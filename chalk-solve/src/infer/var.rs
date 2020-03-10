@@ -91,15 +91,13 @@ pub(crate) enum InferenceValue<I: Interner> {
     Bound(Parameter<I>),
 }
 
-impl<I: Interner> From<Ty<I>> for InferenceValue<I> {
-    fn from(ty: Ty<I>) -> Self {
-        InferenceValue::Bound(ty.cast())
+impl<I: Interner> InferenceValue<I> {
+    pub fn from_ty(interner: &I, ty: Ty<I>) -> Self {
+        InferenceValue::Bound(ty.cast(interner))
     }
-}
 
-impl<I: Interner> From<Lifetime<I>> for InferenceValue<I> {
-    fn from(lifetime: Lifetime<I>) -> Self {
-        InferenceValue::Bound(lifetime.cast())
+    pub fn from_lifetime(interner: &I, lifetime: Lifetime<I>) -> Self {
+        InferenceValue::Bound(lifetime.cast(interner))
     }
 }
 

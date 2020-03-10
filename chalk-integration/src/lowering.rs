@@ -608,10 +608,13 @@ trait LowerDomainGoal {
 
 impl LowerDomainGoal for DomainGoal {
     fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::DomainGoal<ChalkIr>>> {
+        let interner = env.interner();
         let goals = match self {
-            DomainGoal::Holds { where_clause } => {
-                where_clause.lower(env)?.into_iter().casted().collect()
-            }
+            DomainGoal::Holds { where_clause } => where_clause
+                .lower(env)?
+                .into_iter()
+                .casted(interner)
+                .collect(),
             DomainGoal::Normalize { alias, ty } => {
                 vec![chalk_ir::DomainGoal::Normalize(chalk_ir::Normalize {
                     alias: alias.lower(env)?,
@@ -655,18 +658,21 @@ trait LowerLeafGoal {
 
 impl LowerLeafGoal for LeafGoal {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+        let interner = env.interner();
         Ok(match self {
-            LeafGoal::DomainGoal { goal } => goal.lower(env)?.into_iter().casted().collect(),
+            LeafGoal::DomainGoal { goal } => {
+                chalk_ir::Goal::all(interner, goal.lower(env)?.into_iter().casted(interner))
+            }
             LeafGoal::UnifyTys { a, b } => chalk_ir::EqGoal {
-                a: a.lower(env)?.cast(),
-                b: b.lower(env)?.cast(),
+                a: a.lower(env)?.cast(interner),
+                b: b.lower(env)?.cast(interner),
             }
-            .cast::<chalk_ir::Goal<ChalkIr>>(),
+            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
             LeafGoal::UnifyLifetimes { ref a, ref b } => chalk_ir::EqGoal {
-                a: a.lower(env)?.cast(),
-                b: b.lower(env)?.cast(),
+                a: a.lower(env)?.cast(interner),
+                b: b.lower(env)?.cast(interner),
             }
-            .cast::<chalk_ir::Goal<ChalkIr>>(),
+            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
         })
     }
 }
@@ -718,6 +724,7 @@ trait LowerTraitRef {
 
 impl LowerTraitRef for TraitRef {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TraitRef<ChalkIr>> {
+        let interner = env.interner();
         let without_self = TraitBound {
             trait_name: self.trait_name,
             args_no_self: self.args.iter().cloned().skip(1).collect(),
@@ -725,7 +732,7 @@ impl LowerTraitRef for TraitRef {
         .lower(env)?;
 
         let self_parameter = self.args[0].lower(env)?;
-        Ok(without_self.as_trait_ref(self_parameter.assert_ty_ref().clone()))
+        Ok(without_self.as_trait_ref(interner, self_parameter.assert_ty_ref().clone()))
     }
 }
 
@@ -910,6 +917,7 @@ impl LowerAliasTy for AliasTy {
             ref name,
             ref args,
         } = *self;
+        let interner = env.interner();
         let chalk_ir::TraitRef {
             trait_id,
             substitution: trait_substitution,
@@ -945,7 +953,7 @@ impl LowerAliasTy for AliasTy {
 
         Ok(chalk_ir::AliasTy {
             associated_ty_id: lookup.id,
-            substitution: chalk_ir::Substitution::from(args),
+            substitution: chalk_ir::Substitution::from(interner, args),
         })
     }
 }
@@ -956,6 +964,7 @@ trait LowerTy {
 
 impl LowerTy for Ty {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
+        let interner = env.interner();
         match *self {
             Ty::Id { name } => match env.lookup_type(name)? {
                 TypeLookup::Struct(id) => {
@@ -969,14 +978,12 @@ impl LowerTy for Ty {
                     } else {
                         Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                             name: chalk_ir::TypeName::Struct(id),
-                            substitution: chalk_ir::Substitution::empty(),
+                            substitution: chalk_ir::Substitution::empty(interner),
                         })
-                        .intern(env.interner()))
+                        .intern(interner))
                     }
                 }
-                TypeLookup::Parameter(d) => {
-                    Ok(chalk_ir::TyData::BoundVar(d).intern(env.interner()))
-                }
+                TypeLookup::Parameter(d) => Ok(chalk_ir::TyData::BoundVar(d).intern(interner)),
             },
 
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
@@ -989,15 +996,15 @@ impl LowerTy for Ty {
                             .iter()
                             .flat_map(|qil| {
                                 qil.into_where_clauses(
-                                    env.interner(),
-                                    chalk_ir::TyData::BoundVar(0).intern(env.interner()),
+                                    interner,
+                                    chalk_ir::TyData::BoundVar(0).intern(interner),
                                 )
                             })
                             .collect())
                     },
                 )?,
             })
-            .intern(env.interner())),
+            .intern(interner)),
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup_type(name)? {
@@ -1014,8 +1021,10 @@ impl LowerTy for Ty {
                     })?;
                 }
 
-                let substitution =
-                    chalk_ir::Substitution::from_fallible(args.iter().map(|t| Ok(t.lower(env)?)))?;
+                let substitution = chalk_ir::Substitution::from_fallible(
+                    interner,
+                    args.iter().map(|t| Ok(t.lower(env)?)),
+                )?;
 
                 for (param, arg) in k.binders.binders.iter().zip(args.iter()) {
                     if param.kind() != arg.kind() {
@@ -1031,11 +1040,11 @@ impl LowerTy for Ty {
                     name: chalk_ir::TypeName::Struct(id),
                     substitution: substitution,
                 })
-                .intern(env.interner()))
+                .intern(interner))
             }
 
             Ty::Alias { ref alias } => {
-                Ok(chalk_ir::TyData::Alias(alias.lower(env)?).intern(env.interner()))
+                Ok(chalk_ir::TyData::Alias(alias.lower(env)?).intern(interner))
             }
 
             Ty::ForAll {
@@ -1050,9 +1059,9 @@ impl LowerTy for Ty {
 
                 let function = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
-                    parameters: vec![ty.lower(&quantified_env)?.cast()],
+                    parameters: vec![ty.lower(&quantified_env)?.cast(interner)],
                 };
-                Ok(chalk_ir::TyData::Function(function).intern(env.interner()))
+                Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
         }
     }
@@ -1064,9 +1073,10 @@ trait LowerParameter {
 
 impl LowerParameter for Parameter {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Parameter<ChalkIr>> {
+        let interner = env.interner();
         match *self {
-            Parameter::Ty(ref t) => Ok(t.lower(env)?.cast()),
-            Parameter::Lifetime(ref l) => Ok(l.lower(env)?.cast()),
+            Parameter::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
+            Parameter::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
         }
     }
 }
@@ -1077,10 +1087,11 @@ trait LowerLifetime {
 
 impl LowerLifetime for Lifetime {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
+        let interner = env.interner();
         match *self {
             Lifetime::Id { name } => match env.lookup_lifetime(name)? {
                 LifetimeLookup::Parameter(d) => {
-                    Ok(chalk_ir::LifetimeData::BoundVar(d).intern(env.interner()))
+                    Ok(chalk_ir::LifetimeData::BoundVar(d).intern(interner))
                 }
             },
         }
@@ -1150,10 +1161,12 @@ trait LowerClause {
 
 impl LowerClause for Clause {
     fn lower_clause(&self, env: &Env) -> LowerResult<Vec<chalk_ir::ProgramClause<ChalkIr>>> {
+        let interner = env.interner();
         let implications = env.in_binders(self.all_parameters(), |env| {
             let consequences: Vec<chalk_ir::DomainGoal<ChalkIr>> = self.consequence.lower(env)?;
 
             let conditions = chalk_ir::Goals::from_fallible(
+                interner,
                 // Subtle: in the SLG solver, we pop conditions from R to
                 // L. To preserve the expected order (L to R), we must
                 // therefore reverse.
@@ -1269,6 +1282,7 @@ impl LowerGoal<LoweredProgram> for Goal {
 
 impl<'k> LowerGoal<Env<'k>> for Goal {
     fn lower(&self, env: &Env<'k>) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+        let interner = env.interner();
         match self {
             Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
             Goal::Exists(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids),
@@ -1280,18 +1294,19 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 let where_clauses: LowerResult<Vec<_>> = hyp
                     .into_iter()
                     .flat_map(|h| h.lower_clause(env).apply_result())
-                    .map(|result| result.map(|h| h.into_from_env_clause()))
+                    .map(|result| result.map(|h| h.into_from_env_clause(interner)))
                     .collect();
                 Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern())
             }
             Goal::And(g1, g2s) => {
                 let goals = chalk_ir::Goals::from_fallible(
+                    interner,
                     Some(g1).into_iter().chain(g2s).map(|g| g.lower(env)),
                 )?;
                 Ok(chalk_ir::GoalData::All(goals).intern())
             }
             Goal::Not(g) => Ok(chalk_ir::GoalData::Not(g.lower(env)?).intern()),
-            Goal::Compatible(g) => Ok(g.lower(env)?.compatible(env.interner())),
+            Goal::Compatible(g) => Ok(g.lower(env)?.compatible(interner)),
             Goal::Leaf(leaf) => {
                 // A where clause can lower to multiple leaf goals; wrap these in Goal::And.
                 Ok(leaf.lower(env)?)

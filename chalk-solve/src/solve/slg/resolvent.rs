@@ -109,7 +109,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        slg::into_ex_clause(unification_result, &mut ex_clause);
+        slg::into_ex_clause(interner, unification_result, &mut ex_clause);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -322,11 +322,12 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             });
 
         slg::into_ex_clause(
+            interner,
             self.table.unify(
                 interner,
                 &self.environment,
                 answer_param,
-                &Parameter::new(pending_shifted),
+                &Parameter::new(interner, pending_shifted),
             )?,
             self.ex_clause,
         );

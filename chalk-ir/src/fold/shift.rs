@@ -98,8 +98,8 @@ impl<I> Shifter<'_, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Shifter<'_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -111,11 +111,11 @@ impl<I: Interner> Folder<I> for Shifter<'_, I> {
         Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)).intern(self.interner()))
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }
@@ -147,8 +147,8 @@ impl<I> DownShifter<'_, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for DownShifter<'_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -160,11 +160,11 @@ impl<I: Interner> Folder<I> for DownShifter<'_, I> {
         Ok(LifetimeData::<I>::BoundVar(self.adjust(depth, binders)?).intern(self.interner()))
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

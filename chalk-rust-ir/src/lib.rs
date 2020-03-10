@@ -69,8 +69,8 @@ pub struct StructDatum<I: Interner> {
 }
 
 impl<I: Interner> StructDatum<I> {
-    pub fn name(&self) -> TypeName<I> {
-        self.id.cast()
+    pub fn name(&self, interner: &I) -> TypeName<I> {
+        self.id.cast(interner)
     }
 }
 
@@ -160,10 +160,10 @@ impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    fn into_where_clauses(&self, _interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         match self {
-            InlineBound::TraitBound(b) => b.into_where_clauses(self_ty),
-            InlineBound::AliasEqBound(b) => b.into_where_clauses(self_ty),
+            InlineBound::TraitBound(b) => b.into_where_clauses(interner, self_ty),
+            InlineBound::AliasEqBound(b) => b.into_where_clauses(interner, self_ty),
         }
     }
 }
@@ -193,16 +193,17 @@ pub struct TraitBound<I: Interner> {
 }
 
 impl<I: Interner> TraitBound<I> {
-    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
-        let trait_ref = self.as_trait_ref(self_ty);
+    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+        let trait_ref = self.as_trait_ref(interner, self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    pub fn as_trait_ref(&self, self_ty: Ty<I>) -> TraitRef<I> {
+    pub fn as_trait_ref(&self, interner: &I, self_ty: Ty<I>) -> TraitRef<I> {
         TraitRef {
             trait_id: self.trait_id,
             substitution: Substitution::from(
-                iter::once(self_ty.cast()).chain(self.args_no_self.iter().cloned()),
+                interner,
+                iter::once(self_ty.cast(interner)).chain(self.args_no_self.iter().cloned()),
             ),
         }
     }
@@ -220,10 +221,11 @@ pub struct AliasEqBound<I: Interner> {
 }
 
 impl<I: Interner> AliasEqBound<I> {
-    fn into_where_clauses(&self, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
-        let trait_ref = self.trait_bound.as_trait_ref(self_ty);
+    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+        let trait_ref = self.trait_bound.as_trait_ref(interner, self_ty);
 
         let substitution = Substitution::from(
+            interner,
             self.parameters
                 .iter()
                 .cloned()
@@ -270,8 +272,10 @@ impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
     fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
         let &(binder, index) = self;
         match *binder {
-            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index).intern(interner).cast(),
-            ParameterKind::Ty(_) => TyData::BoundVar(index).intern(interner).cast(),
+            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(index)
+                .intern(interner)
+                .cast(interner),
+            ParameterKind::Ty(_) => TyData::BoundVar(index).intern(interner).cast(interner),
         }
     }
 }
@@ -339,8 +343,10 @@ impl<I: Interner> AssociatedTyDatum<I> {
 
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
-        let substitution =
-            Substitution::from(binders.iter().zip(0..).map(|p| p.to_parameter(interner)));
+        let substitution = Substitution::from(
+            interner,
+            binders.iter().zip(0..).map(|p| p.to_parameter(interner)),
+        );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
         let self_ty = TyData::Alias(AliasTy {

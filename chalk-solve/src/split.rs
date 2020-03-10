@@ -46,10 +46,11 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
     fn trait_ref_from_projection<'p>(&self, projection: &'p AliasTy<I>) -> TraitRef<I> {
+        let interner = self.interner();
         let (associated_ty_data, trait_params, _) = self.split_projection(&projection);
         TraitRef {
             trait_id: associated_ty_data.trait_id,
-            substitution: Substitution::from(trait_params),
+            substitution: Substitution::from(interner, trait_params),
         }
     }
 
@@ -119,6 +120,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         parameters: &'p [Parameter<I>],
         associated_ty_value: &AssociatedTyValue<I>,
     ) -> (&'p [Parameter<I>], AliasTy<I>) {
+        let interner = self.interner();
         debug_heading!(
             "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
             parameters,
@@ -140,6 +142,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         // above, this would be `['!a, Box<!T>]`, corresponding to
         // `<Box<!T> as Foo>::Item<'!a>`
         let projection_substitution = Substitution::from(
+            interner,
             atv_parameters
                 .iter()
                 .chain(&trait_ref.substitution)

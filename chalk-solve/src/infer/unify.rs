@@ -234,7 +234,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 alias: alias.clone(),
                 ty: ty.clone(),
             }
-            .cast(),
+            .cast(self.interner),
         )))
     }
 
@@ -260,7 +260,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         self.table
             .unify
-            .unify_var_value(var, InferenceValue::from(ty1.clone()))
+            .unify_var_value(var, InferenceValue::from_ty(self.interner, ty1.clone()))
             .unwrap();
         debug!("unify_var_ty: var {:?} set to {:?}", var, ty1);
 
@@ -300,7 +300,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     let v = LifetimeData::Placeholder(idx).intern(self.interner);
                     self.table
                         .unify
-                        .unify_var_value(var, InferenceValue::from(v))
+                        .unify_var_value(var, InferenceValue::from_lifetime(self.interner, v))
                         .unwrap();
                     Ok(())
                 } else {
@@ -385,8 +385,11 @@ impl<'u, 't, I: Interner> OccursCheck<'u, 't, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for OccursCheck<'_, 'i, I>
+where
+    I: 'i,
+{
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -511,11 +514,11 @@ impl<I: Interner> Folder<I> for OccursCheck<'_, '_, I> {
         true
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.unifier.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

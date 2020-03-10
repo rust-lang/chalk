@@ -45,8 +45,8 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
         let clause = ProgramClauseImplication {
-            consequence: consequence.cast(),
-            conditions: Goals::from(conditions),
+            consequence: consequence.cast(self.db.interner()),
+            conditions: Goals::from(self.db.interner(), conditions),
         };
 
         if self.binders.len() == 0 {
@@ -69,7 +69,10 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// Accesses the placeholders for the current list of parameters in scope,
     /// in the form of a `Substitution`.
     pub fn substitution_in_scope(&self) -> Substitution<I> {
-        Substitution::from(self.placeholders_in_scope().iter().cloned())
+        Substitution::from(
+            self.db.interner(),
+            self.placeholders_in_scope().iter().cloned(),
+        )
     }
 
     /// Executes `op` with the `binders` in-scope; `op` is invoked
@@ -122,7 +125,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         });
     }
 
-    pub fn interner(&self) -> &I {
+    pub fn interner(&self) -> &'me I {
         self.db.interner()
     }
 }

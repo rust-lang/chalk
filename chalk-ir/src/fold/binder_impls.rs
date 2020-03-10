@@ -8,7 +8,15 @@ use crate::*;
 
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
     type Result = Fn<TI>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         let Fn {
             num_binders,
             ref parameters,
@@ -26,7 +34,15 @@ where
     I: Interner,
 {
     type Result = Binders<T::Result>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         let Binders {
             binders: ref self_binders,
             value: ref self_value,
@@ -46,7 +62,15 @@ where
     TI: TargetInterner<I>,
 {
     type Result = Canonical<T::Result>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         let Canonical {
             binders: ref self_binders,
             value: ref self_value,

@@ -150,7 +150,10 @@ fn merge_into_guidance<I: Interner>(
                 ParameterKind::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
                     // creating guidance here anyway.
-                    return infer.new_variable(universe).to_lifetime(interner).cast();
+                    return infer
+                        .new_variable(universe)
+                        .to_lifetime(interner)
+                        .cast(interner);
                 }
             };
 
@@ -162,11 +165,11 @@ fn merge_into_guidance<I: Interner>(
                 universe,
                 interner,
             };
-            aggr.aggregate_tys(&ty, ty1).cast()
+            aggr.aggregate_tys(&ty, ty1).cast(interner)
         })
         .collect();
 
-    let aggr_subst = Substitution::from(aggr_parameters);
+    let aggr_subst = Substitution::from(interner, aggr_parameters);
 
     infer.canonicalize(interner, &aggr_subst).quantified
 }
@@ -309,6 +312,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     where
         N: Copy + Eq + Debug,
     {
+        let interner = self.interner;
         if name1 != name2 {
             return None;
         }
@@ -325,6 +329,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         );
 
         let substitution = Substitution::from(
+            interner,
             substitution1
                 .iter()
                 .zip(substitution2)
@@ -335,10 +340,13 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     }
 
     fn aggregate_parameters(&mut self, p1: &Parameter<I>, p2: &Parameter<I>) -> Parameter<I> {
+        let interner = self.interner;
         match (p1.data(), p2.data()) {
-            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2).cast(),
+            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
+                self.aggregate_tys(ty1, ty2).cast(interner)
+            }
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
-                self.aggregate_lifetimes(l1, l2).cast()
+                self.aggregate_lifetimes(l1, l2).cast(interner)
             }
             (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
                 panic!("mismatched parameter kinds: p1={:?} p2={:?}", p1, p2)

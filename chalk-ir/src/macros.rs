@@ -5,7 +5,7 @@ macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
         $crate::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
-            substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
+            substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern(&chalk_ir::interner::ChalkIr)
     };
 
@@ -26,7 +26,7 @@ macro_rules! ty {
     (alias (item $n:tt) $($arg:tt)*) => {
         $crate::TyData::Alias(AliasTy {
             associated_ty_id: AssocTypeId(chalk_ir::interner::RawId { index: $n }),
-            substitution: $crate::Substitution::from(vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
+            substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern(&chalk_ir::interner::ChalkIr)
     };
 
@@ -50,11 +50,17 @@ macro_rules! ty {
 #[macro_export]
 macro_rules! arg {
     ((lifetime $b:tt)) => {
-        $crate::Parameter::new($crate::ParameterKind::Lifetime(lifetime!($b)))
+        $crate::Parameter::new(
+            &chalk_ir::interner::ChalkIr,
+            $crate::ParameterKind::Lifetime(lifetime!($b)),
+        )
     };
 
     ($arg:tt) => {
-        $crate::Parameter::new($crate::ParameterKind::Ty(ty!($arg)))
+        $crate::Parameter::new(
+            &chalk_ir::interner::ChalkIr,
+            $crate::ParameterKind::Ty(ty!($arg)),
+        )
     };
 }
 

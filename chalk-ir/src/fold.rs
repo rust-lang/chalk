@@ -62,7 +62,11 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
+pub trait Folder<'i, I: Interner, TI: TargetInterner<I> = I>
+where
+    I: 'i,
+    TI: 'i,
+{
     /// Creates a `dyn` value from this folder. Unfortunately, this
     /// must be added manually to each impl of Folder; it permits the
     /// default implements below to create a `&mut dyn Folder` from
@@ -70,7 +74,7 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
     /// method). Effectively, this limits impls of `Folder` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, TI>;
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, TI>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when folding. By default, invokes
@@ -208,9 +212,9 @@ pub trait Folder<I: Interner, TI: TargetInterner<I> = I> {
         }
     }
 
-    fn interner(&self) -> &I;
+    fn interner(&self) -> &'i I;
 
-    fn target_interner(&self) -> &TI;
+    fn target_interner(&self) -> &'i TI;
 }
 
 /// Applies the given `Folder` to a value, producing a folded result
@@ -241,18 +245,28 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
     /// folder. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result>;
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i;
 }
 
 /// For types where "fold" invokes a callback on the `Folder`, the
 /// `SuperFold` trait captures the recursive behavior that folds all
 /// the contents of the type.
 pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
-    fn super_fold_with(
+    fn super_fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<I, TI>,
+        folder: &mut dyn Folder<'i, I, TI>,
         binders: usize,
-    ) -> Fallible<Self::Result>;
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i;
 }
 
 /// "Folding" a type invokes the `fold_ty` method on the folder; this
@@ -261,7 +275,15 @@ pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Ty<I> {
     type Result = Ty<TI>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         folder.fold_ty(self, binders)
     }
 }
@@ -272,7 +294,15 @@ where
     I: Interner,
     TI: TargetInterner<I>,
 {
-    fn super_fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Ty<TI>> {
+    fn super_fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Ty<TI>>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         match self.data() {
             TyData::BoundVar(depth) => {
                 if *depth >= binders {
@@ -308,7 +338,15 @@ where
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Lifetime<I> {
     type Result = Lifetime<TI>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         folder.fold_lifetime(self, binders)
     }
 }
@@ -318,11 +356,15 @@ where
     I: Interner,
     TI: TargetInterner<I>,
 {
-    fn super_fold_with(
+    fn super_fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<I, TI>,
+        folder: &mut dyn Folder<'i, I, TI>,
         binders: usize,
-    ) -> Fallible<Lifetime<TI>> {
+    ) -> Fallible<Lifetime<TI>>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         match self.data() {
             LifetimeData::BoundVar(depth) => {
                 if *depth >= binders {
@@ -345,18 +387,30 @@ where
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goal<I> {
     type Result = Goal<TI>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         folder.fold_goal(self, binders)
     }
 }
 
 /// Superfold folds recursively.
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
-    fn super_fold_with(
+    fn super_fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<I, TI>,
+        folder: &mut dyn Folder<'i, I, TI>,
         binders: usize,
-    ) -> Fallible<Self::Result> {
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         Ok(Goal::new(self.data().fold_with(folder, binders)?))
     }
 }
@@ -367,7 +421,15 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ProgramClause<I> {
     type Result = ProgramClause<TI>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         folder.fold_program_clause(self, binders)
     }
 }

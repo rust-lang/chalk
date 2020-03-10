@@ -23,8 +23,8 @@ impl<I: Interner> Subst<'_, '_, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Subst<'_, '_, I> {
-    fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
 
@@ -56,11 +56,11 @@ impl<I: Interner> Folder<I> for Subst<'_, '_, I> {
         }
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 
-    fn target_interner(&self) -> &I {
+    fn target_interner(&self) -> &'i I {
         self.interner()
     }
 }

@@ -13,28 +13,60 @@ use std::sync::Arc;
 
 impl<'a, T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a T {
     type Result = T::Result;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         (**self).fold_with(folder, binders)
     }
 }
 
 impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Vec<T> {
     type Result = Vec<T::Result>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         self.iter().map(|e| e.fold_with(folder, binders)).collect()
     }
 }
 
 impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Box<T> {
     type Result = Box<T::Result>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         Ok(Box::new((**self).fold_with(folder, binders)?))
     }
 }
 
 impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Arc<T> {
     type Result = Arc<T::Result>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         Ok(Arc::new((**self).fold_with(folder, binders)?))
     }
 }
@@ -43,7 +75,11 @@ macro_rules! tuple_fold {
     ($($n:ident),*) => {
         impl<$($n: Fold<I, TI>,)* I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ($($n,)*) {
             type Result = ($($n::Result,)*);
-            fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+            fn fold_with<'i>(&self, folder: &mut dyn Folder<'i, I, TI>, binders: usize) -> Fallible<Self::Result>
+            where
+                I: 'i,
+                TI: 'i,
+            {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
                 Ok(($($n.fold_with(folder, binders)?,)*))
@@ -59,7 +95,15 @@ tuple_fold!(A, B, C, D, E);
 
 impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Option<T> {
     type Result = Option<T::Result>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         match self {
             None => Ok(None),
             Some(e) => Ok(Some(e.fold_with(folder, binders)?)),
@@ -69,27 +113,51 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Option<
 
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
     type Result = Parameter<TI>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         let data = self.data().fold_with(folder, binders)?;
-        Ok(Parameter::new(data))
+        Ok(Parameter::new(folder.target_interner(), data))
     }
 }
 
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Substitution<I> {
     type Result = Substitution<TI>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
-        Ok(Substitution::from_fallible(
-            self.iter().map(|p| p.fold_with(folder, binders)),
-        )?)
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let interner = folder.target_interner();
+        let folded = self.iter().map(|p| p.fold_with(folder, binders));
+        Ok(Substitution::from_fallible(interner, folded)?)
     }
 }
 
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goals<I> {
     type Result = Goals<TI>;
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
-        Ok(Goals::from_fallible(
-            self.iter().map(|p| p.fold_with(folder, binders)),
-        )?)
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let interner = folder.target_interner();
+        let folded = self.iter().map(|p| p.fold_with(folder, binders));
+        Ok(Goals::from_fallible(interner, folded)?)
     }
 }
 
@@ -98,11 +166,15 @@ macro_rules! copy_fold {
     ($t:ty) => {
         impl<I: Interner, TI: TargetInterner<I>> $crate::fold::Fold<I, TI> for $t {
             type Result = Self;
-            fn fold_with(
+            fn fold_with<'i>(
                 &self,
-                _folder: &mut dyn ($crate::fold::Folder<I, TI>),
+                _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
                 _binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+            ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+            where
+                I: 'i,
+                TI: 'i,
+            {
                 Ok(*self)
             }
         }
@@ -122,11 +194,15 @@ macro_rules! id_fold {
     ($t:ident) => {
         impl<I: Interner, TI: TargetInterner<I>> $crate::fold::Fold<I, TI> for $t<I> {
             type Result = $t<TI>;
-            fn fold_with(
+            fn fold_with<'i>(
                 &self,
-                _folder: &mut dyn ($crate::fold::Folder<I, TI>),
+                _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
                 _binders: usize,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+            ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+            where
+                I: 'i,
+                TI: 'i,
+            {
                 let $t(def_id_tf) = *self;
                 let def_id_ttf = TI::transfer_def_id(def_id_tf);
                 Ok($t(def_id_ttf))
@@ -141,11 +217,15 @@ id_fold!(TraitId);
 id_fold!(AssocTypeId);
 
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
-    fn super_fold_with(
+    fn super_fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<I, TI>,
+        folder: &mut dyn Folder<'i, I, TI>,
         binders: usize,
-    ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         match self {
             ProgramClause::Implies(pci) => {
                 Ok(ProgramClause::Implies(pci.fold_with(folder, binders)?))
@@ -160,11 +240,15 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
 impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
     type Result = PhantomData<TI>;
 
-    fn fold_with(
+    fn fold_with<'i>(
         &self,
-        _folder: &mut dyn Folder<I, TI>,
+        _folder: &mut dyn Folder<'i, I, TI>,
         _binders: usize,
-    ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
+    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         Ok(PhantomData)
     }
 }
@@ -176,7 +260,15 @@ where
 {
     type Result = ParameterKind<T::Result, L::Result>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         match self {
             ParameterKind::Ty(a) => Ok(ParameterKind::Ty(a.fold_with(folder, binders)?)),
             ParameterKind::Lifetime(a) => {
@@ -196,7 +288,15 @@ where
 {
     type Result = ExClause<C>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         let ExClause {
             subst,
             ambiguous,
@@ -228,7 +328,15 @@ where
 {
     type Result = FlounderedSubgoal<C>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         let FlounderedSubgoal {
             floundered_literal,
             floundered_time,
@@ -247,7 +355,15 @@ where
 {
     type Result = Literal<C>;
 
-    fn fold_with(&self, folder: &mut dyn Folder<I, TI>, binders: usize) -> Fallible<Self::Result> {
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        binders: usize,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
         match self {
             Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, binders)?)),
             Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, binders)?)),

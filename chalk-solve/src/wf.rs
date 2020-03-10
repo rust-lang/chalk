@@ -153,6 +153,7 @@ where
     }
 
     pub fn verify_struct_decl(&self, struct_id: StructId<I>) -> Result<(), WfError<I>> {
+        let interner = self.db.interner();
         let struct_datum = self.db.struct_datum(struct_id);
 
         // We retrieve all the input types of the struct fields.
@@ -161,12 +162,12 @@ where
             .binders
             .value
             .fields
-            .fold(self.db.interner(), &mut input_types);
+            .fold(interner, &mut input_types);
         struct_datum
             .binders
             .value
             .where_clauses
-            .fold(self.db.interner(), &mut input_types);
+            .fold(interner, &mut input_types);
 
         if input_types.is_empty() {
             return Ok(());
@@ -175,8 +176,8 @@ where
         let goals = input_types
             .into_iter()
             .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
-            .casted();
-        let goal = goals.collect::<Goal<I>>();
+            .casted(interner);
+        let goal = Goal::all(interner, goals);
 
         let hypotheses = struct_datum
             .binders
@@ -184,8 +185,8 @@ where
             .where_clauses
             .iter()
             .cloned()
-            .map(|wc| wc.map(|bound| bound.into_from_env_goal()))
-            .casted()
+            .map(|wc| wc.map(|bound| bound.into_from_env_goal(interner)))
+            .casted(interner)
             .collect();
 
         // We ask that the above input types are well-formed provided that all the where-clauses
@@ -197,7 +198,7 @@ where
         let is_legal = match self
             .solver_choice
             .into_solver()
-            .solve(self.db, &goal.into_closed_goal(self.db.interner()))
+            .solve(self.db, &goal.into_closed_goal(interner))
         {
             Some(sol) => sol.is_unique(),
             None => false,
@@ -211,6 +212,7 @@ where
     }
 
     pub fn verify_trait_impl(&self, impl_id: ImplId<I>) -> Result<(), WfError<I>> {
+        let interner = self.db.interner();
         let impl_datum = self.db.impl_datum(impl_id);
 
         if !impl_datum.is_positive() {
@@ -230,7 +232,7 @@ where
             .binders
             .value
             .where_clauses
-            .fold(self.db.interner(), &mut input_types);
+            .fold(interner, &mut input_types);
 
         // We retrieve all the input types of the type on which we implement the trait: we will
         // *assume* that these types are well-formed, e.g. we will be able to derive that
@@ -246,7 +248,7 @@ where
         // ```
         let mut header_input_types = Vec::new();
         let trait_ref = &impl_datum.binders.value.trait_ref;
-        trait_ref.fold(self.db.interner(), &mut header_input_types);
+        trait_ref.fold(interner, &mut header_input_types);
 
         let assoc_ty_goals = impl_datum
             .associated_ty_value_ids
@@ -258,11 +260,11 @@ where
         let trait_ref_wf = DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()));
         let goals = input_types
             .into_iter()
-            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)).cast())
+            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)).cast(interner))
             .chain(assoc_ty_goals)
-            .chain(Some(trait_ref_wf).cast());
+            .chain(Some(trait_ref_wf).cast(interner));
 
-        let goal = goals.collect::<Goal<I>>();
+        let goal = Goal::all(interner, goals);
 
         // Assumptions: types appearing in the header which are not projection types are
         // assumed to be well-formed, and where clauses declared on the impl are assumed
@@ -273,13 +275,13 @@ where
             .where_clauses
             .iter()
             .cloned()
-            .map(|qwc| qwc.into_from_env_goal())
-            .casted()
+            .map(|qwc| qwc.into_from_env_goal(interner))
+            .casted(interner)
             .chain(
                 header_input_types
                     .into_iter()
                     .map(|ty| DomainGoal::FromEnv(FromEnv::Ty(ty)))
-                    .casted(),
+                    .casted(interner),
             )
             .collect();
 
@@ -292,7 +294,7 @@ where
         let is_legal = match self
             .solver_choice
             .into_solver()
-            .solve(self.db, &goal.into_closed_goal(self.db.interner()))
+            .solve(self.db, &goal.into_closed_goal(interner))
         {
             Some(sol) => sol.is_unique(),
             None => false,
@@ -334,6 +336,7 @@ where
     /// }
     /// ```
     fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId<I>) -> Option<Goal<I>> {
+        let interner = self.db.interner();
         let assoc_ty = &self.db.associated_ty_value(assoc_ty_id);
 
         // The substitutions for the binders on this associated type
@@ -348,7 +351,7 @@ where
             .binders
             .iter()
             .zip(0..)
-            .map(|p| p.to_parameter(self.db.interner()))
+            .map(|p| p.to_parameter(interner))
             .collect();
 
         // Get the projection for this associated type:
@@ -359,18 +362,17 @@ where
             .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
 
         // Get the ty that the impl is using -- `Box<&'!a !T>`, in our example
-        let AssociatedTyValueBound { ty: value_ty } = assoc_ty
-            .value
-            .substitute(self.db.interner(), &all_parameters);
+        let AssociatedTyValueBound { ty: value_ty } =
+            assoc_ty.value.substitute(interner, &all_parameters);
 
         let mut input_types = Vec::new();
-        value_ty.fold(self.db.interner(), &mut input_types);
+        value_ty.fold(interner, &mut input_types);
 
         // We require that `WellFormed(T)` for each type that appears in the value
         let wf_goals = input_types
             .into_iter()
             .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
-            .casted();
+            .casted(interner);
 
         // Get the bounds and where clauses from the trait
         // declaration, substituted appropriately.
@@ -391,7 +393,7 @@ where
             where_clauses: defn_where_clauses,
         } = assoc_ty_datum
             .binders
-            .substitute(self.db.interner(), &projection.substitution);
+            .substitute(interner, &projection.substitution);
 
         // Check that the `value_ty` meets the bounds from the trait.
         // Here we take the substituted bounds (`defn_bounds`) and we
@@ -403,13 +405,13 @@ where
         let bound_goals = defn_bounds
             .iter()
             .cloned()
-            .flat_map(|qb| qb.into_where_clauses(self.db.interner(), value_ty.clone()))
-            .map(|qwc| qwc.into_well_formed_goal())
-            .casted();
+            .flat_map(|qb| qb.into_where_clauses(interner, value_ty.clone()))
+            .map(|qwc| qwc.into_well_formed_goal(interner))
+            .casted(interner);
 
         // Concatenate the WF goals of inner types + the requirements from trait
         let goals = wf_goals.chain(bound_goals);
-        let goal: Goal<I> = goals.collect();
+        let goal = Goal::all(interner, goals);
         if goal.is_trivially_true() {
             return None;
         }
@@ -419,8 +421,8 @@ where
         let hypotheses = defn_where_clauses
             .iter()
             .cloned()
-            .map(|qwc| qwc.into_from_env_goal())
-            .casted()
+            .map(|qwc| qwc.into_from_env_goal(interner))
+            .casted(interner)
             .collect();
 
         let goal = GoalData::Implies(hypotheses, goal).intern();

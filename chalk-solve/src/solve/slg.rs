@@ -167,10 +167,6 @@ impl<I: Interner> context::Context for SlgContext<I> {
         Environment::add_clauses(env, clauses)
     }
 
-    fn into_goal(domain_goal: DomainGoal<I>) -> Goal<I> {
-        domain_goal.cast()
-    }
-
     // Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<SlgContext<I>>) -> usize {
         // For now, we always pick the last subgoal in the
@@ -334,6 +330,10 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
     fn interner(&self) -> &I {
         self.program.interner()
     }
+
+    fn into_goal(&self, domain_goal: DomainGoal<I>) -> Goal<I> {
+        domain_goal.cast(self.program.interner())
+    }
 }
 
 impl<I: Interner> TruncatingInferenceTable<I> {
@@ -470,18 +470,23 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
         ex_clause: &mut ExClause<SlgContext<I>>,
     ) -> Fallible<()> {
         let result = self.infer.unify(interner, environment, a, b)?;
-        Ok(into_ex_clause(result, ex_clause))
+        Ok(into_ex_clause(interner, result, ex_clause))
     }
 }
 
 /// Helper function
 fn into_ex_clause<I: Interner>(
+    interner: &I,
     result: UnificationResult<I>,
     ex_clause: &mut ExClause<SlgContext<I>>,
 ) {
-    ex_clause
-        .subgoals
-        .extend(result.goals.into_iter().casted().map(Literal::Positive));
+    ex_clause.subgoals.extend(
+        result
+            .goals
+            .into_iter()
+            .casted(interner)
+            .map(Literal::Positive),
+    );
     ex_clause.constraints.extend(result.constraints);
 }
 
