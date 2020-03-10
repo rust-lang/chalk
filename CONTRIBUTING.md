@@ -89,7 +89,7 @@ machinery inside of chalk.
 In addition to the blog posts there is a [glossary](GLOSSARY.md) explaining some
 of the terminology used in chalk.
 
-### Trait solving in rustc guide
-The rustc guide describes [new-style trait solving][trait-solving], which is slowly replacing the old trait resolution.
+### Trait solving in rustc-dev-guide
+The rustc-dev-guide describes [new-style trait solving][trait-solving], which is slowly replacing the old trait resolution.
 
-[trait-solving]: https://rust-lang.github.io/rustc-guide/traits/index.html
+[trait-solving]: https://rustc-dev-guide.rust-lang.org/traits/index.html
