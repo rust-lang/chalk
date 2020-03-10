@@ -952,14 +952,10 @@ pub struct ProgramClauseImplication<I: Interner> {
     pub conditions: Goals<I>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub enum ProgramClause<I: Interner> {
     Implies(ProgramClauseImplication<I>),
     ForAll(Binders<ProgramClauseImplication<I>>),
-}
-
-impl<I: Interner> HasInterner for ProgramClause<I> {
-    type Interner = I;
 }
 
 impl<I: Interner> ProgramClause<I> {

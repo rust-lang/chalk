@@ -34,10 +34,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
                     &self,
                     folder: &mut dyn Folder < 'i, #arg, #arg >,
                     binders: usize,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result>
-                where
-                    #arg: 'i,
-                {
+                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
                 }
             }
