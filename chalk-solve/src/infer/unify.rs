@@ -338,7 +338,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 }
 
-impl<I: Interner> Zipper<I> for Unifier<'_, I> {
+impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
     fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         self.unify_ty_ty(a, b)
     }
@@ -365,7 +365,7 @@ impl<I: Interner> Zipper<I> for Unifier<'_, I> {
         self.unify_binders(a, b)
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 }

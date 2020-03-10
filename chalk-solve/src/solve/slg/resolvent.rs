@@ -352,7 +352,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     }
 }
 
-impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
+impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
     fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
 
@@ -465,7 +465,7 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         Ok(())
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> &'i I {
         self.interner
     }
 }
