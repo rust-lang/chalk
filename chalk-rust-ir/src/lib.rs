@@ -517,10 +517,10 @@ pub struct ImplTraitDatum<I: Interner> {
     pub impl_trait_id: ImplTraitId<I>,
 
     /// Trait bounds for the opaque type.
-    pub bounds: Vec<TraitBound<I>>,
+    pub bounds: Vec<QuantifiedWhereClause<I>>,
 
     /// The "hidden type" that the opaque type is equal to when revealed.
-    pub ty: Ty<I>,
+    pub ty: Binders<Ty<I>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

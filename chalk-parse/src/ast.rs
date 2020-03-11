@@ -81,8 +81,9 @@ pub struct AssocTyDefn {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct OpaqueTyDefn {
     pub ty: Ty,
+    pub parameter_kinds: Vec<ParameterKind>,
     pub identifier: Identifier,
-    pub bounds: Vec<TraitBound>,
+    pub bounds: Vec<QuantifiedInlineBound>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

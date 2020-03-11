@@ -100,9 +100,10 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 OpaqueTyDefn: OpaqueTyDefn = {
-    "opaque" "type" <identifier:Id> ":" <b:Plus<TraitBound>> "=" <ty:Ty> ";" => {
+    "opaque" "type" <identifier:Id> <p:Angle<ParameterKind>> ":" <b:Plus<QuantifiedInlineBound>> "=" <ty:Ty> ";" => {
         OpaqueTyDefn {
             ty,
+            parameter_kinds: p,
             identifier,
             bounds: b,
         }

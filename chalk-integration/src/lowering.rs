@@ -381,16 +381,32 @@ impl LowerProgram for Program {
                 }
                 Item::OpaqueTyDefn(ref opaque_ty) => {
                     if let Some(&value) = impl_trait_ids.get(&opaque_ty.identifier.str) {
+                        let parameter_kinds = opaque_ty
+                            .parameter_kinds
+                            .iter()
+                            .map(|k| k.lower())
+                            .collect::<Vec<_>>();
+
+                        let binders = empty_env
+                            .in_binders(parameter_kinds, |env| opaque_ty.ty.lower(&env))?;
+
                         impl_trait_data.insert(
                             value,
                             Arc::new(ImplTraitDatum {
                                 impl_trait_id: value,
                                 bounds: opaque_ty
                                     .bounds
+                                    .lower(&empty_env)?
                                     .iter()
-                                    .map(|b| b.lower(&empty_env))
-                                    .collect::<Result<Vec<_>, _>>()?,
-                                ty: opaque_ty.ty.lower(&empty_env)?,
+                                    .flat_map(|qil| {
+                                        qil.into_where_clauses(
+                                            empty_env.interner(),
+                                            chalk_ir::TyData::BoundVar(0)
+                                                .intern(empty_env.interner()),
+                                        )
+                                    })
+                                    .collect(),
+                                ty: binders,
                             }),
                         );
                     }

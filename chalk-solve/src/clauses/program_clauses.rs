@@ -136,32 +136,34 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
             substitution: builder.substitution_in_scope(),
         });
 
-        // AliasEq(T<..> = HiddenTy) :- Reveal.
-        builder.push_clause(
-            DomainGoal::Holds(
-                AliasEq {
-                    alias: alias.clone(),
-                    ty: self.ty.clone(),
-                }
-                .cast(interner),
-            ),
-            iter::once(DomainGoal::Reveal(())),
-        );
-
         let alias_ty = Ty::new(interner, alias.clone());
 
-        // AliasEq(T<..> = !T).
-        builder.push_fact(DomainGoal::Holds(
-            AliasEq {
-                alias: alias.clone(),
-                ty: alias_ty.clone(),
-            }
-            .cast(interner),
-        ));
+        builder.push_binders(&self.ty, |builder, impl_trait_datum| {
+            // AliasEq(T<..> = HiddenTy) :- Reveal.
+            builder.push_clause(
+                DomainGoal::Holds(
+                    AliasEq {
+                        alias: alias.clone(),
+                        ty: impl_trait_datum.clone(),
+                    }
+                    .cast(interner),
+                ),
+                iter::once(DomainGoal::Reveal(())),
+            );
+
+            // AliasEq(T<..> = !T).
+            builder.push_fact(DomainGoal::Holds(
+                AliasEq {
+                    alias: alias.clone(),
+                    ty: alias_ty.clone(),
+                }
+                .cast(interner),
+            ));
+        });
 
         for bound in &self.bounds {
             // Implemented(!T: Bound).
-            builder.push_fact(bound.as_trait_ref(interner, alias_ty.clone()));
+            builder.push_fact(bound.value.clone().into_well_formed_goal(interner));
         }
 
         for auto_trait_id in builder.db.auto_traits() {
@@ -173,7 +175,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
                 },
                 iter::once(TraitRef {
                     trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, self.ty.clone()),
+                    substitution: Substitution::from1(interner, self.ty.value.clone()),
                 }),
             );
         }
