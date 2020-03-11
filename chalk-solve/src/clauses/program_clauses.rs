@@ -126,7 +126,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
     /// AliasEq(T<..> = !T).
     /// Implemented(!T: A).
     /// Implemented(!T: B).
-    /// Implemented(!T: Send) :- Implemented(A + B: Send). // For all auto traits
+    /// Implemented(!T: Send) :- Implemented(HiddenTy: Send). // For all auto traits
     /// ```
     /// where `!T` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
@@ -165,7 +165,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
         }
 
         for auto_trait_id in builder.db.auto_traits() {
-            // Implemented(!T: AutoTrait) :- Implemented(Bounds: AutoTrait).
+            // Implemented(!T: AutoTrait) :- Implemented(HiddenTy: AutoTrait).
             builder.push_clause(
                 TraitRef {
                     trait_id: auto_trait_id,
@@ -173,14 +173,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
                 },
                 iter::once(TraitRef {
                     trait_id: auto_trait_id,
-                    substitution: Substitution::from(
-                        interner,
-                        iter::once(alias_ty.clone().cast(interner)).chain(
-                            self.bounds
-                                .iter()
-                                .flat_map(|b| b.args_no_self.iter().cloned()),
-                        ),
-                    ),
+                    substitution: Substitution::from1(interner, self.ty.clone()),
                 }),
             );
         }
