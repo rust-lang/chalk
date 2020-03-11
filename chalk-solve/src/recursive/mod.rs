@@ -313,10 +313,9 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             self.context.search_graph[dfn].solution = current_answer;
 
-            // Subtle: if our current answer is ambiguous, we can just
-            // stop, and in fact we *must* -- otherwise, wesometimes
-            // fail to reach a fixed point. See
-            // `multiple_ambiguous_cycles` for more.
+            // Subtle: if our current answer is ambiguous, we can just stop, and
+            // in fact we *must* -- otherwise, we sometimes fail to reach a
+            // fixed point. See `multiple_ambiguous_cycles` for more.
             if current_answer_is_ambig {
                 return *minimums;
             }

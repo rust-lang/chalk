@@ -222,19 +222,24 @@ fn program_clauses_that_could_match<I: Interner>(
                 // and `bounded_ty` is the `exists<T> { .. }`
                 // clauses shown above.
 
-                for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
-                    // Replace the `T` from `exists<T> { .. }` with `self_ty`,
-                    // yielding clases like
-                    //
-                    // ```
-                    // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
-                    // ```
-                    let qwc = exists_qwc.substitute(interner, &[self_ty.clone().cast(interner)]);
+                let generalized_dyn_ty = generalize::Generalize::apply(db.interner(), dyn_ty);
 
-                    builder.push_binders(&qwc, |builder, wc| {
-                        builder.push_fact(wc);
-                    });
-                }
+                builder.push_binders(&generalized_dyn_ty, |builder, dyn_ty| {
+                    for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
+                        // Replace the `T` from `exists<T> { .. }` with `self_ty`,
+                        // yielding clases like
+                        //
+                        // ```
+                        // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
+                        // ```
+                        let qwc =
+                            exists_qwc.substitute(interner, &[self_ty.clone().cast(interner)]);
+
+                        builder.push_binders(&qwc, |builder, wc| {
+                            builder.push_fact(wc);
+                        });
+                    }
+                });
             }
 
             if let Some(well_known) = trait_datum.well_known {
@@ -415,4 +420,73 @@ fn program_clauses_for_env<'db, I: Interner>(
     }
 
     clauses.extend(closure.drain())
+}
+
+mod generalize {
+    use chalk_engine::fallible::Fallible;
+    use chalk_ir::{
+        fold::{Fold, Folder},
+        interner::Interner,
+        Binders, Lifetime, LifetimeData, ParameterKind, Ty, TyData,
+    };
+    use std::collections::HashMap;
+
+    pub struct Generalize<'i, I: Interner> {
+        binders: Vec<ParameterKind<()>>,
+        mapping: HashMap<usize, usize>,
+        interner: &'i I,
+    }
+
+    impl<I: Interner> Generalize<'_, I> {
+        pub fn apply<T: Fold<I, I>>(interner: &I, value: &T) -> Binders<T::Result> {
+            let mut generalize = Generalize {
+                binders: Vec::new(),
+                mapping: HashMap::new(),
+                interner,
+            };
+            let value = value.fold_with(&mut generalize, 0).unwrap();
+            Binders {
+                binders: generalize.binders,
+                value,
+            }
+        }
+    }
+
+    impl<I: Interner> Folder<I> for Generalize<'_, I> {
+        fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+            self
+        }
+
+        fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+            let binder_vec = &mut self.binders;
+            let new_index = self.mapping.entry(depth).or_insert_with(|| {
+                let i = binder_vec.len();
+                binder_vec.push(ParameterKind::Ty(()));
+                i
+            });
+            Ok(TyData::BoundVar(*new_index + binders).intern(self.interner()))
+        }
+
+        fn fold_free_var_lifetime(
+            &mut self,
+            depth: usize,
+            binders: usize,
+        ) -> Fallible<Lifetime<I>> {
+            let binder_vec = &mut self.binders;
+            let new_index = self.mapping.entry(depth).or_insert_with(|| {
+                let i = binder_vec.len();
+                binder_vec.push(ParameterKind::Ty(()));
+                i
+            });
+            Ok(LifetimeData::BoundVar(*new_index + binders).intern(self.interner()))
+        }
+
+        fn interner(&self) -> &I {
+            self.interner
+        }
+
+        fn target_interner(&self) -> &I {
+            self.interner()
+        }
+    }
 }
