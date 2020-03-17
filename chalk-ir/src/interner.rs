@@ -304,6 +304,7 @@ mod default {
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_lifetime(lifetime, fmt)))
+                .or_else(|| Some(write!(fmt, "{:?}", lifetime.interned)))
         }
 
         fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
