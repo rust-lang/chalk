@@ -21,11 +21,12 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         &'p [Parameter<I>],
         &'p [Parameter<I>],
     ) {
+        let interner = self.interner();
         let AliasTy {
             associated_ty_id,
             ref substitution,
         } = *alias;
-        let parameters = substitution.parameters();
+        let parameters = substitution.parameters(interner);
         let associated_ty_data = &self.associated_ty_data(associated_ty_id);
         let trait_datum = &self.trait_datum(associated_ty_data.trait_id);
         let trait_num_params = trait_datum.binders.len();
@@ -135,7 +136,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         let trait_ref = {
             let impl_trait_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
             debug!("impl_trait_ref: {:?}", impl_trait_ref);
-            impl_trait_ref.substitute(self.interner(), impl_parameters)
+            impl_trait_ref.substitute(interner, impl_parameters)
         };
 
         // Create the parameters for the projection -- in our example
@@ -145,7 +146,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
             interner,
             atv_parameters
                 .iter()
-                .chain(&trait_ref.substitution)
+                .chain(trait_ref.substitution.iter(interner))
                 .cloned(),
         );
 

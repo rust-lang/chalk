@@ -229,7 +229,7 @@ impl<I: Interner> AliasEqBound<I> {
             self.parameters
                 .iter()
                 .cloned()
-                .chain(trait_ref.substitution.iter().cloned()),
+                .chain(trait_ref.substitution.iter(interner).cloned()),
         );
 
         vec![

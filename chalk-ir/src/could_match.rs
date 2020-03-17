@@ -22,15 +22,16 @@ where
 
         impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
             fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
-                let could_match = match (a.data(self.interner), b.data(self.interner)) {
+                let interner = self.interner;
+                let could_match = match (a.data(interner), b.data(interner)) {
                     (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
 
                         names_could_match
                             && a.substitution
-                                .iter()
-                                .zip(&b.substitution)
-                                .all(|(p_a, p_b)| p_a.could_match(self.interner, &p_b))
+                                .iter(interner)
+                                .zip(b.substitution.iter(interner))
+                                .all(|(p_a, p_b)| p_a.could_match(interner, &p_b))
                     }
 
                     _ => true,

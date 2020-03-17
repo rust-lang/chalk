@@ -23,37 +23,78 @@ impl<I: Interner> Debug for AssocTypeId<I> {
 
 impl<I: Interner> Debug for Ty<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_ty(self, fmt).unwrap_or_else(|| unimplemented!())
+        I::debug_ty(self, fmt)
+            .unwrap_or_else(|| unimplemented!("cannot format Ty without setting Program in tls"))
     }
 }
 
 impl<I: Interner> Debug for Lifetime<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_lifetime(self, fmt).unwrap_or_else(|| unimplemented!())
+        I::debug_lifetime(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format Lifetime without setting Program in tls")
+        })
     }
 }
 
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter(self, fmt).unwrap_or_else(|| unimplemented!())
+        I::debug_parameter(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format Parameter without setting Program in tls")
+        })
     }
 }
 
 impl<I: Interner> Debug for Goal<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goal(self, fmt).unwrap_or_else(|| unimplemented!())
+        I::debug_goal(self, fmt)
+            .unwrap_or_else(|| unimplemented!("cannot format Goal without setting Program in tls"))
     }
 }
 
 impl<I: Interner> Debug for Goals<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goals(self, fmt).unwrap_or_else(|| unimplemented!())
+        I::debug_goals(self, fmt)
+            .unwrap_or_else(|| unimplemented!("cannot format Goals without setting Program in tls"))
     }
 }
 
 impl<I: Interner> Debug for ProgramClauseImplication<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_program_clause_implication(self, fmt).unwrap_or_else(|| unimplemented!())
+        I::debug_program_clause_implication(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format ProgramClauseImplication without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Debug for ApplicationTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_application_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format ApplicationTy without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_separator_trait_ref(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format Substitution without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Debug for AliasTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_alias(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format AliasTy without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Display for Substitution<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_substitution(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format Substitution without setting Program in tls")
+        })
     }
 }
 
@@ -135,13 +176,6 @@ impl Debug for PlaceholderIndex {
     }
 }
 
-impl<I: Interner> Debug for ApplicationTy<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let ApplicationTy { name, substitution } = self;
-        write!(fmt, "{:?}{:?}", name, substitution.with_angle())
-    }
-}
-
 impl<I: Interner> TraitRef<I> {
     /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`
     pub fn with_as(&self) -> impl std::fmt::Debug + '_ {
@@ -166,36 +200,9 @@ impl<I: Interner> Debug for TraitRef<I> {
     }
 }
 
-struct SeparatorTraitRef<'me, I: Interner> {
-    trait_ref: &'me TraitRef<I>,
-    separator: &'me str,
-}
-
-impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let parameters = self.trait_ref.substitution.parameters();
-        write!(
-            fmt,
-            "{:?}{}{:?}{:?}",
-            parameters[0],
-            self.separator,
-            self.trait_ref.trait_id,
-            Angle(&parameters[1..])
-        )
-    }
-}
-
-impl<I: Interner> Debug for AliasTy<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_alias(self, fmt).unwrap_or_else(|| {
-            write!(
-                fmt,
-                "({:?}){:?}",
-                self.associated_ty_id,
-                self.substitution.with_angle()
-            )
-        })
-    }
+pub struct SeparatorTraitRef<'me, I: Interner> {
+    pub trait_ref: &'me TraitRef<I>,
+    pub separator: &'me str,
 }
 
 pub struct Angle<'a, T>(pub &'a [T]);
@@ -374,35 +381,13 @@ impl<I: Interner> Display for ConstrainedSubst<I> {
 impl<I: Interner> Substitution<I> {
     /// Displays the substitution in the form `< P0, .. Pn >`, or (if
     /// the substitution is empty) as an empty string.
-    pub fn with_angle(&self) -> Angle<'_, Parameter<I>> {
-        Angle(self.parameters())
+    pub fn with_angle(&self, interner: &I) -> Angle<'_, Parameter<I>> {
+        Angle(self.parameters(interner))
     }
 }
 
 impl<I: Interner> Debug for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         Display::fmt(self, fmt)
-    }
-}
-
-impl<I: Interner> Display for Substitution<I> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        let mut first = true;
-
-        write!(f, "[")?;
-
-        for (index, value) in self.iter().enumerate() {
-            if first {
-                first = false;
-            } else {
-                write!(f, ", ")?;
-            }
-
-            write!(f, "?{} := {:?}", index, value)?;
-        }
-
-        write!(f, "]")?;
-
-        Ok(())
     }
 }

@@ -70,7 +70,7 @@ impl<I: Interner> FoldInputTypes for Parameter<I> {
 
 impl<I: Interner> FoldInputTypes for Substitution<I> {
     fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        self.parameters().fold(interner, accumulator)
+        self.parameters(interner).fold(interner, accumulator)
     }
 }
 

@@ -310,7 +310,9 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             return Ok(false);
         }
 
-        let answer_param = self.answer_subst.at(answer_depth - self.answer_binders);
+        let answer_param = self
+            .answer_subst
+            .at(interner, answer_depth - self.answer_binders);
 
         let pending_shifted = pending
             .shifted_out(interner, self.pending_binders)

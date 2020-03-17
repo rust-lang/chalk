@@ -1,4 +1,5 @@
 use crate::AliasTy;
+use crate::ApplicationTy;
 use crate::AssocTypeId;
 use crate::Goal;
 use crate::GoalData;
@@ -8,7 +9,9 @@ use crate::LifetimeData;
 use crate::Parameter;
 use crate::ParameterData;
 use crate::ProgramClauseImplication;
+use crate::SeparatorTraitRef;
 use crate::StructId;
+use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
 use crate::TyData;
@@ -199,6 +202,42 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result>;
 
+    /// Prints the debug representation of an ApplicationTy. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_application_ty(
+        application_ty: &ApplicationTy<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a Substitution. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_substitution(
+        substitution: &Substitution<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a SeparatorTraitRef. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_separator_trait_ref(
+        separator_trait_ref: &SeparatorTraitRef<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
+
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
     /// will ultimately call this method).
@@ -253,7 +292,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ) -> Result<Self::InternedSubstitution, E>;
 
     /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
-    fn substitution_data(substitution: &Self::InternedSubstitution) -> &[Parameter<Self>];
+    fn substitution_data<'a>(
+        &self,
+        substitution: &'a Self::InternedSubstitution,
+    ) -> &'a [Parameter<Self>];
 }
 
 pub trait TargetInterner<I: Interner>: Interner {
@@ -376,6 +418,29 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_program_clause_implication(pci, fmt)))
         }
 
+        fn debug_application_ty(
+            application_ty: &ApplicationTy<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_application_ty(application_ty, fmt)))
+        }
+
+        fn debug_substitution(
+            substitution: &Substitution<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_substitution(substitution, fmt)))
+        }
+
+        fn debug_separator_trait_ref(
+            separator_trait_ref: &SeparatorTraitRef<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| {
+                Some(prog?.debug_separator_trait_ref(separator_trait_ref, fmt))
+            })
+        }
+
         fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
             Arc::new(ty)
         }
@@ -432,7 +497,10 @@ mod default {
             data.into_iter().collect()
         }
 
-        fn substitution_data(substitution: &Vec<Parameter<ChalkIr>>) -> &[Parameter<ChalkIr>] {
+        fn substitution_data<'a>(
+            &self,
+            substitution: &'a Vec<Parameter<ChalkIr>>,
+        ) -> &'a [Parameter<ChalkIr>] {
             substitution
         }
     }

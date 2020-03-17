@@ -91,8 +91,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         binders.extend(rhs.binders.binders.clone());
 
         // Upshift the rhs variables in params to account for the joined binders
-        let lhs_params = params(lhs).iter().cloned();
-        let rhs_params = params(rhs)
+        let lhs_params = params(interner, lhs).iter().cloned();
+        let rhs_params = params(interner, rhs)
             .iter()
             .map(|param| param.shifted_in(interner, lhs_len));
 
@@ -174,8 +174,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let more_len = more_special.binders.len();
 
         // Create parameter equality goals.
-        let more_special_params = params(more_special).iter().cloned();
-        let less_special_params = params(less_special)
+        let more_special_params = params(interner, more_special).iter().cloned();
+        let less_special_params = params(interner, less_special)
             .iter()
             .map(|p| p.shifted_in(interner, more_len));
         let params_goals = more_special_params
@@ -228,6 +228,11 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     }
 }
 
-fn params<I: Interner>(impl_datum: &ImplDatum<I>) -> &[Parameter<I>] {
-    impl_datum.binders.value.trait_ref.substitution.parameters()
+fn params<'a, I: Interner>(interner: &I, impl_datum: &'a ImplDatum<I>) -> &'a [Parameter<I>] {
+    impl_datum
+        .binders
+        .value
+        .trait_ref
+        .substitution
+        .parameters(interner)
 }

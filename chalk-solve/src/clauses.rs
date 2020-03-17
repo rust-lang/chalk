@@ -150,9 +150,10 @@ fn program_clauses_that_could_match<I: Interner>(
             // as for the `Implemented(Foo) :- FromEnv(Foo)` rule.
             db.trait_datum(trait_id).to_program_clauses(builder);
 
-            for impl_id in
-                db.impls_for_trait(trait_ref.trait_id, trait_ref.substitution.parameters())
-            {
+            for impl_id in db.impls_for_trait(
+                trait_ref.trait_id,
+                trait_ref.substitution.parameters(interner),
+            ) {
                 db.impl_datum(impl_id).to_program_clauses(builder);
             }
 

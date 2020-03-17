@@ -316,7 +316,8 @@ impl<I: Interner> Zip<I> for Substitution<I> {
     where
         I: 'i,
     {
-        Zip::zip_with(zipper, a.parameters(), b.parameters())
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.parameters(interner), b.parameters(interner))
     }
 }
 
