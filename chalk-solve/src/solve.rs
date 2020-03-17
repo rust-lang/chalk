@@ -208,7 +208,7 @@ impl SolverChoice {
     pub fn recursive() -> Self {
         SolverChoice::Recursive {
             overflow_depth: 100,
-            caching_enabled: true,
+            caching_enabled: false,
         }
     }
 
