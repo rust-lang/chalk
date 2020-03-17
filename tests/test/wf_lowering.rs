@@ -481,6 +481,7 @@ fn higher_ranked_trait_bound_on_gat() {
 }
 
 // See `cyclic_traits`, this is essentially the same but with higher-ranked co-inductive WF goals.
+#[ignore]
 #[test]
 fn higher_ranked_cyclic_requirements() {
     lowering_success! {
@@ -562,6 +563,7 @@ fn higher_ranked_inline_bound_on_gat() {
     }
 }
 
+#[ignore]
 #[test]
 fn assoc_type_recursive_bound() {
     lowering_error! {
