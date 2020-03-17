@@ -1,5 +1,5 @@
 use crate::interner::ChalkIr;
-use crate::{AliasTy, AssocTypeId, Lifetime, Parameter, StructId, TraitId, Ty};
+use crate::{AliasTy, AssocTypeId, Goal, Lifetime, Parameter, StructId, TraitId, Ty};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -44,6 +44,12 @@ pub trait DebugContext {
     fn debug_parameter(
         &self,
         parameter: &Parameter<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_goal(
+        &self,
+        goal: &Goal<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }

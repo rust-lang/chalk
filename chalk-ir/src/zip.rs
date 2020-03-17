@@ -327,7 +327,8 @@ impl<I: Interner> Zip<I> for Goal<I> {
     where
         I: 'i,
     {
-        Zip::zip_with(zipper, a.data(), b.data())
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.data(interner), b.data(interner))
     }
 }
 

@@ -255,7 +255,7 @@ impl<C: Context> Forest<C> {
         goal: C::Goal,
     ) {
         let table_ref = &mut self.tables[table];
-        match C::into_hh_goal(goal) {
+        match context.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
                     Ok(clauses) => {

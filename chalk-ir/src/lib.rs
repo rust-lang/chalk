@@ -1083,8 +1083,8 @@ impl<I: Interner> Goal<I> {
         Self { interned }
     }
 
-    pub fn data(&self) -> &GoalData<I> {
-        I::goal_data(&self.interned)
+    pub fn data(&self, interner: &I) -> &GoalData<I> {
+        interner.goal_data(&self.interned)
     }
 
     pub fn quantify(
@@ -1138,8 +1138,8 @@ impl<I: Interner> Goal<I> {
 
     /// True if this goal is "trivially true" -- i.e., no work is
     /// required to prove it.
-    pub fn is_trivially_true(&self) -> bool {
-        match self.data() {
+    pub fn is_trivially_true(&self, interner: &I) -> bool {
+        match self.data(interner) {
             GoalData::All(goals) => goals.is_empty(),
             _ => false,
         }

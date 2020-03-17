@@ -138,23 +138,6 @@ impl<I: Interner> context::Context for SlgContext<I> {
         &goal.goal
     }
 
-    fn into_hh_goal(goal: Goal<I>) -> HhGoal<SlgContext<I>> {
-        match goal.data().clone() {
-            GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
-                HhGoal::ForAll(binders_goal)
-            }
-            GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
-                HhGoal::Exists(binders_goal)
-            }
-            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
-            GoalData::All(goals) => HhGoal::All(goals.iter().cloned().collect()),
-            GoalData::Not(g1) => HhGoal::Not(g1),
-            GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
-            GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),
-            GoalData::CannotProve(()) => HhGoal::CannotProve,
-        }
-    }
-
     // Used by: simplify
     fn add_clauses(env: &Environment<I>, clauses: Vec<ProgramClause<I>>) -> Environment<I> {
         Environment::add_clauses(env, clauses)
@@ -336,6 +319,24 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
     ) -> bool {
         let interner = self.interner();
         u_canon.is_trivial_substitution(interner, canonical_subst)
+    }
+
+    fn into_hh_goal(&self, goal: Goal<I>) -> HhGoal<SlgContext<I>> {
+        let interner = self.interner();
+        match goal.data(interner).clone() {
+            GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
+                HhGoal::ForAll(binders_goal)
+            }
+            GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
+                HhGoal::Exists(binders_goal)
+            }
+            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
+            GoalData::All(goals) => HhGoal::All(goals.iter().cloned().collect()),
+            GoalData::Not(g1) => HhGoal::Not(g1),
+            GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
+            GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),
+            GoalData::CannotProve(()) => HhGoal::CannotProve,
+        }
     }
 }
 

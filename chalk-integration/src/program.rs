@@ -4,8 +4,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ParameterKind, ProgramClause, StructId,
-    TraitId, Ty, TyData, TypeName,
+    AliasTy, AssocTypeId, Goal, GoalData, ImplId, Lifetime, Parameter, ParameterKind,
+    ProgramClause, StructId, TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -145,6 +145,35 @@ impl tls::DebugContext for Program {
         match parameter.data(interner) {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
+        }
+    }
+
+    fn debug_goal(
+        &self,
+        goal: &Goal<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        match goal.data(interner) {
+            GoalData::Quantified(qkind, ref subgoal) => {
+                write!(fmt, "{:?}<", qkind)?;
+                for (index, binder) in subgoal.binders.iter().enumerate() {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    match *binder {
+                        ParameterKind::Ty(()) => write!(fmt, "type")?,
+                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                    }
+                }
+                write!(fmt, "> {{ {:?} }}", subgoal.value)
+            }
+            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
+            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
+            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }
 }

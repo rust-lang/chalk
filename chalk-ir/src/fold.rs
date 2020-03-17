@@ -413,8 +413,12 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
         I: 'i,
         TI: 'i,
     {
-        let interner = folder.target_interner();
-        Ok(Goal::new(interner, self.data().fold_with(folder, binders)?))
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+        Ok(Goal::new(
+            target_interner,
+            self.data(interner).fold_with(folder, binders)?,
+        ))
     }
 }
 

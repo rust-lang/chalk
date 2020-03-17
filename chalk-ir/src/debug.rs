@@ -33,10 +33,15 @@ impl<I: Interner> Debug for Lifetime<I> {
     }
 }
 
-#[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_parameter(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
+impl<I: Interner> Debug for Goal<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_goal(self, fmt).unwrap_or_else(|| unimplemented!())
     }
 }
 
@@ -261,32 +266,6 @@ impl<I: Interner> Debug for DomainGoal<I> {
 impl<I: Interner> Debug for EqGoal<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "({:?} = {:?})", self.a, self.b)
-    }
-}
-
-impl<I: Interner> Debug for Goal<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self.data() {
-            GoalData::Quantified(qkind, ref subgoal) => {
-                write!(fmt, "{:?}<", qkind)?;
-                for (index, binder) in subgoal.binders.iter().enumerate() {
-                    if index > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    match *binder {
-                        ParameterKind::Ty(()) => write!(fmt, "type")?,
-                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                    }
-                }
-                write!(fmt, "> {{ {:?} }}", subgoal.value)
-            }
-            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
-            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
-            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
-        }
     }
 }
 
