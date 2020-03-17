@@ -200,6 +200,18 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
     let program = db.checked_program().unwrap();
 
     for (goal_text, solver_choice, expected) in goals {
+        match (&solver_choice, &expected) {
+            (SolverChoice::Recursive { .. }, TestGoal::All(_))
+            | (SolverChoice::Recursive { .. }, TestGoal::First(_)) => {
+                println!(
+                    "skipping goal {} for recursive solver because it requires solve_multiple",
+                    goal_text
+                );
+                continue;
+            }
+            _ => {}
+        };
+
         if db.solver_choice() != solver_choice {
             db.set_solver_choice(solver_choice);
         }

@@ -245,6 +245,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let env_solution = {
                         debug_heading!("env_clauses");
 
+                        // TODO use code from clauses module
                         let env_clauses = environment
                             .clauses
                             .iter()
@@ -257,7 +258,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let prog_solution = {
                         debug_heading!("prog_clauses");
 
-                        // TODO I think this includes clauses from env
+                        // TODO this also includes clauses from env
                         let prog_clauses =
                             program_clauses_for_goal(self.program, environment, &goal);
                         self.solve_from_clauses(&canonical_goal, prog_clauses, minimums)
@@ -349,11 +350,36 @@ impl<'me, I: Interner> Solver<'me, I> {
         C: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut cur_solution = None;
+        fn combine_with_priorities<I: Interner>(
+            a: Solution<I>,
+            prio_a: ClausePriority,
+            b: Solution<I>,
+            prio_b: ClausePriority,
+        ) -> (Solution<I>, ClausePriority) {
+            match (prio_a, prio_b) {
+                (ClausePriority::High, ClausePriority::Low) => {
+                    debug!(
+                        "preferring solution: {:?} over {:?} because of higher prio",
+                        a, b
+                    );
+                    (a, ClausePriority::High)
+                }
+                (ClausePriority::Low, ClausePriority::High) => {
+                    debug!(
+                        "preferring solution: {:?} over {:?} because of higher prio",
+                        b, a
+                    );
+                    (b, ClausePriority::High)
+                }
+                _ => (a.combine(b), prio_a),
+            }
+        }
         for program_clause in clauses {
             debug_heading!("clause={:?}", program_clause);
 
             match program_clause {
                 ProgramClause::Implies(implication) => {
+                    let priority = implication.priority;
                     let res = self.solve_via_implication(
                         canonical_goal,
                         Binders {
@@ -363,22 +389,27 @@ impl<'me, I: Interner> Solver<'me, I> {
                         minimums,
                     );
                     if let Ok(solution) = res {
-                        debug!("ok: solution={:?}", solution);
+                        debug!("ok: solution={:?} prio={:?}", solution, priority);
                         cur_solution = Some(match cur_solution {
-                            None => solution,
-                            Some(cur) => solution.combine(cur),
+                            None => (solution, priority),
+                            Some((cur, cur_priority)) => {
+                                combine_with_priorities(cur, cur_priority, solution, priority)
+                            }
                         });
                     } else {
                         debug!("error");
                     }
                 }
                 ProgramClause::ForAll(implication) => {
+                    let priority = implication.value.priority;
                     let res = self.solve_via_implication(canonical_goal, implication, minimums);
                     if let Ok(solution) = res {
-                        debug!("ok: solution={:?}", solution);
+                        debug!("ok: solution={:?} prio={:?}", solution, priority);
                         cur_solution = Some(match cur_solution {
-                            None => solution,
-                            Some(cur) => solution.combine(cur),
+                            None => (solution, priority),
+                            Some((cur, cur_priority)) => {
+                                combine_with_priorities(cur, cur_priority, solution, priority)
+                            }
                         });
                     } else {
                         debug!("error");
@@ -386,7 +417,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
         }
-        cur_solution.ok_or(NoSolution)
+        cur_solution.map(|(s, _)| s).ok_or(NoSolution)
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.
@@ -407,7 +438,10 @@ impl<'me, I: Interner> Solver<'me, I> {
         let ProgramClauseImplication {
             consequence,
             conditions,
+            priority: _,
         } = fulfill.instantiate_binders_existentially(&clause);
+
+        debug!("the subst is {:?}", subst);
 
         fulfill.unify(&goal.environment, &goal.goal, &consequence)?;
 

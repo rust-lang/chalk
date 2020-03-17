@@ -76,6 +76,8 @@ impl<I: Interner> Solution<I> {
             return self;
         }
 
+        debug!("combine {} with {}", self, other);
+
         // Otherwise, always downgrade to Ambig:
 
         let guidance = match (self.into_guidance(), other.into_guidance()) {
@@ -104,6 +106,8 @@ impl<I: Interner> Solution<I> {
         if self == other {
             return self;
         }
+
+        debug!("favor_over {} with {}", self, other);
 
         // Otherwise, always downgrade to Ambig:
 

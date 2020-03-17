@@ -1,8 +1,8 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::{
-    self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, QuantifiedWhereClauses, StructId,
-    Substitution, TraitId,
+    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, QuantifiedWhereClauses,
+    StructId, Substitution, TraitId,
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
@@ -1193,6 +1193,7 @@ impl LowerClause for Clause {
                 .map(|consequence| chalk_ir::ProgramClauseImplication {
                     consequence,
                     conditions: conditions.clone(),
+                    priority: ClausePriority::High,
                 })
                 .collect::<Vec<_>>();
             Ok(implications)

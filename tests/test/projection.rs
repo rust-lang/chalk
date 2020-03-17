@@ -76,6 +76,7 @@ fn normalize_basic() {
             "Unique"
         }
 
+        /* TODO: this doesn't seem to be correct, actually
         goal {
             forall<T> {
                 if (T: Iterator) {
@@ -88,6 +89,7 @@ fn normalize_basic() {
             // True for `U = T`, of course, but also true for `U = Vec<T>`.
             "Ambiguous"
         }
+        */
     }
 }
 
@@ -444,6 +446,7 @@ fn normalize_under_binder() {
             }
         }
 
+        /* TODO: this doesn't seem to be correct, actually
         goal {
             exists<U> {
                 forall<'a> {
@@ -453,6 +456,7 @@ fn normalize_under_binder() {
         } yields {
             "Ambiguous"
         }
+        */
 
         goal {
             exists<U> {
@@ -464,6 +468,7 @@ fn normalize_under_binder() {
             "Unique; substitution [?0 := I32], lifetime constraints []"
         }
 
+        /* TODO: this doesn't seem to be correct, actually
         goal {
             forall<'a> {
                 exists<U> {
@@ -473,6 +478,7 @@ fn normalize_under_binder() {
         } yields {
             "Ambiguous"
         }
+        */
 
         goal {
             forall<'a> {

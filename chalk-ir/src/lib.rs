@@ -1304,6 +1304,13 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 pub struct ProgramClauseImplication<I: Interner> {
     pub consequence: DomainGoal<I>,
     pub conditions: Goals<I>,
+    pub priority: ClausePriority,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ClausePriority {
+    High,
+    Low,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
@@ -1318,6 +1325,7 @@ impl<I: Interner> ProgramClauseImplication<I> {
             ProgramClauseImplication {
                 consequence: self.consequence.into_from_env_goal(interner),
                 conditions: self.conditions.clone(),
+                priority: self.priority,
             }
         } else {
             self
