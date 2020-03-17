@@ -353,25 +353,28 @@ impl<'me, I: Interner> Solver<'me, I> {
         fn combine_with_priorities<I: Interner>(
             a: Solution<I>,
             prio_a: ClausePriority,
+            inputs_a: Vec<Parameter<I>>,
             b: Solution<I>,
             prio_b: ClausePriority,
-        ) -> (Solution<I>, ClausePriority) {
+            inputs_b: Vec<Parameter<I>>,
+        ) -> (Solution<I>, ClausePriority, Vec<Parameter<I>>) {
             match (prio_a, prio_b) {
-                (ClausePriority::High, ClausePriority::Low) => {
+                // TODO compare the *input* parts of the solutions
+                (ClausePriority::High, ClausePriority::Low) if inputs_a == inputs_b => {
                     debug!(
                         "preferring solution: {:?} over {:?} because of higher prio",
                         a, b
                     );
-                    (a, ClausePriority::High)
+                    (a, ClausePriority::High, inputs_a)
                 }
-                (ClausePriority::Low, ClausePriority::High) => {
+                (ClausePriority::Low, ClausePriority::High) if inputs_a == inputs_b => {
                     debug!(
                         "preferring solution: {:?} over {:?} because of higher prio",
                         b, a
                     );
-                    (b, ClausePriority::High)
+                    (b, ClausePriority::High, inputs_b)
                 }
-                _ => (a.combine(b), prio_a),
+                _ => (a.combine(b), prio_a, inputs_a),
             }
         }
         for program_clause in clauses {
@@ -390,11 +393,30 @@ impl<'me, I: Interner> Solver<'me, I> {
                     );
                     if let Ok(solution) = res {
                         debug!("ok: solution={:?} prio={:?}", solution, priority);
+                        let inputs = if let Some(subst) = solution.constrained_subst() {
+                            let subst_goal = subst.value.subst.apply(
+                                &canonical_goal.canonical.value.goal,
+                                self.program.interner(),
+                            );
+                            debug!("subst_goal = {:?}", subst_goal);
+                            subst_goal.inputs(self.program.interner())
+                        } else {
+                            canonical_goal
+                                .canonical
+                                .value
+                                .goal
+                                .inputs(self.program.interner())
+                        };
                         cur_solution = Some(match cur_solution {
-                            None => (solution, priority),
-                            Some((cur, cur_priority)) => {
-                                combine_with_priorities(cur, cur_priority, solution, priority)
-                            }
+                            None => (solution, priority, inputs),
+                            Some((cur, cur_priority, cur_inputs)) => combine_with_priorities(
+                                cur,
+                                cur_priority,
+                                cur_inputs,
+                                solution,
+                                priority,
+                                inputs,
+                            ),
                         });
                     } else {
                         debug!("error");
@@ -405,11 +427,30 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let res = self.solve_via_implication(canonical_goal, implication, minimums);
                     if let Ok(solution) = res {
                         debug!("ok: solution={:?} prio={:?}", solution, priority);
+                        let inputs = if let Some(subst) = solution.constrained_subst() {
+                            let subst_goal = subst.value.subst.apply(
+                                &canonical_goal.canonical.value.goal,
+                                self.program.interner(),
+                            );
+                            debug!("subst_goal = {:?}", subst_goal);
+                            subst_goal.inputs(self.program.interner())
+                        } else {
+                            canonical_goal
+                                .canonical
+                                .value
+                                .goal
+                                .inputs(self.program.interner())
+                        };
                         cur_solution = Some(match cur_solution {
-                            None => (solution, priority),
-                            Some((cur, cur_priority)) => {
-                                combine_with_priorities(cur, cur_priority, solution, priority)
-                            }
+                            None => (solution, priority, inputs),
+                            Some((cur, cur_priority, cur_inputs)) => combine_with_priorities(
+                                cur,
+                                cur_priority,
+                                cur_inputs,
+                                solution,
+                                priority,
+                                inputs,
+                            ),
                         });
                     } else {
                         debug!("error");
@@ -417,7 +458,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
         }
-        cur_solution.map(|(s, _)| s).ok_or(NoSolution)
+        cur_solution.map(|(s, _, _)| s).ok_or(NoSolution)
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.
