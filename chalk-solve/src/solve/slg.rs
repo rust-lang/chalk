@@ -114,13 +114,6 @@ impl<I: Interner> context::Context for SlgContext<I> {
         &u_canon.canonical
     }
 
-    fn is_trivial_substitution(
-        u_canon: &UCanonical<InEnvironment<Goal<I>>>,
-        canonical_subst: &Canonical<AnswerSubst<I>>,
-    ) -> bool {
-        u_canon.is_trivial_substitution(canonical_subst)
-    }
-
     fn has_delayed_subgoals(canonical_subst: &Canonical<AnswerSubst<I>>) -> bool {
         !canonical_subst.value.delayed_subgoals.is_empty()
     }
@@ -208,13 +201,14 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         infer: &mut TruncatingInferenceTable<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
         // Look for floundering goals:
+        let interner = self.interner();
         match goal {
             // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
                 let trait_datum = self.program.trait_datum(trait_ref.trait_id);
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                     let self_ty = trait_ref.self_type_parameter();
-                    if let Some(v) = self_ty.inference_var() {
+                    if let Some(v) = self_ty.inference_var(interner) {
                         if !infer.infer.var_is_bound(v) {
                             return Err(Floundered);
                         }
@@ -226,7 +220,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
             | DomainGoal::IsUpstream(ty)
             | DomainGoal::DownstreamType(ty)
             | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty.data() {
+            | DomainGoal::IsLocal(ty) => match ty.data(interner) {
                 TyData::InferenceVar(_) => return Err(Floundered),
                 _ => {}
             },
@@ -240,7 +234,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
             environment
                 .clauses
                 .iter()
-                .filter(|&env_clause| env_clause.could_match(goal))
+                .filter(|&env_clause| env_clause.could_match(interner, goal))
                 .cloned(),
         );
 
@@ -333,6 +327,15 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
 
     fn into_goal(&self, domain_goal: DomainGoal<I>) -> Goal<I> {
         domain_goal.cast(self.program.interner())
+    }
+
+    fn is_trivial_substitution(
+        &self,
+        u_canon: &UCanonical<InEnvironment<Goal<I>>>,
+        canonical_subst: &Canonical<AnswerSubst<I>>,
+    ) -> bool {
+        let interner = self.interner();
+        u_canon.is_trivial_substitution(interner, canonical_subst)
     }
 }
 
@@ -491,26 +494,24 @@ fn into_ex_clause<I: Interner>(
 }
 
 trait SubstitutionExt<I: Interner> {
-    fn may_invalidate(&self, subst: &Canonical<Substitution<I>>) -> bool;
+    fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool;
 }
 
 impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
-    fn may_invalidate(&self, subst: &Canonical<Substitution<I>>) -> bool {
+    fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
         self.iter()
             .zip(subst.value.iter())
-            .any(|(new, current)| MayInvalidate.aggregate_parameters(new, current))
+            .any(|(new, current)| MayInvalidate { interner }.aggregate_parameters(new, current))
     }
 }
 
 // This is a struct in case we need to add state at any point like in AntiUnifier
-struct MayInvalidate;
+struct MayInvalidate<'i, I> {
+    interner: &'i I,
+}
 
-impl MayInvalidate {
-    fn aggregate_parameters<I: Interner>(
-        &mut self,
-        new: &Parameter<I>,
-        current: &Parameter<I>,
-    ) -> bool {
+impl<I: Interner> MayInvalidate<'_, I> {
+    fn aggregate_parameters(&mut self, new: &Parameter<I>, current: &Parameter<I>) -> bool {
         match (new.data(), current.data()) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
@@ -524,8 +525,9 @@ impl MayInvalidate {
     }
 
     // Returns true if the two types could be unequal.
-    fn aggregate_tys<I: Interner>(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
-        match (new.data(), current.data()) {
+    fn aggregate_tys(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
+        let interner = self.interner;
+        match (new.data(interner), current.data(interner)) {
             (_, TyData::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,
@@ -580,11 +582,11 @@ impl MayInvalidate {
         }
     }
 
-    fn aggregate_lifetimes<I: Interner>(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
+    fn aggregate_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
         true
     }
 
-    fn aggregate_application_tys<I: Interner>(
+    fn aggregate_application_tys(
         &mut self,
         new: &ApplicationTy<I>,
         current: &ApplicationTy<I>,
@@ -614,7 +616,7 @@ impl MayInvalidate {
         new != current
     }
 
-    fn aggregate_alias_tys<I: Interner>(&mut self, new: &AliasTy<I>, current: &AliasTy<I>) -> bool {
+    fn aggregate_alias_tys(&mut self, new: &AliasTy<I>, current: &AliasTy<I>) -> bool {
         let AliasTy {
             associated_ty_id: new_name,
             substitution: new_substitution,
@@ -632,7 +634,7 @@ impl MayInvalidate {
         )
     }
 
-    fn aggregate_name_and_substs<N, I>(
+    fn aggregate_name_and_substs<N>(
         &mut self,
         new_name: N,
         new_substitution: &Substitution<I>,
@@ -641,7 +643,6 @@ impl MayInvalidate {
     ) -> bool
     where
         N: Copy + Eq + Debug,
-        I: Interner,
     {
         if new_name != current_name {
             return true;

@@ -3,23 +3,26 @@ use crate::zip::{Zip, Zipper};
 use crate::*;
 
 /// A fast check to see whether two things could ever possibly match.
-pub trait CouldMatch<T: ?Sized> {
-    fn could_match(&self, other: &T) -> bool;
+pub trait CouldMatch<T: ?Sized + HasInterner> {
+    fn could_match(&self, interner: &T::Interner, other: &T) -> bool;
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl<T, I> CouldMatch<T> for T
 where
     T: Zip<I> + ?Sized + HasInterner<Interner = I>,
     I: Interner,
 {
-    fn could_match(&self, other: &T) -> bool {
-        return Zip::zip_with(&mut MatchZipper, self, other).is_ok();
+    fn could_match(&self, interner: &I, other: &T) -> bool {
+        return Zip::zip_with(&mut MatchZipper { interner }, self, other).is_ok();
 
-        struct MatchZipper;
+        struct MatchZipper<'i, I> {
+            interner: &'i I,
+        };
 
-        impl<I: Interner> Zipper<I> for MatchZipper {
+        impl<I: Interner> Zipper<I> for MatchZipper<'_, I> {
             fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
-                let could_match = match (a.data(), b.data()) {
+                let could_match = match (a.data(self.interner), b.data(self.interner)) {
                     (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
 
@@ -27,7 +30,7 @@ where
                             && a.substitution
                                 .iter()
                                 .zip(&b.substitution)
-                                .all(|(p_a, p_b)| p_a.could_match(&p_b))
+                                .all(|(p_a, p_b)| p_a.could_match(self.interner, &p_b))
                     }
 
                     _ => true,
@@ -55,11 +58,13 @@ where
 }
 
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClause<I> {
-    fn could_match(&self, other: &DomainGoal<I>) -> bool {
+    fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
         match self {
-            ProgramClause::Implies(implication) => implication.consequence.could_match(other),
+            ProgramClause::Implies(implication) => {
+                implication.consequence.could_match(interner, other)
+            }
 
-            ProgramClause::ForAll(clause) => clause.value.consequence.could_match(other),
+            ProgramClause::ForAll(clause) => clause.value.consequence.could_match(interner, other),
         }
     }
 }

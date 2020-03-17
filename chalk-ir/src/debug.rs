@@ -21,6 +21,12 @@ impl<I: Interner> Debug for AssocTypeId<I> {
     }
 }
 
+impl<I: Interner> Debug for Ty<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_ty(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
 impl Display for UniverseIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
@@ -40,11 +46,6 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
-    }
-}
-impl<I: Interner> Debug for Ty<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "{:?}", self.data())
     }
 }
 

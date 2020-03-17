@@ -50,7 +50,8 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
     }
 
     fn visit_ty(&mut self, ty: &Ty<I>) {
-        match ty.data() {
+        let interner = self.db.interner();
+        match ty.data(interner) {
             TyData::Apply(application_ty) => {
                 match_type_name(&mut self.builder, application_ty.name)
             }

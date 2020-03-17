@@ -354,6 +354,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
 impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
     fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
+        let interner = self.interner;
         if let Some(pending) = self.table.normalize_shallow(self.interner, pending) {
             return Zip::zip_with(self, answer, &pending);
         }
@@ -362,7 +363,7 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
-        if let TyData::BoundVar(answer_depth) = answer.data() {
+        if let TyData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
                 self.interner,
                 *answer_depth,
@@ -374,7 +375,7 @@ impl<I: Interner> Zipper<I> for AnswerSubstitutor<'_, I> {
 
         // Otherwise, the answer and the selected subgoal ought to be a perfect match for
         // one another.
-        match (answer.data(), pending.data()) {
+        match (answer.data(interner), pending.data(interner)) {
             (TyData::BoundVar(answer_depth), TyData::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }

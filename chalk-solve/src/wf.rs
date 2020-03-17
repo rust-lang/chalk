@@ -76,7 +76,7 @@ impl<I: Interner> FoldInputTypes for Substitution<I> {
 
 impl<I: Interner> FoldInputTypes for Ty<I> {
     fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        match self.data() {
+        match self.data(interner) {
             TyData::Apply(app) => {
                 accumulator.push(self.clone());
                 app.substitution.fold(interner, accumulator);

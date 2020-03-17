@@ -4,7 +4,7 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, TyData, TypeName,
+    AliasTy, AssocTypeId, ImplId, Parameter, ProgramClause, StructId, TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -120,6 +120,11 @@ impl tls::DebugContext for Program {
             Angle(&other_params)
         )
     }
+
+    fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", ty.data(interner))
+    }
 }
 
 impl RustIrDatabase<ChalkIr> for Program {
@@ -162,6 +167,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         trait_id: TraitId<ChalkIr>,
         parameters: &[Parameter<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
+        let interner = self.interner();
         self.impl_data
             .iter()
             .filter(|(_, impl_datum)| {
@@ -170,6 +176,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                     assert_eq!(trait_ref.substitution.len(), parameters.len());
                     <[_] as CouldMatch<[_]>>::could_match(
                         &parameters,
+                        interner,
                         &trait_ref.substitution.parameters(),
                     )
                 }
@@ -193,12 +200,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         auto_trait_id: TraitId<ChalkIr>,
         struct_id: StructId<ChalkIr>,
     ) -> bool {
+        let interner = self.interner();
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.
         self.impl_data.values().any(|impl_datum| {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
-                && match impl_trait_ref.self_type_parameter().data() {
+                && match impl_trait_ref.self_type_parameter().data(interner) {
                     TyData::Apply(apply) => match apply.name {
                         TypeName::Struct(id) => id == struct_id,
                         _ => false,

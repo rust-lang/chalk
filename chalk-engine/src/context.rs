@@ -144,11 +144,6 @@ pub trait Context: Clone + Debug {
 
     fn canonical(u_canon: &Self::UCanonicalGoalInEnvironment) -> &Self::CanonicalGoalInEnvironment;
 
-    fn is_trivial_substitution(
-        u_canon: &Self::UCanonicalGoalInEnvironment,
-        canonical_subst: &Self::CanonicalAnswerSubst,
-    ) -> bool;
-
     fn has_delayed_subgoals(canonical_subst: &Self::CanonicalAnswerSubst) -> bool;
 
     fn num_universes(_: &Self::UCanonicalGoalInEnvironment) -> usize;
@@ -265,6 +260,12 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
 
     /// Upcast this domain goal into a more general goal.
     fn into_goal(&self, domain_goal: C::DomainGoal) -> C::Goal;
+
+    fn is_trivial_substitution(
+        &self,
+        u_canon: &C::UCanonicalGoalInEnvironment,
+        canonical_subst: &C::CanonicalAnswerSubst,
+    ) -> bool;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
