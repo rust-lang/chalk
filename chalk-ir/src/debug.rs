@@ -45,6 +45,18 @@ impl<I: Interner> Debug for Goal<I> {
     }
 }
 
+impl<I: Interner> Debug for Goals<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_goals(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
+impl<I: Interner> Debug for ProgramClauseImplication<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_program_clause_implication(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
 impl Display for UniverseIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
@@ -269,20 +281,6 @@ impl<I: Interner> Debug for EqGoal<I> {
     }
 }
 
-impl<I: Interner> Debug for Goals<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "(")?;
-        for (goal, index) in self.iter().zip(0..) {
-            if index > 0 {
-                write!(fmt, ", ")?;
-            }
-            write!(fmt, "{:?}", goal)?;
-        }
-        write!(fmt, ")")?;
-        Ok(())
-    }
-}
-
 impl<T: Debug> Debug for Binders<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let Binders {
@@ -312,25 +310,6 @@ impl<I: Interner> Debug for ProgramClause<I> {
             ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
             ProgramClause::ForAll(pc) => write!(fmt, "{:?}", pc),
         }
-    }
-}
-
-impl<I: Interner> Debug for ProgramClauseImplication<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "{:?}", self.consequence)?;
-
-        let conditions = self.conditions.as_slice();
-
-        let conds = conditions.len();
-        if conds == 0 {
-            return Ok(());
-        }
-
-        write!(fmt, " :- ")?;
-        for cond in &conditions[..conds - 1] {
-            write!(fmt, "{:?}, ", cond)?;
-        }
-        write!(fmt, "{:?}", conditions[conds - 1])
     }
 }
 

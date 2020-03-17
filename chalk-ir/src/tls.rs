@@ -1,5 +1,8 @@
 use crate::interner::ChalkIr;
-use crate::{AliasTy, AssocTypeId, Goal, Lifetime, Parameter, StructId, TraitId, Ty};
+use crate::{
+    AliasTy, AssocTypeId, Goal, Goals, Lifetime, Parameter, ProgramClauseImplication, StructId,
+    TraitId, Ty,
+};
 use std::cell::RefCell;
 use std::fmt;
 use std::sync::Arc;
@@ -50,6 +53,18 @@ pub trait DebugContext {
     fn debug_goal(
         &self,
         goal: &Goal<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_goals(
+        &self,
+        goals: &Goals<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_program_clause_implication(
+        &self,
+        pci: &ProgramClauseImplication<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }

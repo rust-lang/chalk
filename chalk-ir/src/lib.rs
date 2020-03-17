@@ -968,7 +968,7 @@ impl<I: Interner> ProgramClause<I> {
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
         match self {
             ProgramClause::Implies(implication) => {
-                if implication.conditions.is_empty() {
+                if implication.conditions.is_empty(interner) {
                     ProgramClause::Implies(ProgramClauseImplication {
                         consequence: implication.consequence.into_from_env_goal(interner),
                         conditions: Goals::new(interner),
@@ -1054,20 +1054,20 @@ impl<I: Interner> Goals<I> {
         Ok(Goals::from(interner, goals))
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Goal<I>> {
-        self.as_slice().iter()
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Goal<I>> {
+        self.as_slice(interner).iter()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.as_slice().is_empty()
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
     }
 
-    pub fn len(&self) -> usize {
-        self.as_slice().len()
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
     }
 
-    pub fn as_slice(&self) -> &[Goal<I>] {
-        I::goals_data(&self.goals)
+    pub fn as_slice(&self, interner: &I) -> &[Goal<I>] {
+        interner.goals_data(&self.goals)
     }
 }
 
@@ -1140,7 +1140,7 @@ impl<I: Interner> Goal<I> {
     /// required to prove it.
     pub fn is_trivially_true(&self, interner: &I) -> bool {
         match self.data(interner) {
-            GoalData::All(goals) => goals.is_empty(),
+            GoalData::All(goals) => goals.is_empty(interner),
             _ => false,
         }
     }

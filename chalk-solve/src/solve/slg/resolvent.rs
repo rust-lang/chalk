@@ -114,7 +114,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
         // Add the `conditions` from the program clause into the result too.
         ex_clause
             .subgoals
-            .extend(conditions.iter().map(|c| match c.data(interner) {
+            .extend(conditions.iter(interner).map(|c| match c.data(interner) {
                 GoalData::Not(c1) => {
                     Literal::Negative(InEnvironment::new(environment, Goal::clone(c1)))
                 }

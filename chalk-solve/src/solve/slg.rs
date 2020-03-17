@@ -331,7 +331,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
                 HhGoal::Exists(binders_goal)
             }
             GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
-            GoalData::All(goals) => HhGoal::All(goals.iter().cloned().collect()),
+            GoalData::All(goals) => HhGoal::All(goals.iter(interner).cloned().collect()),
             GoalData::Not(g1) => HhGoal::Not(g1),
             GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
             GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),

@@ -4,8 +4,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, Goal, GoalData, ImplId, Lifetime, Parameter, ParameterKind,
-    ProgramClause, StructId, TraitId, Ty, TyData, TypeName,
+    AliasTy, AssocTypeId, Goal, GoalData, Goals, ImplId, Lifetime, Parameter, ParameterKind,
+    ProgramClause, ProgramClauseImplication, StructId, TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -175,6 +175,45 @@ impl tls::DebugContext for Program {
             GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
+    }
+
+    fn debug_goals(
+        &self,
+        goals: &Goals<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "(")?;
+        for (goal, index) in goals.iter(interner).zip(0..) {
+            if index > 0 {
+                write!(fmt, ", ")?;
+            }
+            write!(fmt, "{:?}", goal)?;
+        }
+        write!(fmt, ")")?;
+        Ok(())
+    }
+
+    fn debug_program_clause_implication(
+        &self,
+        pci: &ProgramClauseImplication<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", pci.consequence)?;
+
+        let conditions = pci.conditions.as_slice(interner);
+
+        let conds = conditions.len();
+        if conds == 0 {
+            return Ok(());
+        }
+
+        write!(fmt, " :- ")?;
+        for cond in &conditions[..conds - 1] {
+            write!(fmt, "{:?}, ", cond)?;
+        }
+        write!(fmt, "{:?}", conditions[conds - 1])
     }
 }
 
