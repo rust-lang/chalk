@@ -14,7 +14,17 @@ mod bench;
 mod coherence;
 mod wf_lowering;
 
-fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
+fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str) {
+    // sort constraints, since the different solvers may output them in different order
+    match &mut result {
+        Some(Solution::Unique(solution)) => {
+            solution
+                .value
+                .constraints
+                .sort_by_key(|c| format!("{:?}", c));
+        }
+        _ => {}
+    }
     let result = match result {
         Some(v) => format!("{}", v),
         None => format!("No possible solution"),
@@ -231,7 +241,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
             match expected {
                 TestGoal::Aggregated(expected) => {
                     let result = db.solve(&peeled_goal);
-                    assert_result(&result, expected);
+                    assert_result(result, expected);
                 }
                 TestGoal::All(expected) => {
                     let mut expected = expected.into_iter();
