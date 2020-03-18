@@ -151,7 +151,7 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
-            debug!(
+            info!(
                 "solve_goal: cycle detected, previous solution {:?}",
                 previous_solution
             );
@@ -187,7 +187,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
 
-            debug!("solve_goal: solution = {:?}", result,);
+            info!("solve_goal: solution = {:?}", result,);
             result
         }
     }

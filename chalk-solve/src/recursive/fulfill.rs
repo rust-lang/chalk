@@ -1,4 +1,5 @@
 use super::*;
+use crate::solve::truncate;
 use cast::Caster;
 use chalk_engine::fallible::NoSolution;
 use fold::Fold;
@@ -191,11 +192,14 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.program.interner();
+        // truncate to avoid overflows
+        let truncated =
+            truncate::truncate(self.solver.program.interner(), &mut self.infer, 10, &wc);
         let Canonicalized {
             quantified,
             free_vars,
             ..
-        } = self.infer.canonicalize(interner, wc);
+        } = self.infer.canonicalize(interner, &truncated.value);
         let UCanonicalized {
             quantified,
             universes,

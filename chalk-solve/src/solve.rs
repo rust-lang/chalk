@@ -6,7 +6,7 @@ use chalk_ir::*;
 use std::fmt;
 
 mod slg;
-mod truncate;
+pub(crate) mod truncate;
 
 /// A (possible) solution for a proposed goal.
 #[derive(Clone, Debug, PartialEq, Eq)]
