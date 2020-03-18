@@ -207,6 +207,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
 
         let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
 
+        // TODO this is redundant, I think
         clauses.extend(
             environment
                 .clauses

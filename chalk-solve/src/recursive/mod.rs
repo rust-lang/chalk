@@ -7,7 +7,10 @@ mod stack;
 use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
-use chalk_engine::fallible::{Fallible, NoSolution};
+use chalk_engine::{
+    context::Floundered,
+    fallible::{Fallible, NoSolution},
+};
 use chalk_ir::could_match::CouldMatch;
 use clauses::program_clauses_for_goal;
 
@@ -258,10 +261,13 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let prog_solution = {
                         debug_heading!("prog_clauses");
 
-                        // TODO this also includes clauses from env
-                        let prog_clauses =
-                            program_clauses_for_goal(self.program, environment, &goal);
-                        self.solve_from_clauses(&canonical_goal, prog_clauses, minimums)
+                        let prog_clauses = self.program_clauses_for_goal(environment, &goal);
+                        prog_clauses.map_or(
+                            Ok(Solution::Ambig(Guidance::Unknown)),
+                            |prog_clauses| {
+                                self.solve_from_clauses(&canonical_goal, prog_clauses, minimums)
+                            },
+                        )
                     };
                     debug!("prog_solution={:?}", prog_solution);
 
@@ -272,6 +278,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     // inference. The idea is that the assumptions you've explicitly
                     // made in a given context are more likely to be relevant than
                     // general `impl`s.
+                    // TODO can we combine this logic with the priorization logic?
                     env_solution.merge_with(prog_solution, |env, prog| env.favor_over(prog))
                 }
 
@@ -493,6 +500,41 @@ impl<'me, I: Interner> Solver<'me, I> {
 
         // and then try to solve
         fulfill.solve(subst, minimums)
+    }
+
+    fn program_clauses_for_goal(
+        &self,
+        environment: &Environment<I>,
+        goal: &DomainGoal<I>,
+    ) -> Result<Vec<ProgramClause<I>>, Floundered> {
+        // TODO this is currently duplicated with the SLG solver, extract it somewhere?
+        // Look for floundering goals:
+        match goal {
+            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
+            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
+                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
+                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                    let self_ty = trait_ref.self_type_parameter();
+                    if let Some(_) = self_ty.bound() {
+                        return Err(Floundered);
+                    }
+                }
+            }
+
+            DomainGoal::WellFormed(WellFormed::Ty(ty))
+            | DomainGoal::IsUpstream(ty)
+            | DomainGoal::DownstreamType(ty)
+            | DomainGoal::IsFullyVisible(ty)
+            | DomainGoal::IsLocal(ty) => match ty.data() {
+                TyData::BoundVar(_) => return Err(Floundered),
+                _ => {}
+            },
+
+            _ => {}
+        }
+
+        // TODO this also includes clauses from env
+        Ok(program_clauses_for_goal(self.program, environment, goal))
     }
 }
 
