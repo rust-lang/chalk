@@ -146,7 +146,6 @@ fn multiple_ambiguous_cycles() {
     }
 }
 
-#[ignore]
 #[test]
 fn overflow() {
     test! {
