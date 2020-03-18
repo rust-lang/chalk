@@ -9,8 +9,8 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, ImplTraitId,
-    LifetimeData, Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId,
+    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
+    OpaqueTyId, Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId,
     Substitution, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
@@ -512,9 +512,9 @@ pub struct AssociatedTyValueBound<I: Interner> {
 /// opaque type T: A + B = HiddenTy;
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
-pub struct ImplTraitDatum<I: Interner> {
+pub struct OpaqueTyDatum<I: Interner> {
     /// The placeholder `!T` that corresponds to the opaque type `T`.
-    pub impl_trait_id: ImplTraitId<I>,
+    pub opaque_ty_id: OpaqueTyId<I>,
 
     /// Trait bounds for the opaque type.
     pub bounds: Vec<QuantifiedWhereClause<I>>,

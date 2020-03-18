@@ -4,12 +4,12 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId,
-    ImplTraitId, ImplTraitTy, Lifetime, Parameter, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
+    OpaqueTy, OpaqueTyId, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
+    ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplTraitDatum, ImplType,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, OpaqueTyDatum,
     StructDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
@@ -42,11 +42,11 @@ pub struct Program {
     pub associated_ty_values:
         BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
 
-    // From `impl Trait` name to item-id. Used during lowering only.
-    pub impl_trait_ids: BTreeMap<Identifier, ImplTraitId<ChalkIr>>,
+    // From opaque type name to item-id. Used during lowering only.
+    pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
 
-    /// For each `impl Trait` type:
-    pub impl_trait_data: BTreeMap<ImplTraitId<ChalkIr>, Arc<ImplTraitDatum<ChalkIr>>>,
+    /// For each opaque type:
+    pub opaque_ty_data: BTreeMap<OpaqueTyId<ChalkIr>, Arc<OpaqueTyDatum<ChalkIr>>>,
 
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
@@ -115,16 +115,16 @@ impl tls::DebugContext for Program {
         }
     }
 
-    fn debug_impl_trait_id(
+    fn debug_opaque_ty_id(
         &self,
-        impl_trait_id: ImplTraitId<ChalkIr>,
+        opaque_ty_id: OpaqueTyId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(d) = self.impl_trait_data.get(&impl_trait_id) {
+        if let Some(d) = self.opaque_ty_data.get(&opaque_ty_id) {
             write!(fmt, "{:?}", d.bounds)
         } else {
             fmt.debug_struct("InvalidItemId")
-                .field("index", &impl_trait_id.0)
+                .field("index", &opaque_ty_id.0)
                 .finish()
         }
     }
@@ -136,7 +136,7 @@ impl tls::DebugContext for Program {
     ) -> Result<(), fmt::Error> {
         match alias_ty {
             AliasTy::Projection(projection_ty) => self.debug_projection_ty(projection_ty, fmt),
-            AliasTy::ImplTrait(impl_trait_ty) => self.debug_impl_trait_ty(impl_trait_ty, fmt),
+            AliasTy::Opaque(opaque_ty) => self.debug_opaque_ty(opaque_ty, fmt),
         }
     }
 
@@ -157,12 +157,12 @@ impl tls::DebugContext for Program {
         )
     }
 
-    fn debug_impl_trait_ty(
+    fn debug_opaque_ty(
         &self,
-        impl_trait_ty: &ImplTraitTy<ChalkIr>,
+        opaque_ty: &OpaqueTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        write!(fmt, "impl {:?}", impl_trait_ty.impl_trait_id)
+        write!(fmt, "impl {:?}", opaque_ty.opaque_ty_id)
     }
 
     fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
@@ -294,8 +294,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.associated_ty_values[&id].clone()
     }
 
-    fn impl_trait_data(&self, id: ImplTraitId<ChalkIr>) -> Arc<ImplTraitDatum<ChalkIr>> {
-        self.impl_trait_data[&id].clone()
+    fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {
+        self.opaque_ty_data[&id].clone()
     }
 
     fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {

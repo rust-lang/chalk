@@ -114,8 +114,8 @@ pub enum TypeName<I: Interner> {
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(AssocTypeId<I>),
 
-    /// a placeholder for some type like `impl Trait`
-    ImplTrait(ImplTraitId<I>),
+    /// a placeholder for opaque types like `impl Trait`
+    OpaqueType(OpaqueTyId<I>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
@@ -180,7 +180,7 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ImplTraitId<I: Interner>(pub I::DefId);
+pub struct OpaqueTyId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
@@ -846,7 +846,7 @@ impl<I: Interner> ParameterData<I> {
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub enum AliasTy<I: Interner> {
     Projection(ProjectionTy<I>),
-    ImplTrait(ImplTraitTy<I>),
+    Opaque(OpaqueTy<I>),
 }
 
 impl<I: Interner> AliasTy<I> {
@@ -874,8 +874,8 @@ pub struct ProjectionTy<I: Interner> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct ImplTraitTy<I: Interner> {
-    pub impl_trait_id: ImplTraitId<I>,
+pub struct OpaqueTy<I: Interner> {
+    pub opaque_ty_id: OpaqueTyId<I>,
     pub substitution: Substitution<I>,
 }
 
@@ -1151,10 +1151,9 @@ impl<I: Interner> DomainGoal<I> {
 
     pub fn inputs(&self, interner: &I) -> Vec<Parameter<I>> {
         match self {
-            DomainGoal::Holds(WhereClause::ProjectionEq(proj_eq)) => vec![ParameterKind::Ty(
-                AliasTy::Projection(proj_eq.projection.clone()).intern(interner),
-            )
-            .intern(interner)],
+            DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
+                vec![ParameterKind::Ty(alias_eq.alias.clone().intern(interner)).intern(interner)]
+            }
             _ => Vec::new(),
         }
     }

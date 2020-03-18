@@ -4,10 +4,10 @@ use crate::AssocTypeId;
 use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
-use crate::ImplTraitId;
-use crate::ImplTraitTy;
 use crate::Lifetime;
 use crate::LifetimeData;
+use crate::OpaqueTy;
+use crate::OpaqueTyId;
 use crate::Parameter;
 use crate::ParameterData;
 use crate::ProgramClause;
@@ -173,15 +173,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an `impl trait`. To get good
+    /// Prints the debug representation of an opaque type. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific type-family (and hence
     /// fully known types).
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_impl_trait_id(
-        impl_trait_id: ImplTraitId<Self>,
+    fn debug_opaque_ty_id(
+        opaque_ty_id: OpaqueTyId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result>;
 
@@ -197,18 +197,6 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an ImplTraitTy. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
-    fn debug_impl_trait_ty(
-        impl_trait_ty: &ImplTraitTy<Self>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
-
     /// Prints the debug representation of a ProjectionTy. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
@@ -218,6 +206,18 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// if no info about current program is available from TLS).
     fn debug_projection_ty(
         projection_ty: &ProjectionTy<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of an OpaqueTy. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_opaque_ty(
+        opaque_ty: &OpaqueTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result>;
 
@@ -574,11 +574,11 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
         }
 
-        fn debug_impl_trait_id(
-            id: ImplTraitId<ChalkIr>,
+        fn debug_opaque_ty_id(
+            id: OpaqueTyId<ChalkIr>,
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_impl_trait_id(id, fmt)))
+            tls::with_current_program(|prog| Some(prog?.debug_opaque_ty_id(id, fmt)))
         }
 
         fn debug_alias(
@@ -588,18 +588,18 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
         }
 
-        fn debug_impl_trait_ty(
-            impl_trait_ty: &ImplTraitTy<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_impl_trait_ty(impl_trait_ty, fmt)))
-        }
-
         fn debug_projection_ty(
             proj: &ProjectionTy<ChalkIr>,
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_projection_ty(proj, fmt)))
+        }
+
+        fn debug_opaque_ty(
+            opaque_ty: &OpaqueTy<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_opaque_ty(opaque_ty, fmt)))
         }
 
         fn debug_ty(ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {

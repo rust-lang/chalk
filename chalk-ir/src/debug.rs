@@ -96,18 +96,18 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
     }
 }
 
-impl<I: Interner> Debug for ImplTraitTy<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_impl_trait_ty(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format ImplTraitTy without setting Program in tls")
-        })
-    }
-}
-
 impl<I: Interner> Debug for ProjectionTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
             unimplemented!("cannot format ProjectionTy without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Debug for OpaqueTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_opaque_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format OpaqueTy without setting Program in tls")
         })
     }
 }
@@ -118,10 +118,9 @@ impl<I: Interner> Display for Substitution<I> {
     }
 }
 
-impl<I: Interner> Debug for ImplTraitId<I> {
+impl<I: Interner> Debug for OpaqueTyId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_impl_trait_id(*self, fmt)
-            .unwrap_or_else(|| write!(fmt, "ImplTraitId({:?})", self.0))
+        I::debug_opaque_ty_id(*self, fmt).unwrap_or_else(|| write!(fmt, "OpaqueTyId({:?})", self.0))
     }
 }
 
@@ -142,7 +141,7 @@ impl<I: Interner> Debug for TypeName<I> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
-            TypeName::ImplTrait(impl_trait) => write!(fmt, "{:?}", impl_trait),
+            TypeName::OpaqueType(opaque_ty) => write!(fmt, "{:?}", opaque_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
@@ -481,30 +480,30 @@ impl<I: Interner> ProjectionTy<I> {
     }
 }
 
-pub struct ImplTraitTyDebug<'a, I: Interner> {
-    impl_trait_ty: &'a ImplTraitTy<I>,
+pub struct OpaqueTyDebug<'a, I: Interner> {
+    opaque_ty: &'a OpaqueTy<I>,
     interner: &'a I,
 }
 
-impl<'a, I: Interner> Debug for ImplTraitTyDebug<'a, I> {
+impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let ImplTraitTyDebug {
-            impl_trait_ty,
+        let OpaqueTyDebug {
+            opaque_ty,
             interner,
         } = self;
         write!(
             fmt,
             "{:?}{:?}",
-            impl_trait_ty.impl_trait_id,
-            impl_trait_ty.substitution.with_angle(interner)
+            opaque_ty.opaque_ty_id,
+            opaque_ty.substitution.with_angle(interner)
         )
     }
 }
 
-impl<I: Interner> ImplTraitTy<I> {
-    pub fn debug<'a>(&'a self, interner: &'a I) -> ImplTraitTyDebug<'a, I> {
-        ImplTraitTyDebug {
-            impl_trait_ty: self,
+impl<I: Interner> OpaqueTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> OpaqueTyDebug<'a, I> {
+        OpaqueTyDebug {
+            opaque_ty: self,
             interner,
         }
     }

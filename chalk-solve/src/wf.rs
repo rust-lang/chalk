@@ -108,9 +108,9 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 proj.visit_with(self, outer_binder);
             }
 
-            TyData::Alias(AliasTy::ImplTrait(impl_trait)) => {
+            TyData::Alias(AliasTy::Opaque(opaque_ty)) => {
                 push_ty();
-                impl_trait.visit_with(self, outer_binder);
+                opaque_ty.visit_with(self, outer_binder);
             }
 
             TyData::Placeholder(_) => {

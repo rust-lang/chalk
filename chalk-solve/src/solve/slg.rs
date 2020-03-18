@@ -514,9 +514,9 @@ impl<I: Interner> MayInvalidate<'_, I> {
             ) => self.aggregate_projection_tys(proj1, proj2),
 
             (
-                TyData::Alias(AliasTy::ImplTrait(impl_trait1)),
-                TyData::Alias(AliasTy::ImplTrait(impl_trait2)),
-            ) => self.aggregate_impl_trait_tys(impl_trait1, impl_trait2),
+                TyData::Alias(AliasTy::Opaque(opaque_ty1)),
+                TyData::Alias(AliasTy::Opaque(opaque_ty2)),
+            ) => self.aggregate_opaque_ty_tys(opaque_ty1, opaque_ty2),
 
             // For everything else, be conservative here and just say we may invalidate.
             (TyData::Function(_), _)
@@ -583,13 +583,13 @@ impl<I: Interner> MayInvalidate<'_, I> {
         )
     }
 
-    fn aggregate_impl_trait_tys(&mut self, new: &ImplTraitTy<I>, current: &ImplTraitTy<I>) -> bool {
-        let ImplTraitTy {
-            impl_trait_id: new_name,
+    fn aggregate_opaque_ty_tys(&mut self, new: &OpaqueTy<I>, current: &OpaqueTy<I>) -> bool {
+        let OpaqueTy {
+            opaque_ty_id: new_name,
             substitution: new_substitution,
         } = new;
-        let ImplTraitTy {
-            impl_trait_id: current_name,
+        let OpaqueTy {
+            opaque_ty_id: current_name,
             substitution: current_substitution,
         } = current;
 

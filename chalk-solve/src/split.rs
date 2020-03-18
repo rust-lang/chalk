@@ -137,9 +137,9 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         let (impl_parameters, atv_parameters) =
             self.split_associated_ty_value_parameters(&parameters, associated_ty_value);
         let trait_ref = {
-            let impl_trait_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
-            debug!("impl_trait_ref: {:?}", impl_trait_ref);
-            impl_trait_ref.substitute(interner, impl_parameters)
+            let opaque_ty_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
+            debug!("opaque_ty_ref: {:?}", opaque_ty_ref);
+            opaque_ty_ref.substitute(interner, impl_parameters)
         };
 
         // Create the parameters for the projection -- in our example

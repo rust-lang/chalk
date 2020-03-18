@@ -272,8 +272,8 @@ fn program_clauses_that_could_match<I: Interner>(
             AliasTy::Projection(proj) => db
                 .associated_ty_data(proj.associated_ty_id)
                 .to_program_clauses(builder),
-            AliasTy::ImplTrait(impl_trait) => db
-                .impl_trait_data(impl_trait.impl_trait_id)
+            AliasTy::Opaque(opaque_ty) => db
+                .opaque_ty_data(opaque_ty.opaque_ty_id)
                 .to_program_clauses(builder),
         },
         DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
@@ -321,7 +321,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     trait_parameters,
                 );
             }
-            AliasTy::ImplTrait(_) => (),
+            AliasTy::Opaque(_) => (),
         },
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
@@ -402,9 +402,9 @@ fn match_ty<I: Interner>(
             .db
             .associated_ty_data(proj.associated_ty_id)
             .to_program_clauses(builder),
-        TyData::Alias(AliasTy::ImplTrait(impl_trait)) => builder
+        TyData::Alias(AliasTy::Opaque(opaque_ty)) => builder
             .db
-            .impl_trait_data(impl_trait.impl_trait_id)
+            .opaque_ty_data(opaque_ty.opaque_ty_id)
             .to_program_clauses(builder),
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
@@ -423,9 +423,9 @@ fn match_ty<I: Interner>(
 fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
     match name {
         TypeName::Struct(struct_id) => match_struct(builder, struct_id),
-        TypeName::ImplTrait(impl_trait_id) => builder
+        TypeName::OpaqueType(opaque_ty_id) => builder
             .db
-            .impl_trait_data(impl_trait_id)
+            .opaque_ty_data(opaque_ty_id)
             .to_program_clauses(builder),
         TypeName::Error => {}
         TypeName::AssociatedType(type_id) => builder

@@ -18,7 +18,7 @@ use chalk_ir::Binders;
 pub enum TypeSort {
     Struct,
     Trait,
-    ImplTrait,
+    Opaque,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

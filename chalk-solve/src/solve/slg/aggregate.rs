@@ -245,9 +245,9 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             ) => self.aggregate_projection_tys(proj1, proj2),
 
             (
-                TyData::Alias(AliasTy::ImplTrait(impl_trait1)),
-                TyData::Alias(AliasTy::ImplTrait(impl_trait2)),
-            ) => self.aggregate_impl_trait_tys(impl_trait1, impl_trait2),
+                TyData::Alias(AliasTy::Opaque(opaque_ty1)),
+                TyData::Alias(AliasTy::Opaque(opaque_ty2)),
+            ) => self.aggregate_opaque_ty_tys(opaque_ty1, opaque_ty2),
 
             (TyData::Placeholder(placeholder1), TyData::Placeholder(placeholder2)) => {
                 self.aggregate_placeholder_tys(placeholder1, placeholder2)
@@ -325,24 +325,24 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             .unwrap_or_else(|| self.new_variable())
     }
 
-    fn aggregate_impl_trait_tys(
+    fn aggregate_opaque_ty_tys(
         &mut self,
-        impl_trait1: &ImplTraitTy<I>,
-        impl_trait2: &ImplTraitTy<I>,
+        opaque_ty1: &OpaqueTy<I>,
+        opaque_ty2: &OpaqueTy<I>,
     ) -> Ty<I> {
-        let ImplTraitTy {
-            impl_trait_id: name1,
+        let OpaqueTy {
+            opaque_ty_id: name1,
             substitution: substitution1,
-        } = impl_trait1;
-        let ImplTraitTy {
-            impl_trait_id: name2,
+        } = opaque_ty1;
+        let OpaqueTy {
+            opaque_ty_id: name2,
             substitution: substitution2,
-        } = impl_trait2;
+        } = opaque_ty2;
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
-            .map(|(&impl_trait_id, substitution)| {
-                TyData::Alias(AliasTy::ImplTrait(ImplTraitTy {
-                    impl_trait_id,
+            .map(|(&opaque_ty_id, substitution)| {
+                TyData::Alias(AliasTy::Opaque(OpaqueTy {
+                    opaque_ty_id,
                     substitution,
                 }))
                 .intern(self.interner)

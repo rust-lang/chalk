@@ -1,8 +1,8 @@
 use crate::interner::ChalkIr;
 use crate::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplTraitId,
-    ImplTraitTy, Lifetime, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
-    ProjectionTy, QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, Lifetime, OpaqueTy,
+    OpaqueTyId, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -31,9 +31,9 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_impl_trait_id(
+    fn debug_opaque_ty_id(
         &self,
-        id: ImplTraitId<ChalkIr>,
+        id: OpaqueTyId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
@@ -43,9 +43,9 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_impl_trait_ty(
+    fn debug_opaque_ty(
         &self,
-        impl_trait_ty: &ImplTraitTy<ChalkIr>,
+        opaque_ty: &OpaqueTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

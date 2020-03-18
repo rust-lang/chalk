@@ -118,7 +118,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
     }
 }
 
-impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
+impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// Given `opaque type T<..>: A + B = HiddenTy;`, we generate:
     ///
     /// ```notrust
@@ -131,20 +131,20 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
     /// where `!T` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
-        let alias = AliasTy::ImplTrait(ImplTraitTy {
-            impl_trait_id: self.impl_trait_id,
+        let alias = AliasTy::Opaque(OpaqueTy {
+            opaque_ty_id: self.opaque_ty_id,
             substitution: builder.substitution_in_scope(),
         });
 
         let alias_ty = Ty::new(interner, alias.clone());
 
-        builder.push_binders(&self.ty, |builder, impl_trait_datum| {
+        builder.push_binders(&self.ty, |builder, opaque_ty_datum| {
             // AliasEq(T<..> = HiddenTy) :- Reveal.
             builder.push_clause(
                 DomainGoal::Holds(
                     AliasEq {
                         alias: alias.clone(),
-                        ty: impl_trait_datum.clone(),
+                        ty: opaque_ty_datum.clone(),
                     }
                     .cast(interner),
                 ),
@@ -163,7 +163,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
 
         for bound in &self.bounds {
             // Implemented(!T: Bound).
-            builder.push_fact(bound.value.clone().into_well_formed_goal(interner));
+            builder.push_fact(bound.skip_binders().clone().into_well_formed_goal(interner));
         }
 
         for auto_trait_id in builder.db.auto_traits() {
@@ -175,7 +175,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplTraitDatum<I> {
                 },
                 iter::once(TraitRef {
                     trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, self.ty.value.clone()),
+                    substitution: Substitution::from1(interner, self.ty.skip_binders().clone()),
                 }),
             );
         }
