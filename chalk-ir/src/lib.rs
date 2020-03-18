@@ -342,13 +342,13 @@ impl<I: Interner> Lifetime<I> {
         }
     }
 
-    pub fn data(&self) -> &LifetimeData<I> {
-        I::lifetime_data(&self.interned)
+    pub fn data(&self, interner: &I) -> &LifetimeData<I> {
+        I::lifetime_data(interner, &self.interned)
     }
 
     /// If this is a `Lifetime::InferenceVar(d)`, returns `Some(d)` else `None`.
-    pub fn inference_var(&self) -> Option<InferenceVar> {
-        if let LifetimeData::InferenceVar(depth) = self.data() {
+    pub fn inference_var(&self, interner: &I) -> Option<InferenceVar> {
+        if let LifetimeData::InferenceVar(depth) = self.data(interner) {
             Some(*depth)
         } else {
             None
@@ -357,8 +357,8 @@ impl<I: Interner> Lifetime<I> {
 
     /// True if this lifetime is a "bound" lifetime, and hence
     /// needs to be shifted across binders. Meant for debug assertions.
-    pub fn needs_shift(&self) -> bool {
-        match self.data() {
+    pub fn needs_shift(&self, interner: &I) -> bool {
+        match self.data(interner) {
             LifetimeData::BoundVar(_) => true,
             LifetimeData::InferenceVar(_) => false,
             LifetimeData::Placeholder(_) => false,
@@ -1302,7 +1302,7 @@ impl<I: Interner> Substitution<I> {
                     TyData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },
-                ParameterKind::Lifetime(lifetime) => match lifetime.data() {
+                ParameterKind::Lifetime(lifetime) => match lifetime.data(interner) {
                     LifetimeData::BoundVar(depth) => index == *depth,
                     _ => false,
                 },

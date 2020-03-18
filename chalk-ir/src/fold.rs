@@ -365,12 +365,14 @@ where
         I: 'i,
         TI: 'i,
     {
-        match self.data() {
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+        match self.data(interner) {
             LifetimeData::BoundVar(depth) => {
                 if *depth >= binders {
                     folder.fold_free_var_lifetime(depth - binders, binders)
                 } else {
-                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern(folder.target_interner()))
+                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern(target_interner))
                 }
             }
             LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),

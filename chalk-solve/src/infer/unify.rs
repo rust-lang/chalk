@@ -54,7 +54,6 @@ pub(crate) struct UnificationResult<I: Interner> {
 }
 
 impl<'t, I: Interner> Unifier<'t, I> {
-    #[allow(unreachable_code)]
     fn new(
         interner: &'t I,
         table: &'t mut InferenceTable<I>,
@@ -270,15 +269,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         let interner = self.interner;
 
-        if let Some(n_a) = self.table.normalize_lifetime(a) {
+        if let Some(n_a) = self.table.normalize_lifetime(interner, a) {
             return self.unify_lifetime_lifetime(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_lifetime(b) {
+        } else if let Some(n_b) = self.table.normalize_lifetime(interner, b) {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
 
         debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
-        match (a.data(), b.data()) {
+        match (a.data(interner), b.data(interner)) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
                 let var_a = EnaVariable::from(var_a);
                 let var_b = EnaVariable::from(var_b);
@@ -510,7 +509,7 @@ where
             InferenceValue::Bound(l) => {
                 let l = l.lifetime().unwrap();
                 let l = l.fold_with(self, binders)?;
-                assert!(!l.needs_shift());
+                assert!(!l.needs_shift(interner));
                 Ok(l.clone())
             }
         }
