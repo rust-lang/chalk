@@ -86,17 +86,18 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     where
         V: Fold<I> + HasInterner<Interner = I>,
     {
+        let interner = self.interner();
         let old_len = self.binders.len();
         self.binders.extend(binders.binders.clone());
         let params: Vec<_> = binders
             .binders
             .iter()
             .zip(old_len..)
-            .map(|p| p.to_parameter(self.interner()))
+            .map(|p| p.to_parameter(interner))
             .collect();
         self.parameters.extend(params);
 
-        let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
+        let value = binders.substitute(interner, &self.parameters[old_len..]);
         op(self, value);
 
         self.binders.truncate(old_len);
@@ -110,6 +111,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// argument.
     #[allow(dead_code)]
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
+        let interner = self.interner();
         let binders = Binders {
             binders: vec![ParameterKind::Ty(())],
             value: PhantomData::<I>,
@@ -119,7 +121,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .placeholders_in_scope()
                 .last()
                 .unwrap()
-                .assert_ty_ref()
+                .assert_ty_ref(interner)
                 .clone();
             op(this, ty)
         });

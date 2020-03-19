@@ -207,7 +207,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
                 let trait_datum = self.program.trait_datum(trait_ref.trait_id);
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter();
+                    let self_ty = trait_ref.self_type_parameter(interner);
                     if let Some(v) = self_ty.inference_var(interner) {
                         if !infer.infer.var_is_bound(v) {
                             return Err(Floundered);
@@ -512,7 +512,8 @@ struct MayInvalidate<'i, I> {
 
 impl<I: Interner> MayInvalidate<'_, I> {
     fn aggregate_parameters(&mut self, new: &Parameter<I>, current: &Parameter<I>) -> bool {
-        match (new.data(), current.data()) {
+        let interner = self.interner;
+        match (new.data(interner), current.data(interner)) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
             (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)

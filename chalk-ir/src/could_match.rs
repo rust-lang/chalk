@@ -20,7 +20,7 @@ where
             interner: &'i I,
         };
 
-        impl<I: Interner> Zipper<I> for MatchZipper<'_, I> {
+        impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
             fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
                 let could_match = match (a.data(self.interner), b.data(self.interner)) {
                     (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
@@ -52,6 +52,10 @@ where
                 T: Zip<I>,
             {
                 Zip::zip_with(self, &a.value, &b.value)
+            }
+
+            fn interner(&self) -> &'i I {
+                self.interner
             }
         }
     }

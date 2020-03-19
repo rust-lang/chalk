@@ -160,7 +160,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.self_type_parameter().data(interner) {
+                match trait_ref.self_type_parameter(interner).data(interner) {
                     TyData::Apply(apply) => {
                         if let Some(struct_id) = db.as_struct_id(&apply.name) {
                             push_auto_trait_impls(builder, trait_id, struct_id);
@@ -214,7 +214,7 @@ fn program_clauses_that_could_match<I: Interner>(
             // generated two clauses that are totally irrelevant to
             // that goal, because they let us prove other things but
             // not `Clone`.
-            let self_ty = trait_ref.self_type_parameter();
+            let self_ty = trait_ref.self_type_parameter(interner);
             if let TyData::Dyn(dyn_ty) = self_ty.data(interner) {
                 // In this arm, `self_ty` is the `dyn Fn(&u8)`,
                 // and `bounded_ty` is the `exists<T> { .. }`
@@ -350,7 +350,7 @@ fn match_ty<I: Interner>(
         TyData::Function(quantified_ty) => quantified_ty
             .parameters
             .iter()
-            .map(|p| p.assert_ty_ref())
+            .map(|p| p.assert_ty_ref(interner))
             .for_each(|ty| match_ty(builder, environment, &ty)),
         TyData::BoundVar(_) => {}
         TyData::InferenceVar(_) => panic!("should have floundered"),

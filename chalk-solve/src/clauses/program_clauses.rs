@@ -196,7 +196,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
             builder.push_clause(
                 DomainGoal::IsFullyVisible(self_ty.clone()),
                 self_appl_ty
-                    .type_parameters()
+                    .type_parameters(interner)
                     .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>(interner)),
             );
 
@@ -215,7 +215,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
                     // until the day when someone makes a decision
                     // about how that should behave.
                     assert_eq!(
-                        self_appl_ty.len_type_parameters(),
+                        self_appl_ty.len_type_parameters(interner),
                         1,
                         "Only fundamental types with a single parameter are supported"
                     );
@@ -226,7 +226,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
                             // This unwrap is safe because we asserted
                             // above for the presence of a type
                             // parameter
-                            self_appl_ty.first_type_parameter().unwrap(),
+                            self_appl_ty.first_type_parameter(interner).unwrap(),
                         )),
                     );
                 };
@@ -413,7 +413,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // added to every trait. This is important because
             // otherwise the added program clauses would not have any
             // conditions.
-            let type_parameters: Vec<_> = trait_ref.type_parameters().collect();
+            let type_parameters: Vec<_> = trait_ref.type_parameters(interner).collect();
 
             // Add all cases for potential downstream impls that could exist
             for i in 0..type_parameters.len() {
@@ -462,7 +462,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                         .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
                         .chain(
                             trait_ref
-                                .type_parameters()
+                                .type_parameters(interner)
                                 .map(|ty| DomainGoal::IsUpstream(ty).cast(interner)),
                         )
                         .chain(iter::once(GoalData::CannotProve(()).intern(interner))),

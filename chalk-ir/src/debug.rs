@@ -33,6 +33,13 @@ impl<I: Interner> Debug for Lifetime<I> {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
+impl<I: Interner> Debug for Parameter<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_parameter(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
 impl Display for UniverseIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "U{}", self.counter)
@@ -382,15 +389,6 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
         match *self {
             ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
             ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
-        }
-    }
-}
-
-impl<I: Interner> Debug for Parameter<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self.data() {
-            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
-            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
         }
     }
 }

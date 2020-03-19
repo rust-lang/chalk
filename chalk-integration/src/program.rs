@@ -4,8 +4,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ProgramClause, StructId, TraitId, Ty,
-    TyData, TypeName,
+    AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ParameterKind, ProgramClause, StructId,
+    TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -135,6 +135,18 @@ impl tls::DebugContext for Program {
         let interner = self.interner();
         write!(fmt, "{:?}", lifetime.data(interner))
     }
+
+    fn debug_parameter(
+        &self,
+        parameter: &Parameter<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        match parameter.data(interner) {
+            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
+        }
+    }
 }
 
 impl RustIrDatabase<ChalkIr> for Program {
@@ -216,7 +228,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.impl_data.values().any(|impl_datum| {
             let impl_trait_ref = &impl_datum.binders.value.trait_ref;
             impl_trait_ref.trait_id == auto_trait_id
-                && match impl_trait_ref.self_type_parameter().data(interner) {
+                && match impl_trait_ref.self_type_parameter(interner).data(interner) {
                     TyData::Apply(apply) => match apply.name {
                         TypeName::Struct(id) => id == struct_id,
                         _ => false,

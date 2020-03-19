@@ -19,7 +19,7 @@ use std::sync::Arc;
 /// represented by two distinct `ItemId` values, and the impl for
 /// `ItemId` requires that all `ItemId` in the two zipped values match
 /// up.
-pub trait Zipper<I: Interner> {
+pub trait Zipper<'i, I: Interner> {
     /// Indicates that the two types `a` and `b` were found in
     /// matching spots, beneath `binders` levels of binders.
     fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()>;
@@ -32,12 +32,15 @@ pub trait Zipper<I: Interner> {
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
         T: Zip<I> + Fold<I, I, Result = T>;
+
+    /// Retreives the interner from the underlying zipper object
+    fn interner(&self) -> &'i I;
 }
 
-impl<'f, Z, I> Zipper<I> for &'f mut Z
+impl<'f, 'i, Z, I> Zipper<'i, I> for &'f mut Z
 where
     I: Interner,
-    Z: Zipper<I>,
+    Z: Zipper<'i, I>,
 {
     fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         (**self).zip_tys(a, b)
@@ -53,6 +56,10 @@ where
     {
         (**self).zip_binders(a, b)
     }
+
+    fn interner(&self) -> &'i I {
+        Z::interner(*self)
+    }
 }
 
 /// The `Zip` trait walks two values, invoking the `Zipper` methods where
@@ -66,29 +73,40 @@ pub trait Zip<I>: Debug
 where
     I: Interner,
 {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>;
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i;
 }
 
 impl<'a, T: ?Sized + Zip<I>, I: Interner> Zip<I> for &'a T {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         <T as Zip<I>>::zip_with(zipper, a, b)
     }
 }
 
 impl<I: Interner> Zip<I> for () {
-    fn zip_with<Z: Zipper<I>>(_: &mut Z, _: &Self, _: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(_: &mut Z, _: &Self, _: &Self) -> Fallible<()> {
         Ok(())
     }
 }
 
 impl<T: Zip<I>, I: Interner> Zip<I> for Vec<T> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         <[T] as Zip<I>>::zip_with(zipper, a, b)
     }
 }
 
 impl<T: Zip<I>, I: Interner> Zip<I> for [T] {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         if a.len() != b.len() {
             return Err(NoSolution);
         }
@@ -102,19 +120,28 @@ impl<T: Zip<I>, I: Interner> Zip<I> for [T] {
 }
 
 impl<T: Zip<I>, I: Interner> Zip<I> for Arc<T> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         <T as Zip<I>>::zip_with(zipper, a, b)
     }
 }
 
 impl<T: Zip<I>, I: Interner> Zip<I> for Box<T> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         <T as Zip<I>>::zip_with(zipper, a, b)
     }
 }
 
 impl<T: Zip<I>, U: Zip<I>, I: Interner> Zip<I> for (T, U) {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         Zip::zip_with(zipper, &a.0, &b.0)?;
         Zip::zip_with(zipper, &a.1, &b.1)?;
         Ok(())
@@ -122,19 +149,28 @@ impl<T: Zip<I>, U: Zip<I>, I: Interner> Zip<I> for (T, U) {
 }
 
 impl<I: Interner> Zip<I> for Ty<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         zipper.zip_tys(a, b)
     }
 }
 
 impl<I: Interner> Zip<I> for Lifetime<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         zipper.zip_lifetimes(a, b)
     }
 }
 
 impl<I: Interner, T: Zip<I> + Fold<I, I, Result = T>> Zip<I> for Binders<T> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         zipper.zip_binders(a, b)
     }
 }
@@ -144,7 +180,10 @@ impl<I: Interner, T: Zip<I> + Fold<I, I, Result = T>> Zip<I> for Binders<T> {
 macro_rules! eq_zip {
     ($I:ident => $t:ty) => {
         impl<$I: Interner> Zip<$I> for $t {
-            fn zip_with<Z: Zipper<$I>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+            fn zip_with<'i, Z: Zipper<'i, $I>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+            where
+                I: 'i,
+            {
                 if a != b {
                     return Err(NoSolution);
                 }
@@ -166,7 +205,10 @@ eq_zip!(I => PlaceholderIndex);
 macro_rules! struct_zip {
     (impl[$($param:tt)*] Zip<$I:ty> for $self:ty { $($field:ident),* $(,)* } $($w:tt)*) => {
         impl<$($param)*> Zip<$I> for $self $($w)* {
-            fn zip_with<Z: Zipper<$I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+            fn zip_with<'i, Z: Zipper<'i, $I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+            where
+                I: 'i,
+            {
                 // Validate that we have indeed listed all fields
                 let Self { $($field: _),* } = *a;
                 $(
@@ -204,7 +246,10 @@ struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
 });
 
 impl<I: Interner> Zip<I> for Environment<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
         Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
         Ok(())
@@ -212,7 +257,10 @@ impl<I: Interner> Zip<I> for Environment<I> {
 }
 
 impl<I: Interner> Zip<I> for Goals<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         Zip::zip_with(zipper, a.as_slice(), b.as_slice())?;
         Ok(())
     }
@@ -224,7 +272,10 @@ impl<I: Interner> Zip<I> for Goals<I> {
 macro_rules! enum_zip {
     (impl<$I:ident $(, $param:ident)*> for $self:ty { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
         impl<$I: Interner, $(, $param)*> Zip<$I> for $self $($w)* {
-            fn zip_with<Z: Zipper<$I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+            fn zip_with<'i, Z: Zipper<'i, $I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+            where
+                I: 'i,
+            {
                 match (a, b) {
                     $(
                         (Self :: $variant (f_a), Self :: $variant (f_b)) => {
@@ -260,7 +311,10 @@ enum_zip!(impl<I> for DomainGoal<I> {
 enum_zip!(impl<I> for ProgramClause<I> { Implies, ForAll });
 
 impl<I: Interner> Zip<I> for Substitution<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         Zip::zip_with(zipper, a.parameters(), b.parameters())
     }
 }
@@ -269,13 +323,19 @@ impl<I: Interner> Zip<I> for Substitution<I> {
 // two parameters, and I'm too lazy to make the macro account for the
 // relevant name mangling.
 impl<I: Interner> Zip<I> for Goal<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         Zip::zip_with(zipper, a.data(), b.data())
     }
 }
 
 impl<I: Interner> Zip<I> for GoalData<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         match (a, b) {
             (&GoalData::Quantified(ref f_a, ref g_a), &GoalData::Quantified(ref f_b, ref g_b)) => {
                 Zip::zip_with(zipper, f_a, f_b)?;
@@ -309,7 +369,10 @@ impl<I: Interner> Zip<I> for GoalData<I> {
 
 // I'm too lazy to make `enum_zip` support type parameters.
 impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         match (a, b) {
             (ParameterKind::Ty(a), ParameterKind::Ty(b)) => Zip::zip_with(zipper, a, b),
             (ParameterKind::Lifetime(a), ParameterKind::Lifetime(b)) => Zip::zip_with(zipper, a, b),
@@ -320,8 +383,13 @@ impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Zip<I> for Parameter<I> {
-    fn zip_with<Z: Zipper<I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()> {
-        Zip::zip_with(zipper, a.data(), b.data())
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.data(interner), b.data(interner))
     }
 }

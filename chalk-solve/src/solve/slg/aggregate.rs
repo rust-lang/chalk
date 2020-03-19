@@ -148,7 +148,7 @@ fn merge_into_guidance<I: Interner>(
             // of X.
             let universe = root_goal.binders[index].into_inner();
 
-            let ty = match value.data() {
+            let ty = match value.data(interner) {
                 ParameterKind::Ty(ty) => ty,
                 ParameterKind::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
@@ -160,7 +160,7 @@ fn merge_into_guidance<I: Interner>(
                 }
             };
 
-            let ty1 = value1.assert_ty_ref();
+            let ty1 = value1.assert_ty_ref(interner);
 
             // Combine the two types into a new type.
             let mut aggr = AntiUnifier {
@@ -183,7 +183,7 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
         .value
         .iter()
         .enumerate()
-        .all(|(index, parameter)| match parameter.data() {
+        .all(|(index, parameter)| match parameter.data(interner) {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
@@ -348,7 +348,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 
     fn aggregate_parameters(&mut self, p1: &Parameter<I>, p2: &Parameter<I>) -> Parameter<I> {
         let interner = self.interner;
-        match (p1.data(), p2.data()) {
+        match (p1.data(interner), p2.data(interner)) {
             (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
                 self.aggregate_tys(ty1, ty2).cast(interner)
             }

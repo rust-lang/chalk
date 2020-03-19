@@ -109,8 +109,9 @@ where
         universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Ty<I>> {
+        let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_ty(self.interner()))
+        Ok(universe.to_ty(interner))
     }
 
     fn fold_free_placeholder_lifetime(
@@ -118,8 +119,9 @@ where
         universe: PlaceholderIndex,
         _binders: usize,
     ) -> Fallible<Lifetime<I>> {
+        let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_lifetime(self.interner()))
+        Ok(universe.to_lifetime(interner))
     }
 
     fn forbid_free_vars(&self) -> bool {
@@ -128,11 +130,12 @@ where
 
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
         debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
+        let interner = self.interner;
         let var = EnaVariable::from(var);
-        match self.table.probe_ty_var(var) {
+        match self.table.probe_ty_var(interner, var) {
             Some(ty) => {
                 debug!("bound to {:?}", ty);
-                Ok(ty.fold_with(self, 0)?.shifted_in(self.interner(), binders))
+                Ok(ty.fold_with(self, 0)?.shifted_in(interner, binders))
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -142,7 +145,7 @@ where
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(TyData::BoundVar(position + binders).intern(self.interner()))
+                Ok(TyData::BoundVar(position + binders).intern(interner))
             }
         }
     }
@@ -157,17 +160,18 @@ where
             var,
             binders
         );
+        let interner = self.interner;
         let var = EnaVariable::from(var);
-        match self.table.probe_lifetime_var(var) {
+        match self.table.probe_lifetime_var(interner, var) {
             Some(l) => {
                 debug!("bound to {:?}", l);
-                Ok(l.fold_with(self, 0)?.shifted_in(self.interner(), binders))
+                Ok(l.fold_with(self, 0)?.shifted_in(interner, binders))
             }
             None => {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let position = self.add(free_var);
                 debug!("not yet unified: position={:?}", position);
-                Ok(LifetimeData::BoundVar(position + binders).intern(self.interner()))
+                Ok(LifetimeData::BoundVar(position + binders).intern(interner))
             }
         }
     }

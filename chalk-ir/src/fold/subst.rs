@@ -29,28 +29,27 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     }
 
     fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+        let interner = self.interner();
         if depth >= self.parameters.len() {
-            Ok(
-                TyData::<I>::BoundVar(depth - self.parameters.len() + binders)
-                    .intern(self.interner()),
-            )
+            Ok(TyData::<I>::BoundVar(depth - self.parameters.len() + binders).intern(interner))
         } else {
-            match self.parameters[depth].data() {
-                ParameterKind::Ty(t) => Ok(t.shifted_in(self.interner(), binders)),
+            match self.parameters[depth].data(interner) {
+                ParameterKind::Ty(t) => Ok(t.shifted_in(interner, binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }
     }
 
     fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
+        let interner = self.interner();
         if depth >= self.parameters.len() {
             Ok(
                 LifetimeData::<I>::BoundVar(depth - self.parameters.len() + binders)
-                    .intern(self.interner()),
+                    .intern(interner),
             )
         } else {
-            match self.parameters[depth].data() {
-                ParameterKind::Lifetime(l) => Ok(l.shifted_in(self.interner(), binders)),
+            match self.parameters[depth].data(interner) {
+                ParameterKind::Lifetime(l) => Ok(l.shifted_in(interner, binders)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         }
