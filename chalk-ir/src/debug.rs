@@ -169,6 +169,32 @@ impl<I: Interner> Debug for LifetimeData<I> {
     }
 }
 
+impl<I: Interner> Debug for GoalData<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        match self {
+            GoalData::Quantified(qkind, ref subgoal) => {
+                write!(fmt, "{:?}<", qkind)?;
+                for (index, binder) in subgoal.binders.iter().enumerate() {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    match *binder {
+                        ParameterKind::Ty(()) => write!(fmt, "type")?,
+                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                    }
+                }
+                write!(fmt, "> {{ {:?} }}", subgoal.value)
+            }
+            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
+            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
+            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
+        }
+    }
+}
+
 impl Debug for PlaceholderIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let PlaceholderIndex { ui, idx } = self;

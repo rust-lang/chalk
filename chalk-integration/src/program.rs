@@ -4,9 +4,9 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, GoalData, Goals, ImplId,
-    Lifetime, Parameter, ParameterKind, ProgramClause, ProgramClauseImplication, StructId,
-    Substitution, TraitId, Ty, TyData, TypeName,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
+    Parameter, ParameterKind, ProgramClause, ProgramClauseImplication, StructId, Substitution,
+    TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -155,27 +155,8 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        match goal.data(interner) {
-            GoalData::Quantified(qkind, ref subgoal) => {
-                write!(fmt, "{:?}<", qkind)?;
-                for (index, binder) in subgoal.binders.iter().enumerate() {
-                    if index > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    match *binder {
-                        ParameterKind::Ty(()) => write!(fmt, "type")?,
-                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                    }
-                }
-                write!(fmt, "> {{ {:?} }}", subgoal.value)
-            }
-            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
-            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
-            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
-        }
+        write!(fmt, "{:?}", goal.data(interner))?;
+        Ok(())
     }
 
     fn debug_goals(
