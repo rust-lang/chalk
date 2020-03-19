@@ -6,6 +6,8 @@ use chalk_engine::fallible::*;
 use std::iter;
 use std::marker::PhantomData;
 
+pub use crate::debug::SeparatorTraitRef;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
 
@@ -418,7 +420,7 @@ impl<I: Interner> ApplicationTy<I> {
 
     pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
         self.substitution
-            .iter()
+            .iter(interner)
             .filter_map(move |p| p.ty(interner))
             .cloned()
     }
@@ -585,7 +587,7 @@ pub struct TraitRef<I: Interner> {
 impl<I: Interner> TraitRef<I> {
     pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
         self.substitution
-            .iter()
+            .iter(interner)
             .filter_map(move |p| p.ty(interner))
             .cloned()
     }
@@ -899,7 +901,7 @@ where
         interner: &I,
         parameters: &(impl AsParameters<I> + ?Sized),
     ) -> T::Result {
-        let parameters = parameters.as_parameters();
+        let parameters = parameters.as_parameters(interner);
         assert_eq!(self.binders.len(), parameters.len());
         Subst::apply(interner, parameters, &self.value)
     }
@@ -1019,7 +1021,10 @@ impl<T> UCanonical<T> {
         canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
-        assert_eq!(self.canonical.binders.len(), subst.parameters().len());
+        assert_eq!(
+            self.canonical.binders.len(),
+            subst.parameters(interner).len()
+        );
         subst.is_identity_subst(interner)
     }
 }
@@ -1260,8 +1265,8 @@ impl<I: Interner> Substitution<I> {
     }
 
     /// Index into the list of parameters
-    pub fn at(&self, index: usize) -> &Parameter<I> {
-        &self.parameters()[index]
+    pub fn at(&self, interner: &I, index: usize) -> &Parameter<I> {
+        &self.parameters(interner)[index]
     }
 
     pub fn from1(interner: &I, parameter: impl CastTo<Parameter<I>>) -> Self {
@@ -1272,20 +1277,20 @@ impl<I: Interner> Substitution<I> {
         Self::from(interner, None::<Parameter<I>>)
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.parameters().is_empty()
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.parameters(interner).is_empty()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, Parameter<I>> {
-        self.parameters().iter()
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Parameter<I>> {
+        self.parameters(interner).iter()
     }
 
-    pub fn parameters(&self) -> &[Parameter<I>] {
-        I::substitution_data(&self.parameters)
+    pub fn parameters(&self, interner: &I) -> &[Parameter<I>] {
+        interner.substitution_data(&self.parameters)
     }
 
-    pub fn len(&self) -> usize {
-        self.parameters().len()
+    pub fn len(&self, interner: &I) -> usize {
+        self.parameters(interner).len()
     }
 
     /// A substitution is an **identity substitution** if it looks
@@ -1301,7 +1306,7 @@ impl<I: Interner> Substitution<I> {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     pub fn is_identity_subst(&self, interner: &I) -> bool {
-        self.iter()
+        self.iter(interner)
             .zip(0..)
             .all(|(parameter, index)| match parameter.data(interner) {
                 ParameterKind::Ty(ty) => match ty.data(interner) {
@@ -1339,34 +1344,36 @@ struct SubstFolder<'i, I: Interner> {
 impl<I: Interner> SubstFolder<'_, I> {
     /// Index into the list of parameters
     pub fn at(&self, index: usize) -> &Parameter<I> {
-        &self.subst.parameters()[index]
+        let interner = self.interner;
+        &self.subst.parameters(interner)[index]
     }
 }
 
 pub trait AsParameters<I: Interner> {
-    fn as_parameters(&self) -> &[Parameter<I>];
+    fn as_parameters(&self, interner: &I) -> &[Parameter<I>];
 }
 
 impl<I: Interner> AsParameters<I> for Substitution<I> {
-    fn as_parameters(&self) -> &[Parameter<I>] {
-        self.parameters()
+    #[allow(unreachable_code, unused_variables)]
+    fn as_parameters(&self, interner: &I) -> &[Parameter<I>] {
+        self.parameters(interner)
     }
 }
 
 impl<I: Interner> AsParameters<I> for [Parameter<I>] {
-    fn as_parameters(&self) -> &[Parameter<I>] {
+    fn as_parameters(&self, _interner: &I) -> &[Parameter<I>] {
         self
     }
 }
 
 impl<I: Interner> AsParameters<I> for [Parameter<I>; 1] {
-    fn as_parameters(&self) -> &[Parameter<I>] {
+    fn as_parameters(&self, _interner: &I) -> &[Parameter<I>] {
         self
     }
 }
 
 impl<I: Interner> AsParameters<I> for Vec<Parameter<I>> {
-    fn as_parameters(&self) -> &[Parameter<I>] {
+    fn as_parameters(&self, _interner: &I) -> &[Parameter<I>] {
         self
     }
 }
@@ -1375,20 +1382,8 @@ impl<T, I: Interner> AsParameters<I> for &T
 where
     T: ?Sized + AsParameters<I>,
 {
-    fn as_parameters(&self) -> &[Parameter<I>] {
-        T::as_parameters(self)
-    }
-}
-
-impl<'me, I> std::iter::IntoIterator for &'me Substitution<I>
-where
-    I: Interner,
-{
-    type IntoIter = std::slice::Iter<'me, Parameter<I>>;
-    type Item = &'me Parameter<I>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+    fn as_parameters(&self, interner: &I) -> &[Parameter<I>] {
+        T::as_parameters(self, interner)
     }
 }
 

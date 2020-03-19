@@ -949,7 +949,7 @@ impl LowerAliasTy for AliasTy {
             }
         }
 
-        args.extend(trait_substitution.iter().cloned());
+        args.extend(trait_substitution.iter(interner).cloned());
 
         Ok(chalk_ir::AliasTy {
             associated_ty_id: lookup.id,

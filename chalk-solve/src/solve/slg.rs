@@ -500,8 +500,8 @@ trait SubstitutionExt<I: Interner> {
 
 impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
     fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
-        self.iter()
-            .zip(subst.value.iter())
+        self.iter(interner)
+            .zip(subst.value.iter(interner))
             .any(|(new, current)| MayInvalidate { interner }.aggregate_parameters(new, current))
     }
 }
@@ -646,6 +646,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
     where
         N: Copy + Eq + Debug,
     {
+        let interner = self.interner;
         if new_name != current_name {
             return true;
         }
@@ -653,17 +654,17 @@ impl<I: Interner> MayInvalidate<'_, I> {
         let name = new_name;
 
         assert_eq!(
-            new_substitution.len(),
-            current_substitution.len(),
+            new_substitution.len(interner),
+            current_substitution.len(interner),
             "does {:?} take {} substitution or {}? can't both be right",
             name,
-            new_substitution.len(),
-            current_substitution.len()
+            new_substitution.len(interner),
+            current_substitution.len(interner)
         );
 
         new_substitution
-            .iter()
-            .zip(current_substitution)
+            .iter(interner)
+            .zip(current_substitution.iter(interner))
             .any(|(new, current)| self.aggregate_parameters(new, current))
     }
 }

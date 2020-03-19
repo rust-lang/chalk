@@ -66,7 +66,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
         // a trivial subst (or run out of answers).
         let mut num_answers = 1;
         let guidance = loop {
-            if subst.value.is_empty() || is_trivial(interner, &subst) {
+            if subst.value.is_empty(interner) || is_trivial(interner, &subst) {
                 break Guidance::Unknown;
             }
 
@@ -139,8 +139,8 @@ fn merge_into_guidance<I: Interner>(
     // common.
     let aggr_parameters: Vec<_> = guidance
         .value
-        .iter()
-        .zip(subst1.iter())
+        .iter(interner)
+        .zip(subst1.iter(interner))
         .enumerate()
         .map(|(index, (value, value1))| {
             // We have two values for some variable X that
@@ -181,7 +181,7 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
     // A subst is trivial if..
     subst
         .value
-        .iter()
+        .iter(interner)
         .enumerate()
         .all(|(index, parameter)| match parameter.data(interner) {
             // All types are mapped to distinct variables.  Since this
@@ -327,19 +327,19 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         let name = name1;
 
         assert_eq!(
-            substitution1.len(),
-            substitution2.len(),
+            substitution1.len(interner),
+            substitution2.len(interner),
             "does {:?} take {} substitution or {}? can't both be right",
             name,
-            substitution1.len(),
-            substitution2.len()
+            substitution1.len(interner),
+            substitution2.len(interner)
         );
 
         let substitution = Substitution::from(
             interner,
             substitution1
-                .iter()
-                .zip(substitution2)
+                .iter(interner)
+                .zip(substitution2.iter(interner))
                 .map(|(p1, p2)| self.aggregate_parameters(p1, p2)),
         );
 

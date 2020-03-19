@@ -1,7 +1,7 @@
 use crate::interner::ChalkIr;
 use crate::{
-    AliasTy, AssocTypeId, Goal, Goals, Lifetime, Parameter, ProgramClauseImplication, StructId,
-    TraitId, Ty,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, Lifetime,
+    Parameter, ProgramClauseImplication, StructId, Substitution, TraitId, Ty,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -65,6 +65,24 @@ pub trait DebugContext {
     fn debug_program_clause_implication(
         &self,
         pci: &ProgramClauseImplication<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_application_ty(
+        &self,
+        application_ty: &ApplicationTy<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_substitution(
+        &self,
+        substitution: &Substitution<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_separator_trait_ref(
+        &self,
+        separator_trait_ref: &SeparatorTraitRef<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }

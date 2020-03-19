@@ -4,8 +4,9 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, Goal, GoalData, Goals, ImplId, Lifetime, Parameter, ParameterKind,
-    ProgramClause, ProgramClauseImplication, StructId, TraitId, Ty, TyData, TypeName,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, GoalData, Goals, ImplId,
+    Lifetime, Parameter, ParameterKind, ProgramClause, ProgramClauseImplication, StructId,
+    Substitution, TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -215,6 +216,61 @@ impl tls::DebugContext for Program {
         }
         write!(fmt, "{:?}", conditions[conds - 1])
     }
+
+    fn debug_application_ty(
+        &self,
+        application_ty: &ApplicationTy<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        let ApplicationTy { name, substitution } = application_ty;
+        write!(fmt, "{:?}{:?}", name, substitution.with_angle(interner))
+    }
+
+    fn debug_substitution(
+        &self,
+        substitution: &Substitution<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        let mut first = true;
+
+        write!(fmt, "[")?;
+
+        for (index, value) in substitution.iter(interner).enumerate() {
+            if first {
+                first = false;
+            } else {
+                write!(fmt, ", ")?;
+            }
+
+            write!(fmt, "?{} := {:?}", index, value)?;
+        }
+
+        write!(fmt, "]")?;
+
+        Ok(())
+    }
+
+    fn debug_separator_trait_ref(
+        &self,
+        separator_trait_ref: &SeparatorTraitRef<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        let parameters = separator_trait_ref
+            .trait_ref
+            .substitution
+            .parameters(interner);
+        write!(
+            fmt,
+            "{:?}{}{:?}{:?}",
+            parameters[0],
+            separator_trait_ref.separator,
+            separator_trait_ref.trait_ref.trait_id,
+            Angle(&parameters[1..])
+        )
+    }
 }
 
 impl RustIrDatabase<ChalkIr> for Program {
@@ -263,11 +319,11 @@ impl RustIrDatabase<ChalkIr> for Program {
             .filter(|(_, impl_datum)| {
                 let trait_ref = &impl_datum.binders.value.trait_ref;
                 trait_id == trait_ref.trait_id && {
-                    assert_eq!(trait_ref.substitution.len(), parameters.len());
+                    assert_eq!(trait_ref.substitution.len(interner), parameters.len());
                     <[_] as CouldMatch<[_]>>::could_match(
                         &parameters,
                         interner,
-                        &trait_ref.substitution.parameters(),
+                        &trait_ref.substitution.parameters(interner),
                     )
                 }
             })

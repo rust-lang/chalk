@@ -141,9 +141,10 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Substitution<I> {
         I: 'i,
         TI: 'i,
     {
-        let interner = folder.target_interner();
-        let folded = self.iter().map(|p| p.fold_with(folder, binders));
-        Ok(Substitution::from_fallible(interner, folded)?)
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+        let folded = self.iter(interner).map(|p| p.fold_with(folder, binders));
+        Ok(Substitution::from_fallible(target_interner, folded)?)
     }
 }
 
