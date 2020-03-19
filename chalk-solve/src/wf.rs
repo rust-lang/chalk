@@ -420,7 +420,7 @@ where
         // Concatenate the WF goals of inner types + the requirements from trait
         let goals = wf_goals.chain(bound_goals);
         let goal = Goal::all(interner, goals);
-        if goal.is_trivially_true() {
+        if goal.is_trivially_true(interner) {
             return None;
         }
 

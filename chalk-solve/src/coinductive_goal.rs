@@ -16,7 +16,8 @@ pub trait IsCoinductive<I: Interner> {
 
 impl<I: Interner> IsCoinductive<I> for Goal<I> {
     fn is_coinductive(&self, db: &dyn RustIrDatabase<I>) -> bool {
-        match self.data() {
+        let interner = db.interner();
+        match self.data(interner) {
             GoalData::DomainGoal(DomainGoal::Holds(wca)) => match wca {
                 WhereClause::Implemented(tr) => {
                     db.trait_datum(tr.trait_id).is_auto_trait()

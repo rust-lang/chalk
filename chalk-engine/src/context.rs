@@ -154,16 +154,6 @@ pub trait Context: Clone + Debug {
 
     fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
 
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(goal: Self::Goal) -> HhGoal<Self>;
-
     // Used by: simplify
     fn add_clauses(env: &Self::Environment, clauses: Self::ProgramClauses) -> Self::Environment;
 
@@ -266,6 +256,16 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         u_canon: &C::UCanonicalGoalInEnvironment,
         canonical_subst: &C::CanonicalAnswerSubst,
     ) -> bool;
+
+    /// Convert the context's goal type into the `HhGoal` type that
+    /// the SLG solver understands. The expectation is that the
+    /// context's goal type has the same set of variants, but with
+    /// different names and a different setup. If you inspect
+    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
+    /// conversion -- that is, we convert the outermost goal into an
+    /// `HhGoal`, but the goals contained within are left as context
+    /// goals.
+    fn into_hh_goal(&self, goal: C::Goal) -> HhGoal<C>;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.

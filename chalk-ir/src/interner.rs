@@ -2,10 +2,12 @@ use crate::AliasTy;
 use crate::AssocTypeId;
 use crate::Goal;
 use crate::GoalData;
+use crate::Goals;
 use crate::Lifetime;
 use crate::LifetimeData;
 use crate::Parameter;
 use crate::ParameterData;
+use crate::ProgramClauseImplication;
 use crate::StructId;
 use crate::TraitId;
 use crate::Ty;
@@ -167,6 +169,36 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result>;
 
+    /// Prints the debug representation of an goal. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_goal(goal: &Goal<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a list of goals. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_goals(goals: &Goals<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+
+    /// Prints the debug representation of a ProgramClauseImplication. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    fn debug_program_clause_implication(
+        pci: &ProgramClauseImplication<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result>;
+
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
     /// will ultimately call this method).
@@ -200,7 +232,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     fn intern_goal(&self, data: GoalData<Self>) -> Self::InternedGoal;
 
     /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
-    fn goal_data(goal: &Self::InternedGoal) -> &GoalData<Self>;
+    fn goal_data<'a>(&self, goal: &'a Self::InternedGoal) -> &'a GoalData<Self>;
 
     /// Create an "interned" goals from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -209,7 +241,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     fn intern_goals(&self, data: impl IntoIterator<Item = Goal<Self>>) -> Self::InternedGoals;
 
     /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
-    fn goals_data(goals: &Self::InternedGoals) -> &[Goal<Self>];
+    fn goals_data<'a>(&self, goals: &'a Self::InternedGoals) -> &'a [Goal<Self>];
 
     /// Create an "interned" substitution from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -326,6 +358,24 @@ mod default {
             tls::with_current_program(|prog| Some(prog?.debug_parameter(parameter, fmt)))
         }
 
+        fn debug_goal(goal: &Goal<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_goal(goal, fmt)))
+        }
+
+        fn debug_goals(
+            goals: &Goals<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_goals(goals, fmt)))
+        }
+
+        fn debug_program_clause_implication(
+            pci: &ProgramClauseImplication<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_program_clause_implication(pci, fmt)))
+        }
+
         fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
             Arc::new(ty)
         }
@@ -360,7 +410,7 @@ mod default {
             Arc::new(goal)
         }
 
-        fn goal_data(goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
+        fn goal_data<'a>(&self, goal: &'a Arc<GoalData<ChalkIr>>) -> &'a GoalData<ChalkIr> {
             goal
         }
 
@@ -371,7 +421,7 @@ mod default {
             data.into_iter().collect()
         }
 
-        fn goals_data(goals: &Vec<Goal<ChalkIr>>) -> &[Goal<ChalkIr>] {
+        fn goals_data<'a>(&self, goals: &'a Vec<Goal<ChalkIr>>) -> &'a [Goal<ChalkIr>] {
             goals
         }
 

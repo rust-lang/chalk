@@ -33,10 +33,27 @@ impl<I: Interner> Debug for Lifetime<I> {
     }
 }
 
-#[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_parameter(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
+impl<I: Interner> Debug for Goal<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_goal(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
+impl<I: Interner> Debug for Goals<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_goals(self, fmt).unwrap_or_else(|| unimplemented!())
+    }
+}
+
+impl<I: Interner> Debug for ProgramClauseImplication<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_program_clause_implication(self, fmt).unwrap_or_else(|| unimplemented!())
     }
 }
 
@@ -264,46 +281,6 @@ impl<I: Interner> Debug for EqGoal<I> {
     }
 }
 
-impl<I: Interner> Debug for Goal<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self.data() {
-            GoalData::Quantified(qkind, ref subgoal) => {
-                write!(fmt, "{:?}<", qkind)?;
-                for (index, binder) in subgoal.binders.iter().enumerate() {
-                    if index > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    match *binder {
-                        ParameterKind::Ty(()) => write!(fmt, "type")?,
-                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                    }
-                }
-                write!(fmt, "> {{ {:?} }}", subgoal.value)
-            }
-            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
-            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
-            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
-        }
-    }
-}
-
-impl<I: Interner> Debug for Goals<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "(")?;
-        for (goal, index) in self.iter().zip(0..) {
-            if index > 0 {
-                write!(fmt, ", ")?;
-            }
-            write!(fmt, "{:?}", goal)?;
-        }
-        write!(fmt, ")")?;
-        Ok(())
-    }
-}
-
 impl<T: Debug> Debug for Binders<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let Binders {
@@ -333,25 +310,6 @@ impl<I: Interner> Debug for ProgramClause<I> {
             ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
             ProgramClause::ForAll(pc) => write!(fmt, "{:?}", pc),
         }
-    }
-}
-
-impl<I: Interner> Debug for ProgramClauseImplication<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "{:?}", self.consequence)?;
-
-        let conditions = self.conditions.as_slice();
-
-        let conds = conditions.len();
-        if conds == 0 {
-            return Ok(());
-        }
-
-        write!(fmt, " :- ")?;
-        for cond in &conditions[..conds - 1] {
-            write!(fmt, "{:?}, ", cond)?;
-        }
-        write!(fmt, "{:?}", conditions[conds - 1])
     }
 }
 

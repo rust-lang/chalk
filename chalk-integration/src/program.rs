@@ -4,8 +4,8 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    AliasTy, AssocTypeId, ImplId, Lifetime, Parameter, ParameterKind, ProgramClause, StructId,
-    TraitId, Ty, TyData, TypeName,
+    AliasTy, AssocTypeId, Goal, GoalData, Goals, ImplId, Lifetime, Parameter, ParameterKind,
+    ProgramClause, ProgramClauseImplication, StructId, TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -146,6 +146,74 @@ impl tls::DebugContext for Program {
             ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
             ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
         }
+    }
+
+    fn debug_goal(
+        &self,
+        goal: &Goal<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        match goal.data(interner) {
+            GoalData::Quantified(qkind, ref subgoal) => {
+                write!(fmt, "{:?}<", qkind)?;
+                for (index, binder) in subgoal.binders.iter().enumerate() {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    match *binder {
+                        ParameterKind::Ty(()) => write!(fmt, "type")?,
+                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                    }
+                }
+                write!(fmt, "> {{ {:?} }}", subgoal.value)
+            }
+            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
+            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
+            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
+        }
+    }
+
+    fn debug_goals(
+        &self,
+        goals: &Goals<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "(")?;
+        for (goal, index) in goals.iter(interner).zip(0..) {
+            if index > 0 {
+                write!(fmt, ", ")?;
+            }
+            write!(fmt, "{:?}", goal)?;
+        }
+        write!(fmt, ")")?;
+        Ok(())
+    }
+
+    fn debug_program_clause_implication(
+        &self,
+        pci: &ProgramClauseImplication<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", pci.consequence)?;
+
+        let conditions = pci.conditions.as_slice(interner);
+
+        let conds = conditions.len();
+        if conds == 0 {
+            return Ok(());
+        }
+
+        write!(fmt, " :- ")?;
+        for cond in &conditions[..conds - 1] {
+            write!(fmt, "{:?}, ", cond)?;
+        }
+        write!(fmt, "{:?}", conditions[conds - 1])
     }
 }
 

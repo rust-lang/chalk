@@ -68,7 +68,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
             let mut env_goal = InEnvironment::new(&Environment::new(), self);
             loop {
                 let InEnvironment { environment, goal } = env_goal;
-                match goal.data() {
+                match goal.data(interner) {
                     GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                         let subgoal = infer.instantiate_binders_universally(interner, subgoal);
                         env_goal = InEnvironment::new(&environment, subgoal);
