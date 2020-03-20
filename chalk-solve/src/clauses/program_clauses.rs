@@ -138,13 +138,13 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
 
         let alias_ty = Ty::new(interner, alias.clone());
 
-        builder.push_binders(&self.ty, |builder, opaque_ty_datum| {
+        builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
             // AliasEq(T<..> = HiddenTy) :- Reveal.
             builder.push_clause(
                 DomainGoal::Holds(
                     AliasEq {
                         alias: alias.clone(),
-                        ty: opaque_ty_datum.clone(),
+                        ty: opaque_ty_bound.hidden_ty.clone(),
                     }
                     .cast(interner),
                 ),
@@ -161,7 +161,8 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             ));
         });
 
-        for bound in &self.bounds {
+        let opaque_ty_bound = &self.bound.skip_binders();
+        for bound in &opaque_ty_bound.bounds {
             // Implemented(!T: Bound).
             builder.push_fact(bound.skip_binders().clone().into_well_formed_goal(interner));
         }
@@ -175,7 +176,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 },
                 iter::once(TraitRef {
                     trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, self.ty.skip_binders().clone()),
+                    substitution: Substitution::from1(interner, opaque_ty_bound.hidden_ty.clone()),
                 }),
             );
         }

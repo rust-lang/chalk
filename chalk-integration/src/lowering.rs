@@ -6,7 +6,9 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
-use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, ToParameter};
+use chalk_rust_ir::{
+    Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyBound, OpaqueTyDatum, ToParameter,
+};
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -378,36 +380,50 @@ impl LowerProgram for Program {
                     custom_clauses.extend(clause.lower_clause(&empty_env)?);
                 }
                 Item::OpaqueTyDefn(ref opaque_ty) => {
-                    if let Some(&value) = opaque_ty_ids.get(&opaque_ty.identifier.str) {
+                    if let Some(&opaque_ty_id) = opaque_ty_ids.get(&opaque_ty.identifier.str) {
                         let parameter_kinds = opaque_ty
                             .parameter_kinds
                             .iter()
                             .map(|k| k.lower())
                             .collect::<Vec<_>>();
 
-                        let binders = empty_env
-                            .in_binders(parameter_kinds, |env| opaque_ty.ty.lower(&env))?;
+                        let binders = empty_env.in_binders(parameter_kinds, |env| {
+                            let hidden_ty = opaque_ty.ty.lower(&env)?;
+
+                            let hidden_ty_bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> =
+                                env.in_binders(
+                                    Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
+                                    |env1| {
+                                        let interner = env1.interner();
+                                        Ok(opaque_ty
+                                            .bounds
+                                            .lower(&env1)?
+                                            .iter()
+                                            .flat_map(|qil| {
+                                                qil.into_where_clauses(
+                                                    interner,
+                                                    chalk_ir::TyData::BoundVar(BoundVar::new(
+                                                        DebruijnIndex::INNERMOST,
+                                                        todo!(),
+                                                    ))
+                                                    .intern(interner),
+                                                )
+                                            })
+                                            .collect())
+                                    },
+                                )?;
+
+                            Ok(OpaqueTyBound {
+                                hidden_ty,
+                                bounds: hidden_ty_bounds.skip_binders().clone(),
+                            })
+                        })?;
 
                         opaque_ty_data.insert(
-                            value,
+                            opaque_ty_id,
                             Arc::new(OpaqueTyDatum {
-                                opaque_ty_id: value,
-                                bounds: opaque_ty
-                                    .bounds
-                                    .lower(&empty_env)?
-                                    .iter()
-                                    .flat_map(|qil| {
-                                        qil.into_where_clauses(
-                                            empty_env.interner(),
-                                            chalk_ir::TyData::BoundVar(BoundVar::new(
-                                                DebruijnIndex::INNERMOST,
-                                                todo!(),
-                                            ))
-                                            .intern(empty_env.interner()),
-                                        )
-                                    })
-                                    .collect(),
-                                ty: binders,
+                                opaque_ty_id,
+                                bound: binders,
                             }),
                         );
                     }

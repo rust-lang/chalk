@@ -516,11 +516,17 @@ pub struct OpaqueTyDatum<I: Interner> {
     /// The placeholder `!T` that corresponds to the opaque type `T`.
     pub opaque_ty_id: OpaqueTyId<I>,
 
+    /// The type bound to when revealed.
+    pub bound: Binders<OpaqueTyBound<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct OpaqueTyBound<I: Interner> {
+    /// The value for the "hidden type" for `opaque type Foo = ...`
+    pub hidden_ty: Ty<I>,
+
     /// Trait bounds for the opaque type.
     pub bounds: Vec<QuantifiedWhereClause<I>>,
-
-    /// The "hidden type" that the opaque type is equal to when revealed.
-    pub ty: Binders<Ty<I>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
