@@ -13,12 +13,14 @@ use chalk_engine::{
 };
 use chalk_ir::could_match::CouldMatch;
 use clauses::program_clauses_for_goal;
+use rustc_hash::FxHashMap;
 
 type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,
     search_graph: SearchGraph<I>,
+    cache: FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
 
     caching_enabled: bool,
 }
@@ -65,6 +67,7 @@ impl<I: Interner> RecursiveContext<I> {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
+            cache: FxHashMap::default(),
             caching_enabled,
         }
     }
@@ -117,11 +120,10 @@ impl<'me, I: Interner> Solver<'me, I> {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
-        // TODO
-        // if let Some(value) = self.cache.get(&goal) {
-        //     debug!("solve_reduced_goal: cache hit, value={:?}", value);
-        //     return value.clone();
-        // }
+        if let Some(value) = self.context.cache.get(&goal) {
+            debug!("solve_reduced_goal: cache hit, value={:?}", value);
+            return value.clone();
+        }
 
         // Next, check if the goal is in the search tree already.
         if let Some(dfn) = self.context.search_graph.lookup(&goal) {
@@ -176,8 +178,9 @@ impl<'me, I: Interner> Solver<'me, I> {
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
                 if self.context.caching_enabled {
-                    // TODO
-                    // self.search_graph.move_to_cache(dfn, &mut self.cache);
+                    self.context
+                        .search_graph
+                        .move_to_cache(dfn, &mut self.context.cache);
                     debug!("solve_reduced_goal: SCC head encountered, moving to cache");
                 } else {
                     debug!(

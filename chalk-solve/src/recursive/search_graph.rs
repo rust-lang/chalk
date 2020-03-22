@@ -9,6 +9,7 @@ use super::{Minimums, UCanonicalGoal};
 use crate::Solution;
 use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir::interner::Interner;
+use rustc_hash::FxHashMap;
 
 pub(super) struct SearchGraph<I: Interner> {
     indices: HashMap<UCanonicalGoal<I>, DepthFirstNumber>,
@@ -86,7 +87,7 @@ impl<I: Interner> SearchGraph<I> {
     pub(crate) fn move_to_cache(
         &mut self,
         dfn: DepthFirstNumber,
-        cache: &mut HashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
     ) {
         debug!("move_to_cache(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
