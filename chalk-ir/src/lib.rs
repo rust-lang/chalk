@@ -1322,6 +1322,16 @@ pub enum ClausePriority {
     Low,
 }
 
+impl std::ops::BitAnd for ClausePriority {
+    type Output = ClausePriority;
+    fn bitand(self, rhs: ClausePriority) -> Self::Output {
+        match (self, rhs) {
+            (ClausePriority::High, ClausePriority::High) => ClausePriority::High,
+            _ => ClausePriority::Low,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub enum ProgramClauseData<I: Interner> {
     Implies(ProgramClauseImplication<I>),

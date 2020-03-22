@@ -8,7 +8,7 @@ use super::stack::StackDepth;
 use super::{Minimums, UCanonicalGoal};
 use crate::Solution;
 use chalk_engine::fallible::{Fallible, NoSolution};
-use chalk_ir::interner::Interner;
+use chalk_ir::{interner::Interner, ClausePriority};
 use rustc_hash::FxHashMap;
 
 pub(super) struct SearchGraph<I: Interner> {
@@ -25,6 +25,7 @@ pub(super) struct Node<I: Interner> {
     pub(crate) goal: UCanonicalGoal<I>,
 
     pub(crate) solution: Fallible<Solution<I>>,
+    pub(crate) solution_priority: ClausePriority,
 
     /// This is `Some(X)` if we are actively exploring this node, or
     /// `None` otherwise.
@@ -66,6 +67,7 @@ impl<I: Interner> SearchGraph<I> {
         let node = Node {
             goal: goal.clone(),
             solution: Err(NoSolution),
+            solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
             links: Minimums { positive: dfn },
         };

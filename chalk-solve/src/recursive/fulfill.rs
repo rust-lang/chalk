@@ -75,6 +75,8 @@ pub(crate) struct Fulfill<'s, 'db, I: Interner> {
     /// The remaining goals to prove or refute
     obligations: Vec<Obligation<I>>,
 
+    priority: ClausePriority,
+
     /// Lifetime constraints that must be fulfilled for a solution to be fully
     /// validated.
     constraints: HashSet<InEnvironment<Constraint<I>>>,
@@ -89,6 +91,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     pub(crate) fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
         solver: &'s mut Solver<'db, I>,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
+        priority: ClausePriority,
     ) -> (Self, Substitution<I>, InEnvironment<T::Result>) {
         let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
             solver.program.interner(),
@@ -99,6 +102,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             solver,
             infer,
             obligations: vec![],
+            priority,
             constraints: HashSet::new(),
             cannot_prove: false,
         };
@@ -204,10 +208,12 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             quantified,
             universes,
         } = self.infer.u_canonicalize(interner, &quantified);
+        let (result, new_priority) = self.solver.solve_goal(quantified, minimums);
+        self.priority = self.priority & new_priority;
         Ok(PositiveSolution {
             free_vars,
             universes,
-            solution: self.solver.solve_goal(quantified, minimums)?,
+            solution: result?,
         })
     }
 
@@ -232,7 +238,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             .infer
             .u_canonicalize(self.solver.program.interner(), &canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
-        if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
+        if let (Ok(solution), _priority) = self.solver.solve_goal(quantified, &mut minimums) {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {
@@ -361,11 +367,14 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         mut self,
         subst: Substitution<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
-        let outcome = self.fulfill(minimums)?;
+    ) -> (Fallible<Solution<I>>, ClausePriority) {
+        let outcome = match self.fulfill(minimums) {
+            Ok(o) => o,
+            Err(e) => return (Err(e), self.priority),
+        };
 
         if self.cannot_prove {
-            return Ok(Solution::Ambig(Guidance::Unknown));
+            return (Ok(Solution::Ambig(Guidance::Unknown)), self.priority);
         }
 
         if outcome.is_complete() {
@@ -377,7 +386,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                 self.solver.program.interner(),
                 &ConstrainedSubst { subst, constraints },
             );
-            return Ok(Solution::Unique(constrained.quantified));
+            return (Ok(Solution::Unique(constrained.quantified)), self.priority);
         }
 
         // Otherwise, we have (positive or negative) obligations remaining, but
@@ -405,12 +414,15 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                         let subst = self
                             .infer
                             .canonicalize(self.solver.program.interner(), &subst);
-                        return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
+                        return (
+                            Ok(Solution::Ambig(Guidance::Suggested(subst.quantified))),
+                            self.priority,
+                        );
                     }
                 }
             }
 
-            Ok(Solution::Ambig(Guidance::Unknown))
+            (Ok(Solution::Ambig(Guidance::Unknown)), self.priority)
         } else {
             // While we failed to prove the goal, we still learned that
             // something had to hold. Here's an example where this happens:
@@ -435,7 +447,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             let subst = self
                 .infer
                 .canonicalize(self.solver.program.interner(), &subst);
-            Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
+            (
+                Ok(Solution::Ambig(Guidance::Definite(subst.quantified))),
+                self.priority,
+            )
         }
     }
 

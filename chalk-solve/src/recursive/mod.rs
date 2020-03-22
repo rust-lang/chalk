@@ -106,7 +106,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
-        self.solve_goal(canonical_goal.clone(), minimums)
+        self.solve_goal(canonical_goal.clone(), minimums).0
     }
 
     /// Attempt to solve a goal that has been fully broken down into leaf form
@@ -116,13 +116,13 @@ impl<'me, I: Interner> Solver<'me, I> {
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    ) -> (Fallible<Solution<I>>, ClausePriority) {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
             debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return value.clone();
+            return (value.clone(), ClausePriority::High);
         }
 
         // Next, check if the goal is in the search tree already.
@@ -140,10 +140,13 @@ impl<'me, I: Interner> Solver<'me, I> {
                         constraints: vec![],
                     };
                     debug!("applying coinductive semantics");
-                    return Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
+                    return (
+                        Ok(Solution::Unique(Canonical {
+                            value,
+                            binders: goal.canonical.binders,
+                        })),
+                        ClausePriority::High,
+                    );
                 }
 
                 self.context.stack[depth].flag_cycle();
@@ -153,11 +156,12 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
+            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
             info!(
-                "solve_goal: cycle detected, previous solution {:?}",
-                previous_solution
+                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
+                previous_solution, previous_solution_priority
             );
-            previous_solution
+            (previous_solution, previous_solution_priority)
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table is error.
@@ -171,6 +175,7 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             // Read final result from table.
             let result = self.context.search_graph[dfn].solution.clone();
+            let priority = self.context.search_graph[dfn].solution_priority;
 
             // If processing this subgoal did not involve anything
             // outside of its subtree, then we can promote it to the
@@ -190,8 +195,8 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
 
-            info!("solve_goal: solution = {:?}", result,);
-            result
+            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            (result, priority)
         }
     }
 
@@ -228,7 +233,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     },
             } = canonical_goal.clone();
 
-            let current_answer = match goal.data() {
+            let (current_answer, current_prio) = match goal.data() {
                 GoalData::DomainGoal(domain_goal) => {
                     let canonical_goal = UCanonical {
                         universes,
@@ -248,7 +253,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     // clauses. We try each approach in turn:
 
                     let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
-                    let env_solution = {
+                    let (env_solution, env_prio) = {
                         debug_heading!("env_clauses");
 
                         // TODO use code from clauses module
@@ -261,16 +266,18 @@ impl<'me, I: Interner> Solver<'me, I> {
                     };
                     debug!("env_solution={:?}", env_solution);
 
-                    let prog_solution = {
+                    let (prog_solution, prog_prio) = {
                         debug_heading!("prog_clauses");
 
                         let prog_clauses = self.program_clauses_for_goal(environment, &goal);
-                        prog_clauses.map_or(
-                            Ok(Solution::Ambig(Guidance::Unknown)),
-                            |prog_clauses| {
-                                self.solve_from_clauses(&canonical_goal, prog_clauses, minimums)
-                            },
-                        )
+                        match prog_clauses {
+                            Ok(clauses) => {
+                                self.solve_from_clauses(&canonical_goal, clauses, minimums)
+                            }
+                            Err(Floundered) => {
+                                (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
+                            }
+                        }
                     };
                     debug!("prog_solution={:?}", prog_solution);
 
@@ -282,7 +289,10 @@ impl<'me, I: Interner> Solver<'me, I> {
                     // made in a given context are more likely to be relevant than
                     // general `impl`s.
                     // TODO can we combine this logic with the priorization logic?
-                    env_solution.merge_with(prog_solution, |env, prog| env.favor_over(prog))
+                    (
+                        env_solution.merge_with(prog_solution, |env, prog| env.favor_over(prog)),
+                        prog_prio & env_prio, // FIXME
+                    )
                 }
 
                 _ => {
@@ -307,6 +317,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // None of our subgoals depended on us directly.
                 // We can return.
                 self.context.search_graph[dfn].solution = current_answer;
+                self.context.search_graph[dfn].solution_priority = current_prio;
                 return *minimums;
             }
 
@@ -317,12 +328,24 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return *minimums;
             }
 
+            if (
+                self.context.search_graph[dfn].solution_priority,
+                current_prio,
+            ) == (ClausePriority::High, ClausePriority::Low)
+            {
+                // TODO check solution inputs?
+                // Not replacing the current answer, so we're at a fixed point?
+                debug!("solve_new_subgoal: new answer has lower priority");
+                return *minimums;
+            }
+
             let current_answer_is_ambig = match &current_answer {
                 Ok(s) => s.is_ambig(),
                 Err(_) => false,
             };
 
             self.context.search_graph[dfn].solution = current_answer;
+            self.context.search_graph[dfn].solution_priority = current_prio;
 
             // Subtle: if our current answer is ambiguous, we can just stop, and
             // in fact we *must* -- otherwise, we sometimes fail to reach a
@@ -340,10 +363,12 @@ impl<'me, I: Interner> Solver<'me, I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
-        fulfill.push_goal(&goal.environment, goal.goal)?;
+        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal, ClausePriority::High);
+        if let Err(e) = fulfill.push_goal(&goal.environment, goal.goal) {
+            return (Err(e), ClausePriority::High);
+        }
         fulfill.solve(subst, minimums)
     }
 
@@ -355,10 +380,11 @@ impl<'me, I: Interner> Solver<'me, I> {
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clauses: C,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>>
+    ) -> (Fallible<Solution<I>>, ClausePriority)
     where
         C: IntoIterator<Item = ProgramClause<I>>,
     {
+        // TODO we don't actually need to keep track of the inputs
         let mut cur_solution = None;
         fn combine_with_priorities<I: Interner>(
             a: Solution<I>,
@@ -369,7 +395,6 @@ impl<'me, I: Interner> Solver<'me, I> {
             inputs_b: Vec<Parameter<I>>,
         ) -> (Solution<I>, ClausePriority, Vec<Parameter<I>>) {
             match (prio_a, prio_b) {
-                // TODO compare the *input* parts of the solutions
                 (ClausePriority::High, ClausePriority::Low) if inputs_a == inputs_b => {
                     debug!(
                         "preferring solution: {:?} over {:?} because of higher prio",
@@ -392,7 +417,6 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             match program_clause {
                 ProgramClause::Implies(implication) => {
-                    let priority = implication.priority;
                     let res = self.solve_via_implication(
                         canonical_goal,
                         Binders {
@@ -401,7 +425,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                         },
                         minimums,
                     );
-                    if let Ok(solution) = res {
+                    if let (Ok(solution), priority) = res {
                         debug!("ok: solution={:?} prio={:?}", solution, priority);
                         let inputs = if let Some(subst) = solution.constrained_subst() {
                             let subst_goal = subst.value.subst.apply(
@@ -433,9 +457,8 @@ impl<'me, I: Interner> Solver<'me, I> {
                     }
                 }
                 ProgramClause::ForAll(implication) => {
-                    let priority = implication.value.priority;
                     let res = self.solve_via_implication(canonical_goal, implication, minimums);
-                    if let Ok(solution) = res {
+                    if let (Ok(solution), priority) = res {
                         debug!("ok: solution={:?} prio={:?}", solution, priority);
                         let inputs = if let Some(subst) = solution.constrained_subst() {
                             let subst_goal = subst.value.subst.apply(
@@ -468,7 +491,9 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
         }
-        cur_solution.map(|(s, _, _)| s).ok_or(NoSolution)
+        cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p, _)| {
+            (Ok(s), p)
+        })
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.
@@ -477,7 +502,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    ) -> (Fallible<Solution<I>>, ClausePriority) {
         info_heading!(
             "solve_via_implication(\
              \n    canonical_goal={:?},\
@@ -485,7 +510,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
+        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal, clause.value.priority);
         let ProgramClauseImplication {
             consequence,
             conditions,
@@ -494,11 +519,15 @@ impl<'me, I: Interner> Solver<'me, I> {
 
         debug!("the subst is {:?}", subst);
 
-        fulfill.unify(&goal.environment, &goal.goal, &consequence)?;
+        if let Err(e) = fulfill.unify(&goal.environment, &goal.goal, &consequence) {
+            return (Err(e), ClausePriority::High);
+        }
 
         // if so, toss in all of its premises
         for condition in conditions.as_slice() {
-            fulfill.push_goal(&goal.environment, condition.clone())?;
+            if let Err(e) = fulfill.push_goal(&goal.environment, condition.clone()) {
+                return (Err(e), ClausePriority::High);
+            }
         }
 
         // and then try to solve
