@@ -14,7 +14,7 @@ bench = []
 
 [dependencies]
 docopt = "1.0.0"
-itertools = "0.8.0"
+itertools = "0.9.0"
 lalrpop-intern = "0.15.1"
 rustyline = "1.0"
 salsa = "0.10.0"
@@ -52,8 +52,5 @@ path = "chalk-derive"
 [dependencies.chalk-integration]
 version = "0.1.0"
 path = "chalk-integration"
-
-[dev-dependencies]
-itertools = "0.8.0"
 
 [workspace]
