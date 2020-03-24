@@ -87,6 +87,7 @@ pub struct StructFlags {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// JRL What does a TraitDatum represent?
 pub struct TraitDatum<I: Interner> {
     pub id: TraitId<I>,
 
@@ -99,6 +100,13 @@ pub struct TraitDatum<I: Interner> {
 
     /// The id of each associated type defined in the trait.
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
+
+    pub well_known: Option<WellKnownTrait>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WellKnownTrait {
+    SizedTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {
@@ -130,8 +138,11 @@ pub struct TraitDatumBound<I: Interner> {
 pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
+    /// JRL What does upstream trait mean?
     pub upstream: bool,
+    /// JRL What fundamental traits are there? Does this just mean #[fundamental] like `Box`?
     pub fundamental: bool,
+    /// JRL Also what are these?
     pub non_enumerable: bool,
     pub coinductive: bool,
 }

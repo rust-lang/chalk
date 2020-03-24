@@ -1241,6 +1241,7 @@ impl LowerTrait for TraitDefn {
             binders: binders,
             flags: self.flags.lower(),
             associated_ty_ids,
+            well_known: None,
         })
     }
 }
