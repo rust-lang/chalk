@@ -839,6 +839,14 @@ impl<I: Interner> AliasTy<I> {
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
     }
+
+    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
+        self.substitution.iter().filter_map(|p| p.ty()).cloned()
+    }
+
+    pub fn self_type_parameter(&self) -> Ty<I> {
+        self.type_parameters().next().unwrap()
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
