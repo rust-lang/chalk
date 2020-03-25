@@ -87,7 +87,10 @@ pub struct StructFlags {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// JRL What does a TraitDatum represent?
+/// A rust intermediate representation (rust_ir) of a Trait Definition.
+///
+/// Not to be confused with a rust_ir for a Trait Implementation, which is
+/// represented with ??? JRL
 pub struct TraitDatum<I: Interner> {
     pub id: TraitId<I>,
 
@@ -101,6 +104,8 @@ pub struct TraitDatum<I: Interner> {
     /// The id of each associated type defined in the trait.
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
 
+    /// A marker indicating if this trait definition represents one of the
+    /// various builtin traits (sized, copy, etc)
     pub well_known: Option<WellKnownTrait>,
 }
 
@@ -138,11 +143,15 @@ pub struct TraitDatumBound<I: Interner> {
 pub struct TraitFlags {
     pub auto: bool,
     pub marker: bool,
-    /// JRL What does upstream trait mean?
+    /// Indicate that a trait is defined upstream (in a dependency), used during
+    /// coherence checking.
     pub upstream: bool,
-    /// JRL What fundamental traits are there? Does this just mean #[fundamental] like `Box`?
+    /// The trait equivalent of a struct fundamental, currently (2020-03-25)
+    /// there are no known fundamental traits.
     pub fundamental: bool,
-    /// JRL Also what are these?
+    /// Indicates that chalk cannot list all of the implementations of the given
+    /// trait, likely because it is a publicly exported trait in a library JRL
+    /// ???.
     pub non_enumerable: bool,
     pub coinductive: bool,
 }
