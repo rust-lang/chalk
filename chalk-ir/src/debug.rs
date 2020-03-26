@@ -169,6 +169,176 @@ impl<I: Interner> Debug for LifetimeData<I> {
     }
 }
 
+impl<I: Interner> Debug for GoalData<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        match self {
+            GoalData::Quantified(qkind, ref subgoal) => {
+                write!(fmt, "{:?}<", qkind)?;
+                for (index, binder) in subgoal.binders.iter().enumerate() {
+                    if index > 0 {
+                        write!(fmt, ", ")?;
+                    }
+                    match *binder {
+                        ParameterKind::Ty(()) => write!(fmt, "type")?,
+                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                    }
+                }
+                write!(fmt, "> {{ {:?} }}", subgoal.value)
+            }
+            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
+            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
+            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
+            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
+        }
+    }
+}
+
+pub struct GoalsDebug<'a, I: Interner> {
+    goals: &'a Goals<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for GoalsDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "(")?;
+        for (goal, index) in self.goals.iter(self.interner).zip(0..) {
+            if index > 0 {
+                write!(fmt, ", ")?;
+            }
+            write!(fmt, "{:?}", goal)?;
+        }
+        write!(fmt, ")")?;
+        Ok(())
+    }
+}
+
+impl<I: Interner> Goals<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> GoalsDebug<'a, I> {
+        GoalsDebug {
+            goals: self,
+            interner,
+        }
+    }
+}
+
+pub struct ParameterDataInnerDebug<'a, I: Interner>(&'a ParameterData<I>);
+
+impl<'a, I: Interner> Debug for ParameterDataInnerDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        match self.0 {
+            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
+            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
+        }
+    }
+}
+
+impl<I: Interner> ParameterData<I> {
+    pub fn inner_debug(&self) -> ParameterDataInnerDebug<'_, I> {
+        ParameterDataInnerDebug(self)
+    }
+}
+
+pub struct ProgramClauseImplicationDebug<'a, I: Interner> {
+    pci: &'a ProgramClauseImplication<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ProgramClauseImplicationDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let ProgramClauseImplicationDebug { pci, interner } = self;
+        write!(fmt, "{:?}", pci.consequence)?;
+
+        let conditions = pci.conditions.as_slice(interner);
+
+        let conds = conditions.len();
+        if conds == 0 {
+            return Ok(());
+        }
+
+        write!(fmt, " :- ")?;
+        for cond in &conditions[..conds - 1] {
+            write!(fmt, "{:?}, ", cond)?;
+        }
+        write!(fmt, "{:?}", conditions[conds - 1])
+    }
+}
+
+impl<I: Interner> ProgramClauseImplication<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> ProgramClauseImplicationDebug<'a, I> {
+        ProgramClauseImplicationDebug {
+            pci: self,
+            interner,
+        }
+    }
+}
+
+pub struct ApplicationTyDebug<'a, I: Interner> {
+    application_ty: &'a ApplicationTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ApplicationTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let ApplicationTyDebug {
+            application_ty,
+            interner,
+        } = self;
+        let ApplicationTy { name, substitution } = application_ty;
+        write!(fmt, "{:?}{:?}", name, substitution.with_angle(interner))
+    }
+}
+
+impl<I: Interner> ApplicationTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> ApplicationTyDebug<'a, I> {
+        ApplicationTyDebug {
+            application_ty: self,
+            interner,
+        }
+    }
+}
+
+pub struct SubstitutionDebug<'a, I: Interner> {
+    substitution: &'a Substitution<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let SubstitutionDebug {
+            substitution,
+            interner,
+        } = self;
+        let mut first = true;
+
+        write!(fmt, "[")?;
+
+        for (index, value) in substitution.iter(interner).enumerate() {
+            if first {
+                first = false;
+            } else {
+                write!(fmt, ", ")?;
+            }
+
+            write!(fmt, "?{} := {:?}", index, value)?;
+        }
+
+        write!(fmt, "]")?;
+
+        Ok(())
+    }
+}
+
+impl<I: Interner> Substitution<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> SubstitutionDebug<'a, I> {
+        SubstitutionDebug {
+            substitution: self,
+            interner,
+        }
+    }
+}
+
 impl Debug for PlaceholderIndex {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let PlaceholderIndex { ui, idx } = self;
@@ -203,6 +373,41 @@ impl<I: Interner> Debug for TraitRef<I> {
 pub struct SeparatorTraitRef<'me, I: Interner> {
     pub trait_ref: &'me TraitRef<I>,
     pub separator: &'me str,
+}
+
+pub struct SeparatorTraitRefDebug<'a, 'me, I: Interner> {
+    separator_trait_ref: &'a SeparatorTraitRef<'me, I>,
+    interner: &'a I,
+}
+
+impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let SeparatorTraitRefDebug {
+            separator_trait_ref,
+            interner,
+        } = self;
+        let parameters = separator_trait_ref
+            .trait_ref
+            .substitution
+            .parameters(interner);
+        write!(
+            fmt,
+            "{:?}{}{:?}{:?}",
+            parameters[0],
+            separator_trait_ref.separator,
+            separator_trait_ref.trait_ref.trait_id,
+            Angle(&parameters[1..])
+        )
+    }
+}
+
+impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> SeparatorTraitRefDebug<'a, 'me, I> {
+        SeparatorTraitRefDebug {
+            separator_trait_ref: self,
+            interner,
+        }
+    }
 }
 
 pub struct Angle<'a, T>(pub &'a [T]);
