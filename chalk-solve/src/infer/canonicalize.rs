@@ -145,7 +145,7 @@ where
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
-                Ok(TyData::BoundVar(bound_var.shifted_in(binders)).intern(interner))
+                Ok(TyData::BoundVar(bound_var.shifted_in_by(binders)).intern(interner))
             }
         }
     }
@@ -171,7 +171,7 @@ where
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
-                Ok(LifetimeData::BoundVar(bound_var.shifted_in(binders)).intern(interner))
+                Ok(LifetimeData::BoundVar(bound_var.shifted_in_by(binders)).intern(interner))
             }
         }
     }

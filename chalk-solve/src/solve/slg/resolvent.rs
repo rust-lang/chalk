@@ -417,9 +417,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             }
 
             (TyData::Function(answer), TyData::Function(pending)) => {
-                self.outer_binder.shift_in(1);
+                self.outer_binder.shift_in();
                 Zip::zip_with(self, &answer.parameters, &pending.parameters)?;
-                self.outer_binder.shift_out(1);
+                self.outer_binder.shift_out();
                 Ok(())
             }
 
@@ -484,9 +484,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
     where
         T: Zip<I> + Fold<I, Result = T>,
     {
-        self.outer_binder.shift_in(1);
+        self.outer_binder.shift_in();
         Zip::zip_with(self, &answer.value, &pending.value)?;
-        self.outer_binder.shift_out(1);
+        self.outer_binder.shift_out();
         Ok(())
     }
 

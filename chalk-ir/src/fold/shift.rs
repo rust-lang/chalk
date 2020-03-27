@@ -93,7 +93,7 @@ impl<I> Shifter<'_, I> {
     /// + self.adjustment`, and then wraps *that* within the internal
     /// set `binders`.
     fn adjust(&self, bound_var: BoundVar, binders: usize) -> BoundVar {
-        bound_var.shifted_in(self.adjustment + binders)
+        bound_var.shifted_in_by(self.adjustment + binders)
     }
 }
 
@@ -143,8 +143,8 @@ impl<I> DownShifter<'_, I> {
     /// this will fail with `Err`. Otherwise, returns the variable at
     /// this new depth (but adjusted to appear within `binders`).
     fn adjust(&self, bound_var: BoundVar, binders: usize) -> Fallible<BoundVar> {
-        match bound_var.checked_shifted_out(self.adjustment) {
-            Some(bound_var1) => Ok(bound_var1.shifted_in(binders)),
+        match bound_var.shifted_out_by(self.adjustment) {
+            Some(bound_var1) => Ok(bound_var1.shifted_in_by(binders)),
             None => Err(NoSolution),
         }
     }

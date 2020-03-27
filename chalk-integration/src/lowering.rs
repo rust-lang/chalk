@@ -146,7 +146,7 @@ impl<'k> Env<'k> {
         let parameter_map: ParameterMap = self
             .parameter_map
             .iter()
-            .map(|(&k, &v)| (k, v.shifted_in(1)))
+            .map(|(&k, &v)| (k, v.shifted_in()))
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {

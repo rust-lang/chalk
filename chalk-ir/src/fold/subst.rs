@@ -55,8 +55,9 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
             }
         } else {
             Ok(bound_var
-                .shifted_out(1)
-                .shifted_in(binders)
+                .shifted_out()
+                .expect("cannot fail because this is not the innermost")
+                .shifted_in_by(binders)
                 .to_ty(self.interner()))
         }
     }
@@ -75,8 +76,9 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
             }
         } else {
             Ok(bound_var
-                .shifted_out(1)
-                .shifted_in(binders)
+                .shifted_out()
+                .unwrap()
+                .shifted_in_by(binders)
                 .to_lifetime(self.interner()))
         }
     }

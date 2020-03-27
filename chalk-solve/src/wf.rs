@@ -378,7 +378,7 @@ where
                 .iter()
                 .zip(0..)
                 .map(|p| p.to_parameter(interner));
-            let impl_debruin = DebruijnIndex::INNERMOST.shifted_in(1);
+            let impl_debruin = DebruijnIndex::INNERMOST.shifted_in();
             let impl_parameters = impl_binders
                 .iter()
                 .zip(0..)

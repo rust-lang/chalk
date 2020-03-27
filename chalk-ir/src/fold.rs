@@ -129,7 +129,7 @@ where
                 bound_var, binders
             )
         } else {
-            let bound_var = bound_var.shifted_in(binders);
+            let bound_var = bound_var.shifted_in_by(binders);
             Ok(TyData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
         }
     }
@@ -146,7 +146,7 @@ where
                 bound_var, binders
             )
         } else {
-            let bound_var = bound_var.shifted_in(binders);
+            let bound_var = bound_var.shifted_in_by(binders);
             Ok(LifetimeData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
         }
     }
@@ -318,7 +318,7 @@ where
         let interner = folder.interner();
         match self.data(interner) {
             TyData::BoundVar(bound_var) => {
-                if let Some(bound_var1) = bound_var.checked_shifted_out(binders) {
+                if let Some(bound_var1) = bound_var.shifted_out_by(binders) {
                     // This variable was bound outside of the binders
                     // that we have traversed during folding;
                     // therefore, it is free. Let the folder have a
@@ -388,7 +388,7 @@ where
         let interner = folder.interner();
         match self.data(interner) {
             LifetimeData::BoundVar(bound_var) => {
-                if let Some(bound_var1) = bound_var.checked_shifted_out(binders) {
+                if let Some(bound_var1) = bound_var.shifted_out_by(binders) {
                     // This variable was bound outside of the binders
                     // that we have traversed during folding;
                     // therefore, it is free. Let the folder have a

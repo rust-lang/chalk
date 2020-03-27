@@ -315,21 +315,30 @@ impl BoundVar {
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
     #[must_use]
-    pub fn shifted_in(self, amount: usize) -> Self {
-        BoundVar::new(self.debruijn.shifted_in(amount), self.index)
+    pub fn shifted_in(self) -> Self {
+        BoundVar::new(self.debruijn.shifted_in(), self.index)
     }
 
-    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_out`]).
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
     #[must_use]
-    pub fn shifted_out(self, amount: usize) -> Self {
-        BoundVar::new(self.debruijn.shifted_out(amount), self.index)
+    pub fn shifted_in_by(self, amount: usize) -> Self {
+        BoundVar::new(self.debruijn.shifted_in_by(amount), self.index)
     }
 
-    /// Shift out this variable by `amount` binders, returning `None`
-    /// if not enclosed in that many levels of binders.
-    pub fn checked_shifted_out(self, amount: usize) -> Option<Self> {
-        let debruijn = self.debruijn.checked_shifted_out(amount)?;
-        Some(BoundVar::new(debruijn, self.index))
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
+    #[must_use]
+    pub fn shifted_out(self) -> Option<Self> {
+        self.debruijn
+            .shifted_out()
+            .map(|db| BoundVar::new(db, self.index))
+    }
+
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
+    #[must_use]
+    pub fn shifted_out_by(self, amount: usize) -> Option<Self> {
+        self.debruijn
+            .shifted_out_by(amount)
+            .map(|db| BoundVar::new(db, self.index))
     }
 
     /// Return the index of the bound variable, but only if it is bound
@@ -436,6 +445,19 @@ impl DebruijnIndex {
     }
 
     /// Returns the resulting index when this value is moved into
+    /// through one binder.
+    #[must_use]
+    pub fn shifted_in(self) -> DebruijnIndex {
+        self.shifted_in_by(1)
+    }
+
+    /// Update this index in place by shifting it "in" through
+    /// `amount` number of binders.
+    pub fn shift_in(&mut self) {
+        *self = self.shifted_in();
+    }
+
+    /// Returns the resulting index when this value is moved into
     /// `amount` number of new binders. So, e.g., if you had
     ///
     ///    for<'a> fn(&'a x)
@@ -446,36 +468,31 @@ impl DebruijnIndex {
     ///
     /// you would need to shift the index for `'a` into a new binder.
     #[must_use]
-    pub fn shifted_in(self, amount: usize) -> DebruijnIndex {
+    pub fn shifted_in_by(self, amount: usize) -> DebruijnIndex {
         DebruijnIndex::from(self.as_usize() + amount)
-    }
-
-    /// Update this index in place by shifting it "in" through
-    /// `amount` number of binders.
-    pub fn shift_in(&mut self, amount: usize) {
-        *self = self.shifted_in(amount);
     }
 
     /// Returns the resulting index when this value is moved out from
     /// `amount` number of new binders.
     #[must_use]
-    pub fn shifted_out(self, amount: usize) -> DebruijnIndex {
-        assert!(self.as_usize() >= amount);
-        DebruijnIndex::from(self.as_usize() - amount)
-    }
-
-    #[must_use]
-    pub fn checked_shifted_out(self, amount: usize) -> Option<DebruijnIndex> {
-        if self.within(amount) {
-            None
-        } else {
-            Some(self.shifted_out(amount))
-        }
+    pub fn shifted_out(self) -> Option<DebruijnIndex> {
+        self.shifted_out_by(1)
     }
 
     /// Update in place by shifting out from `amount` binders.
-    pub fn shift_out(&mut self, amount: usize) {
-        *self = self.shifted_out(amount);
+    pub fn shift_out(&mut self) {
+        *self = self.shifted_out().unwrap();
+    }
+
+    /// Returns the resulting index when this value is moved out from
+    /// `amount` number of new binders.
+    #[must_use]
+    pub fn shifted_out_by(self, amount: usize) -> Option<DebruijnIndex> {
+        if self.within(amount) {
+            None
+        } else {
+            Some(DebruijnIndex::from(self.as_usize() - amount))
+        }
     }
 
     /// Adjusts any De Bruijn indices so as to make `to_binder` the
@@ -498,8 +515,8 @@ impl DebruijnIndex {
     /// If we invoke `shift_out_to_binder` and the region is in fact
     /// bound by one of the binders we are shifting out of, that is an
     /// error (and should fail an assertion failure).
-    pub fn shifted_out_to_binder(self, to_binder: DebruijnIndex) -> Self {
-        self.shifted_out(to_binder.as_usize() - Self::INNERMOST.as_usize())
+    pub fn shifted_out_to_binder(self, to_binder: DebruijnIndex) -> Option<Self> {
+        self.shifted_out_by(to_binder.as_usize() - Self::INNERMOST.as_usize())
     }
 }
 
