@@ -234,81 +234,78 @@ where
             return Ok(());
         }
 
-        // We retrieve all the input types of the where clauses appearing on the trait impl,
-        // e.g. in:
-        // ```
-        // impl<T, K> Foo for (T, K) where T: Iterator<Item = (HashSet<K>, Vec<Box<T>>)> { ... }
-        // ```
-        // we would retrieve `HashSet<K>`, `Box<T>`, `Vec<Box<T>>`, `(HashSet<K>, Vec<Box<T>>)`.
-        // We will have to prove that these types are well-formed (e.g. an additional `K: Hash`
-        // bound would be needed here).
-        let mut input_types = Vec::new();
-        impl_datum
+        let impl_fields = impl_datum
             .binders
-            .value
-            .where_clauses
-            .fold(interner, &mut input_types);
+            .map_ref(|v| (&v.trait_ref, &v.where_clauses));
 
-        // We retrieve all the input types of the type on which we implement the trait: we will
-        // *assume* that these types are well-formed, e.g. we will be able to derive that
-        // `K: Hash` holds without writing any where clause.
-        //
-        // Example:
-        // ```
-        // struct HashSet<K> where K: Hash { ... }
-        //
-        // impl<K> Foo for HashSet<K> {
-        //     // Inside here, we can rely on the fact that `K: Hash` holds
-        // }
-        // ```
-        let mut header_input_types = Vec::new();
-        let trait_ref = &impl_datum.binders.value.trait_ref;
-        trait_ref.fold(interner, &mut header_input_types);
+        let mut gb = GoalBuilder::new(self.db);
+        // forall<P0...Pn> {...}
+        let goal = gb.forall(
+            &impl_fields,
+            &impl_datum.associated_ty_value_ids,
+            |gb, &(trait_ref, where_clauses), associated_ty_value_ids| {
+                let interner = gb.interner();
 
-        let assoc_ty_goals = impl_datum
-            .associated_ty_value_ids
-            .iter()
-            .filter_map(|&id| Self::compute_assoc_ty_goal(self.db, id));
+                // if (WC) { ... }
+                gb.implies(
+                    where_clauses
+                        .iter()
+                        .cloned()
+                        .map(|qwc| qwc.into_from_env_goal(interner)),
+                    |gb| {
+                        // We retrieve all the input types of the type on which we implement the trait: we will
+                        // *assume* that these types are well-formed, e.g. we will be able to derive that
+                        // `K: Hash` holds without writing any where clause.
+                        //
+                        // Example:
+                        // ```
+                        // struct HashSet<K> where K: Hash { ... }
+                        //
+                        // impl<K> Foo for HashSet<K> {
+                        //     // Inside here, we can rely on the fact that `K: Hash` holds
+                        // }
+                        // ```
+                        let mut header_input_types = Vec::new();
+                        trait_ref.fold(interner, &mut header_input_types);
 
-        // Things to prove well-formed: input types of the where-clauses, projection types
-        // appearing in the header, associated type values, and of course the trait ref.
-        let trait_ref_wf = DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()));
-        debug!("verify_trait_impl: input_types={:?}", input_types);
-        let goals = input_types
-            .into_iter()
-            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)).cast(interner))
-            .chain(assoc_ty_goals)
-            .chain(Some(trait_ref_wf).cast(interner));
+                        gb.implies(
+                            header_input_types
+                                .into_iter()
+                                .map(|ty| ty.into_from_env_goal(interner)),
+                            |gb| {
+                                let db = gb.db();
 
-        let goal = Goal::all(interner, goals);
-        debug!("verify_trait_impl: goal={:?}", goal);
+                                let assoc_ty_goals = associated_ty_value_ids
+                                    .iter()
+                                    .filter_map(|&id| Self::compute_assoc_ty_goal(db, id));
 
-        // Assumptions: types appearing in the header which are not projection types are
-        // assumed to be well-formed, and where clauses declared on the impl are assumed
-        // to hold.
-        let hypotheses = impl_datum
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .map(|qwc| qwc.into_from_env_goal(interner))
-            .casted(interner)
-            .chain(
-                header_input_types
-                    .into_iter()
-                    .map(|ty| DomainGoal::FromEnv(FromEnv::Ty(ty)))
-                    .casted(interner),
-            )
-            .collect();
+                                // We retrieve all the input types of the where clauses appearing on the trait impl,
+                                // e.g. in:
+                                // ```
+                                // impl<T, K> Foo for (T, K) where T: Iterator<Item = (HashSet<K>, Vec<Box<T>>)> { ... }
+                                // ```
+                                // we would retrieve `HashSet<K>`, `Box<T>`, `Vec<Box<T>>`, `(HashSet<K>, Vec<Box<T>>)`.
+                                // We will have to prove that these types are well-formed (e.g. an additional `K: Hash`
+                                // bound would be needed here).
+                                let mut input_types = Vec::new();
+                                where_clauses.fold(interner, &mut input_types);
 
-        let goal = GoalData::Implies(hypotheses, goal)
-            .intern(interner)
-            .quantify(
-                interner,
-                QuantifierKind::ForAll,
-                impl_datum.binders.binders.clone(),
-            );
+                                // Things to prove well-formed: input types of the where-clauses, projection types
+                                // appearing in the header, associated type values, and of course the trait ref.
+                                debug!("verify_trait_impl: input_types={:?}", input_types);
+                                let goals = input_types
+                                    .into_iter()
+                                    .map(|ty| ty.well_formed().cast(interner))
+                                    .chain(assoc_ty_goals)
+                                    .chain(Some(trait_ref.clone().well_formed().cast(interner)));
+
+                                gb.all(goals)
+                            },
+                        )
+                    },
+                )
+            },
+        );
 
         debug!("WF trait goal: {:?}", goal);
 

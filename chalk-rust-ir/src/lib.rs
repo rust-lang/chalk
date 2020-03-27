@@ -20,6 +20,8 @@ pub enum LangItem {}
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 
+chalk_ir::id_fold!(AssociatedTyValueId);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,

@@ -10,12 +10,16 @@ use fold::Fold;
 use interner::{HasInterner, Interner};
 
 pub(crate) struct GoalBuilder<'i, I: Interner> {
-    pub db: &'i dyn RustIrDatabase<I>,
+    db: &'i dyn RustIrDatabase<I>,
 }
 
 impl<'i, I: Interner> GoalBuilder<'i, I> {
     pub(crate) fn new(db: &'i dyn RustIrDatabase<I>) -> Self {
         GoalBuilder { db }
+    }
+
+    pub(crate) fn db(&self) -> &'i dyn RustIrDatabase<I> {
+        self.db
     }
 
     pub(crate) fn interner(&self) -> &'i I {
