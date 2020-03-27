@@ -1,6 +1,6 @@
 use super::*;
 use crate::solve::truncate;
-use cast::Caster;
+use cast::Cast;
 use chalk_engine::fallible::NoSolution;
 use fold::Fold;
 use infer::{
@@ -110,7 +110,6 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     }
 
     /// Wraps `InferenceTable::instantiate_in`
-    #[allow(non_camel_case_types)]
     pub(crate) fn instantiate_binders_existentially<T>(
         &mut self,
         arg: impl IntoBindersAndValue<Value = T>,
@@ -120,6 +119,23 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     {
         self.infer
             .instantiate_binders_existentially(self.solver.program.interner(), arg)
+    }
+
+    fn push_obligation(&mut self, obligation: Obligation<I>) {
+        // truncate to avoid overflows
+        let obligation = match obligation {
+            Obligation::Prove(goal) => {
+                let truncated =
+                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 10, &goal);
+                Obligation::Prove(truncated.value)
+            }
+            Obligation::Refute(goal) => {
+                let truncated =
+                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 10, &goal);
+                Obligation::Refute(truncated.value)
+            }
+        };
+        self.obligations.push(obligation);
     }
 
     /// Unifies `a` and `b` in the given environment.
@@ -137,12 +153,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.obligations.extend(
-            goals
-                .into_iter()
-                .casted(self.solver.program.interner())
-                .map(Obligation::Prove),
-        );
+        let interner = self.solver.program.interner();
+        for goal in goals {
+            self.push_obligation(Obligation::Prove(goal.cast(interner)));
+        }
         Ok(())
     }
 
@@ -179,11 +193,11 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             }
             GoalData::Not(subgoal) => {
                 let in_env = InEnvironment::new(environment, subgoal.clone());
-                self.obligations.push(Obligation::Refute(in_env));
+                self.push_obligation(Obligation::Refute(in_env));
             }
             GoalData::DomainGoal(_) => {
                 let in_env = InEnvironment::new(environment, goal);
-                self.obligations.push(Obligation::Prove(in_env));
+                self.push_obligation(Obligation::Prove(in_env));
             }
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
@@ -201,14 +215,11 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.program.interner();
-        // truncate to avoid overflows
-        let truncated =
-            truncate::truncate(self.solver.program.interner(), &mut self.infer, 10, &wc);
         let Canonicalized {
             quantified,
             free_vars,
             ..
-        } = self.infer.canonicalize(interner, &truncated.value);
+        } = self.infer.canonicalize(interner, &wc);
         let UCanonicalized {
             quantified,
             universes,
