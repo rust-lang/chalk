@@ -268,7 +268,7 @@ where
         let assoc_ty_goals = impl_datum
             .associated_ty_value_ids
             .iter()
-            .filter_map(|&id| self.compute_assoc_ty_goal(id));
+            .filter_map(|&id| Self::compute_assoc_ty_goal(self.db, id));
 
         // Things to prove well-formed: input types of the where-clauses, projection types
         // appearing in the header, associated type values, and of course the trait ref.
@@ -356,16 +356,18 @@ where
     ///     forall<'a> { WellFormed(Box<&'a T>) },
     /// }
     /// ```
-    fn compute_assoc_ty_goal(&self, assoc_ty_id: AssociatedTyValueId<I>) -> Option<Goal<I>> {
-        let interner = self.db.interner();
-        let assoc_ty = &self.db.associated_ty_value(assoc_ty_id);
+    fn compute_assoc_ty_goal(
+        db: &dyn RustIrDatabase<I>,
+        assoc_ty_id: AssociatedTyValueId<I>,
+    ) -> Option<Goal<I>> {
+        let interner = db.interner();
+        let assoc_ty = &db.associated_ty_value(assoc_ty_id);
 
         // Split the binders on the assoc. ty value into those
         // from the *impl* (in our example, `T`) and those from
         // the associated type (in our example, `'a`).
-        let (impl_binders, value_binders) = self
-            .db
-            .split_associated_ty_value_parameters(&assoc_ty.value.binders, assoc_ty);
+        let (impl_binders, value_binders) =
+            db.split_associated_ty_value_parameters(&assoc_ty.value.binders, assoc_ty);
 
         // In our final goal, the binders from the impl will be
         // something like `^1.N` -- i.e., a debruijn index of 1 --
@@ -386,9 +388,8 @@ where
         // Get the projection for this associated type:
         //
         // * `projection`: `<Box<!T> as Foo>::Item<'!a>`
-        let (_, projection) = self
-            .db
-            .impl_parameters_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
+        let (_, projection) =
+            db.impl_parameters_and_projection_from_associated_ty_value(&all_parameters, assoc_ty);
 
         // Get the ty that the impl is using -- `Box<&'!a !T>`, in our example
         let AssociatedTyValueBound { ty: value_ty } =
@@ -416,7 +417,7 @@ where
         // * where clauses
         //     * original in trait, `Self: 'a`
         //     * after substituting impl parameters, `Box<!T>: '!a`
-        let assoc_ty_datum = self.db.associated_ty_data(projection.associated_ty_id);
+        let assoc_ty_datum = db.associated_ty_data(projection.associated_ty_id);
         let AssociatedTyDatumBound {
             bounds: defn_bounds,
             where_clauses: defn_where_clauses,
