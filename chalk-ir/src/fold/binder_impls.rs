@@ -22,7 +22,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
             parameters,
         } = self;
         Ok(Fn {
-            num_binders: num_binders.clone(),
+            num_binders: *num_binders,
             parameters: parameters.fold_with(folder, outer_binder.shifted_in())?,
         })
     }
