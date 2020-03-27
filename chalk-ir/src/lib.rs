@@ -371,33 +371,16 @@ pub struct DebruijnIndex {
     depth: u32,
 }
 
-impl From<u32> for DebruijnIndex {
-    fn from(depth: u32) -> Self {
-        Self::from_u32(depth)
-    }
-}
-
-impl From<usize> for DebruijnIndex {
-    fn from(depth: usize) -> Self {
-        assert!(depth < (std::u32::MAX as usize));
-        Self::from_u32(depth as u32)
-    }
-}
-
 impl DebruijnIndex {
     pub const INNERMOST: DebruijnIndex = DebruijnIndex { depth: 0 };
     pub const ONE: DebruijnIndex = DebruijnIndex { depth: 1 };
 
-    pub fn from_u32(depth: u32) -> Self {
+    pub fn new(depth: u32) -> Self {
         DebruijnIndex { depth }
     }
 
-    pub fn as_u32(self) -> u32 {
+    pub fn depth(self) -> u32 {
         self.depth
-    }
-
-    pub fn as_usize(self) -> usize {
-        self.depth as usize
     }
 
     /// True if the binder identified by this index is within the
@@ -463,7 +446,7 @@ impl DebruijnIndex {
     ///   innermost binder, has index 3).
     #[must_use]
     pub fn shifted_in_from(self, outer_binder: DebruijnIndex) -> DebruijnIndex {
-        DebruijnIndex::from(self.as_usize() + outer_binder.as_usize())
+        DebruijnIndex::new(self.depth() + outer_binder.depth())
     }
 
     /// Returns the resulting index when this value is moved out from
@@ -508,9 +491,7 @@ impl DebruijnIndex {
         if self.within(outer_binder) {
             None
         } else {
-            Some(DebruijnIndex::from(
-                self.as_usize() - outer_binder.as_usize(),
-            ))
+            Some(DebruijnIndex::new(self.depth() - outer_binder.depth()))
         }
     }
 }
