@@ -112,7 +112,7 @@ impl<C: Context> Forest<C> {
         mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
-            info!("answer cached = {:?}", answer);
+            info!(?answer, "answer cached");
             return test(C::inference_normalized_subst_from_subst(&answer.subst));
         }
 
@@ -260,7 +260,7 @@ impl<C: Context> Forest<C> {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
                     Ok(clauses) => {
                         for clause in clauses {
-                            info!("program clause = {:#?}", clause);
+                            info!(?clause, "program clause");
                             let mut infer = infer.clone();
                             if let Ok(resolvent) = infer.resolvent_clause(
                                 context.interner(),
@@ -269,7 +269,7 @@ impl<C: Context> Forest<C> {
                                 &subst,
                                 &clause,
                             ) {
-                                info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
+                                info!(?resolvent, "pushing initial strand with ex-clause");
                                 let strand = Strand {
                                     infer,
                                     ex_clause: resolvent,
@@ -282,7 +282,7 @@ impl<C: Context> Forest<C> {
                         }
                     }
                     Err(Floundered) => {
-                        debug!("Marking table {:?} as floundered!", table);
+                        debug!(?table, "Marking table as floundered!");
                         table_ref.mark_floundered();
                     }
                 }
@@ -301,8 +301,8 @@ impl<C: Context> Forest<C> {
                     Self::simplify_hh_goal(context, &mut infer, subst, environment, hh_goal)
                 {
                     info!(
-                        "pushing initial strand with ex-clause: {:#?}",
-                        infer.debug_ex_clause(context.interner(), &ex_clause),
+                        ex_clause = ?infer.debug_ex_clause(context.interner(), &ex_clause),
+                        "pushing initial strand with ex-clause",
                     );
                     let strand = Strand {
                         infer,
@@ -433,17 +433,15 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
             initial_table,
             initial_answer
         );
-        info!(
-            "table goal = {:#?}",
-            self.forest.tables[initial_table].table_goal
-        );
+        let goal = &self.forest.tables[initial_table].table_goal;
+        info!(?goal, "table goal");
         // Check if this table has floundered.
         if self.forest.tables[initial_table].is_floundered() {
             return Err(RootSearchFail::Floundered);
         }
         // Check for a tabled answer.
         if let Some(answer) = self.forest.tables[initial_table].answer(initial_answer) {
-            info!("answer cached = {:?}", answer);
+            info!(?answer, "answer cached");
             return Ok(());
         }
 
@@ -839,7 +837,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
 
         // Check for a tabled answer.
         if let Some(answer) = self.forest.tables[subgoal_table].answer(answer_index) {
-            info!("answer cached = {:?}", answer);
+            info!(?answer, "answer cached");
 
             // There was a previous answer available for this table
             // We need to check if we can merge it into the current `Strand`.
@@ -867,7 +865,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         // Next, check if the table is already active. If so, then we
         // have a recursive attempt.
         if let Some(cyclic_depth) = self.stack.is_active(subgoal_table) {
-            info!("cycle detected at depth {:?}", cyclic_depth);
+            info!(?cyclic_depth, "cycle detected at depth");
             let minimums = Minimums {
                 positive: self.stack[cyclic_depth].clock,
                 negative: TimeStamp::MAX,
@@ -1427,7 +1425,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
     }
 
     fn reconsider_floundered_subgoals(&mut self, ex_clause: &mut ExClause<impl Context>) {
-        info!("reconsider_floundered_subgoals(ex_clause={:#?})", ex_clause,);
+        info!(?ex_clause, "reconsider_floundered_subgoals(ex_clause=)");
         let ExClause {
             answer_time,
             subgoals,

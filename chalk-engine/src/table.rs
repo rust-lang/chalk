@@ -142,8 +142,8 @@ impl<C: Context> Table<C> {
         };
 
         info!(
-            "new answer to table with goal {:?}: answer={:?}",
-            self.table_goal, answer,
+            goal = ?self.table_goal, answer=?answer,
+            "new answer to table with goal; answer"
         );
         if !added {
             return None;
