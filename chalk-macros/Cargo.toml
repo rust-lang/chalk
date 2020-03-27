@@ -11,3 +11,4 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "1.1.0"
+tracing = "0.1"
