@@ -1,6 +1,7 @@
 use std::fmt;
 
 use crate::ext::*;
+use crate::goal_builder::GoalBuilder;
 use crate::solve::SolverChoice;
 use crate::split::Split;
 use crate::RustIrDatabase;
@@ -168,56 +169,52 @@ where
 
     pub fn verify_struct_decl(&self, struct_id: StructId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
+
+        // Given a struct like
+        //
+        // ```rust
+        // struct Foo<T> where T: Eq {
+        //     data: Vec<T>
+        // }
+        // ```
         let struct_datum = self.db.struct_datum(struct_id);
 
-        // We retrieve all the input types of the struct fields.
-        let mut input_types = Vec::new();
-        struct_datum
+        let mut gb = GoalBuilder::new(self.db);
+        let struct_data = struct_datum
             .binders
-            .value
-            .fields
-            .fold(interner, &mut input_types);
-        struct_datum
-            .binders
-            .value
-            .where_clauses
-            .fold(interner, &mut input_types);
+            .map_ref(|b| (&b.fields, &b.where_clauses));
 
-        if input_types.is_empty() {
-            return Ok(());
-        }
+        // We make a goal like...
+        //
+        // forall<T> { ... }
+        let wg_goal = gb.forall(&struct_data, (), |gb, (fields, where_clauses), ()| {
+            let interner = gb.interner();
 
-        let goals = input_types
-            .into_iter()
-            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
-            .casted(interner);
-        let goal = Goal::all(interner, goals);
+            // (FromEnv(T: Eq) => ...)
+            gb.implies(
+                where_clauses
+                    .iter()
+                    .cloned()
+                    .map(|wc| wc.into_from_env_goal(interner)),
+                |gb| {
+                    // WellFormed(Vec<T>), for each field type `Vec<T>` or type that appears in the where clauses
+                    let mut input_types = Vec::new();
+                    // ...in a field type...
+                    fields.fold(gb.interner(), &mut input_types);
+                    // ...in a where clause.
+                    where_clauses.fold(gb.interner(), &mut input_types);
+                    gb.all(
+                        input_types
+                            .into_iter()
+                            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty))),
+                    )
+                },
+            )
+        });
 
-        let hypotheses = struct_datum
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .map(|wc| wc.map(|bound| bound.into_from_env_goal(interner)))
-            .casted(interner)
-            .collect();
+        let wg_goal = wg_goal.into_closed_goal(interner);
 
-        // We ask that the above input types are well-formed provided that all the where-clauses
-        // on the struct definition hold.
-        let goal = GoalData::Implies(hypotheses, goal)
-            .intern(interner)
-            .quantify(
-                interner,
-                QuantifierKind::ForAll,
-                struct_datum.binders.binders.clone(),
-            );
-
-        let is_legal = match self
-            .solver_choice
-            .into_solver()
-            .solve(self.db, &goal.into_closed_goal(interner))
-        {
+        let is_legal = match self.solver_choice.into_solver().solve(self.db, &wg_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };

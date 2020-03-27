@@ -21,7 +21,7 @@ pub trait Shift<I: Interner>: Fold<I, I> {
     fn shifted_out_to(&self, interner: &I, target_binder: DebruijnIndex) -> Fallible<Self::Result>;
 }
 
-impl<T: Fold<I, I> + Eq, I: Interner> Shift<I> for T {
+impl<T: Fold<I, I>, I: Interner> Shift<I> for T {
     fn shifted_in(&self, interner: &I) -> Self::Result {
         self.shifted_in_from(interner, DebruijnIndex::ONE)
     }
