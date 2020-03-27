@@ -25,7 +25,7 @@ impl<I: Interner> InferenceTable<I> {
                     interner,
                     table: self,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap()
     }
@@ -44,11 +44,17 @@ where
         self
     }
 
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
+    fn fold_inference_ty(
+        &mut self,
+        var: InferenceVar,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<I>> {
         let interner = self.interner;
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(interner, var) {
-            Some(ty) => Ok(ty.fold_with(self, 0)?.shifted_in(interner, binders)), // FIXME shift
+            Some(ty) => Ok(ty
+                .fold_with(self, DebruijnIndex::INNERMOST)?
+                .shifted_in(interner)), // FIXME shift
             None => Ok(var.to_ty(interner)),
         }
     }
@@ -56,12 +62,14 @@ where
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
-        binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let interner = self.interner;
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(interner, var) {
-            Some(l) => Ok(l.fold_with(self, 0)?.shifted_in(interner, binders)),
+            Some(l) => Ok(l
+                .fold_with(self, DebruijnIndex::INNERMOST)?
+                .shifted_in(interner)),
             None => Ok(var.to_lifetime(interner)), // FIXME shift
         }
     }

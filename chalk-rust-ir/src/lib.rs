@@ -172,7 +172,7 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
     type Output = QuantifiedWhereClause<I>;
 
     fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
-        let self_ty = self_ty.shifted_in(interner, 1);
+        let self_ty = self_ty.shifted_in(interner);
         self.value
             .into_where_clauses(interner, self_ty)
             .into_iter()

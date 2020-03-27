@@ -17,7 +17,7 @@ impl<I: Interner> Subst<'_, '_, I> {
                     parameters,
                     interner,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap()
     }
@@ -28,7 +28,11 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
+    fn fold_free_var_ty(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<I>> {
         // We are eliminating one binder, but binders outside of that get preserved.
         //
         // So e.g. consider this:
@@ -50,14 +54,14 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
         // ```
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                ParameterKind::Ty(t) => Ok(t.shifted_in(self.interner(), binders)),
+                ParameterKind::Ty(t) => Ok(t.shifted_in_from(self.interner(), outer_binder)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
             Ok(bound_var
                 .shifted_out()
                 .expect("cannot fail because this is not the innermost")
-                .shifted_in_by(binders)
+                .shifted_in_from(outer_binder)
                 .to_ty(self.interner()))
         }
     }
@@ -65,20 +69,20 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     fn fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         // see comment in `fold_free_var_ty`
 
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                ParameterKind::Lifetime(l) => Ok(l.shifted_in(self.interner(), binders)),
+                ParameterKind::Lifetime(l) => Ok(l.shifted_in_from(self.interner(), outer_binder)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
             Ok(bound_var
                 .shifted_out()
                 .unwrap()
-                .shifted_in_by(binders)
+                .shifted_in_from(outer_binder)
                 .to_lifetime(self.interner()))
         }
     }

@@ -16,13 +16,13 @@ impl<'a, T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        (**self).fold_with(folder, binders)
+        (**self).fold_with(folder, outer_binder)
     }
 }
 
@@ -31,13 +31,15 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Vec<T> 
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        self.iter().map(|e| e.fold_with(folder, binders)).collect()
+        self.iter()
+            .map(|e| e.fold_with(folder, outer_binder))
+            .collect()
     }
 }
 
@@ -46,13 +48,13 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Box<T> 
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        Ok(Box::new((**self).fold_with(folder, binders)?))
+        Ok(Box::new((**self).fold_with(folder, outer_binder)?))
     }
 }
 
@@ -61,13 +63,13 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Arc<T> 
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        Ok(Arc::new((**self).fold_with(folder, binders)?))
+        Ok(Arc::new((**self).fold_with(folder, outer_binder)?))
     }
 }
 
@@ -75,14 +77,14 @@ macro_rules! tuple_fold {
     ($($n:ident),*) => {
         impl<$($n: Fold<I, TI>,)* I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ($($n,)*) {
             type Result = ($($n::Result,)*);
-            fn fold_with<'i>(&self, folder: &mut dyn Folder<'i, I, TI>, binders: usize) -> Fallible<Self::Result>
+            fn fold_with<'i>(&self, folder: &mut dyn Folder<'i, I, TI>, outer_binder: DebruijnIndex) -> Fallible<Self::Result>
             where
                 I: 'i,
                 TI: 'i,
             {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
-                Ok(($($n.fold_with(folder, binders)?,)*))
+                Ok(($($n.fold_with(folder, outer_binder)?,)*))
             }
         }
     }
@@ -98,7 +100,7 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Option<
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -106,7 +108,7 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Option<
     {
         match self {
             None => Ok(None),
-            Some(e) => Ok(Some(e.fold_with(folder, binders)?)),
+            Some(e) => Ok(Some(e.fold_with(folder, outer_binder)?)),
         }
     }
 }
@@ -116,7 +118,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -125,7 +127,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
         let interner = folder.interner();
         let target_interner = folder.target_interner();
 
-        let data = self.data(interner).fold_with(folder, binders)?;
+        let data = self.data(interner).fold_with(folder, outer_binder)?;
         Ok(Parameter::new(target_interner, data))
     }
 }
@@ -135,7 +137,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Substitution<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -143,7 +145,9 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Substitution<I> {
     {
         let interner = folder.interner();
         let target_interner = folder.target_interner();
-        let folded = self.iter(interner).map(|p| p.fold_with(folder, binders));
+        let folded = self
+            .iter(interner)
+            .map(|p| p.fold_with(folder, outer_binder));
         Ok(Substitution::from_fallible(target_interner, folded)?)
     }
 }
@@ -153,7 +157,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goals<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -161,7 +165,9 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goals<I> {
     {
         let interner = folder.interner();
         let target_interner = folder.target_interner();
-        let folded = self.iter(interner).map(|p| p.fold_with(folder, binders));
+        let folded = self
+            .iter(interner)
+            .map(|p| p.fold_with(folder, outer_binder));
         Ok(Goals::from_fallible(target_interner, folded)?)
     }
 }
@@ -174,7 +180,7 @@ macro_rules! copy_fold {
             fn fold_with<'i>(
                 &self,
                 _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
-                _binders: usize,
+                _outer_binder: DebruijnIndex,
             ) -> ::chalk_engine::fallible::Fallible<Self::Result>
             where
                 I: 'i,
@@ -203,7 +209,7 @@ macro_rules! id_fold {
             fn fold_with<'i>(
                 &self,
                 _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
-                _binders: usize,
+                _outer_binder: DebruijnIndex,
             ) -> ::chalk_engine::fallible::Fallible<Self::Result>
             where
                 I: 'i,
@@ -226,7 +232,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> ::chalk_engine::fallible::Fallible<Self::Result>
     where
         I: 'i,
@@ -234,10 +240,10 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
     {
         match self {
             ProgramClause::Implies(pci) => {
-                Ok(ProgramClause::Implies(pci.fold_with(folder, binders)?))
+                Ok(ProgramClause::Implies(pci.fold_with(folder, outer_binder)?))
             }
             ProgramClause::ForAll(pci) => {
-                Ok(ProgramClause::ForAll(pci.fold_with(folder, binders)?))
+                Ok(ProgramClause::ForAll(pci.fold_with(folder, outer_binder)?))
             }
         }
     }
@@ -249,7 +255,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
     fn fold_with<'i>(
         &self,
         _folder: &mut dyn Folder<'i, I, TI>,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> ::chalk_engine::fallible::Fallible<Self::Result>
     where
         I: 'i,
@@ -269,16 +275,16 @@ where
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
         match self {
-            ParameterKind::Ty(a) => Ok(ParameterKind::Ty(a.fold_with(folder, binders)?)),
+            ParameterKind::Ty(a) => Ok(ParameterKind::Ty(a.fold_with(folder, outer_binder)?)),
             ParameterKind::Lifetime(a) => {
-                Ok(ParameterKind::Lifetime(a.fold_with(folder, binders)?))
+                Ok(ParameterKind::Lifetime(a.fold_with(folder, outer_binder)?))
             }
         }
     }
@@ -297,7 +303,7 @@ where
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -313,13 +319,13 @@ where
             floundered_subgoals,
         } = self;
         Ok(ExClause {
-            subst: subst.fold_with(folder, binders)?,
+            subst: subst.fold_with(folder, outer_binder)?,
             ambiguous: *ambiguous,
-            constraints: constraints.fold_with(folder, binders)?,
-            subgoals: subgoals.fold_with(folder, binders)?,
-            delayed_subgoals: delayed_subgoals.fold_with(folder, binders)?,
-            answer_time: answer_time.fold_with(folder, binders)?,
-            floundered_subgoals: floundered_subgoals.fold_with(folder, binders)?,
+            constraints: constraints.fold_with(folder, outer_binder)?,
+            subgoals: subgoals.fold_with(folder, outer_binder)?,
+            delayed_subgoals: delayed_subgoals.fold_with(folder, outer_binder)?,
+            answer_time: answer_time.fold_with(folder, outer_binder)?,
+            floundered_subgoals: floundered_subgoals.fold_with(folder, outer_binder)?,
         })
     }
 }
@@ -337,7 +343,7 @@ where
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -348,8 +354,8 @@ where
             floundered_time,
         } = self;
         Ok(FlounderedSubgoal {
-            floundered_literal: floundered_literal.fold_with(folder, binders)?,
-            floundered_time: floundered_time.fold_with(folder, binders)?,
+            floundered_literal: floundered_literal.fold_with(folder, outer_binder)?,
+            floundered_time: floundered_time.fold_with(folder, outer_binder)?,
         })
     }
 }
@@ -364,15 +370,15 @@ where
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
         match self {
-            Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, binders)?)),
-            Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, binders)?)),
+            Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, outer_binder)?)),
+            Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, outer_binder)?)),
         }
     }
 }

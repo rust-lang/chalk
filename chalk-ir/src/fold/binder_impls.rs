@@ -11,7 +11,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -23,7 +23,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
         } = self;
         Ok(Fn {
             num_binders: num_binders.clone(),
-            parameters: parameters.fold_with(folder, binders + 1)?,
+            parameters: parameters.fold_with(folder, outer_binder.shifted_in())?,
         })
     }
 }
@@ -37,7 +37,7 @@ where
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -47,7 +47,7 @@ where
             binders: self_binders,
             value: self_value,
         } = self;
-        let value = self_value.fold_with(folder, binders + 1)?;
+        let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
         Ok(Binders {
             binders: self_binders.clone(),
             value: value,
@@ -65,7 +65,7 @@ where
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -75,7 +75,7 @@ where
             binders: self_binders,
             value: self_value,
         } = self;
-        let value = self_value.fold_with(folder, binders + 1)?;
+        let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
         Ok(Canonical {
             binders: self_binders.clone(),
             value: value,

@@ -326,7 +326,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         let answer_param = self.answer_subst.at(interner, answer_index);
 
         let pending_shifted = pending
-            .shifted_out(interner, self.outer_binder.as_usize())
+            .shifted_out_to(interner, self.outer_binder)
             .unwrap_or_else(|_| {
                 panic!(
                     "truncate extracted a pending value that references internal binder: {:?}",
@@ -369,7 +369,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         } = pending_var;
 
         // Both bound variables are bound within the term we are matching
-        assert!(answer_depth.within_binder(self.outer_binder));
+        assert!(answer_depth.within(self.outer_binder));
 
         // They are bound at the same (relative) depth
         assert_eq!(answer_depth, pending_depth);

@@ -212,7 +212,7 @@ impl<I: Interner> Ty<I> {
     /// check, intended only for debug assertions, because I am lazy.
     pub fn needs_shift(&self, interner: &I) -> bool {
         let ty = self.clone();
-        ty != ty.shifted_in(interner, 1)
+        ty != ty.shifted_in(interner)
     }
 }
 
@@ -309,8 +309,8 @@ impl BoundVar {
     }
 
     /// True if this variable is bound within the `amount` innermost binders.
-    pub fn bound_within(self, amount: usize) -> bool {
-        self.debruijn.within(amount)
+    pub fn bound_within(self, outer_binder: DebruijnIndex) -> bool {
+        self.debruijn.within(outer_binder)
     }
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
@@ -321,8 +321,8 @@ impl BoundVar {
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
     #[must_use]
-    pub fn shifted_in_by(self, amount: usize) -> Self {
-        BoundVar::new(self.debruijn.shifted_in_by(amount), self.index)
+    pub fn shifted_in_from(self, outer_binder: DebruijnIndex) -> Self {
+        BoundVar::new(self.debruijn.shifted_in_from(outer_binder), self.index)
     }
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
@@ -335,9 +335,9 @@ impl BoundVar {
 
     /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
     #[must_use]
-    pub fn shifted_out_by(self, amount: usize) -> Option<Self> {
+    pub fn shifted_out_to(self, outer_binder: DebruijnIndex) -> Option<Self> {
         self.debruijn
-            .shifted_out_by(amount)
+            .shifted_out_to(outer_binder)
             .map(|db| BoundVar::new(db, self.index))
     }
 
@@ -386,6 +386,7 @@ impl From<usize> for DebruijnIndex {
 
 impl DebruijnIndex {
     pub const INNERMOST: DebruijnIndex = DebruijnIndex { depth: 0 };
+    pub const ONE: DebruijnIndex = DebruijnIndex { depth: 1 };
 
     pub fn from_u32(depth: u32) -> Self {
         DebruijnIndex { depth }
@@ -399,31 +400,8 @@ impl DebruijnIndex {
         self.depth as usize
     }
 
-    /// True if this represents a binder that is "within" the
-    /// `binders` innermost binders.
-    ///
-    /// # Example
-    ///
-    /// Imagine you have the following binders in scope
-    ///
-    /// ```ignore
-    /// forall<a> forall<b> forall<c>
-    /// ```
-    ///
-    /// then the Debruijn index for `c` would be `0`, the index for
-    /// `b` would be 1, and so on. Now consider the following calls:
-    ///
-    /// * `c.within(0) = false` -- nothing is within the 0 innermost binders
-    /// * `c.within(1) = true` -- but c is within the innermost binder
-    /// * `b.within(1) = false` -- b is not
-    /// * `b.within(2) = true` -- b is within the 2 innermost binders
-    /// * `b.within(3) = true` -- b is also within the 3 innermost binders
-    pub fn within(self, binders: usize) -> bool {
-        self.as_usize() < binders
-    }
-
     /// True if the binder identified by this index is within the
-    /// binder identified by the index `binder`.
+    /// binder identified by the index `outer_binder`.
     ///
     /// # Example
     ///
@@ -440,15 +418,15 @@ impl DebruijnIndex {
     /// * `b.within(a) = true`
     /// * `a.within(a) = false`
     /// * `a.within(c) = false`
-    pub fn within_binder(self, binder: DebruijnIndex) -> bool {
-        self < binder
+    pub fn within(self, outer_binder: DebruijnIndex) -> bool {
+        self < outer_binder
     }
 
     /// Returns the resulting index when this value is moved into
     /// through one binder.
     #[must_use]
     pub fn shifted_in(self) -> DebruijnIndex {
-        self.shifted_in_by(1)
+        self.shifted_in_from(DebruijnIndex::ONE)
     }
 
     /// Update this index in place by shifting it "in" through
@@ -457,26 +435,42 @@ impl DebruijnIndex {
         *self = self.shifted_in();
     }
 
-    /// Returns the resulting index when this value is moved into
-    /// `amount` number of new binders. So, e.g., if you had
+    /// Adds `outer_binder` levels to the `self` index. Intuitively, this
+    /// shifts the `self` index, which was valid at the outer binder,
+    /// so that it is valid at the innermost binder.
     ///
-    ///    for<'a> fn(&'a x)
+    /// Example: Assume that the following binders are in scope:
     ///
-    /// and you wanted to change it to
+    /// ```ignore
+    /// for<A> for<B> for<C> for<D>
+    ///            ^ outer binder
+    /// ```
     ///
-    ///    for<'a> fn(for<'b> fn(&'a x))
+    /// Assume further that the `outer_binder` argument is 2,
+    /// which means that it is referring to the `for<B>` binder
+    /// (since `D` would be the innermost binder).
     ///
-    /// you would need to shift the index for `'a` into a new binder.
+    /// This means that `self` is relative to the binder `B` -- so
+    /// if `self` is 0 (`INNERMOST`), then it refers to `B`,
+    /// and if `self` is 1, then it refers to `A`.
+    ///
+    /// We will return as follows:
+    ///
+    /// * `0.shifted_in_from(2) = 2` -- i.e., `B`, when shifted in to the binding level `D`, has index 2
+    /// * `1.shifted_in_from(2) = 3` -- i.e., `A`, when shifted in to the binding level `D`, has index 3
+    /// * `2.shifted_in_from(1) = 3` -- here, we changed the `outer_binder`  to refer to `C`.
+    ///   Therefore `2` (relative to `C`) refers to `A`, so the result is still 3 (since `A`, relative to the
+    ///   innermost binder, has index 3).
     #[must_use]
-    pub fn shifted_in_by(self, amount: usize) -> DebruijnIndex {
-        DebruijnIndex::from(self.as_usize() + amount)
+    pub fn shifted_in_from(self, outer_binder: DebruijnIndex) -> DebruijnIndex {
+        DebruijnIndex::from(self.as_usize() + outer_binder.as_usize())
     }
 
     /// Returns the resulting index when this value is moved out from
     /// `amount` number of new binders.
     #[must_use]
     pub fn shifted_out(self) -> Option<DebruijnIndex> {
-        self.shifted_out_by(1)
+        self.shifted_out_to(DebruijnIndex::ONE)
     }
 
     /// Update in place by shifting out from `amount` binders.
@@ -484,14 +478,39 @@ impl DebruijnIndex {
         *self = self.shifted_out().unwrap();
     }
 
-    /// Returns the resulting index when this value is moved out from
-    /// `amount` number of new binders.
-    #[must_use]
-    pub fn shifted_out_by(self, amount: usize) -> Option<DebruijnIndex> {
-        if self.within(amount) {
+    /// Subtracts `outer_binder` levels from the `self` index. Intuitively, this
+    /// shifts the `self` index, which was valid at the innermost
+    /// binder, to one that is valid at the binder `outer_binder`.
+    ///
+    /// This will return `None` if the `self` index is internal to the
+    /// outer binder (i.e., if `self < outer_binder`).
+    ///
+    /// Example: Assume that the following binders are in scope:
+    ///
+    /// ```ignore
+    /// for<A> for<B> for<C> for<D>
+    ///            ^ outer binder
+    /// ```
+    ///
+    /// Assume further that the `outer_binder` argument is 2,
+    /// which means that it is referring to the `for<B>` binder
+    /// (since `D` would be the innermost binder).
+    ///
+    /// This means that the result is relative to the binder `B` -- so
+    /// if `self` is 0 (`INNERMOST`), then it refers to `B`,
+    /// and if `self` is 1, then it refers to `A`.
+    ///
+    /// We will return as follows:
+    ///
+    /// * `1.shifted_out_to(2) = None` -- i.e., the binder for `C` can't be named from the binding level `B`
+    /// * `3.shifted_out_to(2) = Some(1)` -- i.e., `A`, when shifted out to the binding level `B`, has index 1
+    pub fn shifted_out_to(self, outer_binder: DebruijnIndex) -> Option<DebruijnIndex> {
+        if self.within(outer_binder) {
             None
         } else {
-            Some(DebruijnIndex::from(self.as_usize() - amount))
+            Some(DebruijnIndex::from(
+                self.as_usize() - outer_binder.as_usize(),
+            ))
         }
     }
 }
@@ -1354,7 +1373,7 @@ impl<I: Interner> Goal<I> {
                         DomainGoal::Compatible(()).cast(interner),
                         DomainGoal::DownstreamType(ty).cast(interner),
                     ],
-                    self.shifted_in(interner, 1),
+                    self.shifted_in(interner),
                 )
                 .intern(interner)
             }),
@@ -1556,7 +1575,7 @@ impl<I: Interner> Substitution<I> {
                     interner,
                     subst: self,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap()
     }
@@ -1618,22 +1637,26 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, bound_var: BoundVar, binders: usize) -> Fallible<Ty<I>> {
+    fn fold_free_var_ty(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<I>> {
         assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
         let ty = self.at(bound_var.index);
         let ty = ty.assert_ty_ref(self.interner());
-        Ok(ty.shifted_in(self.interner(), binders))
+        Ok(ty.shifted_in_from(self.interner(), outer_binder))
     }
 
     fn fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
         let l = self.at(bound_var.index);
         let l = l.assert_lifetime_ref(self.interner());
-        Ok(l.shifted_in(self.interner(), binders))
+        Ok(l.shifted_in_from(self.interner(), outer_binder))
     }
 
     fn interner(&self) -> &'i I {

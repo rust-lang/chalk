@@ -255,7 +255,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // as the variable is unified.
         let universe_index = self.table.universe_of_unbound_var(var);
 
-        let ty1 = ty.fold_with(&mut OccursCheck::new(self, var, universe_index), 0)?;
+        let ty1 = ty.fold_with(
+            &mut OccursCheck::new(self, var, universe_index),
+            DebruijnIndex::INNERMOST,
+        )?;
 
         self.table
             .unify
@@ -401,7 +404,7 @@ where
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner();
         if self.universe_index < universe.ui {
@@ -414,7 +417,7 @@ where
     fn fold_free_placeholder_lifetime(
         &mut self,
         ui: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let interner = self.interner();
         if self.universe_index < ui.ui {
@@ -444,14 +447,18 @@ where
         }
     }
 
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<I>> {
+    fn fold_inference_ty(
+        &mut self,
+        var: InferenceVar,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<I>> {
         let interner = self.interner();
         let var = EnaVariable::from(var);
         match self.unifier.table.unify.probe_value(var) {
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.ty(interner).unwrap();
-                let normalized_ty = normalized_ty.fold_with(self, 0)?;
+                let normalized_ty = normalized_ty.fold_with(self, DebruijnIndex::INNERMOST)?;
                 assert!(!normalized_ty.needs_shift(interner));
                 Ok(normalized_ty)
             }
@@ -486,7 +493,7 @@ where
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         // a free existentially bound region; find the
         // inference variable it corresponds to
@@ -512,7 +519,7 @@ where
 
             InferenceValue::Bound(l) => {
                 let l = l.lifetime(interner).unwrap();
-                let l = l.fold_with(self, binders)?;
+                let l = l.fold_with(self, outer_binder)?;
                 assert!(!l.needs_shift(interner));
                 Ok(l.clone())
             }

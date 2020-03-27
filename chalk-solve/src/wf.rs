@@ -152,7 +152,7 @@ impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
         accumulator.extend(
             types
                 .into_iter()
-                .map(|ty| ty.shifted_out(interner, 1).unwrap()),
+                .map(|ty| ty.shifted_out(interner).unwrap()),
         );
     }
 }

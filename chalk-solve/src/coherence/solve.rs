@@ -89,7 +89,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let lhs_params = params(interner, lhs).iter().cloned();
         let rhs_params = params(interner, rhs)
             .iter()
-            .map(|param| param.shifted_in(interner, 1));
+            .map(|param| param.shifted_in(interner));
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
@@ -104,7 +104,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.shifted_in(interner, 1));
+            .map(|wc| wc.shifted_in(interner));
 
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
@@ -180,7 +180,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         // binder for the "less special" impl.
         let more_special_params = params(interner, more_special)
             .iter()
-            .map(|p| p.shifted_in(interner, 1));
+            .map(|p| p.shifted_in(interner));
         let less_special_params = params(interner, less_special).iter().cloned();
         let params_goals = more_special_params
             .zip(less_special_params)

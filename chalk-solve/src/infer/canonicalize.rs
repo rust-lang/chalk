@@ -38,7 +38,7 @@ impl<I: Interner> InferenceTable<I> {
             max_universe: UniverseIndex::root(),
             interner,
         };
-        let value = value.fold_with(&mut q, 0).unwrap();
+        let value = value.fold_with(&mut q, DebruijnIndex::INNERMOST).unwrap();
         let free_vars = q.free_vars.clone();
         let max_universe = q.max_universe;
 
@@ -107,7 +107,7 @@ where
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
@@ -117,7 +117,7 @@ where
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
@@ -128,14 +128,24 @@ where
         true
     }
 
-    fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
-        debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
+    fn fold_inference_ty(
+        &mut self,
+        var: InferenceVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<I>> {
+        debug_heading!(
+            "fold_inference_ty(depth={:?}, binders={:?})",
+            var,
+            outer_binder
+        );
         let interner = self.interner;
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(interner, var) {
             Some(ty) => {
                 debug!("bound to {:?}", ty);
-                Ok(ty.fold_with(self, 0)?.shifted_in(interner, binders))
+                Ok(ty
+                    .fold_with(self, DebruijnIndex::INNERMOST)?
+                    .shifted_in_from(interner, outer_binder))
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -145,7 +155,7 @@ where
                 let free_var = ParameterKind::Ty(self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
-                Ok(TyData::BoundVar(bound_var.shifted_in_by(binders)).intern(interner))
+                Ok(TyData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
             }
         }
     }
@@ -153,25 +163,29 @@ where
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         debug_heading!(
-            "fold_inference_lifetime(depth={:?}, binders={:?})",
+            "fold_inference_lifetime(depth={:?}, outer_binder={:?})",
             var,
-            binders
+            outer_binder
         );
         let interner = self.interner;
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(interner, var) {
             Some(l) => {
                 debug!("bound to {:?}", l);
-                Ok(l.fold_with(self, 0)?.shifted_in(interner, binders))
+                Ok(l.fold_with(self, DebruijnIndex::INNERMOST)?
+                    .shifted_in_from(interner, outer_binder))
             }
             None => {
                 let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
-                Ok(LifetimeData::BoundVar(bound_var.shifted_in_by(binders)).intern(interner))
+                Ok(
+                    LifetimeData::BoundVar(bound_var.shifted_in_from(outer_binder))
+                        .intern(interner),
+                )
             }
         }
     }

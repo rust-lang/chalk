@@ -135,7 +135,7 @@ impl<I: Interner> Debug for TyData<I> {
 }
 
 impl Debug for BoundVar {
-    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let BoundVar { debruijn, index } = self;
         write!(fmt, "{:?}.{:?}", debruijn, index)
     }
