@@ -51,7 +51,7 @@ pub struct TraitDefn {
     pub well_known: Option<WellKnownTrait>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum WellKnownTrait {
     SizedTrait,
 }

@@ -237,7 +237,9 @@ fn program_clauses_that_could_match<I: Interner>(
                 }
             }
 
-            // TODO sized, unsize_trait, builtin impls?
+            if let Some(well_known) = trait_datum.well_known {
+                builtin_traits::add_builtin_program_clauses(well_known, trait_ref, builder);
+            }
         }
         DomainGoal::Holds(WhereClause::AliasEq(alias_predicate)) => {
             db.associated_ty_data(alias_predicate.alias.associated_ty_id)

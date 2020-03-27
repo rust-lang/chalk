@@ -87,11 +87,35 @@ pub struct StructFlags {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// A rust intermediate representation (rust_ir) of a Trait Definition.
+/// A rust intermediate representation (rust_ir) of a Trait Definition. For
+/// example, given the following rust code:
 ///
-/// Not to be confused with a rust_ir for a Trait Implementation, which is
-/// represented with ??? JRL
+/// ```compile_fail
+/// use std::fmt::Debug;
+///
+/// trait Foo<T>
+/// where
+///     T: Debug,
+/// {
+///     type Bar<U>;
+/// }
+/// ```
+///
+/// This would represent the `trait Foo` declaration. Note that the details of
+/// the trait members (e.g., the associated type declaration (`type Bar<U>`) are
+/// not contained in this type, and are represented separately (e.g., in
+/// [`AssociatedTyDatum`]).
+///
+/// Not to be confused with the rust_ir for a Trait Implementation, which is
+/// represented by [`ImplDatum`]
+///
+/// [`ImplDatum`]: struct.ImplDatum.html
+/// [`AssociatedTyDatum`]: struct.AssociatedTyDatum.html
 pub struct TraitDatum<I: Interner> {
+    /// The id of this trait; could be used to load the trait datum by invoking
+    /// the [`trait_datum`] method.
+    ///
+    /// [`trait_datum`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.trait_datum
     pub id: TraitId<I>,
 
     pub binders: Binders<TraitDatumBound<I>>,
@@ -101,15 +125,18 @@ pub struct TraitDatum<I: Interner> {
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
 
-    /// The id of each associated type defined in the trait.
+    /// The ids for the associated type members of the trait. The details of
+    /// each type can be found by invoking the [`associated_ty_data`] method.
+    ///
+    /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
 
-    /// A marker indicating if this trait definition represents one of the
-    /// various builtin traits (sized, copy, etc)
+    /// A list of the traits that are "well known" to chalk, which means that
+    /// the chalk-solve crate has special, hard-coded impls for them.
     pub well_known: Option<WellKnownTrait>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WellKnownTrait {
     SizedTrait,
 }
@@ -141,18 +168,34 @@ pub struct TraitDatumBound<I: Interner> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitFlags {
+    /// An "auto trait" is one that is "automatically implemented" for every
+    /// struct, so long as no explicit impl is given.
+    ///
+    /// Examples are `Send` and `Sync`.
     pub auto: bool,
+
     pub marker: bool,
+
     /// Indicate that a trait is defined upstream (in a dependency), used during
     /// coherence checking.
     pub upstream: bool,
-    /// The trait equivalent of a struct fundamental, currently (2020-03-25)
-    /// there are no known fundamental traits.
+
+    /// A fundamental trait is a trait where adding an impl for an existing type
+    /// is considered a breaking change. Examples of fundamental traits are the
+    /// closure traits like `Fn` and `FnMut`.
+    ///
+    /// As of this writing (2020-03-27), fundamental traits are declared by the
+    /// unstable `#[fundamental]` attribute in rustc, and hence cannot appear
+    /// outside of the standard library.
     pub fundamental: bool,
+
     /// Indicates that chalk cannot list all of the implementations of the given
-    /// trait, likely because it is a publicly exported trait in a library JRL
-    /// ???.
+    /// trait, likely because it is a publicly exported trait in a library.
+    ///
+    /// Currently (2020-03-27) rustc and rust-analyzer mark all traits as
+    /// non_enumerable, and in the future it may become the only option.
     pub non_enumerable: bool,
+
     pub coinductive: bool,
 }
 
