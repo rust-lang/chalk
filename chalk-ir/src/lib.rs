@@ -840,12 +840,15 @@ impl<I: Interner> AliasTy<I> {
         Ty::new(interner, self)
     }
 
-    pub fn type_parameters<'a>(&'a self) -> impl Iterator<Item = Ty<I>> + 'a {
-        self.substitution.iter().filter_map(|p| p.ty()).cloned()
+    pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
+        self.substitution
+            .iter(interner)
+            .filter_map(move |p| p.ty(interner))
+            .cloned()
     }
 
-    pub fn self_type_parameter(&self) -> Ty<I> {
-        self.type_parameters().next().unwrap()
+    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
+        self.type_parameters(interner).next().unwrap()
     }
 }
 
@@ -1118,7 +1121,7 @@ impl<I: Interner> DomainGoal<I> {
     pub fn inputs(&self, interner: &I) -> Vec<Parameter<I>> {
         match self {
             DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
-                vec![ParameterKind::Ty(alias_eq.alias.clone().intern(interner)).intern()]
+                vec![ParameterKind::Ty(alias_eq.alias.clone().intern(interner)).intern(interner)]
             }
             _ => Vec::new(),
         }
@@ -1505,16 +1508,17 @@ impl<T> UCanonical<T> {
     pub fn trivial_substitution<I: Interner>(&self, interner: &I) -> Substitution<I> {
         let binders = &self.canonical.binders;
         Substitution::from(
+            interner,
             binders
                 .iter()
                 .enumerate()
                 .map(|(index, pk)| match pk {
                     ParameterKind::Ty(_) => {
-                        ParameterKind::Ty(TyData::BoundVar(index).intern(interner)).intern()
+                        ParameterKind::Ty(TyData::BoundVar(index).intern(interner)).intern(interner)
                     }
                     ParameterKind::Lifetime(_) => {
                         ParameterKind::Lifetime(LifetimeData::BoundVar(index).intern(interner))
-                            .intern()
+                            .intern(interner)
                     }
                 })
                 .collect::<Vec<_>>(),

@@ -202,11 +202,15 @@ impl<I: Interner> InferenceTable<I> {
 
     /// Check whether the given substitution is the identity substitution in this
     /// inference context.
-    pub(crate) fn is_trivial_substitution(&mut self, subst: &Substitution<I>) -> bool {
-        for value in subst.as_parameters() {
-            match value.data() {
+    pub(crate) fn is_trivial_substitution(
+        &mut self,
+        interner: &I,
+        subst: &Substitution<I>,
+    ) -> bool {
+        for value in subst.as_parameters(interner) {
+            match value.data(interner) {
                 ParameterKind::Ty(ty) => {
-                    if let Some(var) = ty.inference_var() {
+                    if let Some(var) = ty.inference_var(interner) {
                         if self.var_is_bound(var) {
                             return false;
                         }
@@ -214,7 +218,7 @@ impl<I: Interner> InferenceTable<I> {
                 }
 
                 ParameterKind::Lifetime(lifetime) => {
-                    if let Some(var) = lifetime.inference_var() {
+                    if let Some(var) = lifetime.inference_var(interner) {
                         if self.var_is_bound(var) {
                             return false;
                         }

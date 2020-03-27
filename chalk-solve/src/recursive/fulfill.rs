@@ -137,8 +137,12 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);
         self.constraints.extend(constraints);
-        self.obligations
-            .extend(goals.into_iter().casted().map(Obligation::Prove));
+        self.obligations.extend(
+            goals
+                .into_iter()
+                .casted(self.solver.program.interner())
+                .map(Obligation::Prove),
+        );
         Ok(())
     }
 
@@ -150,7 +154,8 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         goal: Goal<I>,
     ) -> Fallible<()> {
         debug!("push_goal({:?}, {:?})", goal, environment);
-        match goal.data() {
+        let interner = self.interner();
+        match goal.data(interner) {
             GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                 let subgoal = self
                     .infer
@@ -168,7 +173,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                 self.push_goal(new_environment, subgoal.clone())?;
             }
             GoalData::All(goals) => {
-                for subgoal in goals.as_slice() {
+                for subgoal in goals.as_slice(interner) {
                     self.push_goal(environment, subgoal.clone())?;
                 }
             }
@@ -280,7 +285,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         let empty_env = &Environment::new();
 
         for (i, free_var) in free_vars.into_iter().enumerate() {
-            let subst_value = subst.at(i);
+            let subst_value = subst.at(self.interner(), i);
             let free_value = free_var.to_parameter(self.interner());
             self.unify(empty_env, &free_value, subst_value)
                 .unwrap_or_else(|err| {
@@ -394,7 +399,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        if self.infer.is_trivial_substitution(&subst) {
+        let interner = self.solver.program.interner();
+
+        if self.infer.is_trivial_substitution(interner, &subst) {
             // In this case, we didn't learn *anything* definitively. So now, we
             // go one last time through the positive obligations, this time
             // applying even *tentative* inference suggestions, so that we can

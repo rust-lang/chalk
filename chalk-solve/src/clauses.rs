@@ -452,8 +452,8 @@ mod generalize {
         }
     }
 
-    impl<I: Interner> Folder<I> for Generalize<'_, I> {
-        fn as_dyn(&mut self) -> &mut dyn Folder<I> {
+    impl<'i, I: Interner> Folder<'i, I> for Generalize<'i, I> {
+        fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
             self
         }
 
@@ -481,12 +481,12 @@ mod generalize {
             Ok(LifetimeData::BoundVar(*new_index + binders).intern(self.interner()))
         }
 
-        fn interner(&self) -> &I {
+        fn interner(&self) -> &'i I {
             self.interner
         }
 
-        fn target_interner(&self) -> &I {
-            self.interner()
+        fn target_interner(&self) -> &'i I {
+            self.interner
         }
     }
 }

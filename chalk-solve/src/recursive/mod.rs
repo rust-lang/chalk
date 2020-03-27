@@ -233,7 +233,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     },
             } = canonical_goal.clone();
 
-            let (current_answer, current_prio) = match goal.data() {
+            let (current_answer, current_prio) = match goal.data(self.program.interner()) {
                 GoalData::DomainGoal(domain_goal) => {
                     let canonical_goal = UCanonical {
                         universes,
@@ -257,11 +257,12 @@ impl<'me, I: Interner> Solver<'me, I> {
                         debug_heading!("env_clauses");
 
                         // TODO use code from clauses module
-                        let env_clauses = environment
+                        let env_clauses: Vec<_> = environment
                             .clauses
                             .iter()
-                            .filter(|&clause| clause.could_match(goal))
-                            .cloned();
+                            .filter(|&clause| clause.could_match(self.program.interner(), goal))
+                            .cloned()
+                            .collect();
                         self.solve_from_clauses(&canonical_goal, env_clauses, minimums)
                     };
                     debug!("env_solution={:?}", env_solution);
@@ -510,6 +511,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
+        let interner = self.program.interner();
         let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal, clause.value.priority);
         let ProgramClauseImplication {
             consequence,
@@ -524,7 +526,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         }
 
         // if so, toss in all of its premises
-        for condition in conditions.as_slice() {
+        for condition in conditions.as_slice(interner) {
             if let Err(e) = fulfill.push_goal(&goal.environment, condition.clone()) {
                 return (Err(e), ClausePriority::High);
             }
@@ -541,21 +543,22 @@ impl<'me, I: Interner> Solver<'me, I> {
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
         // TODO this is currently duplicated with the SLG solver, extract it somewhere?
         // Look for floundering goals:
+        let interner = self.program.interner();
         match goal {
             // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
             DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
                 let trait_datum = self.program.trait_datum(trait_ref.trait_id);
                 if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter();
-                    if let Some(_) = self_ty.bound() {
+                    let self_ty = trait_ref.self_type_parameter(interner);
+                    if let Some(_) = self_ty.bound(interner) {
                         return Err(Floundered);
                     }
                 }
             }
 
             DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
-                let self_ty = alias_eq.alias.self_type_parameter();
-                if let Some(_) = self_ty.bound() {
+                let self_ty = alias_eq.alias.self_type_parameter(interner);
+                if let Some(_) = self_ty.bound(interner) {
                     return Err(Floundered);
                 }
             }
@@ -564,7 +567,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             | DomainGoal::IsUpstream(ty)
             | DomainGoal::DownstreamType(ty)
             | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty.data() {
+            | DomainGoal::IsLocal(ty) => match ty.data(interner) {
                 TyData::BoundVar(_) => return Err(Floundered),
                 _ => {}
             },
