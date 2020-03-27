@@ -1,6 +1,6 @@
-use crate::{TraitRef, WellKnownTrait};
-use crate::Interner;
 use super::builder::ClauseBuilder;
+use crate::Interner;
+use crate::{TraitRef, WellKnownTrait};
 
 pub fn add_builtin_program_clauses<I: Interner>(
     well_known: WellKnownTrait,
@@ -8,9 +8,6 @@ pub fn add_builtin_program_clauses<I: Interner>(
     _builder: &mut ClauseBuilder<I>,
 ) {
     match well_known {
-        WellKnownTrait::SizedTrait => {
-            /* TODO */
-        }
+        WellKnownTrait::SizedTrait => { /* TODO */ }
     }
 }
-
