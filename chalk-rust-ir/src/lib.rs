@@ -131,11 +131,12 @@ pub struct TraitDatum<I: Interner> {
     /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
 
-    /// A list of the traits that are "well known" to chalk, which means that
-    /// the chalk-solve crate has special, hard-coded impls for them.
+    /// If this is a well-known trait, which one? If `None`, this is a regular, user-defined trait.
     pub well_known: Option<WellKnownTrait>,
 }
 
+/// A list of the traits that are "well known" to chalk, which means that
+/// the chalk-solve crate has special, hard-coded impls for them.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WellKnownTrait {
     SizedTrait,
