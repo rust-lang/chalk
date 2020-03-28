@@ -63,38 +63,33 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     // Examples:
     //
     //  Impls:
-    //      impl<T> Foo for T { }
-    //      impl Foo for i32 { }
+    //      impl<T> Foo for T { }   // rhs
+    //      impl Foo for i32 { }    // lhs
     //  Generates:
-    //      not { compatible { exists<T> { T = i32 } } }
+    //      not { compatible { exists<T> { exists<> { T = i32 } } } }
     //
     //  Impls:
-    //      impl<T1, U> Foo<T1> for Vec<U> { }
-    //      impl<T2> Foo<T2> for Vec<i32> { }
+    //      impl<T1, U> Foo<T1> for Vec<U> { }  // rhs
+    //      impl<T2> Foo<T2> for Vec<i32> { }   // lhs
     //  Generates:
-    //      not { compatible { exists<T1, U, T2> { Vec<U> = Vec<i32>, T1 = T2 } } }
+    //      not { compatible { exists<T1, U> { exists<T2> { Vec<U> = Vec<i32>, T1 = T2 } } } }
     //
     //  Impls:
     //      impl<T> Foo for Vec<T> where T: Bar { }
     //      impl<U> Foo for Vec<U> where U: Baz { }
     //  Generates:
-    //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
+    //      not { compatible { exists<T> { exists<U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } } }
     //
     fn disjoint(&self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
         debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
 
         let interner = self.db.interner();
-        let lhs_len = lhs.binders.len();
-
-        // Join the two impls' binders together
-        let mut binders = lhs.binders.binders.clone();
-        binders.extend(rhs.binders.binders.clone());
 
         // Upshift the rhs variables in params to account for the joined binders
         let lhs_params = params(interner, lhs).iter().cloned();
         let rhs_params = params(interner, rhs)
             .iter()
-            .map(|param| param.shifted_in(interner, lhs_len));
+            .map(|param| param.shifted_in(interner));
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
@@ -109,7 +104,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .value
             .where_clauses
             .iter()
-            .map(|wc| wc.shifted_in(interner, lhs_len));
+            .map(|wc| wc.shifted_in(interner));
 
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
@@ -119,7 +114,16 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
         let goal = Box::new(Goal::all(interner, params_goals.chain(wc_goals)))
-            .quantify(interner, QuantifierKind::Exists, binders)
+            .quantify(
+                interner,
+                QuantifierKind::Exists,
+                lhs.binders.binders.clone(),
+            )
+            .quantify(
+                interner,
+                QuantifierKind::Exists,
+                rhs.binders.binders.clone(),
+            )
             .compatible(interner)
             .negate(interner);
 
@@ -171,18 +175,30 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             return false;
         }
 
-        let more_len = more_special.binders.len();
-
-        // Create parameter equality goals.
-        let more_special_params = params(interner, more_special).iter().cloned();
-        let less_special_params = params(interner, less_special)
+        // Create parameter equality goals. Note that parameters from
+        // the "more special" goal have to be "shifted in" across the
+        // binder for the "less special" impl.
+        let more_special_params = params(interner, more_special)
             .iter()
-            .map(|p| p.shifted_in(interner, more_len));
+            .map(|p| p.shifted_in(interner));
+        let less_special_params = params(interner, less_special).iter().cloned();
         let params_goals = more_special_params
             .zip(less_special_params)
             .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern(interner));
 
-        // Create the where clause goals.
+        // Create less special where clause goals. These reference the parameters
+        // from the "less special" impl, which are at the same debruijn depth here.
+        let less_special_wc = less_special
+            .binders
+            .value
+            .where_clauses
+            .iter()
+            .cloned()
+            .casted(interner);
+
+        // Create the "more special" where clause goals. These will be
+        // added as an implication without the "less special" goals in
+        // scope, no shift required.
         let more_special_wc = more_special
             .binders
             .value
@@ -191,14 +207,17 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .cloned()
             .casted(interner)
             .collect();
-        let less_special_wc = less_special
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .map(|wc| wc.shifted_in(interner, more_len).cast(interner));
 
-        // Join all of the goals together.
+        // Join all of the goals together:
+        //
+        // forall<..more special..> {
+        //   if (<more special wc>) {
+        //     exists<..less special..> {
+        //       ..less special goals..
+        //       ..equality goals..
+        //     }
+        //   }
+        // }
         let goal = Box::new(Goal::all(interner, params_goals.chain(less_special_wc)))
             .quantify(
                 interner,

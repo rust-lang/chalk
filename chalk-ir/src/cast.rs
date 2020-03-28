@@ -138,15 +138,11 @@ impl<I: Interner> CastTo<Goal<I>> for EqGoal<I> {
 
 impl<T: CastTo<Goal<I>>, I: Interner> CastTo<Goal<I>> for Binders<T> {
     fn cast_to(self, interner: &I) -> Goal<I> {
-        if self.binders.is_empty() {
-            self.value.cast(interner)
-        } else {
-            GoalData::Quantified(
-                QuantifierKind::ForAll,
-                self.map(|bound| bound.cast(interner)),
-            )
-            .intern(interner)
-        }
+        GoalData::Quantified(
+            QuantifierKind::ForAll,
+            self.map(|bound| bound.cast(interner)),
+        )
+        .intern(interner)
     }
 }
 
@@ -199,14 +195,10 @@ where
     I: Interner,
 {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        if self.binders.is_empty() {
-            self.value.cast::<ProgramClause<I>>(interner)
-        } else {
-            ProgramClause::ForAll(self.map(|bound| ProgramClauseImplication {
-                consequence: bound.cast(interner),
-                conditions: Goals::new(interner),
-            }))
-        }
+        ProgramClause::ForAll(self.map(|bound| ProgramClauseImplication {
+            consequence: bound.cast(interner),
+            conditions: Goals::new(interner),
+        }))
     }
 }
 

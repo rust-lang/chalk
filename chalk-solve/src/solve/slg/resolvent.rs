@@ -269,8 +269,20 @@ struct AnswerSubstitutor<'t, I: Interner> {
     table: &'t mut InferenceTable<I>,
     environment: &'t Environment<I>,
     answer_subst: &'t Substitution<I>,
-    answer_binders: usize,
-    pending_binders: usize,
+
+    /// Tracks the debrujn index of the first binder that is outside
+    /// the term we are traversing. This starts as `DebruijnIndex::INNERMOST`,
+    /// since we have not yet traversed *any* binders, but when we visit
+    /// the inside of a binder, it would be incremented.
+    ///
+    /// Example: If we are visiting `(for<type> A, B, C, for<type> for<type> D)`,
+    /// then this would be:
+    ///
+    /// * `1`, when visiting `A`,
+    /// * `0`, when visiting `B` and `C`,
+    /// * `2`, when visiting `D`.
+    outer_binder: DebruijnIndex,
+
     ex_clause: &'t mut ExClause<SlgContext<I>>,
     interner: &'t I,
 }
@@ -291,8 +303,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             environment,
             answer_subst,
             ex_clause,
-            answer_binders: 0,
-            pending_binders: 0,
+            outer_binder: DebruijnIndex::INNERMOST,
         };
         Zip::zip_with(&mut this, answer, pending)?;
         Ok(())
@@ -301,21 +312,21 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn unify_free_answer_var(
         &mut self,
         interner: &I,
-        answer_depth: usize,
+        answer_var: BoundVar,
         pending: ParameterKind<&Ty<I>, &Lifetime<I>>,
     ) -> Fallible<bool> {
-        // This variable is bound in the answer, not free, so it
-        // doesn't represent a reference into the answer substitution.
-        if answer_depth < self.answer_binders {
-            return Ok(false);
-        }
+        let answer_index = match answer_var.index_if_bound_at(self.outer_binder) {
+            Some(index) => index,
 
-        let answer_param = self
-            .answer_subst
-            .at(interner, answer_depth - self.answer_binders);
+            // This variable is bound in the answer, not free, so it
+            // doesn't represent a reference into the answer substitution.
+            None => return Ok(false),
+        };
+
+        let answer_param = self.answer_subst.at(interner, answer_index);
 
         let pending_shifted = pending
-            .shifted_out(interner, self.pending_binders)
+            .shifted_out_to(interner, self.outer_binder)
             .unwrap_or_else(|_| {
                 panic!(
                     "truncate extracted a pending value that references internal binder: {:?}",
@@ -343,13 +354,29 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     /// that case, there should be a corresponding bound variable in
     /// the pending goal. This bit of code just checks that latter
     /// case.
-    fn assert_matching_vars(&mut self, answer_depth: usize, pending_depth: usize) -> Fallible<()> {
-        assert!(answer_depth < self.answer_binders);
-        assert!(pending_depth < self.pending_binders);
-        assert_eq!(
-            self.answer_binders - answer_depth,
-            self.pending_binders - pending_depth
-        );
+    fn assert_matching_vars(
+        &mut self,
+        answer_var: BoundVar,
+        pending_var: BoundVar,
+    ) -> Fallible<()> {
+        let BoundVar {
+            debruijn: answer_depth,
+            index: answer_index,
+        } = answer_var;
+        let BoundVar {
+            debruijn: pending_depth,
+            index: pending_index,
+        } = pending_var;
+
+        // Both bound variables are bound within the term we are matching
+        assert!(answer_depth.within(self.outer_binder));
+
+        // They are bound at the same (relative) depth
+        assert_eq!(answer_depth, pending_depth);
+
+        // They are bound at the same index within the binder
+        assert_eq!(answer_index, pending_index,);
+
         Ok(())
     }
 }
@@ -390,11 +417,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             }
 
             (TyData::Function(answer), TyData::Function(pending)) => {
-                self.answer_binders += answer.num_binders;
-                self.pending_binders += pending.num_binders;
+                self.outer_binder.shift_in();
                 Zip::zip_with(self, &answer.parameters, &pending.parameters)?;
-                self.answer_binders -= answer.num_binders;
-                self.pending_binders -= pending.num_binders;
+                self.outer_binder.shift_out();
                 Ok(())
             }
 
@@ -459,11 +484,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
     where
         T: Zip<I> + Fold<I, Result = T>,
     {
-        self.answer_binders += answer.binders.len();
-        self.pending_binders += pending.binders.len();
+        self.outer_binder.shift_in();
         Zip::zip_with(self, &answer.value, &pending.value)?;
-        self.answer_binders -= answer.binders.len();
-        self.pending_binders -= pending.binders.len();
+        self.outer_binder.shift_out();
         Ok(())
     }
 

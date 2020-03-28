@@ -350,7 +350,7 @@ fn definite_guidance() {
                 T: Debug
             }
         } yields {
-            "Ambiguous; definite substitution for<?U0> { [?0 := Foo<^0>] }"
+            "Ambiguous; definite substitution for<?U0> { [?0 := Foo<^0.0>] }"
         }
     }
 }

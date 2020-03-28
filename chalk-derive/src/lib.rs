@@ -33,7 +33,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
                 fn fold_with<'i>(
                     &self,
                     folder: &mut dyn Folder < 'i, #arg, #arg >,
-                    binders: usize,
+                    outer_binder: DebruijnIndex,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
                     #body
                 }
@@ -97,7 +97,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
                 fn fold_with<'i>(
                     &self,
                     folder: &mut dyn Folder < 'i, _I, _TI >,
-                    binders: usize,
+                    outer_binder: DebruijnIndex,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result>
                 where
                     _I: 'i,
@@ -136,7 +136,7 @@ pub fn derive_fold(item: TokenStream) -> TokenStream {
                 fn fold_with<'i>(
                     &self,
                     folder: &mut dyn Folder < 'i, #i, _TI >,
-                    binders: usize,
+                    outer_binder: DebruijnIndex,
                 ) -> ::chalk_engine::fallible::Fallible<Self::Result>
                 where
                     #i: 'i,
@@ -157,7 +157,7 @@ fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
         Data::Struct(s) => {
             let fields = s.fields.into_iter().map(|f| {
                 let name = f.ident.as_ref().expect("Unnamed field in Foldable struct");
-                quote! { #name: self.#name.fold_with(folder, binders)? }
+                quote! { #name: self.#name.fold_with(folder, outer_binder)? }
             });
             quote! {
                 Ok(#type_name {
@@ -187,7 +187,7 @@ fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
                             .collect();
                         quote! {
                             #type_name::#variant( #(ref #names),* ) => {
-                                Ok(#type_name::#variant( #(#names.fold_with(folder, binders)?),* ))
+                                Ok(#type_name::#variant( #(#names.fold_with(folder, outer_binder)?),* ))
                             }
                         }
                     }

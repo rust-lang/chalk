@@ -123,7 +123,7 @@ impl<I: Interner> Debug for TypeName<I> {
 impl<I: Interner> Debug for TyData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            TyData::BoundVar(depth) => write!(fmt, "^{}", depth),
+            TyData::BoundVar(db) => write!(fmt, "{:?}", db),
             TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
             TyData::InferenceVar(var) => write!(fmt, "{:?}", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
@@ -131,6 +131,20 @@ impl<I: Interner> Debug for TyData<I> {
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
             TyData::Function(function) => write!(fmt, "{:?}", function),
         }
+    }
+}
+
+impl Debug for BoundVar {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let BoundVar { debruijn, index } = self;
+        write!(fmt, "{:?}.{:?}", debruijn, index)
+    }
+}
+
+impl Debug for DebruijnIndex {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let DebruijnIndex { depth } = self;
+        write!(fmt, "^{}", depth)
     }
 }
 
@@ -161,7 +175,7 @@ impl<I: Interner> Debug for Fn<I> {
 impl<I: Interner> Debug for LifetimeData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            LifetimeData::BoundVar(depth) => write!(fmt, "'^{}", depth),
+            LifetimeData::BoundVar(db) => write!(fmt, "'{:?}", db),
             LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
             LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
             LifetimeData::Phantom(..) => unreachable!(),
@@ -499,19 +513,24 @@ impl<T: Debug> Debug for Binders<T> {
             ref binders,
             ref value,
         } = *self;
-        if !binders.is_empty() {
-            write!(fmt, "for<")?;
-            for (index, binder) in binders.iter().enumerate() {
-                if index > 0 {
-                    write!(fmt, ", ")?;
-                }
-                match *binder {
-                    ParameterKind::Ty(()) => write!(fmt, "type")?,
-                    ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                }
+
+        // NB: We always print the `for<>`, even if it is empty,
+        // because it may affect the debruijn indices of things
+        // contained within. For example, `for<> { ^1.0 }` is very
+        // different from `^1.0` in terms of what variable is being
+        // referenced.
+
+        write!(fmt, "for<")?;
+        for (index, binder) in binders.iter().enumerate() {
+            if index > 0 {
+                write!(fmt, ", ")?;
             }
-            write!(fmt, "> ")?;
+            match *binder {
+                ParameterKind::Ty(()) => write!(fmt, "type")?,
+                ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+            }
         }
+        write!(fmt, "> ")?;
         Debug::fmt(value, fmt)
     }
 }
@@ -536,6 +555,12 @@ impl<T: Display> Display for Canonical<T> {
         let Canonical { binders, value } = self;
 
         if binders.is_empty() {
+            // Ordinarily, we try to print all binder levels, if they
+            // are empty, but we can skip in this *particular* case
+            // because we know that `Canonical` terms are never
+            // supposed to contain free variables.  In other words,
+            // all "bound variables" that appear inside the canonical
+            // value must reference values that appear in `binders`.
             write!(f, "{}", value)?;
         } else {
             write!(f, "for<")?;

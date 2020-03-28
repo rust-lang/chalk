@@ -492,8 +492,8 @@ fn normalize_under_binder() {
             }
         } yields {
             "Unique; for<?U0> { \
-             substitution [?0 := Ref<'^0, I32>], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }] \
+             substitution [?0 := Ref<'^0.0, I32>], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0 == '!1_0 }] \
              }"
         }
     }
@@ -523,7 +523,7 @@ fn normalize_under_binder_multi() {
             }
         } yields_all {
             "substitution [?0 := I32], lifetime constraints []",
-            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0, I32>, '^1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^1 == '!1_0 }] }"
+            "for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0.0, I32>, '^0.1>], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0 == '!1_0 }, InEnvironment { environment: Env([]), goal: '^0.1 == '!1_0 }] }"
         }
 
         goal {

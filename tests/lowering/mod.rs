@@ -162,7 +162,7 @@ fn goal_quantifiers() {
     db.with_program(|_| {
         assert_eq!(
             format!("{:?}", goal),
-            "ForAll<type> { Exists<type> { ForAll<type> { Implemented(^0: Foo<^1, ^2>) } } }"
+            "ForAll<type> { Exists<type> { ForAll<type> { Implemented(^0.0: Foo<^1.0, ^2.0>) } } }"
         );
     });
 }
@@ -197,7 +197,7 @@ fn atc_accounting() {
     impl_id: ImplId(#2),
     associated_ty_id: (Iterable::Iter),
     value: for<lifetime, type> AssociatedTyValueBound {
-        ty: Iter<'^0, ^1>
+        ty: Iter<'^0.0, ^0.1>
     },
 }"#
             .replace(",\n", "\n"),
@@ -215,8 +215,8 @@ fn atc_accounting() {
             "ForAll<type> { \
              ForAll<lifetime> { \
              ForAll<type> { \
-             all(AliasEq(<^2 as Iterable>::Iter<'^1> = ^0), \
-             Implemented(^2: Iterable)) \
+             all(AliasEq(<^2.0 as Iterable>::Iter<'^1.0> = ^0.0), \
+             Implemented(^2.0: Iterable)) \
              } \
              } \
              }"

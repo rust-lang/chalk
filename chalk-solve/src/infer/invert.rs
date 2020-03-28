@@ -91,7 +91,7 @@ impl<I: Interner> InferenceTable<I> {
         assert!(quantified.binders.is_empty());
         let inverted = quantified
             .value
-            .fold_with(&mut Inverter::new(interner, self), 0)
+            .fold_with(&mut Inverter::new(interner, self), DebruijnIndex::INNERMOST)
             .unwrap();
         Some(inverted)
     }
@@ -126,7 +126,7 @@ where
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
-        binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let table = &mut self.table;
         Ok(self
@@ -134,13 +134,13 @@ where
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
             .to_ty(self.interner())
-            .shifted_in(self.interner(), binders))
+            .shifted_in(self.interner()))
     }
 
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
-        binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let table = &mut self.table;
         Ok(self
@@ -148,7 +148,7 @@ where
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
             .to_lifetime(self.interner())
-            .shifted_in(self.interner(), binders))
+            .shifted_in(self.interner()))
     }
 
     fn forbid_free_vars(&self) -> bool {
