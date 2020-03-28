@@ -1248,6 +1248,7 @@ impl LowerTrait for TraitDefn {
             binders: binders,
             flags: self.flags.lower(),
             associated_ty_ids,
+            well_known: self.well_known.map(|t| t.lower()),
         };
 
         debug!("trait_datum={:?}", trait_datum);
@@ -1350,6 +1351,18 @@ impl LowerQuantifiedGoal for Goal {
         let parameter_kinds = parameter_kinds.iter().map(|pk| pk.lower());
         let subgoal = env.in_binders(parameter_kinds, |env| self.lower(env))?;
         Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
+    }
+}
+
+trait LowerWellKnownTrait {
+    fn lower(&self) -> rust_ir::WellKnownTrait;
+}
+
+impl LowerWellKnownTrait for WellKnownTrait {
+    fn lower(&self) -> rust_ir::WellKnownTrait {
+        match self {
+            Self::SizedTrait => rust_ir::WellKnownTrait::SizedTrait,
+        }
     }
 }
 

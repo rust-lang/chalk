@@ -144,6 +144,10 @@ impl UniverseIndex {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StructId<I: Interner>(pub I::DefId);
 
+/// The id of a trait definition; could be used to load the trait datum by
+/// invoking the [`trait_datum`] method.
+///
+/// [`trait_datum`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.trait_datum
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TraitId<I: Interner>(pub I::DefId);
 
@@ -153,6 +157,10 @@ pub struct ImplId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClauseId<I: Interner>(pub I::DefId);
 
+/// The id for the associated type member of a trait. The details of the type
+/// can be found by invoking the [`associated_ty_data`] method.
+///
+/// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 

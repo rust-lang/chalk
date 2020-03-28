@@ -87,6 +87,30 @@ pub struct StructFlags {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// A rust intermediate representation (rust_ir) of a Trait Definition. For
+/// example, given the following rust code:
+///
+/// ```compile_fail
+/// use std::fmt::Debug;
+///
+/// trait Foo<T>
+/// where
+///     T: Debug,
+/// {
+///     type Bar<U>;
+/// }
+/// ```
+///
+/// This would represent the `trait Foo` declaration. Note that the details of
+/// the trait members (e.g., the associated type declaration (`type Bar<U>`) are
+/// not contained in this type, and are represented separately (e.g., in
+/// [`AssociatedTyDatum`]).
+///
+/// Not to be confused with the rust_ir for a Trait Implementation, which is
+/// represented by [`ImplDatum`]
+///
+/// [`ImplDatum`]: struct.ImplDatum.html
+/// [`AssociatedTyDatum`]: struct.AssociatedTyDatum.html
 pub struct TraitDatum<I: Interner> {
     pub id: TraitId<I>,
 
@@ -97,8 +121,18 @@ pub struct TraitDatum<I: Interner> {
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
 
-    /// The id of each associated type defined in the trait.
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
+
+    /// If this is a well-known trait, which one? If `None`, this is a regular,
+    /// user-defined trait.
+    pub well_known: Option<WellKnownTrait>,
+}
+
+/// A list of the traits that are "well known" to chalk, which means that
+/// the chalk-solve crate has special, hard-coded impls for them.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WellKnownTrait {
+    SizedTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {
@@ -128,11 +162,34 @@ pub struct TraitDatumBound<I: Interner> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TraitFlags {
+    /// An "auto trait" is one that is "automatically implemented" for every
+    /// struct, so long as no explicit impl is given.
+    ///
+    /// Examples are `Send` and `Sync`.
     pub auto: bool,
+
     pub marker: bool,
+
+    /// Indicate that a trait is defined upstream (in a dependency), used during
+    /// coherence checking.
     pub upstream: bool,
+
+    /// A fundamental trait is a trait where adding an impl for an existing type
+    /// is considered a breaking change. Examples of fundamental traits are the
+    /// closure traits like `Fn` and `FnMut`.
+    ///
+    /// As of this writing (2020-03-27), fundamental traits are declared by the
+    /// unstable `#[fundamental]` attribute in rustc, and hence cannot appear
+    /// outside of the standard library.
     pub fundamental: bool,
+
+    /// Indicates that chalk cannot list all of the implementations of the given
+    /// trait, likely because it is a publicly exported trait in a library.
+    ///
+    /// Currently (2020-03-27) rustc and rust-analyzer mark all traits as
+    /// non_enumerable, and in the future it may become the only option.
     pub non_enumerable: bool,
+
     pub coinductive: bool,
 }
 

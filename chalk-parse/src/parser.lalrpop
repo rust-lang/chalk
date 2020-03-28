@@ -43,6 +43,10 @@ FundamentalKeyword: () = "#" "[" "fundamental" "]";
 NonEnumerableKeyword: () = "#" "[" "non_enumerable" "]";
 CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 
+WellKnownTrait: WellKnownTrait = {
+     "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::SizedTrait,
+};
+
 StructDefn: StructDefn = {
     <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
@@ -59,13 +63,14 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
         parameter_kinds: p,
         where_clauses: w,
         assoc_ty_defns: a,
+        well_known,
         flags: TraitFlags {
             auto: auto.is_some(),
             marker: marker.is_some(),

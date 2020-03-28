@@ -48,6 +48,12 @@ pub struct TraitDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
     pub flags: TraitFlags,
+    pub well_known: Option<WellKnownTrait>,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum WellKnownTrait {
+    SizedTrait,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
