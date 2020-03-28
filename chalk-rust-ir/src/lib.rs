@@ -112,10 +112,6 @@ pub struct StructFlags {
 /// [`ImplDatum`]: struct.ImplDatum.html
 /// [`AssociatedTyDatum`]: struct.AssociatedTyDatum.html
 pub struct TraitDatum<I: Interner> {
-    /// The id of this trait; could be used to load the trait datum by invoking
-    /// the [`trait_datum`] method.
-    ///
-    /// [`trait_datum`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.trait_datum
     pub id: TraitId<I>,
 
     pub binders: Binders<TraitDatumBound<I>>,
@@ -125,13 +121,10 @@ pub struct TraitDatum<I: Interner> {
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
 
-    /// The ids for the associated type members of the trait. The details of
-    /// each type can be found by invoking the [`associated_ty_data`] method.
-    ///
-    /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
 
-    /// If this is a well-known trait, which one? If `None`, this is a regular, user-defined trait.
+    /// If this is a well-known trait, which one? If `None`, this is a regular,
+    /// user-defined trait.
     pub well_known: Option<WellKnownTrait>,
 }
 
