@@ -191,9 +191,9 @@ impl<I: Interner> Ty<I> {
     }
 
     /// If this is a `TyData::BoundVar(d)`, returns `Some(d)` else `None`.
-    pub fn bound(&self, interner: &I) -> Option<usize> {
-        if let TyData::BoundVar(depth) = self.data(interner) {
-            Some(*depth)
+    pub fn bound(&self, interner: &I) -> Option<BoundVar> {
+        if let TyData::BoundVar(bv) = self.data(interner) {
+            Some(*bv)
         } else {
             None
         }
@@ -220,7 +220,7 @@ impl<I: Interner> Ty<I> {
     /// check, intended only for debug assertions, because I am lazy.
     pub fn needs_shift(&self, interner: &I) -> bool {
         let ty = self.clone();
-        ty != ty.shifted_in(interner, 1)
+        ty != ty.shifted_in(interner)
     }
 }
 
@@ -260,14 +260,8 @@ pub enum TyData<I: Interner> {
     Function(Fn<I>),
 
     /// References the binding at the given depth. The index is a [de
-    /// Bruijn index], so it counts back through the in-scope binders,
-    /// with 0 being the innermost binder. This is used in impls and
-    /// the like. For example, if we had a rule like `for<T> { (T:
-    /// Clone) :- (T: Copy) }`, then `T` would be represented as a
-    /// `BoundVar(0)` (as the `for` is the innermost binder).
-    ///
-    /// [de Bruijn index]: https://en.wikipedia.org/wiki/De_Bruijn_index
-    BoundVar(usize),
+    /// Bruijn index], so it counts back through the in-scope binders.
+    BoundVar(BoundVar),
 
     /// Inference variable defined in the current inference context.
     InferenceVar(InferenceVar),
@@ -276,6 +270,237 @@ pub enum TyData<I: Interner> {
 impl<I: Interner> TyData<I> {
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
+    }
+}
+
+/// Identifies a particular bound variable within a binder.
+/// Variables are identified by the combination of a [`DebruijnIndex`],
+/// which identifies the *binder*, and an index within that binder.
+///
+/// Consider this case:
+///
+/// ```ignore
+/// forall<'a, 'b> { forall<'c, 'd> { ... } }
+/// ```
+///
+/// Within the `...` term:
+///
+/// * the variable `'a` have a debruijn index of 1 and index 0
+/// * the variable `'b` have a debruijn index of 1 and index 1
+/// * the variable `'c` have a debruijn index of 0 and index 0
+/// * the variable `'d` have a debruijn index of 0 and index 1
+///
+/// The variables `'a` and `'b` both have debruijn index of 1 because,
+/// counting out, they are the 2nd binder enclosing `...`. The indices
+/// identify the location *within* that binder.
+///
+/// The variables `'c` and `'d` both have debruijn index of 0 because
+/// they appear in the *innermost* binder enclosing the `...`. The
+/// indices identify the location *within* that binder.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct BoundVar {
+    pub debruijn: DebruijnIndex,
+    pub index: usize,
+}
+
+impl BoundVar {
+    pub fn new(debruijn: DebruijnIndex, index: usize) -> Self {
+        Self { debruijn, index }
+    }
+
+    pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
+        TyData::<I>::BoundVar(self).intern(interner)
+    }
+
+    pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
+        LifetimeData::<I>::BoundVar(self).intern(interner)
+    }
+
+    /// True if this variable is bound within the `amount` innermost binders.
+    pub fn bound_within(self, outer_binder: DebruijnIndex) -> bool {
+        self.debruijn.within(outer_binder)
+    }
+
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
+    #[must_use]
+    pub fn shifted_in(self) -> Self {
+        BoundVar::new(self.debruijn.shifted_in(), self.index)
+    }
+
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
+    #[must_use]
+    pub fn shifted_in_from(self, outer_binder: DebruijnIndex) -> Self {
+        BoundVar::new(self.debruijn.shifted_in_from(outer_binder), self.index)
+    }
+
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
+    #[must_use]
+    pub fn shifted_out(self) -> Option<Self> {
+        self.debruijn
+            .shifted_out()
+            .map(|db| BoundVar::new(db, self.index))
+    }
+
+    /// Adjusts the debruijn index (see [`DebruijnIndex::shifted_in`]).
+    #[must_use]
+    pub fn shifted_out_to(self, outer_binder: DebruijnIndex) -> Option<Self> {
+        self.debruijn
+            .shifted_out_to(outer_binder)
+            .map(|db| BoundVar::new(db, self.index))
+    }
+
+    /// Return the index of the bound variable, but only if it is bound
+    /// at the innermost binder. Otherwise, returns `None`.
+    pub fn index_if_innermost(self) -> Option<usize> {
+        self.index_if_bound_at(DebruijnIndex::INNERMOST)
+    }
+
+    /// Return the index of the bound variable, but only if it is bound
+    /// at the innermost binder. Otherwise, returns `None`.
+    pub fn index_if_bound_at(self, debruijn: DebruijnIndex) -> Option<usize> {
+        if self.debruijn == debruijn {
+            Some(self.index)
+        } else {
+            None
+        }
+    }
+}
+
+/// References the binder at the given depth. The index is a [de
+/// Bruijn index], so it counts back through the in-scope binders,
+/// with 0 being the innermost binder. This is used in impls and
+/// the like. For example, if we had a rule like `for<T> { (T:
+/// Clone) :- (T: Copy) }`, then `T` would be represented as a
+/// `BoundVar(0)` (as the `for` is the innermost binder).
+///
+/// [de Bruijn index]: https://en.wikipedia.org/wiki/De_Bruijn_index
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct DebruijnIndex {
+    depth: u32,
+}
+
+impl DebruijnIndex {
+    pub const INNERMOST: DebruijnIndex = DebruijnIndex { depth: 0 };
+    pub const ONE: DebruijnIndex = DebruijnIndex { depth: 1 };
+
+    pub fn new(depth: u32) -> Self {
+        DebruijnIndex { depth }
+    }
+
+    pub fn depth(self) -> u32 {
+        self.depth
+    }
+
+    /// True if the binder identified by this index is within the
+    /// binder identified by the index `outer_binder`.
+    ///
+    /// # Example
+    ///
+    /// Imagine you have the following binders in scope
+    ///
+    /// ```ignore
+    /// forall<a> forall<b> forall<c>
+    /// ```
+    ///
+    /// then the Debruijn index for `c` would be `0`, the index for
+    /// `b` would be 1, and so on. Now consider the following calls:
+    ///
+    /// * `c.within(a) = true`
+    /// * `b.within(a) = true`
+    /// * `a.within(a) = false`
+    /// * `a.within(c) = false`
+    pub fn within(self, outer_binder: DebruijnIndex) -> bool {
+        self < outer_binder
+    }
+
+    /// Returns the resulting index when this value is moved into
+    /// through one binder.
+    #[must_use]
+    pub fn shifted_in(self) -> DebruijnIndex {
+        self.shifted_in_from(DebruijnIndex::ONE)
+    }
+
+    /// Update this index in place by shifting it "in" through
+    /// `amount` number of binders.
+    pub fn shift_in(&mut self) {
+        *self = self.shifted_in();
+    }
+
+    /// Adds `outer_binder` levels to the `self` index. Intuitively, this
+    /// shifts the `self` index, which was valid at the outer binder,
+    /// so that it is valid at the innermost binder.
+    ///
+    /// Example: Assume that the following binders are in scope:
+    ///
+    /// ```ignore
+    /// for<A> for<B> for<C> for<D>
+    ///            ^ outer binder
+    /// ```
+    ///
+    /// Assume further that the `outer_binder` argument is 2,
+    /// which means that it is referring to the `for<B>` binder
+    /// (since `D` would be the innermost binder).
+    ///
+    /// This means that `self` is relative to the binder `B` -- so
+    /// if `self` is 0 (`INNERMOST`), then it refers to `B`,
+    /// and if `self` is 1, then it refers to `A`.
+    ///
+    /// We will return as follows:
+    ///
+    /// * `0.shifted_in_from(2) = 2` -- i.e., `B`, when shifted in to the binding level `D`, has index 2
+    /// * `1.shifted_in_from(2) = 3` -- i.e., `A`, when shifted in to the binding level `D`, has index 3
+    /// * `2.shifted_in_from(1) = 3` -- here, we changed the `outer_binder`  to refer to `C`.
+    ///   Therefore `2` (relative to `C`) refers to `A`, so the result is still 3 (since `A`, relative to the
+    ///   innermost binder, has index 3).
+    #[must_use]
+    pub fn shifted_in_from(self, outer_binder: DebruijnIndex) -> DebruijnIndex {
+        DebruijnIndex::new(self.depth() + outer_binder.depth())
+    }
+
+    /// Returns the resulting index when this value is moved out from
+    /// `amount` number of new binders.
+    #[must_use]
+    pub fn shifted_out(self) -> Option<DebruijnIndex> {
+        self.shifted_out_to(DebruijnIndex::ONE)
+    }
+
+    /// Update in place by shifting out from `amount` binders.
+    pub fn shift_out(&mut self) {
+        *self = self.shifted_out().unwrap();
+    }
+
+    /// Subtracts `outer_binder` levels from the `self` index. Intuitively, this
+    /// shifts the `self` index, which was valid at the innermost
+    /// binder, to one that is valid at the binder `outer_binder`.
+    ///
+    /// This will return `None` if the `self` index is internal to the
+    /// outer binder (i.e., if `self < outer_binder`).
+    ///
+    /// Example: Assume that the following binders are in scope:
+    ///
+    /// ```ignore
+    /// for<A> for<B> for<C> for<D>
+    ///            ^ outer binder
+    /// ```
+    ///
+    /// Assume further that the `outer_binder` argument is 2,
+    /// which means that it is referring to the `for<B>` binder
+    /// (since `D` would be the innermost binder).
+    ///
+    /// This means that the result is relative to the binder `B` -- so
+    /// if `self` is 0 (`INNERMOST`), then it refers to `B`,
+    /// and if `self` is 1, then it refers to `A`.
+    ///
+    /// We will return as follows:
+    ///
+    /// * `1.shifted_out_to(2) = None` -- i.e., the binder for `C` can't be named from the binding level `B`
+    /// * `3.shifted_out_to(2) = Some(1)` -- i.e., `A`, when shifted out to the binding level `B`, has index 1
+    pub fn shifted_out_to(self, outer_binder: DebruijnIndex) -> Option<DebruijnIndex> {
+        if self.within(outer_binder) {
+            None
+        } else {
+            Some(DebruijnIndex::new(self.depth() - outer_binder.depth()))
+        }
     }
 }
 
@@ -380,7 +605,7 @@ impl<I: Interner> Lifetime<I> {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub enum LifetimeData<I: Interner> {
     /// See TyData::Var(_).
-    BoundVar(usize),
+    BoundVar(BoundVar),
     InferenceVar(InferenceVar),
     Placeholder(PlaceholderIndex),
     Phantom(Void, PhantomData<I>),
@@ -866,26 +1091,22 @@ impl<T> Binders<T> {
         }
     }
 
-    /// Introduces a fresh type variable at the start of the binders and returns new Binders with
-    /// the result of the operator function applied.
+    /// Creates a fresh binders that contains a single type
+    /// variable. The result of the closure will be embedded in this
+    /// binder. Note that you should be careful with what you return
+    /// from the closure to account for the binder that will be added.
     ///
-    /// forall<?0, ?1> will become forall<?0, ?1, ?2> where ?0 is the fresh variable
-    pub fn with_fresh_type_var<U, I>(
-        self,
-        interner: &I,
-        op: impl FnOnce(<T as Fold<I, I>>::Result, Ty<I>) -> U,
-    ) -> Binders<U>
+    /// XXX FIXME -- this is potentially a pretty footgun-y function.
+    pub fn with_fresh_type_var<I>(interner: &I, op: impl FnOnce(Ty<I>) -> T) -> Binders<T>
     where
         I: Interner,
-        T: Shift<I>,
     {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var = TyData::<I>::BoundVar(0).intern(interner);
-        let value = op(self.value.shifted_in(interner, 1), new_var);
+        let new_var =
+            TyData::<I>::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
+        let value = op(new_var);
         Binders {
-            binders: iter::once(ParameterKind::Ty(()))
-                .chain(self.binders.iter().cloned())
-                .collect(),
+            binders: iter::once(ParameterKind::Ty(())).collect(),
             value,
         }
     }
@@ -974,20 +1195,28 @@ pub enum ProgramClause<I: Interner> {
     ForAll(Binders<ProgramClauseImplication<I>>),
 }
 
+impl<I: Interner> ProgramClauseImplication<I> {
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseImplication<I> {
+        if self.conditions.is_empty(interner) {
+            ProgramClauseImplication {
+                consequence: self.consequence.into_from_env_goal(interner),
+                conditions: self.conditions.clone(),
+            }
+        } else {
+            self
+        }
+    }
+}
+
 impl<I: Interner> ProgramClause<I> {
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
         match self {
             ProgramClause::Implies(implication) => {
-                if implication.conditions.is_empty(interner) {
-                    ProgramClause::Implies(ProgramClauseImplication {
-                        consequence: implication.consequence.into_from_env_goal(interner),
-                        conditions: Goals::new(interner),
-                    })
-                } else {
-                    ProgramClause::Implies(implication)
-                }
+                ProgramClause::Implies(implication.into_from_env_clause(interner))
             }
-            clause => clause,
+            ProgramClause::ForAll(binders_implication) => {
+                ProgramClause::ForAll(binders_implication.map(|i| i.into_from_env_clause(interner)))
+            }
         }
     }
 }
@@ -1121,23 +1350,19 @@ impl<I: Interner> Goal<I> {
         GoalData::Not(self).intern(interner)
     }
 
-    /// Takes a goal `G` and turns it into `compatible { G }`
+    /// Takes a goal `G` and turns it into `compatible { G }`.
     pub fn compatible(self, interner: &I) -> Self {
         // compatible { G } desugars into: forall<T> { if (Compatible, DownstreamType(T)) { G } }
         // This activates the compatible modality rules and introduces an anonymous downstream type
         GoalData::Quantified(
             QuantifierKind::ForAll,
-            Binders {
-                value: self,
-                binders: Vec::new(),
-            }
-            .with_fresh_type_var(interner, |goal, ty| {
+            Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
                     vec![
                         DomainGoal::Compatible(()).cast(interner),
                         DomainGoal::DownstreamType(ty).cast(interner),
                     ],
-                    goal,
+                    self.shifted_in(interner),
                 )
                 .intern(interner)
             }),
@@ -1187,7 +1412,7 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum GoalData<I: Interner> {
     /// Introduces a binding at depth 0, shifting other bindings up
@@ -1314,18 +1539,19 @@ impl<I: Interner> Substitution<I> {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     pub fn is_identity_subst(&self, interner: &I) -> bool {
-        self.iter(interner)
-            .zip(0..)
-            .all(|(parameter, index)| match parameter.data(interner) {
+        self.iter(interner).zip(0..).all(|(parameter, index)| {
+            let index_db = BoundVar::new(DebruijnIndex::INNERMOST, index);
+            match parameter.data(interner) {
                 ParameterKind::Ty(ty) => match ty.data(interner) {
-                    TyData::BoundVar(depth) => index == *depth,
+                    TyData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
                 ParameterKind::Lifetime(lifetime) => match lifetime.data(interner) {
-                    LifetimeData::BoundVar(depth) => index == *depth,
+                    LifetimeData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
-            })
+            }
+        })
     }
 
     pub fn apply<T>(&self, value: &T, interner: &I) -> T::Result
@@ -1338,7 +1564,7 @@ impl<I: Interner> Substitution<I> {
                     interner,
                     subst: self,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap()
     }
@@ -1400,18 +1626,26 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
         self
     }
 
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
-        let interner = self.interner();
-        let ty = self.at(depth);
-        let ty = ty.assert_ty_ref(interner);
-        Ok(ty.shifted_in(interner, binders))
+    fn fold_free_var_ty(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<I>> {
+        assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
+        let ty = self.at(bound_var.index);
+        let ty = ty.assert_ty_ref(self.interner());
+        Ok(ty.shifted_in_from(self.interner(), outer_binder))
     }
 
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<I>> {
-        let interner = self.interner();
-        let l = self.at(depth);
-        let l = l.assert_lifetime_ref(interner);
-        Ok(l.shifted_in(interner, binders))
+    fn fold_free_var_lifetime(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Lifetime<I>> {
+        assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
+        let l = self.at(bound_var.index);
+        let l = l.assert_lifetime_ref(self.interner());
+        Ok(l.shifted_in_from(self.interner(), outer_binder))
     }
 
     fn interner(&self) -> &'i I {

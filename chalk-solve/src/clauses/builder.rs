@@ -85,19 +85,23 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_binders<V>(&mut self, binders: &Binders<V>, op: impl FnOnce(&mut Self, V::Result))
     where
         V: Fold<I> + HasInterner<Interner = I>,
+        V::Result: std::fmt::Debug,
     {
-        let interner = self.interner();
-        let old_len = self.binders.len();
-        self.binders.extend(binders.binders.clone());
-        let params: Vec<_> = binders
-            .binders
-            .iter()
-            .zip(old_len..)
-            .map(|p| p.to_parameter(interner))
-            .collect();
-        self.parameters.extend(params);
+        debug_heading!("push_binders({:?})", binders);
 
-        let value = binders.substitute(interner, &self.parameters[old_len..]);
+        let old_len = self.binders.len();
+        let interner = self.interner();
+        self.binders.extend(binders.binders.clone());
+        self.parameters.extend(
+            binders
+                .binders
+                .iter()
+                .zip(old_len..)
+                .map(|p| p.to_parameter(interner)),
+        );
+
+        let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
+        debug!("push_binders: value={:?}", value);
         op(self, value);
 
         self.binders.truncate(old_len);

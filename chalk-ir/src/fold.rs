@@ -80,30 +80,34 @@ where
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_var_ty`.
-    fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<TI>> {
-        ty.super_fold_with(self.as_dyn(), binders)
+    fn fold_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Fallible<Ty<TI>> {
+        ty.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// Top-level callback: invoked for each `Lifetime<I>` that is
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_lifetime_ty`.
-    fn fold_lifetime(&mut self, lifetime: &Lifetime<I>, binders: usize) -> Fallible<Lifetime<TI>> {
-        lifetime.super_fold_with(self.as_dyn(), binders)
+    fn fold_lifetime(
+        &mut self,
+        lifetime: &Lifetime<I>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Lifetime<TI>> {
+        lifetime.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every program clause. By default, recursively folds the goals contents.
     fn fold_program_clause(
         &mut self,
         clause: &ProgramClause<I>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<ProgramClause<TI>> {
-        clause.super_fold_with(self.as_dyn(), binders)
+        clause.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every goal. By default, recursively folds the goals contents.
-    fn fold_goal(&mut self, goal: &Goal<I>, binders: usize) -> Fallible<Goal<TI>> {
-        goal.super_fold_with(self.as_dyn(), binders)
+    fn fold_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> Fallible<Goal<TI>> {
+        goal.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// If overridden to return true, then folding will panic if a
@@ -122,20 +126,36 @@ where
     ///
     /// This should return a type suitable for a context with
     /// `binders` in scope.
-    fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<TI>> {
+    fn fold_free_var_ty(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<TI>> {
         if self.forbid_free_vars() {
-            panic!("unexpected free variable with depth `{:?}`", depth)
+            panic!(
+                "unexpected free variable with depth `{:?}` with outer binder {:?}",
+                bound_var, outer_binder
+            )
         } else {
-            Ok(TyData::<TI>::BoundVar(depth + binders).intern(self.target_interner()))
+            let bound_var = bound_var.shifted_in_from(outer_binder);
+            Ok(TyData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
         }
     }
 
     /// As `fold_free_var_ty`, but for lifetimes.
-    fn fold_free_var_lifetime(&mut self, depth: usize, binders: usize) -> Fallible<Lifetime<TI>> {
+    fn fold_free_var_lifetime(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Lifetime<TI>> {
         if self.forbid_free_vars() {
-            panic!("unexpected free variable with depth `{:?}`", depth)
+            panic!(
+                "unexpected free variable with depth `{:?}` with outer binder {:?}",
+                bound_var, outer_binder
+            )
         } else {
-            Ok(LifetimeData::<TI>::BoundVar(depth + binders).intern(self.target_interner()))
+            let bound_var = bound_var.shifted_in_from(outer_binder);
+            Ok(LifetimeData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
         }
     }
 
@@ -152,10 +172,11 @@ where
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
+    #[allow(unused_variables)]
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<TI>> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
@@ -165,10 +186,11 @@ where
     }
 
     /// As with `fold_free_placeholder_ty`, but for lifetimes.
+    #[allow(unused_variables)]
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<TI>> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder lifetime `{:?}`", universe)
@@ -191,7 +213,12 @@ where
     ///
     /// - `universe` is the universe of the `TypeName::ForAll` that was found
     /// - `binders` is the number of binders in scope
-    fn fold_inference_ty(&mut self, var: InferenceVar, _binders: usize) -> Fallible<Ty<TI>> {
+    #[allow(unused_variables)]
+    fn fold_inference_ty(
+        &mut self,
+        var: InferenceVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Ty<TI>> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
@@ -200,10 +227,11 @@ where
     }
 
     /// As with `fold_free_inference_ty`, but for lifetimes.
+    #[allow(unused_variables)]
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
-        _binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<TI>> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference lifetime `'{:?}`", var)
@@ -248,7 +276,7 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -262,7 +290,7 @@ pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -278,13 +306,13 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Ty<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        folder.fold_ty(self, binders)
+        folder.fold_ty(self, outer_binder)
     }
 }
 
@@ -297,37 +325,38 @@ where
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<TI>>
     where
         I: 'i,
         TI: 'i,
     {
-        match self.data(folder.interner()) {
-            TyData::BoundVar(depth) => {
-                if *depth >= binders {
-                    folder.fold_free_var_ty(*depth - binders, binders)
+        let interner = folder.interner();
+        match self.data(interner) {
+            TyData::BoundVar(bound_var) => {
+                if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
+                    // This variable was bound outside of the binders
+                    // that we have traversed during folding;
+                    // therefore, it is free. Let the folder have a
+                    // crack at it.
+                    folder.fold_free_var_ty(bound_var1, outer_binder)
                 } else {
-                    Ok(TyData::<TI>::BoundVar(*depth).intern(folder.target_interner()))
+                    // This variable was bound within the binders that
+                    // we folded over, so just return a bound
+                    // variable.
+                    Ok(TyData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
                 }
             }
-            TyData::Dyn(clauses) => {
-                Ok(TyData::Dyn(clauses.fold_with(folder, binders)?)
-                    .intern(folder.target_interner()))
-            }
-            TyData::InferenceVar(var) => folder.fold_inference_ty(*var, binders),
-            TyData::Apply(apply) => {
-                Ok(TyData::Apply(apply.fold_with(folder, binders)?)
-                    .intern(folder.target_interner()))
-            }
-            TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, binders)?),
-            TyData::Alias(proj) => Ok(
-                TyData::Alias(proj.fold_with(folder, binders)?).intern(folder.target_interner())
-            ),
-            TyData::Function(fun) => {
-                Ok(TyData::Function(fun.fold_with(folder, binders)?)
-                    .intern(folder.target_interner()))
-            }
+            TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner())),
+            TyData::InferenceVar(var) => folder.fold_inference_ty(*var, outer_binder),
+            TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner())),
+            TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, outer_binder)?),
+            TyData::Alias(proj) => Ok(TyData::Alias(proj.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner())),
+            TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner())),
         }
     }
 }
@@ -341,13 +370,13 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Lifetime<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        folder.fold_lifetime(self, binders)
+        folder.fold_lifetime(self, outer_binder)
     }
 }
 
@@ -359,25 +388,31 @@ where
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<TI>>
     where
         I: 'i,
         TI: 'i,
     {
         let interner = folder.interner();
-        let target_interner = folder.target_interner();
         match self.data(interner) {
-            LifetimeData::BoundVar(depth) => {
-                if *depth >= binders {
-                    folder.fold_free_var_lifetime(depth - binders, binders)
+            LifetimeData::BoundVar(bound_var) => {
+                if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
+                    // This variable was bound outside of the binders
+                    // that we have traversed during folding;
+                    // therefore, it is free. Let the folder have a
+                    // crack at it.
+                    folder.fold_free_var_lifetime(bound_var1, outer_binder)
                 } else {
-                    Ok(LifetimeData::<TI>::BoundVar(*depth).intern(target_interner))
+                    // This variable was bound within the binders that
+                    // we folded over, so just return a bound
+                    // variable.
+                    Ok(LifetimeData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
                 }
             }
-            LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, binders),
+            LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, outer_binder),
             LifetimeData::Placeholder(universe) => {
-                folder.fold_free_placeholder_lifetime(*universe, binders)
+                folder.fold_free_placeholder_lifetime(*universe, outer_binder)
             }
             LifetimeData::Phantom(..) => unreachable!(),
         }
@@ -392,13 +427,13 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goal<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        folder.fold_goal(self, binders)
+        folder.fold_goal(self, outer_binder)
     }
 }
 
@@ -407,7 +442,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
@@ -417,7 +452,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
         let target_interner = folder.target_interner();
         Ok(Goal::new(
             target_interner,
-            self.data(interner).fold_with(folder, binders)?,
+            self.data(interner).fold_with(folder, outer_binder)?,
         ))
     }
 }
@@ -431,12 +466,12 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ProgramClause<I> {
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
-        binders: usize,
+        outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
     {
-        folder.fold_program_clause(self, binders)
+        folder.fold_program_clause(self, outer_binder)
     }
 }

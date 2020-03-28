@@ -22,7 +22,7 @@ impl<I: Interner> InferenceTable<I> {
                     universes: &mut universes,
                     interner,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap();
 
@@ -36,7 +36,7 @@ impl<I: Interner> InferenceTable<I> {
                     universes: &universes,
                     interner,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap();
         let binders = value0
@@ -226,7 +226,7 @@ impl UniverseMap {
                     interner,
                     universes: self,
                 },
-                0,
+                DebruijnIndex::INNERMOST,
             )
             .unwrap()
     }
@@ -250,7 +250,7 @@ where
     fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         self.universes.add(universe.ui);
         Ok(universe.to_ty::<I>(self.interner()))
@@ -259,7 +259,7 @@ where
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         self.universes.add(universe.ui);
         Ok(universe.to_lifetime(self.interner()))
@@ -298,7 +298,7 @@ where
     fn fold_free_placeholder_ty(
         &mut self,
         universe0: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let ui = self.universes.map_universe_to_canonical(universe0.ui);
         Ok(PlaceholderIndex {
@@ -311,7 +311,7 @@ where
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe0: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let universe = self.universes.map_universe_to_canonical(universe0.ui);
         Ok(PlaceholderIndex {
@@ -346,7 +346,7 @@ where
     fn fold_free_placeholder_ty(
         &mut self,
         universe0: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let ui = self.universes.map_universe_from_canonical(universe0.ui);
         Ok(PlaceholderIndex {
@@ -359,7 +359,7 @@ where
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe0: PlaceholderIndex,
-        _binders: usize,
+        _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let universe = self.universes.map_universe_from_canonical(universe0.ui);
         Ok(PlaceholderIndex {

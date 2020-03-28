@@ -189,7 +189,13 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
             // variables.
             ParameterKind::Ty(t) => match t.bound(interner) {
                 None => false,
-                Some(depth) => depth == index,
+                Some(bound_var) => {
+                    if let Some(index1) = bound_var.index_if_innermost() {
+                        index == index1
+                    } else {
+                        false
+                    }
+                }
             },
 
             // And no lifetime mappings. (This is too strict, but we never

@@ -23,7 +23,7 @@ where
 
     let mut truncater = Truncater::new(interner, infer, max_size);
     let value = value
-        .fold_with(&mut truncater, 0)
+        .fold_with(&mut truncater, DebruijnIndex::INNERMOST)
         .expect("Truncater is infallible");
     debug!(
         "truncate: overflow={} value={:?}",
@@ -81,15 +81,15 @@ where
         self
     }
 
-    fn fold_ty(&mut self, ty: &Ty<I>, binders: usize) -> Fallible<Ty<I>> {
+    fn fold_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Fallible<Ty<I>> {
         if let Some(normalized_ty) = self.infer.normalize_shallow(self.interner, ty) {
-            return self.fold_ty(&normalized_ty, binders);
+            return self.fold_ty(&normalized_ty, outer_binder);
         }
 
         let pre_size = self.current_size;
         self.current_size += 1;
 
-        let result = ty.super_fold_with(self, binders)?;
+        let result = ty.super_fold_with(self, outer_binder)?;
 
         // We wish to maintain the invariant that:
         //
@@ -102,7 +102,8 @@ where
         // a fresh existential variable (in the innermost universe).
         let post_size = self.current_size;
         let result = if pre_size < self.max_size && post_size > self.max_size {
-            self.overflow(pre_size).shifted_in(self.interner(), binders)
+            self.overflow(pre_size)
+                .shifted_in_from(self.interner(), outer_binder)
         } else {
             result
         };
@@ -116,8 +117,12 @@ where
         Ok(result)
     }
 
-    fn fold_lifetime(&mut self, lifetime: &Lifetime<I>, binders: usize) -> Fallible<Lifetime<I>> {
-        lifetime.super_fold_with(self, binders)
+    fn fold_lifetime(
+        &mut self,
+        lifetime: &Lifetime<I>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Lifetime<I>> {
+        lifetime.super_fold_with(self, outer_binder)
     }
 
     fn interner(&self) -> &'i I {

@@ -82,7 +82,7 @@ fn unify_quantified_lifetimes() {
         program {
         }
 
-        // Check that `'a` (here, `'^0`) is not unified
+        // Check that `'a` (here, `'^0.0`) is not unified
         // with `'!1_0`, because they belong to incompatible
         // universes.
         goal {
@@ -93,8 +93,8 @@ fn unify_quantified_lifetimes() {
             }
         } yields {
             "Unique; for<?U0> { \
-             substitution [?0 := '^0], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }] \
+             substitution [?0 := '^0.0], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0 == '!1_0 }] \
              }"
         }
 
@@ -110,8 +110,8 @@ fn unify_quantified_lifetimes() {
             }
         } yields {
             "Unique; for<?U0> { \
-             substitution [?0 := '^0, ?1 := '!1_0], \
-             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0 == '!1_0 }] \
+             substitution [?0 := '^0.0, ?1 := '!1_0], \
+             lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0 == '!1_0 }] \
              }"
         }
     }
@@ -135,8 +135,8 @@ fn equality_binder() {
             }
         } yields {
             "Unique; for<?U1> { \
-                 substitution [?0 := '^0], \
-                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '^0 }] \
+                 substitution [?0 := '^0.0], \
+                 lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '^0.0 }] \
              }"
         }
     }
@@ -180,7 +180,7 @@ fn mixed_indices_unify() {
             }
         } yields {
             "Unique; for<?U0,?U0> { \
-                 substitution [?0 := '^0, ?1 := ^1, ?2 := ^1], \
+                 substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.1], \
                  lifetime constraints []\
              }"
         }
@@ -207,7 +207,7 @@ fn mixed_indices_match_program() {
             }
         } yields {
             "Unique; for<?U0> { \
-                 substitution [?0 := '^0, ?1 := S, ?2 := S], \
+                 substitution [?0 := '^0.0, ?1 := S, ?2 := S], \
                  lifetime constraints [] \
              }"
         }
@@ -237,7 +237,7 @@ fn mixed_indices_normalize_application() {
                 }
             }
         } yields {
-            "Unique; for<?U0,?U0> { substitution [?0 := '^0, ?1 := ^1, ?2 := ^1], "
+            "Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.1], "
         }
     }
 }
@@ -265,7 +265,7 @@ fn mixed_indices_normalize_gat_application() {
             // Our GAT parameter <X> is mapped to ?0; all others appear left to right
             // in our Normalize(...) goal.
             "Unique; for<?U0,?U0,?U0> { \
-                substitution [?0 := ^0, ?1 := '^1, ?2 := ^2, ?3 := ^0, ?4 := ^2], "
+                substitution [?0 := ^0.0, ?1 := '^0.1, ?2 := ^0.2, ?3 := ^0.0, ?4 := ^0.2], "
         }
     }
 }

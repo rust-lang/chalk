@@ -154,7 +154,7 @@ fn only_draw_so_many_blow_up() {
         goal {
             exists<T> { T: Foo }
         } yields[SolverChoice::slg(10, Some(2))] {
-            "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0>] }"
+            "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0.0>] }"
         }
     }
 }

@@ -1,6 +1,6 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
-use chalk_ir::{self, AssocTypeId, ImplId, StructId, TraitId};
+use chalk_ir::{self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, TraitId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
@@ -19,7 +19,7 @@ type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
-type ParameterMap = BTreeMap<chalk_ir::ParameterKind<Ident>, usize>;
+type ParameterMap = BTreeMap<chalk_ir::ParameterKind<Ident>, BoundVar>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
@@ -62,11 +62,11 @@ struct AssociatedTyLookup {
 
 enum TypeLookup {
     Struct(chalk_ir::StructId<ChalkIr>),
-    Parameter(usize),
+    Parameter(BoundVar),
 }
 
 enum LifetimeLookup {
-    Parameter(usize),
+    Parameter(BoundVar),
 }
 
 const SELF: &str = "Self";
@@ -138,12 +138,15 @@ impl<'k> Env<'k> {
         I: IntoIterator<Item = chalk_ir::ParameterKind<Ident>>,
         I::IntoIter: ExactSizeIterator,
     {
-        let binders = binders.into_iter().enumerate().map(|(i, k)| (k, i));
+        let binders = binders
+            .into_iter()
+            .enumerate()
+            .map(|(i, k)| (k, BoundVar::new(DebruijnIndex::INNERMOST, i)));
         let len = binders.len();
         let parameter_map: ParameterMap = self
             .parameter_map
             .iter()
-            .map(|(&k, &v)| (k, v + len))
+            .map(|(&k, &v)| (k, v.shifted_in()))
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
@@ -395,6 +398,16 @@ trait LowerParameterMap {
             .chain(self.synthetic_parameters()) // (*) see below
             .collect()
          */
+
+        // (*) It is important that the declared parameters come
+        // before the synthetic parameters in the ordering. This is
+        // because of traits, when used as types, only have the first
+        // N parameters in their kind (that is, they do not have Self).
+        //
+        // Note that if `Self` appears in the where-clauses etc, the
+        // trait is not object-safe, and hence not supposed to be used
+        // as an object. Actually the handling of object types is
+        // probably just kind of messed up right now. That's ok.
     }
 
     fn parameter_refs(&self) -> Vec<chalk_ir::Parameter<ChalkIr>> {
@@ -407,16 +420,10 @@ trait LowerParameterMap {
     }
 
     fn parameter_map(&self) -> ParameterMap {
-        // (*) It is important that the declared parameters come
-        // before the subtle parameters in the ordering. This is
-        // because of traits, when used as types, only have the first
-        // N parameters in their kind (that is, they do not have Self).
-        //
-        // Note that if `Self` appears in the where-clauses etc, the
-        // trait is not object-safe, and hence not supposed to be used
-        // as an object. Actually the handling of object types is
-        // probably just kind of messed up right now. That's ok.
-        self.all_parameters().into_iter().zip(0..).collect()
+        self.all_parameters()
+            .into_iter()
+            .zip((0..).map(|i| BoundVar::new(DebruijnIndex::INNERMOST, i)))
+            .collect()
     }
 
     fn interner(&self) -> &ChalkIr {
@@ -997,7 +1004,11 @@ impl LowerTy for Ty {
                             .flat_map(|qil| {
                                 qil.into_where_clauses(
                                     interner,
-                                    chalk_ir::TyData::BoundVar(0).intern(interner),
+                                    chalk_ir::TyData::BoundVar(BoundVar::new(
+                                        DebruijnIndex::INNERMOST,
+                                        0,
+                                    ))
+                                    .intern(interner),
                                 )
                             })
                             .collect())
@@ -1187,11 +1198,7 @@ impl LowerClause for Clause {
             .into_iter()
             .map(
                 |implication: chalk_ir::Binders<chalk_ir::ProgramClauseImplication<ChalkIr>>| {
-                    if implication.binders.is_empty() {
-                        chalk_ir::ProgramClause::Implies(implication.value)
-                    } else {
-                        chalk_ir::ProgramClause::ForAll(implication)
-                    }
+                    chalk_ir::ProgramClause::ForAll(implication)
                 },
             )
             .collect();
@@ -1236,13 +1243,17 @@ impl LowerTrait for TraitDefn {
             .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str)].id)
             .collect();
 
-        Ok(rust_ir::TraitDatum {
+        let trait_datum = rust_ir::TraitDatum {
             id: trait_id,
             binders: binders,
             flags: self.flags.lower(),
             associated_ty_ids,
             well_known: self.well_known.map(|t| t.lower()),
-        })
+        };
+
+        debug!("trait_datum={:?}", trait_datum);
+
+        Ok(trait_datum)
     }
 }
 

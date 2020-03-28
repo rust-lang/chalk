@@ -259,7 +259,7 @@ fn quantify_ty_under_binder() {
             )
             .quantified,
         Canonical {
-            value: ty!(function 3 (apply (item 0) (bound 1) (bound 3) (bound 3) (lifetime (bound 4)))),
+            value: ty!(function 3 (apply (item 0) (bound 1) (bound 1 0) (bound 1 0) (lifetime (bound 1 1)))),
             binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)],
         }
     );

@@ -4,9 +4,9 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, GoalData, Goals, ImplId,
-    Lifetime, Parameter, ParameterKind, ProgramClause, ProgramClauseImplication, StructId,
-    Substitution, TraitId, Ty, TyData, TypeName,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
+    Parameter, ProgramClause, ProgramClauseImplication, StructId, Substitution, TraitId, Ty,
+    TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -143,10 +143,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        match parameter.data(interner) {
-            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
-            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
-        }
+        write!(fmt, "{:?}", parameter.data(interner).inner_debug())
     }
 
     fn debug_goal(
@@ -155,27 +152,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        match goal.data(interner) {
-            GoalData::Quantified(qkind, ref subgoal) => {
-                write!(fmt, "{:?}<", qkind)?;
-                for (index, binder) in subgoal.binders.iter().enumerate() {
-                    if index > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    match *binder {
-                        ParameterKind::Ty(()) => write!(fmt, "type")?,
-                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                    }
-                }
-                write!(fmt, "> {{ {:?} }}", subgoal.value)
-            }
-            GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
-            GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
-            GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
-            GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
-        }
+        write!(fmt, "{:?}", goal.data(interner))
     }
 
     fn debug_goals(
@@ -184,15 +161,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "(")?;
-        for (goal, index) in goals.iter(interner).zip(0..) {
-            if index > 0 {
-                write!(fmt, ", ")?;
-            }
-            write!(fmt, "{:?}", goal)?;
-        }
-        write!(fmt, ")")?;
-        Ok(())
+        write!(fmt, "{:?}", goals.debug(interner))
     }
 
     fn debug_program_clause_implication(
@@ -201,20 +170,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", pci.consequence)?;
-
-        let conditions = pci.conditions.as_slice(interner);
-
-        let conds = conditions.len();
-        if conds == 0 {
-            return Ok(());
-        }
-
-        write!(fmt, " :- ")?;
-        for cond in &conditions[..conds - 1] {
-            write!(fmt, "{:?}, ", cond)?;
-        }
-        write!(fmt, "{:?}", conditions[conds - 1])
+        write!(fmt, "{:?}", pci.debug(interner))
     }
 
     fn debug_application_ty(
@@ -223,8 +179,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        let ApplicationTy { name, substitution } = application_ty;
-        write!(fmt, "{:?}{:?}", name, substitution.with_angle(interner))
+        write!(fmt, "{:?}", application_ty.debug(interner))
     }
 
     fn debug_substitution(
@@ -233,43 +188,16 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        let mut first = true;
-
-        write!(fmt, "[")?;
-
-        for (index, value) in substitution.iter(interner).enumerate() {
-            if first {
-                first = false;
-            } else {
-                write!(fmt, ", ")?;
-            }
-
-            write!(fmt, "?{} := {:?}", index, value)?;
-        }
-
-        write!(fmt, "]")?;
-
-        Ok(())
+        write!(fmt, "{:?}", substitution.debug(interner))
     }
 
     fn debug_separator_trait_ref(
         &self,
-        separator_trait_ref: &SeparatorTraitRef<ChalkIr>,
+        separator_trait_ref: &SeparatorTraitRef<'_, ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        let parameters = separator_trait_ref
-            .trait_ref
-            .substitution
-            .parameters(interner);
-        write!(
-            fmt,
-            "{:?}{}{:?}{:?}",
-            parameters[0],
-            separator_trait_ref.separator,
-            separator_trait_ref.trait_ref.trait_id,
-            Angle(&parameters[1..])
-        )
+        write!(fmt, "{:?}", separator_trait_ref.debug(interner))
     }
 }
 
