@@ -187,7 +187,7 @@ where
         // We make a goal like...
         //
         // forall<T> { ... }
-        let wg_goal = gb.forall(&struct_data, (), |gb, (fields, where_clauses), ()| {
+        let wg_goal = gb.forall(&struct_data, (), |gb, _, (fields, where_clauses), ()| {
             let interner = gb.interner();
 
             // (FromEnv(T: Eq) => ...)
@@ -243,7 +243,7 @@ where
         let goal = gb.forall(
             &impl_fields,
             &impl_datum.associated_ty_value_ids,
-            |gb, &(trait_ref, where_clauses), associated_ty_value_ids| {
+            |gb, _, (trait_ref, where_clauses), associated_ty_value_ids| {
                 let interner = gb.interner();
 
                 // if (WC) { ... }
@@ -297,7 +297,7 @@ where
                                     .into_iter()
                                     .map(|ty| ty.well_formed().cast(interner))
                                     .chain(assoc_ty_goals)
-                                    .chain(Some(trait_ref.clone().well_formed().cast(interner)));
+                                    .chain(Some(trait_ref.well_formed().cast(interner)));
 
                                 gb.all(goals)
                             },
