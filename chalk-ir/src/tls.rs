@@ -82,7 +82,7 @@ pub trait DebugContext {
 
     fn debug_separator_trait_ref(
         &self,
-        separator_trait_ref: &SeparatorTraitRef<ChalkIr>,
+        separator_trait_ref: &SeparatorTraitRef<'_, ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }

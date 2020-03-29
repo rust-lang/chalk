@@ -23,78 +23,63 @@ impl<I: Interner> Debug for AssocTypeId<I> {
 
 impl<I: Interner> Debug for Ty<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_ty(self, fmt)
-            .unwrap_or_else(|| unimplemented!("cannot format Ty without setting Program in tls"))
+        I::debug_ty(self, fmt).unwrap_or_else(|| write!(fmt, "Ty(?)"))
     }
 }
 
 impl<I: Interner> Debug for Lifetime<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_lifetime(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format Lifetime without setting Program in tls")
-        })
+        I::debug_lifetime(self, fmt).unwrap_or_else(|| write!(fmt, "Lifetime(?)"))
     }
 }
 
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format Parameter without setting Program in tls")
-        })
+        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "Parameter(?)"))
     }
 }
 
 impl<I: Interner> Debug for Goal<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goal(self, fmt)
-            .unwrap_or_else(|| unimplemented!("cannot format Goal without setting Program in tls"))
+        I::debug_goal(self, fmt).unwrap_or_else(|| write!(fmt, "Goal(?)"))
     }
 }
 
 impl<I: Interner> Debug for Goals<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goals(self, fmt)
-            .unwrap_or_else(|| unimplemented!("cannot format Goals without setting Program in tls"))
+        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "Goals(?)"))
     }
 }
 
 impl<I: Interner> Debug for ProgramClauseImplication<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_program_clause_implication(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format ProgramClauseImplication without setting Program in tls")
-        })
+        I::debug_program_clause_implication(self, fmt)
+            .unwrap_or_else(|| write!(fmt, "ProgramClauseImplication(?)"))
     }
 }
 
 impl<I: Interner> Debug for ApplicationTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_application_ty(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format ApplicationTy without setting Program in tls")
-        })
+        I::debug_application_ty(self, fmt).unwrap_or_else(|| write!(fmt, "ApplicationTy(?)"))
     }
 }
 
 impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_separator_trait_ref(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format Substitution without setting Program in tls")
-        })
+        I::debug_separator_trait_ref(self, fmt)
+            .unwrap_or_else(|| write!(fmt, "SeparatorTraitRef(?)"))
     }
 }
 
 impl<I: Interner> Debug for AliasTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_alias(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format AliasTy without setting Program in tls")
-        })
+        I::debug_alias(self, fmt).unwrap_or_else(|| write!(fmt, "AliasTy(?)"))
     }
 }
 
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_substitution(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format Substitution without setting Program in tls")
-        })
+        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "Substitution(?)"))
     }
 }
 
