@@ -80,6 +80,7 @@ reflexive_impl!(for(I: Interner) TraitRef<I>);
 reflexive_impl!(for(I: Interner) DomainGoal<I>);
 reflexive_impl!(for(I: Interner) Goal<I>);
 reflexive_impl!(for(I: Interner) WhereClause<I>);
+reflexive_impl!(for(I: Interner) ProgramClause<I>);
 
 impl<I: Interner> CastTo<WhereClause<I>> for TraitRef<I> {
     fn cast_to(self, _interner: &I) -> WhereClause<I> {
