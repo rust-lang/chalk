@@ -106,10 +106,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_struct_id(
         struct_id: StructId<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -118,17 +121,25 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_trait_id(trait_id: TraitId<Self>, fmt: &mut fmt::Formatter<'_>)
-        -> Option<fmt::Result>;
+    #[allow(unused_variables)]
+    fn debug_trait_id(
+        trait_id: TraitId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
     /// fully known types).
+    #[allow(unused_variables)]
     fn debug_assoc_type_id(
         type_id: AssocTypeId<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an alias. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -137,7 +148,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_alias(alias: &AliasTy<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+    #[allow(unused_variables)]
+    fn debug_alias(alias: &AliasTy<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an type. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -146,7 +160,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_ty(ty: &Ty<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+    #[allow(unused_variables)]
+    fn debug_ty(ty: &Ty<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an lifetime. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -155,10 +172,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_lifetime(
         lifetime: &Lifetime<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an parameter. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -167,10 +187,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_parameter(
         parameter: &Parameter<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an goal. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -179,7 +202,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_goal(goal: &Goal<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+    #[allow(unused_variables)]
+    fn debug_goal(goal: &Goal<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of a list of goals. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -188,7 +214,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
-    fn debug_goals(goals: &Goals<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result>;
+    #[allow(unused_variables)]
+    fn debug_goals(goals: &Goals<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of a ProgramClauseImplication. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -197,10 +226,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_program_clause_implication(
         pci: &ProgramClauseImplication<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an ApplicationTy. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -209,10 +241,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_application_ty(
         application_ty: &ApplicationTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of a Substitution. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -221,10 +256,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_substitution(
         substitution: &Substitution<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of a SeparatorTraitRef. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -233,10 +271,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_separator_trait_ref(
-        separator_trait_ref: &SeparatorTraitRef<Self>,
+        separator_trait_ref: &SeparatorTraitRef<'_, Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
@@ -433,7 +474,7 @@ mod default {
         }
 
         fn debug_separator_trait_ref(
-            separator_trait_ref: &SeparatorTraitRef<ChalkIr>,
+            separator_trait_ref: &SeparatorTraitRef<'_, ChalkIr>,
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| {

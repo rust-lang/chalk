@@ -1,3 +1,5 @@
+#![deny(rust_2018_idioms)]
+
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_rust_ir::*;

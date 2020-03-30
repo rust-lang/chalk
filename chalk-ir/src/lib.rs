@@ -1,3 +1,5 @@
+#![deny(rust_2018_idioms)]
+
 use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
@@ -176,6 +178,10 @@ impl<I: Interner> Ty<I> {
         Ty {
             interned: I::intern_ty(interner, data.cast(interner)),
         }
+    }
+
+    pub fn interned(&self) -> &I::InternedType {
+        &self.interned
     }
 
     pub fn data(&self, interner: &I) -> &TyData<I> {
@@ -577,6 +583,10 @@ impl<I: Interner> Lifetime<I> {
         }
     }
 
+    pub fn interned(&self) -> &I::InternedLifetime {
+        &self.interned
+    }
+
     pub fn data(&self, interner: &I) -> &LifetimeData<I> {
         I::lifetime_data(interner, &self.interned)
     }
@@ -747,6 +757,10 @@ impl<I: Interner> Parameter<I> {
     pub fn new(interner: &I, data: ParameterData<I>) -> Self {
         let interned = I::intern_parameter(interner, data);
         Parameter(interned)
+    }
+
+    pub fn interned(&self) -> &I::InternedParameter {
+        &self.0
     }
 
     pub fn data(&self, interner: &I) -> &ParameterData<I> {
@@ -1277,6 +1291,10 @@ impl<I: Interner> Goals<I> {
         Self::from(interner, None::<Goal<I>>)
     }
 
+    pub fn interned(&self) -> &I::InternedGoals {
+        &self.goals
+    }
+
     pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
         use crate::cast::Caster;
         Goals {
@@ -1323,6 +1341,10 @@ impl<I: Interner> Goal<I> {
     pub fn new(interner: &I, interned: GoalData<I>) -> Self {
         let interned = I::intern_goal(interner, interned);
         Self { interned }
+    }
+
+    pub fn interned(&self) -> &I::InternedGoal {
+        &self.interned
     }
 
     pub fn data(&self, interner: &I) -> &GoalData<I> {
@@ -1495,6 +1517,10 @@ impl<I: Interner> Substitution<I> {
         Ok(Substitution {
             parameters: I::intern_substitution(interner, parameters.into_iter().casted(interner))?,
         })
+    }
+
+    pub fn interned(&self) -> &I::InternedSubstitution {
+        &self.parameters
     }
 
     /// Index into the list of parameters
