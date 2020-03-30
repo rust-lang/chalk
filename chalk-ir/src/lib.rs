@@ -1512,13 +1512,17 @@ impl<T> UCanonical<T> {
             binders
                 .iter()
                 .enumerate()
-                .map(|(index, pk)| match pk {
-                    ParameterKind::Ty(_) => {
-                        ParameterKind::Ty(TyData::BoundVar(index).intern(interner)).intern(interner)
-                    }
-                    ParameterKind::Lifetime(_) => {
-                        ParameterKind::Lifetime(LifetimeData::BoundVar(index).intern(interner))
-                            .intern(interner)
+                .map(|(index, pk)| {
+                    let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);
+                    match pk {
+                        ParameterKind::Ty(_) => {
+                            ParameterKind::Ty(TyData::BoundVar(bound_var).intern(interner))
+                                .intern(interner)
+                        }
+                        ParameterKind::Lifetime(_) => ParameterKind::Lifetime(
+                            LifetimeData::BoundVar(bound_var).intern(interner),
+                        )
+                        .intern(interner),
                     }
                 })
                 .collect::<Vec<_>>(),

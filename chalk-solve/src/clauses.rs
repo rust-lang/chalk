@@ -427,13 +427,13 @@ mod generalize {
     use chalk_ir::{
         fold::{Fold, Folder},
         interner::Interner,
-        Binders, Lifetime, LifetimeData, ParameterKind, Ty, TyData,
+        Binders, BoundVar, DebruijnIndex, Lifetime, LifetimeData, ParameterKind, Ty, TyData,
     };
     use std::collections::HashMap;
 
     pub struct Generalize<'i, I: Interner> {
         binders: Vec<ParameterKind<()>>,
-        mapping: HashMap<usize, usize>,
+        mapping: HashMap<BoundVar, usize>,
         interner: &'i I,
     }
 
@@ -444,7 +444,9 @@ mod generalize {
                 mapping: HashMap::new(),
                 interner,
             };
-            let value = value.fold_with(&mut generalize, 0).unwrap();
+            let value = value
+                .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
+                .unwrap();
             Binders {
                 binders: generalize.binders,
                 value,
@@ -457,28 +459,34 @@ mod generalize {
             self
         }
 
-        fn fold_free_var_ty(&mut self, depth: usize, binders: usize) -> Fallible<Ty<I>> {
+        fn fold_free_var_ty(
+            &mut self,
+            bound_var: BoundVar,
+            outer_binder: DebruijnIndex,
+        ) -> Fallible<Ty<I>> {
             let binder_vec = &mut self.binders;
-            let new_index = self.mapping.entry(depth).or_insert_with(|| {
+            let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
                 let i = binder_vec.len();
                 binder_vec.push(ParameterKind::Ty(()));
                 i
             });
-            Ok(TyData::BoundVar(*new_index + binders).intern(self.interner()))
+            let new_var = BoundVar::new(outer_binder, *new_index);
+            Ok(TyData::BoundVar(new_var).intern(self.interner()))
         }
 
         fn fold_free_var_lifetime(
             &mut self,
-            depth: usize,
-            binders: usize,
+            bound_var: BoundVar,
+            outer_binder: DebruijnIndex,
         ) -> Fallible<Lifetime<I>> {
             let binder_vec = &mut self.binders;
-            let new_index = self.mapping.entry(depth).or_insert_with(|| {
+            let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
                 let i = binder_vec.len();
                 binder_vec.push(ParameterKind::Ty(()));
                 i
             });
-            Ok(LifetimeData::BoundVar(*new_index + binders).intern(self.interner()))
+            let new_var = BoundVar::new(outer_binder, *new_index);
+            Ok(LifetimeData::BoundVar(new_var).intern(self.interner()))
         }
 
         fn interner(&self) -> &'i I {
