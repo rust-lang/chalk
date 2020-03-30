@@ -23,31 +23,31 @@ impl<I: Interner> Debug for AssocTypeId<I> {
 
 impl<I: Interner> Debug for Ty<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_ty(self, fmt).unwrap_or_else(|| write!(fmt, "Ty(?)"))
+        I::debug_ty(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
 impl<I: Interner> Debug for Lifetime<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_lifetime(self, fmt).unwrap_or_else(|| write!(fmt, "Lifetime(?)"))
+        I::debug_lifetime(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "Parameter(?)"))
+        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.0))
     }
 }
 
 impl<I: Interner> Debug for Goal<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goal(self, fmt).unwrap_or_else(|| write!(fmt, "Goal(?)"))
+        I::debug_goal(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
 impl<I: Interner> Debug for Goals<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "Goals(?)"))
+        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.goals))
     }
 }
 
@@ -79,7 +79,7 @@ impl<I: Interner> Debug for AliasTy<I> {
 
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "Substitution(?)"))
+        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.parameters))
     }
 }
 
