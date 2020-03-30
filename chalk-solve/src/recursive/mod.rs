@@ -556,13 +556,6 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
 
-            DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
-                let self_ty = alias_eq.alias.self_type_parameter(interner);
-                if let Some(_) = self_ty.bound(interner) {
-                    return Err(Floundered);
-                }
-            }
-
             DomainGoal::WellFormed(WellFormed::Ty(ty))
             | DomainGoal::IsUpstream(ty)
             | DomainGoal::DownstreamType(ty)
