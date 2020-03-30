@@ -40,7 +40,7 @@ impl<I: Interner> ImplDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, Fold)]
 pub struct ImplDatumBound<I: Interner> {
     pub trait_ref: TraitRef<I>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
