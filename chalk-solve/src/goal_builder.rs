@@ -83,7 +83,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         &mut self,
         binders: &Binders<B>,
         passthru: P,
-        body: fn(&mut Self, Substitution<I>, B::Result, P::Result) -> G,
+        body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
     ) -> Goal<I>
     where
         B: Fold<I> + HasInterner<Interner = I>,
@@ -91,7 +91,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         B::Result: std::fmt::Debug,
         G: CastTo<Goal<I>>,
     {
-        self.partially_quantified(QuantifierKind::ForAll, binders, &[], passthru, body)
+        self.quantified(QuantifierKind::ForAll, binders, passthru, body)
     }
 
     /// Like [`GoalBuilder::forall`], but for a `exists<Q0..Qn> { G }` goal.
@@ -99,7 +99,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         &mut self,
         binders: &Binders<B>,
         passthru: P,
-        body: fn(&mut Self, Substitution<I>, B::Result, P::Result) -> G,
+        body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
     ) -> Goal<I>
     where
         B: Fold<I> + HasInterner<Interner = I>,
@@ -107,64 +107,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         B::Result: std::fmt::Debug,
         G: CastTo<Goal<I>>,
     {
-        self.partially_quantified(QuantifierKind::Exists, binders, &[], passthru, body)
-    }
-
-    /// Like `[GoalBuilder::forall`], except that it also takes
-    /// a (partial) substitution `S0..Sm` that provides some
-    /// suffix of the values for the bound value `<P0..Pn> V`.
-    ///
-    /// The resulting goal will be `forall<Q0..Q(n-m)> { G }`,
-    /// and the resulting substitution for the bound value `V`
-    /// will be `[Q0, .., Q(n-m), S0, .., Sm]`.
-    ///
-    /// This is useful for associated items within traits and impls:
-    /// the binders on such items contain both the binders from the trait
-    /// and impl as well as from the associated item itself. Here, the
-    /// "partial substitution" would be the values from the trait/impl.
-    pub(crate) fn partially_forall<G, B, P>(
-        &mut self,
-        binders: &Binders<B>,
-        partial_substitution: &Substitution<I>,
-        passthru: P,
-        body: fn(&mut Self, Substitution<I>, B::Result, P::Result) -> G,
-    ) -> Goal<I>
-    where
-        B: Fold<I> + HasInterner<Interner = I>,
-        P: Fold<I>,
-        B::Result: std::fmt::Debug,
-        G: CastTo<Goal<I>>,
-    {
-        self.partially_quantified(
-            QuantifierKind::ForAll,
-            binders,
-            partial_substitution.parameters(self.interner()),
-            passthru,
-            body,
-        )
-    }
-
-    /// Like [`GoalBuilder::partially_forall`], but for a `exists` goal.
-    pub(crate) fn partially_exists<G, B, P>(
-        &mut self,
-        binders: &Binders<B>,
-        partial_substitution: &Substitution<I>,
-        passthru: P,
-        body: fn(&mut Self, Substitution<I>, B::Result, P::Result) -> G,
-    ) -> Goal<I>
-    where
-        B: Fold<I> + HasInterner<Interner = I>,
-        P: Fold<I>,
-        B::Result: std::fmt::Debug,
-        G: CastTo<Goal<I>>,
-    {
-        self.partially_quantified(
-            QuantifierKind::Exists,
-            binders,
-            partial_substitution.parameters(self.interner()),
-            passthru,
-            body,
-        )
+        self.quantified(QuantifierKind::Exists, binders, passthru, body)
     }
 
     /// A combined helper functon for the various methods
@@ -174,13 +117,12 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     /// * [`GoalBuilder::partially_forall`]
     ///
     /// for details.
-    pub(crate) fn partially_quantified<G, B, P>(
+    pub(crate) fn quantified<G, B, P>(
         &mut self,
         quantifier_kind: QuantifierKind,
         binders: &Binders<B>,
-        partial_substitution: &[Parameter<I>],
         passthru: P,
-        body: fn(&mut Self, Substitution<I>, B::Result, P::Result) -> G,
+        body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
     ) -> Goal<I>
     where
         B: Fold<I> + HasInterner<Interner = I>,
@@ -189,30 +131,19 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         G: CastTo<Goal<I>>,
     {
         let interner = self.interner();
-        assert!(binders.binders.len() >= partial_substitution.len());
-        let split_point = binders.binders.len() - partial_substitution.len();
-        let (quantified_binders, _) = binders.binders.split_at(split_point);
-        let combined_values: Substitution<I> = Substitution::from(
-            interner,
-            quantified_binders
-                .iter()
-                .zip(0..)
-                .map(|p| p.to_parameter(interner))
-                .chain(
-                    // Note that the values from the partial substitution must be shifted
-                    // in by one to account for the new binder we are introducing.
-                    partial_substitution.iter().map(|p| p.shifted_in(interner)),
-                ),
-        );
-        let bound_goal = {
-            let bound_value = binders.substitute(interner, &combined_values);
+        let bound_goal = binders.map_ref(|bound_value| {
+            let substitution: Substitution<I> = Substitution::from(
+                interner,
+                binders
+                    .binders
+                    .iter()
+                    .zip(0..)
+                    .map(|p| p.to_parameter(interner)),
+            );
             let passthru_shifted = passthru.shifted_in(self.interner());
-            let result = body(self, combined_values, bound_value, passthru_shifted);
-            Binders {
-                binders: quantified_binders.to_vec(),
-                value: result.cast(self.interner()),
-            }
-        };
+            let result = body(self, substitution, bound_value, passthru_shifted);
+            result.cast(self.interner())
+        });
         GoalData::Quantified(quantifier_kind, bound_goal).intern(self.interner())
     }
 }

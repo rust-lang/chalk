@@ -300,7 +300,7 @@ fn impl_header_wf_goal<I: Interner>(
                 let goals = input_types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))
-                    .chain(Some(trait_ref.clone().well_formed().cast(interner)));
+                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)));
 
                 gb.all::<_, Goal<I>>(goals)
             })
@@ -456,7 +456,7 @@ fn compute_assoc_ty_goal<I: Interner>(
                         let bound_goals = defn_bounds
                             .iter()
                             .cloned()
-                            .flat_map(|qb| qb.into_where_clauses(interner, value_ty.clone()))
+                            .flat_map(|qb| qb.into_where_clauses(interner, (*value_ty).clone()))
                             .map(|qwc| qwc.into_well_formed_goal(interner))
                             .casted(interner);
 
