@@ -541,35 +541,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        // TODO this is currently duplicated with the SLG solver, extract it somewhere?
-        // Look for floundering goals:
-        let interner = self.program.interner();
-        match goal {
-            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
-            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
-                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter(interner);
-                    if let Some(_) = self_ty.bound(interner) {
-                        return Err(Floundered);
-                    }
-                }
-            }
-
-            DomainGoal::WellFormed(WellFormed::Ty(ty))
-            | DomainGoal::IsUpstream(ty)
-            | DomainGoal::DownstreamType(ty)
-            | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty.data(interner) {
-                TyData::BoundVar(_) => return Err(Floundered),
-                _ => {}
-            },
-
-            _ => {}
-        }
-
-        // TODO this also includes clauses from env
-        Ok(program_clauses_for_goal(self.program, environment, goal))
+        program_clauses_for_goal(self.program, environment, goal).ok_or(Floundered)
     }
 }
 

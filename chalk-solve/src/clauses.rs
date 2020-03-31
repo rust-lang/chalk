@@ -102,6 +102,8 @@ pub fn push_auto_trait_impls<I: Interner>(
     });
 }
 
+// TODO add Floundered error instead of using Option
+
 /// Given some goal `goal` that must be proven, along with
 /// its `environment`, figures out the program clauses that apply
 /// to this goal from the Rust program. So for example if the goal
@@ -111,7 +113,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
-) -> Vec<ProgramClause<I>> {
+) -> Option<Vec<ProgramClause<I>>> {
     debug_heading!(
         "program_clauses_for_goal(goal={:?}, environment={:?})",
         goal,
@@ -121,13 +123,13 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
 
     let mut vec = vec![];
     vec.extend(db.custom_clauses());
-    program_clauses_that_could_match(db, environment, goal, &mut vec);
+    program_clauses_that_could_match(db, environment, goal, &mut vec)?;
     program_clauses_for_env(db, environment, &mut vec);
     vec.retain(|c| c.could_match(interner, goal));
 
     debug!("vec = {:#?}", vec);
 
-    vec
+    Some(vec)
 }
 
 /// Returns a set of program clauses that could possibly match
@@ -139,7 +141,7 @@ fn program_clauses_that_could_match<I: Interner>(
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
     clauses: &mut Vec<ProgramClause<I>>,
-) {
+) -> Option<()> {
     let interner = db.interner();
     let builder = &mut ClauseBuilder::new(db, clauses);
 
@@ -147,9 +149,18 @@ fn program_clauses_that_could_match<I: Interner>(
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
             let trait_id = trait_ref.trait_id;
 
+            let trait_datum = db.trait_datum(trait_id);
+
+            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                let self_ty = trait_ref.self_type_parameter(interner);
+                if self_ty.bound(interner).is_some() || self_ty.inference_var(interner).is_some() {
+                    return None;
+                }
+            }
+
             // This is needed for the coherence related impls, as well
             // as for the `Implemented(Foo) :- FromEnv(Foo)` rule.
-            db.trait_datum(trait_id).to_program_clauses(builder);
+            trait_datum.to_program_clauses(builder);
 
             for impl_id in db.impls_for_trait(
                 trait_ref.trait_id,
@@ -168,8 +179,8 @@ fn program_clauses_that_could_match<I: Interner>(
                             push_auto_trait_impls(builder, trait_id, struct_id);
                         }
                     }
-                    TyData::InferenceVar(_) => {
-                        panic!("auto-traits should flounder if nothing is known")
+                    TyData::InferenceVar(_) | TyData::BoundVar(_) => {
+                        return None;
                     }
                     _ => {}
                 }
@@ -262,12 +273,12 @@ fn program_clauses_that_could_match<I: Interner>(
         }
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsUpstream(ty)
-        | DomainGoal::DownstreamType(ty) => match_ty(builder, environment, ty),
+        | DomainGoal::DownstreamType(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => {
-            match_ty(builder, environment, ty)
+            match_ty(builder, environment, ty)?
         }
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(Normalize { alias, ty: _ }) => {
+        DomainGoal::Normalize(Normalize { alias, ty }) => {
             // Normalize goals derive from `AssociatedTyValue` datums,
             // which are found in impls. That is, if we are
             // normalizing (e.g.) `<T as Iterator>::Item>`, then
@@ -282,6 +293,26 @@ fn program_clauses_that_could_match<I: Interner>(
             let associated_ty_datum = db.associated_ty_data(alias.associated_ty_id);
             let trait_id = associated_ty_datum.trait_id;
             let trait_parameters = db.trait_parameters_from_projection(alias);
+
+            if let TyData::Apply(ApplicationTy {
+                name: TypeName::AssociatedType(_),
+                ..
+            }) = ty.data(interner)
+            {
+                // TODO this is probably wrong
+                // Associated types will never *normalize* to an associated type placeholder.
+                // It's important that we return early here so that we don't flounder in this case.
+                return Some(());
+            }
+
+            let trait_datum = builder.db.trait_datum(trait_id);
+            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                let self_ty = alias.self_type_parameter(interner);
+                if self_ty.bound(interner).is_some() || self_ty.inference_var(interner).is_some() {
+                    return None;
+                }
+            }
+
             push_program_clauses_for_associated_type_values_in_impls_of(
                 builder,
                 trait_id,
@@ -293,6 +324,8 @@ fn program_clauses_that_could_match<I: Interner>(
             .to_program_clauses(builder),
         DomainGoal::Compatible(()) => (),
     };
+
+    Some(())
 }
 
 /// Generate program clauses from the associated-type values
@@ -353,9 +386,9 @@ fn match_ty<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     environment: &Environment<I>,
     ty: &Ty<I>,
-) {
+) -> Option<()> {
     let interner = builder.interner();
-    match ty.data(interner) {
+    Some(match ty.data(interner) {
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
@@ -370,12 +403,12 @@ fn match_ty<I: Interner>(
                 .substitution
                 .iter(interner)
                 .map(|p| p.assert_ty_ref(interner))
-                .for_each(|ty| match_ty(builder, environment, &ty))
+                .map(|ty| match_ty(builder, environment, &ty))
+                .collect::<Option<_>>()?;
         }
-        TyData::BoundVar(_) => {}
-        TyData::InferenceVar(_) => panic!("should have floundered"),
+        TyData::BoundVar(_) | TyData::InferenceVar(_) => return None,
         TyData::Dyn(_) => {}
-    }
+    })
 }
 
 fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
