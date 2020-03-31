@@ -114,7 +114,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     /// to create `forall` and `exists` goals. See:
     ///
     /// * [`GoalBuilder::forall`]
-    /// * [`GoalBuilder::partially_forall`]
+    /// * [`GoalBuilder::exists`]
     ///
     /// for details.
     pub(crate) fn quantified<G, B, P>(
