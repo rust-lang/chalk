@@ -135,6 +135,8 @@ pub struct TraitDatum<I: Interner> {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WellKnownTrait {
     SizedTrait,
+    CopyTrait,
+    CloneTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {
