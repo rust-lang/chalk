@@ -1,6 +1,6 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
 use crate::ext::*;
-use crate::Solution;
+use crate::{goal_builder::GoalBuilder, Solution};
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
@@ -34,7 +34,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             // the other. Note that specialization can only run one way - if both
             // specialization checks return *either* true or false, that's an error.
             if !self.disjoint(lhs, rhs) {
-                match (self.specializes(lhs, rhs), self.specializes(rhs, lhs)) {
+                match (self.specializes(l_id, r_id), self.specializes(r_id, l_id)) {
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
@@ -145,15 +145,45 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         result
     }
 
-    // Test for specialization.
+    // Creates a goal which, if provable, means "more special" impl specializes the "less special" one.
     //
-    // If this test succeeds, the second impl specializes the first.
+    // # General rule
     //
-    // Example lowering:
+    // Given the more special impl:
     //
-    // more: impl<T: Clone> Foo for Vec<T>
-    // less: impl<U: Clone> Foo for U
+    // ```ignore
+    // impl<P0..Pn> SomeTrait<T1..Tm> for T0 where WC_more
+    // ```
     //
+    // and less special impl
+    //
+    // ```ignore
+    // impl<Q0..Qo> SomeTrait<U1..Um> for U0 where WC_less
+    // ```
+    //
+    // create the goal:
+    //
+    // ```ignore
+    // forall<P0..Pn> {
+    //   if (WC_more) {}
+    //     exists<Q0..Qo> {
+    //       T0 = U0, ..., Tm = Um,
+    //       WC_less
+    //     }
+    //   }
+    // }
+    // ```
+    //
+    // # Example
+    //
+    // Given:
+    //
+    // * more: `impl<T: Clone> Foo for Vec<T>`
+    // * less: `impl<U: Clone> Foo for U`
+    //
+    // Resulting goal:
+    //
+    // ```ignore
     // forall<T> {
     //  if (T: Clone) {
     //    exists<U> {
@@ -161,7 +191,10 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     //    }
     //  }
     // }
-    fn specializes(&self, less_special: &ImplDatum<I>, more_special: &ImplDatum<I>) -> bool {
+    // ```
+    fn specializes(&self, less_special_id: ImplId<I>, more_special_id: ImplId<I>) -> bool {
+        let more_special = &self.db.impl_datum(more_special_id);
+        let less_special = &self.db.impl_datum(less_special_id);
         debug_heading!(
             "specializes(less_special={:#?}, more_special={:#?})",
             less_special,
@@ -170,66 +203,54 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         let interner = self.db.interner();
 
-        // Negative impls cannot specialize.
-        if !less_special.is_positive() || !more_special.is_positive() {
-            return false;
-        }
+        let gb = &mut GoalBuilder::new(self.db);
 
-        // Create parameter equality goals. Note that parameters from
-        // the "more special" goal have to be "shifted in" across the
-        // binder for the "less special" impl.
-        let more_special_params = params(interner, more_special)
-            .iter()
-            .map(|p| p.shifted_in(interner));
-        let less_special_params = params(interner, less_special).iter().cloned();
-        let params_goals = more_special_params
-            .zip(less_special_params)
-            .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern(interner));
+        // forall<P0..Pn> { ... }
+        let goal = gb.forall(
+            &more_special.binders,
+            less_special_id,
+            |gb, _, more_special_impl, less_special_id| {
+                // if (WC_more) { ... }
+                gb.implies(more_special_impl.where_clauses.iter().cloned(), |gb| {
+                    let less_special = &gb.db().impl_datum(less_special_id);
 
-        // Create less special where clause goals. These reference the parameters
-        // from the "less special" impl, which are at the same debruijn depth here.
-        let less_special_wc = less_special
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .casted(interner);
+                    // exists<Q0..Qn> { ... }
+                    gb.exists(
+                        &less_special.binders,
+                        &more_special_impl.trait_ref,
+                        |gb, _, less_special_impl, more_special_trait_ref| {
+                            let interner = gb.interner();
 
-        // Create the "more special" where clause goals. These will be
-        // added as an implication without the "less special" goals in
-        // scope, no shift required.
-        let more_special_wc = more_special
-            .binders
-            .value
-            .where_clauses
-            .iter()
-            .cloned()
-            .casted(interner)
-            .collect();
+                            // T0 = U0, ..., Tm = Um
+                            let params_goals = more_special_trait_ref
+                                .substitution
+                                .parameters(interner)
+                                .iter()
+                                .cloned()
+                                .zip(
+                                    less_special_impl
+                                        .trait_ref
+                                        .substitution
+                                        .parameters(interner)
+                                        .iter()
+                                        .cloned(),
+                                )
+                                .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern(interner));
 
-        // Join all of the goals together:
-        //
-        // forall<..more special..> {
-        //   if (<more special wc>) {
-        //     exists<..less special..> {
-        //       ..less special goals..
-        //       ..equality goals..
-        //     }
-        //   }
-        // }
-        let goal = Box::new(Goal::all(interner, params_goals.chain(less_special_wc)))
-            .quantify(
-                interner,
-                QuantifierKind::Exists,
-                less_special.binders.binders.clone(),
-            )
-            .implied_by(interner, more_special_wc)
-            .quantify(
-                interner,
-                QuantifierKind::ForAll,
-                more_special.binders.binders.clone(),
-            );
+                            // <less_special_wc_goals> = where clauses from the less special impl
+                            let less_special_wc_goals = less_special_impl
+                                .where_clauses
+                                .iter()
+                                .cloned()
+                                .casted(interner);
+
+                            // <equality_goals> && WC_less
+                            gb.all(params_goals.chain(less_special_wc_goals))
+                        },
+                    )
+                })
+            },
+        );
 
         let canonical_goal = &goal.into_closed_goal(interner);
         let result = match self
