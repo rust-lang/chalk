@@ -238,7 +238,13 @@ fn program_clauses_that_could_match<I: Interner>(
             }
 
             if let Some(well_known) = trait_datum.well_known {
-                builtin_traits::add_builtin_program_clauses(well_known, trait_ref, builder);
+                builtin_traits::add_builtin_program_clauses(
+                    db,
+                    builder,
+                    well_known,
+                    trait_ref,
+                    self_ty.data(interner),
+                );
             }
         }
         DomainGoal::Holds(WhereClause::AliasEq(alias_predicate)) => {
@@ -346,16 +352,21 @@ fn match_ty<I: Interner>(
     let interner = builder.interner();
     match ty.data(interner) {
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
-        TyData::Placeholder(_) => {}
+        TyData::Placeholder(_) => {
+            builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
+        }
         TyData::Alias(alias_ty) => builder
             .db
             .associated_ty_data(alias_ty.associated_ty_id)
             .to_program_clauses(builder),
-        TyData::Function(quantified_ty) => quantified_ty
-            .parameters
-            .iter()
-            .map(|p| p.assert_ty_ref(interner))
-            .for_each(|ty| match_ty(builder, environment, &ty)),
+        TyData::Function(quantified_ty) => {
+            builder.push_fact(WellFormed::Ty(ty.clone()));
+            quantified_ty
+                .parameters
+                .iter()
+                .map(|p| p.assert_ty_ref(interner))
+                .for_each(|ty| match_ty(builder, environment, &ty))
+        }
         TyData::BoundVar(_) => {}
         TyData::InferenceVar(_) => panic!("should have floundered"),
         TyData::Dyn(_) => {}

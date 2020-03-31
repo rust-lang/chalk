@@ -68,6 +68,13 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// user gave).
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, struct_id: StructId<I>) -> bool;
 
+    /// A stop-gap solution to force an impl for a given well-known trait.
+    /// Useful when the logic for a given trait is absent or incomplete.
+    #[allow(unused_variables)]
+    fn force_impl_for(&self, well_known: WellKnownTrait, ty: &TyData<I>) -> bool {
+        false
+    }
+
     fn interner(&self) -> &I;
 }
 
