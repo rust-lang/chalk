@@ -1,7 +1,7 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::{
-    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId,
+    self, AssocTypeId, Binders, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId,
     QuantifiedWhereClauses, StructId, Substitution, TraitId,
 };
 use chalk_parse::ast::*;
@@ -390,28 +390,20 @@ impl LowerProgram for Program {
                         let binders = empty_env.in_binders(parameter_kinds, |env| {
                             let hidden_ty = opaque_ty.ty.lower(&env)?;
 
-                            let hidden_ty_bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> =
-                                env.in_binders(
-                                    Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
-                                    |env1| {
-                                        let interner = env1.interner();
-                                        Ok(opaque_ty
-                                            .bounds
-                                            .lower(&env1)?
-                                            .iter()
-                                            .flat_map(|qil| {
-                                                qil.into_where_clauses(
-                                                    interner,
-                                                    chalk_ir::TyData::BoundVar(BoundVar::new(
-                                                        DebruijnIndex::INNERMOST,
-                                                        todo!(),
-                                                    ))
-                                                    .intern(interner),
-                                                )
-                                            })
-                                            .collect())
-                                    },
-                                )?;
+                            let hidden_ty_bounds: Binders<Vec<Binders<_>>> = env.in_binders(
+                                Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
+                                |env1| {
+                                    let interner = env1.interner();
+                                    Ok(opaque_ty
+                                        .bounds
+                                        .lower(&env1)?
+                                        .iter()
+                                        .flat_map(|qil| {
+                                            qil.into_where_clauses(interner, hidden_ty.clone())
+                                        })
+                                        .collect())
+                                },
+                            )?;
 
                             Ok(OpaqueTyBound {
                                 hidden_ty,
