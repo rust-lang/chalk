@@ -131,19 +131,32 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         G: CastTo<Goal<I>>,
     {
         let interner = self.interner();
+
+        // Make an identity mapping `[0 => ^0.0, 1 => ^0.1, ..]`
+        // and so forth. This substitution is mapping from the `<P0..Pn>` variables
+        // in `binders` to the corresponding `P0..Pn` variables we're about to
+        // introduce in the form of a `forall<P0..Pn>` goal. Of course, it's
+        // actually an identity mapping, since this `forall` will be the innermost
+        // debruijn binder and so forth, so there's no actual reason to
+        // *do* the substitution, since it would effectively just be a clone.
+        let substitution: Substitution<I> = Substitution::from(
+            interner,
+            binders
+                .binders
+                .iter()
+                .zip(0..)
+                .map(|p| p.to_parameter(interner)),
+        );
+
+        // Shift passthru into one level of binder, to account for the `forall<P0..Pn>`
+        // we are about to introduce.
+        let passthru_shifted = passthru.shifted_in(self.interner());
+
+        // Invoke `body` function, which returns a goal, and wrap that goal in the binders
+        // from `binders`, and finally a `forall` or `exists` goal.
         let bound_goal = binders.map_ref(|bound_value| {
-            let substitution: Substitution<I> = Substitution::from(
-                interner,
-                binders
-                    .binders
-                    .iter()
-                    .zip(0..)
-                    .map(|p| p.to_parameter(interner)),
-            );
-            let passthru_shifted = passthru.shifted_in(self.interner());
-            let result = body(self, substitution, bound_value, passthru_shifted);
-            result.cast(self.interner())
+            body(self, substitution, bound_value, passthru_shifted).cast(interner)
         });
-        GoalData::Quantified(quantifier_kind, bound_goal).intern(self.interner())
+        GoalData::Quantified(quantifier_kind, bound_goal).intern(interner)
     }
 }
