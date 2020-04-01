@@ -22,6 +22,8 @@ pub enum LangItem {}
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 
+chalk_ir::id_fold!(AssociatedTyValueId);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,
@@ -40,7 +42,7 @@ impl<I: Interner> ImplDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, Fold)]
 pub struct ImplDatumBound<I: Interner> {
     pub trait_ref: TraitRef<I>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,

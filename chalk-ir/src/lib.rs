@@ -196,6 +196,11 @@ impl<I: Interner> Ty<I> {
         WellFormed::Ty(self.clone())
     }
 
+    /// Creates a domain goal `FromEnv(T)` where `T` is this type.
+    pub fn into_from_env_goal(self, interner: &I) -> DomainGoal<I> {
+        self.from_env().cast(interner)
+    }
+
     /// If this is a `TyData::BoundVar(d)`, returns `Some(d)` else `None`.
     pub fn bound(&self, interner: &I) -> Option<BoundVar> {
         if let TyData::BoundVar(bv) = self.data(interner) {
