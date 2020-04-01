@@ -11,7 +11,7 @@ pub mod clauses;
 pub mod coherence;
 mod coinductive_goal;
 pub mod ext;
-mod goal_builder;
+pub mod goal_builder;
 mod infer;
 mod solve;
 pub mod split;

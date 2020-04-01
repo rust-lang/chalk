@@ -8,28 +8,28 @@ use fold::shift::Shift;
 use fold::Fold;
 use interner::{HasInterner, Interner};
 
-pub(crate) struct GoalBuilder<'i, I: Interner> {
+pub struct GoalBuilder<'i, I: Interner> {
     db: &'i dyn RustIrDatabase<I>,
 }
 
 impl<'i, I: Interner> GoalBuilder<'i, I> {
-    pub(crate) fn new(db: &'i dyn RustIrDatabase<I>) -> Self {
+    pub fn new(db: &'i dyn RustIrDatabase<I>) -> Self {
         GoalBuilder { db }
     }
 
     /// Returns the database within the goal builder.
-    pub(crate) fn db(&self) -> &'i dyn RustIrDatabase<I> {
+    pub fn db(&self) -> &'i dyn RustIrDatabase<I> {
         self.db
     }
 
     /// Returns the interner within the goal builder.
-    pub(crate) fn interner(&self) -> &'i I {
+    pub fn interner(&self) -> &'i I {
         self.db.interner()
     }
 
     /// Creates a goal that ensures all of the goals from the `goals`
     /// iterator are met (e.g., `goals[0] && ... && goals[N]`).
-    pub(crate) fn all<GS, G>(&mut self, goals: GS) -> Goal<I>
+    pub fn all<GS, G>(&mut self, goals: GS) -> Goal<I>
     where
         GS: IntoIterator<Item = G>,
         G: CastTo<Goal<I>>,
@@ -39,11 +39,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
 
     /// Creates a goal `clauses => goal`. The clauses are given as an iterator
     /// and the goal is returned via the contained closure.
-    pub(crate) fn implies<CS, C, G>(
-        &mut self,
-        clauses: CS,
-        goal: impl FnOnce(&mut Self) -> G,
-    ) -> Goal<I>
+    pub fn implies<CS, C, G>(&mut self, clauses: CS, goal: impl FnOnce(&mut Self) -> G) -> Goal<I>
     where
         CS: IntoIterator<Item = C>,
         C: CastTo<ProgramClause<I>>,
@@ -77,7 +73,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     /// This is to ensure that `body` doesn't accidentally reference
     /// values from the environment whose debruijn indices do not
     /// account for the new binder being created.
-    pub(crate) fn forall<G, B, P>(
+    pub fn forall<G, B, P>(
         &mut self,
         binders: &Binders<B>,
         passthru: P,
@@ -93,7 +89,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     }
 
     /// Like [`GoalBuilder::forall`], but for a `exists<Q0..Qn> { G }` goal.
-    pub(crate) fn exists<G, B, P>(
+    pub fn exists<G, B, P>(
         &mut self,
         binders: &Binders<B>,
         passthru: P,
