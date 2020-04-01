@@ -123,12 +123,12 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     ///
     /// ```notrust
     /// AliasEq(T<..> = HiddenTy) :- Reveal.
-    /// AliasEq(T<..> = !T).
-    /// Implemented(!T: A).
-    /// Implemented(!T: B).
-    /// Implemented(!T: Send) :- Implemented(HiddenTy: Send). // For all auto traits
+    /// AliasEq(T<..> = !T<..>).
+    /// Implemented(!T<..>: A).
+    /// Implemented(!T<..>: B).
+    /// Implemented(!T<..>: Send) :- Implemented(HiddenTy: Send). // For all auto traits
     /// ```
-    /// where `!T` is the placeholder for the unnormalized type `T<..>`.
+    /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
         let alias = AliasTy::Opaque(OpaqueTy {
@@ -151,7 +151,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 iter::once(DomainGoal::Reveal(())),
             );
 
-            // AliasEq(T<..> = !T).
+            // AliasEq(T<..> = !T<..>).
             builder.push_fact(DomainGoal::Holds(
                 AliasEq {
                     alias: alias.clone(),
@@ -163,12 +163,12 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
 
         let opaque_ty_bound = &self.bound.skip_binders();
         for bound in &opaque_ty_bound.bounds {
-            // Implemented(!T: Bound).
+            // Implemented(!T<..>: Bound).
             builder.push_fact(bound.skip_binders().clone().into_well_formed_goal(interner));
         }
 
         for auto_trait_id in builder.db.auto_traits() {
-            // Implemented(!T: AutoTrait) :- Implemented(HiddenTy: AutoTrait).
+            // Implemented(!T<..>: AutoTrait) :- Implemented(HiddenTy: AutoTrait).
             builder.push_clause(
                 TraitRef {
                     trait_id: auto_trait_id,
