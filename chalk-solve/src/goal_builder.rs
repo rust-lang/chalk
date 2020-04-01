@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use crate::RustIrDatabase;
 use cast::CastTo;
 use chalk_ir::cast::Cast;
