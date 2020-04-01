@@ -115,7 +115,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     /// * [`GoalBuilder::exists`]
     ///
     /// for details.
-    pub(crate) fn quantified<G, B, P>(
+    fn quantified<G, B, P>(
         &mut self,
         quantifier_kind: QuantifierKind,
         binders: &Binders<B>,
