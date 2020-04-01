@@ -131,12 +131,20 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
         let interner = builder.interner();
+        let substitution = builder.substitution_in_scope();
         let alias = AliasTy::Opaque(OpaqueTy {
             opaque_ty_id: self.opaque_ty_id,
-            substitution: builder.substitution_in_scope(),
+            substitution: substitution.clone(),
         });
 
-        let alias_ty = Ty::new(interner, alias.clone());
+        let alias_ty = Ty::new(
+            interner,
+            ApplicationTy {
+                name: TypeName::OpaqueType(self.opaque_ty_id),
+                substitution,
+            }
+            .cast(interner),
+        );
 
         builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
             // AliasEq(T<..> = HiddenTy) :- Reveal.
