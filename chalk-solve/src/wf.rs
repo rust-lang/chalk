@@ -203,11 +203,7 @@ where
                     fields.fold(gb.interner(), &mut input_types);
                     // ...in a where clause.
                     where_clauses.fold(gb.interner(), &mut input_types);
-                    gb.all(
-                        input_types
-                            .into_iter()
-                            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty))),
-                    )
+                    gb.all(input_types.into_iter().map(|ty| ty.well_formed()))
                 },
             )
         });
@@ -443,7 +439,7 @@ fn compute_assoc_ty_goal<I: Interner>(
                         // We require that `WellFormed(T)` for each type that appears in the value
                         let wf_goals = input_types
                             .into_iter()
-                            .map(|ty| DomainGoal::WellFormed(WellFormed::Ty(ty)))
+                            .map(|ty| ty.well_formed())
                             .casted(interner);
 
                         // Check that the `value_ty` meets the bounds from the trait.
