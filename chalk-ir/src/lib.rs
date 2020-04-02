@@ -1208,8 +1208,8 @@ pub struct ProgramClauseImplication<I: Interner> {
     pub conditions: Goals<I>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
-pub enum ProgramClause<I: Interner> {
+#[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub enum ProgramClauseData<I: Interner> {
     Implies(ProgramClauseImplication<I>),
     ForAll(Binders<ProgramClauseImplication<I>>),
 }
@@ -1227,16 +1227,41 @@ impl<I: Interner> ProgramClauseImplication<I> {
     }
 }
 
-impl<I: Interner> ProgramClause<I> {
-    pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
+impl<I: Interner> ProgramClauseData<I> {
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseData<I> {
         match self {
-            ProgramClause::Implies(implication) => {
-                ProgramClause::Implies(implication.into_from_env_clause(interner))
+            ProgramClauseData::Implies(implication) => {
+                ProgramClauseData::Implies(implication.into_from_env_clause(interner))
             }
-            ProgramClause::ForAll(binders_implication) => {
-                ProgramClause::ForAll(binders_implication.map(|i| i.into_from_env_clause(interner)))
+            ProgramClauseData::ForAll(binders_implication) => {
+                ProgramClauseData::ForAll(binders_implication.map(|i| i.into_from_env_clause(interner)))
             }
         }
+    }
+
+    pub fn intern(self, interner: &I) -> ProgramClause<I> {
+        ProgramClause {
+            clause: interner.intern_program_clause(self),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ProgramClause<I: Interner> {
+    clause: I::InternedProgramClause,
+}
+
+impl<I: Interner> ProgramClause<I> {
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
+        let program_clause_data = self.data(interner);
+        let new_clause = program_clause_data.clone().into_from_env_clause(interner);
+        ProgramClause {
+            clause: interner.intern_program_clause(new_clause),
+        }
+    }
+
+    pub fn data(&self, interner: &I) -> &ProgramClauseData<I> {
+        interner.program_clause_data(&self.clause)
     }
 }
 

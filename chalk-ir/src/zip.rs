@@ -309,7 +309,7 @@ enum_zip!(impl<I> for DomainGoal<I> {
     Compatible,
     DownstreamType
 });
-enum_zip!(impl<I> for ProgramClause<I> { Implies, ForAll });
+enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
 
 impl<I: Interner> Zip<I> for Substitution<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
@@ -388,6 +388,16 @@ impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
 
 #[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Zip<I> for Parameter<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.data(interner), b.data(interner))
+    }
+}
+
+impl<I: Interner> Zip<I> for ProgramClause<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,

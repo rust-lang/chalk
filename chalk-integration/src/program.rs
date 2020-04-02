@@ -173,6 +173,15 @@ impl tls::DebugContext for Program {
         write!(fmt, "{:?}", pci.debug(interner))
     }
 
+    fn debug_program_clause(
+        &self,
+        clause: &ProgramClause<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", clause.data(interner))
+    }
+
     fn debug_application_ty(
         &self,
         application_ty: &ApplicationTy<ChalkIr>,

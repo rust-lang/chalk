@@ -228,7 +228,7 @@ id_fold!(StructId);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
 
-impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
+impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<I> {
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
@@ -239,13 +239,28 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
         TI: 'i,
     {
         match self {
-            ProgramClause::Implies(pci) => {
-                Ok(ProgramClause::Implies(pci.fold_with(folder, outer_binder)?))
+            ProgramClauseData::Implies(pci) => {
+                Ok(ProgramClauseData::Implies(pci.fold_with(folder, outer_binder)?))
             }
-            ProgramClause::ForAll(pci) => {
-                Ok(ProgramClause::ForAll(pci.fold_with(folder, outer_binder)?))
+            ProgramClauseData::ForAll(pci) => {
+                Ok(ProgramClauseData::ForAll(pci.fold_with(folder, outer_binder)?))
             }
         }
+    }
+}
+
+impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
+    fn super_fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let clause = self.data(folder.interner());
+        Ok(clause.super_fold_with(folder, outer_binder)?.intern(folder.target_interner()))
     }
 }
 
