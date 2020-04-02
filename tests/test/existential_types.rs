@@ -6,23 +6,31 @@ use super::*;
 fn opaque_bounds() {
     test! {
         program {
-            trait Trait { }
+            trait Direct { }
+            trait Indirect { }
             struct Ty { }
-            impl Trait for Ty { }
+            impl Direct for Ty { }
+            impl Indirect for Ty { }
 
-            opaque type T: Trait = Ty;
+            opaque type T: Direct = Ty;
+        }
+
+        goal {
+            T: Direct
+        } yields {
+            "Unique; substitution []"
         }
 
         goal {
             if (Reveal) {
-                T: Trait
+                T: Indirect
             }
         } yields {
             "Unique; substitution []"
         }
 
         goal {
-            T: Trait
+            T: Indirect
         } yields {
             "No possible solution"
         }
