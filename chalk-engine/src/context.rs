@@ -178,11 +178,7 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
     ) -> Result<Vec<C::ProgramClause>, Floundered>;
 
     // Used by: simplify
-    fn add_clauses(
-        &self,
-        env: &C::Environment,
-        clauses: C::ProgramClauses,
-    ) -> C::Environment;
+    fn add_clauses(&self, env: &C::Environment, clauses: C::ProgramClauses) -> C::Environment;
 
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".

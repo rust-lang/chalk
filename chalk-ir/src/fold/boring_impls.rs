@@ -259,12 +259,12 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<
         TI: 'i,
     {
         match self {
-            ProgramClauseData::Implies(pci) => {
-                Ok(ProgramClauseData::Implies(pci.fold_with(folder, outer_binder)?))
-            }
-            ProgramClauseData::ForAll(pci) => {
-                Ok(ProgramClauseData::ForAll(pci.fold_with(folder, outer_binder)?))
-            }
+            ProgramClauseData::Implies(pci) => Ok(ProgramClauseData::Implies(
+                pci.fold_with(folder, outer_binder)?,
+            )),
+            ProgramClauseData::ForAll(pci) => Ok(ProgramClauseData::ForAll(
+                pci.fold_with(folder, outer_binder)?,
+            )),
         }
     }
 }
@@ -280,7 +280,9 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
         TI: 'i,
     {
         let clause = self.data(folder.interner());
-        Ok(clause.super_fold_with(folder, outer_binder)?.intern(folder.target_interner()))
+        Ok(clause
+            .super_fold_with(folder, outer_binder)?
+            .intern(folder.target_interner()))
     }
 }
 

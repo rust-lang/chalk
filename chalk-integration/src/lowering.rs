@@ -1307,7 +1307,8 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                     .into_iter()
                     .flat_map(|h| h.lower_clause(env).apply_result())
                     .map(|result| result.map(|h| h.into_from_env_clause(interner)));
-                let where_clauses = chalk_ir::ProgramClauses::from_fallible(interner, where_clauses);
+                let where_clauses =
+                    chalk_ir::ProgramClauses::from_fallible(interner, where_clauses);
                 Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern(interner))
             }
             Goal::And(g1, g2s) => {

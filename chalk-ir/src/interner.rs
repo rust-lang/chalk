@@ -637,10 +637,7 @@ mod default {
             substitution
         }
 
-        fn intern_program_clause(
-            &self,
-            data: ProgramClauseData<Self>,
-        ) -> ProgramClauseData<Self> {
+        fn intern_program_clause(&self, data: ProgramClauseData<Self>) -> ProgramClauseData<Self> {
             data
         }
 

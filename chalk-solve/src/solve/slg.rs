@@ -220,11 +220,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
     }
 
     // Used by: simplify
-    fn add_clauses(
-        &self,
-        env: &Environment<I>,
-        clauses: ProgramClauses<I>,
-    ) -> Environment<I> {
+    fn add_clauses(&self, env: &Environment<I>, clauses: ProgramClauses<I>) -> Environment<I> {
         let interner = self.interner();
         env.add_clauses(interner, clauses.iter(interner).cloned())
     }

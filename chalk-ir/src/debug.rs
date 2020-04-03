@@ -60,8 +60,7 @@ impl<I: Interner> Debug for ProgramClauseImplication<I> {
 
 impl<I: Interner> Debug for ProgramClause<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_program_clause(self, fmt)
-            .unwrap_or_else(|| write!(fmt, "{:?}", self.clause))
+        I::debug_program_clause(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.clause))
     }
 }
 

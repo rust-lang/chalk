@@ -252,7 +252,11 @@ impl<I: Interner> Zip<I> for Environment<I> {
     {
         let interner = zipper.interner();
         assert_eq!(a.clauses.len(interner), b.clauses.len(interner)); // or different numbers of clauses
-        Zip::zip_with(zipper, a.clauses.as_slice(interner), b.clauses.as_slice(interner))?;
+        Zip::zip_with(
+            zipper,
+            a.clauses.as_slice(interner),
+            b.clauses.as_slice(interner),
+        )?;
         Ok(())
     }
 }

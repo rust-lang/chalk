@@ -51,12 +51,16 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         };
 
         if self.binders.len() == 0 {
-            self.clauses.push(ProgramClauseData::Implies(clause).intern(interner));
+            self.clauses
+                .push(ProgramClauseData::Implies(clause).intern(interner));
         } else {
-            self.clauses.push(ProgramClauseData::ForAll(Binders {
-                binders: self.binders.clone(),
-                value: clause,
-            }).intern(interner));
+            self.clauses.push(
+                ProgramClauseData::ForAll(Binders {
+                    binders: self.binders.clone(),
+                    value: clause,
+                })
+                .intern(interner),
+            );
         }
 
         debug!("pushed clause {:?}", self.clauses.last());

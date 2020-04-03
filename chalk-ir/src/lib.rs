@@ -53,7 +53,9 @@ pub struct Environment<I: Interner> {
 
 impl<I: Interner> Environment<I> {
     pub fn new(interner: &I) -> Self {
-        Environment { clauses: ProgramClauses::new(interner) }
+        Environment {
+            clauses: ProgramClauses::new(interner),
+        }
     }
 
     pub fn add_clauses<II>(&self, interner: &I, clauses: II) -> Self
@@ -61,7 +63,8 @@ impl<I: Interner> Environment<I> {
         II: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut env = self.clone();
-        env.clauses = ProgramClauses::from(interner, env.clauses.iter(interner).cloned().chain(clauses));
+        env.clauses =
+            ProgramClauses::from(interner, env.clauses.iter(interner).cloned().chain(clauses));
         env
     }
 }
@@ -1233,9 +1236,9 @@ impl<I: Interner> ProgramClauseData<I> {
             ProgramClauseData::Implies(implication) => {
                 ProgramClauseData::Implies(implication.into_from_env_clause(interner))
             }
-            ProgramClauseData::ForAll(binders_implication) => {
-                ProgramClauseData::ForAll(binders_implication.map(|i| i.into_from_env_clause(interner)))
-            }
+            ProgramClauseData::ForAll(binders_implication) => ProgramClauseData::ForAll(
+                binders_implication.map(|i| i.into_from_env_clause(interner)),
+            ),
         }
     }
 
@@ -1279,7 +1282,10 @@ impl<I: Interner> ProgramClauses<I> {
         &self.clauses
     }
 
-    pub fn from(interner: &I, clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>) -> Self {
+    pub fn from(
+        interner: &I,
+        clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>,
+    ) -> Self {
         use crate::cast::Caster;
         ProgramClauses {
             clauses: I::intern_program_clauses(interner, clauses.into_iter().casted(interner)),
@@ -1462,10 +1468,7 @@ impl<I: Interner> Goal<I> {
                 GoalData::Implies(
                     ProgramClauses::from(
                         interner,
-                        vec![
-                            DomainGoal::Compatible(()),
-                            DomainGoal::DownstreamType(ty),
-                        ],
+                        vec![DomainGoal::Compatible(()), DomainGoal::DownstreamType(ty)],
                     ),
                     self.shifted_in(interner),
                 )

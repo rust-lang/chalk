@@ -80,7 +80,8 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
                     }
 
                     GoalData::Implies(wc, subgoal) => {
-                        let new_environment = environment.add_clauses(interner, wc.iter(interner).cloned());
+                        let new_environment =
+                            environment.add_clauses(interner, wc.iter(interner).cloned());
                         env_goal = InEnvironment::new(&new_environment, Goal::clone(subgoal));
                     }
 
