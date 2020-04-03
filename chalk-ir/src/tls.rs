@@ -1,7 +1,8 @@
 use crate::interner::ChalkIr;
 use crate::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, StructId, Substitution, TraitId, Ty,
+    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, StructId, Substitution,
+    TraitId, Ty,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -71,6 +72,12 @@ pub trait DebugContext {
     fn debug_program_clause(
         &self,
         clause: &ProgramClause<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_program_clauses(
+        &self,
+        clauses: &ProgramClauses<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

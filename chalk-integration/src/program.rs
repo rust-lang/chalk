@@ -5,8 +5,8 @@ use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, StructId, Substitution, TraitId, Ty,
-    TyData, TypeName,
+    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, StructId, Substitution,
+    TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -180,6 +180,15 @@ impl tls::DebugContext for Program {
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
         write!(fmt, "{:?}", clause.data(interner))
+    }
+
+    fn debug_program_clauses(
+        &self,
+        clauses: &ProgramClauses<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", clauses.as_slice(interner))
     }
 
     fn debug_application_ty(

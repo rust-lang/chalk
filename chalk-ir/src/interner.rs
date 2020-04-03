@@ -11,6 +11,7 @@ use crate::ParameterData;
 use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
+use crate::ProgramClauses;
 use crate::SeparatorTraitRef;
 use crate::StructId;
 use crate::Substitution;
@@ -95,6 +96,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedSubstitution` is created by `intern_substitution` and can be
     /// converted back to its underlying data via `substitution_data`.
     type InternedSubstitution: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of a list of program clauses.  In normal user code,
+    /// `Self::InternedProgramClauses` is not referenced. Instead, we refer to
+    /// `ProgramClauses<Self>`, which wraps this type.
+    ///
+    /// An `InternedProgramClauses` is created by `intern_program_clauses` and can be
+    /// converted back to its underlying data via `program_clauses_data`.
+    type InternedProgramClauses: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "program clause".  In normal user code,
     /// `Self::InternedProgramClause` is not referenced. Instead, we refer to
@@ -259,6 +268,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a ProgramClauses. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
+    fn debug_program_clauses(
+        clauses: &ProgramClauses<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
     /// Prints the debug representation of an ApplicationTy. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
@@ -374,6 +398,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         &self,
         clause: &'a Self::InternedProgramClause,
     ) -> &'a ProgramClauseData<Self>;
+
+    /// Create an "interned" program clauses from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `ProgramClauses::from` (which will ultimately call this
+    /// method).
+    fn intern_program_clauses(
+        &self,
+        data: impl IntoIterator<Item = ProgramClause<Self>>,
+    ) -> Self::InternedProgramClauses;
+
+    /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
+    fn program_clauses_data<'a>(
+        &self,
+        clauses: &'a Self::InternedProgramClauses,
+    ) -> &'a [ProgramClause<Self>];
 }
 
 pub trait TargetInterner<I: Interner>: Interner {
@@ -429,6 +468,7 @@ mod default {
         type InternedGoals = Vec<Goal<ChalkIr>>;
         type InternedSubstitution = Vec<Parameter<ChalkIr>>;
         type InternedProgramClause = ProgramClauseData<ChalkIr>;
+        type InternedProgramClauses = Vec<ProgramClause<ChalkIr>>;
         type DefId = RawId;
         type Identifier = Identifier;
 
@@ -502,6 +542,13 @@ mod default {
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_program_clause(clause, fmt)))
+        }
+
+        fn debug_program_clauses(
+            clause: &ProgramClauses<ChalkIr>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| Some(prog?.debug_program_clauses(clause, fmt)))
         }
 
         fn debug_application_ty(
@@ -602,6 +649,20 @@ mod default {
             clause: &'a ProgramClauseData<Self>,
         ) -> &'a ProgramClauseData<Self> {
             clause
+        }
+
+        fn intern_program_clauses(
+            &self,
+            data: impl IntoIterator<Item = ProgramClause<Self>>,
+        ) -> Vec<ProgramClause<Self>> {
+            data.into_iter().collect()
+        }
+
+        fn program_clauses_data<'a>(
+            &self,
+            clauses: &'a Vec<ProgramClause<Self>>,
+        ) -> &'a [ProgramClause<Self>] {
+            clauses
         }
     }
 

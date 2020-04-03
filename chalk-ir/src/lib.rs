@@ -48,20 +48,20 @@ pub mod tls;
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment<I: Interner> {
-    pub clauses: Vec<ProgramClause<I>>,
+    pub clauses: ProgramClauses<I>,
 }
 
 impl<I: Interner> Environment<I> {
-    pub fn new() -> Self {
-        Environment { clauses: vec![] }
+    pub fn new(interner: &I) -> Self {
+        Environment { clauses: ProgramClauses::new(interner) }
     }
 
-    pub fn add_clauses<II>(&self, clauses: II) -> Self
+    pub fn add_clauses<II>(&self, interner: &I, clauses: II) -> Self
     where
         II: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut env = self.clone();
-        env.clauses = env.clauses.into_iter().chain(clauses).collect();
+        env.clauses = ProgramClauses::from(interner, env.clauses.iter(interner).cloned().chain(clauses));
         env
     }
 }
@@ -1265,6 +1265,56 @@ impl<I: Interner> ProgramClause<I> {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ProgramClauses<I: Interner> {
+    clauses: I::InternedProgramClauses,
+}
+
+impl<I: Interner> ProgramClauses<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<ProgramClause<I>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedProgramClauses {
+        &self.clauses
+    }
+
+    pub fn from(interner: &I, clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>) -> Self {
+        use crate::cast::Caster;
+        ProgramClauses {
+            clauses: I::intern_program_clauses(interner, clauses.into_iter().casted(interner)),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        clauses: impl IntoIterator<Item = Result<impl CastTo<ProgramClause<I>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        let clauses = clauses
+            .into_iter()
+            .casted(interner)
+            .collect::<Result<Vec<ProgramClause<I>>, _>>()?;
+        Ok(Self::from(interner, clauses))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ProgramClause<I>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[ProgramClause<I>] {
+        interner.program_clauses_data(&self.clauses)
+    }
+}
+
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
 /// All unresolved existential variables are "renumbered" according to their
@@ -1410,10 +1460,13 @@ impl<I: Interner> Goal<I> {
             QuantifierKind::ForAll,
             Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
-                    vec![
-                        DomainGoal::Compatible(()).cast(interner),
-                        DomainGoal::DownstreamType(ty).cast(interner),
-                    ],
+                    ProgramClauses::from(
+                        interner,
+                        vec![
+                            DomainGoal::Compatible(()),
+                            DomainGoal::DownstreamType(ty),
+                        ],
+                    ),
                     self.shifted_in(interner),
                 )
                 .intern(interner)
@@ -1422,7 +1475,7 @@ impl<I: Interner> Goal<I> {
         .intern(interner)
     }
 
-    pub fn implied_by(self, interner: &I, predicates: Vec<ProgramClause<I>>) -> Goal<I> {
+    pub fn implied_by(self, interner: &I, predicates: ProgramClauses<I>) -> Goal<I> {
         GoalData::Implies(predicates, self).intern(interner)
     }
 
@@ -1470,7 +1523,7 @@ pub enum GoalData<I: Interner> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Goal<I>>),
-    Implies(Vec<ProgramClause<I>>, Goal<I>),
+    Implies(ProgramClauses<I>, Goal<I>),
     All(Goals<I>),
     Not(Goal<I>),
 

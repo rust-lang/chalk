@@ -20,7 +20,7 @@ use rustc_hash::FxHashSet;
 /// the rule `FromEnv(T: Copy) :- FromEnv(T: Clone)
 pub(super) fn elaborate_env_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
-    in_clauses: &Vec<ProgramClause<I>>,
+    in_clauses: &[ProgramClause<I>],
     out: &mut FxHashSet<ProgramClause<I>>,
 ) {
     let mut this_round = vec![];

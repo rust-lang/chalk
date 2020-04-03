@@ -250,13 +250,25 @@ impl<I: Interner> Zip<I> for Environment<I> {
     where
         I: 'i,
     {
-        assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
-        Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
+        let interner = zipper.interner();
+        assert_eq!(a.clauses.len(interner), b.clauses.len(interner)); // or different numbers of clauses
+        Zip::zip_with(zipper, a.clauses.as_slice(interner), b.clauses.as_slice(interner))?;
         Ok(())
     }
 }
 
 impl<I: Interner> Zip<I> for Goals<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.as_slice(interner), b.as_slice(interner))?;
+        Ok(())
+    }
+}
+
+impl<I: Interner> Zip<I> for ProgramClauses<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
