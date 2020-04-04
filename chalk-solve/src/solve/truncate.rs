@@ -139,7 +139,7 @@ fn truncate_types() {
     use chalk_ir::interner::ChalkIr;
     let interner = &ChalkIr;
     let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
-    let environment0 = &Environment::new();
+    let environment0 = &Environment::new(interner);
     let _u1 = table.new_universe();
 
     // Vec<Vec<Vec<Vec<T>>>>
@@ -233,7 +233,7 @@ fn truncate_normalizes() {
     let interner = &ChalkIr;
     let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
 
-    let environment0 = &Environment::new();
+    let environment0 = &Environment::new(interner);
     let u1 = table.new_universe();
 
     // ty0 = Vec<Vec<X>>
