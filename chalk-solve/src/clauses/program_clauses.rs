@@ -275,6 +275,172 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
     }
 }
 
+impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
+    /// Given the following type definition: `fn foo<T: Eq> { }`, generate:
+    ///
+    /// ```notrust
+    /// -- Rule WellFormed-Type
+    /// forall<T> {
+    ///     WF(foo<T>) :- WF(T: Eq).
+    /// }
+    ///
+    /// TODO(markmccaskey): review this
+    /// -- Rule Implied-Bound-From-Type
+    /// forall<T> {
+    ///     FromEnv(T: Eq) :- FromEnv(foo<T>).
+    /// }
+    ///
+    /// forall<T> {
+    ///     IsFullyVisible(foo<T>) :- IsFullyVisible(T).
+    /// }
+    /// ```
+    ///
+    /// If the function `foo` is marked `#[upstream]`, we also generate:
+    ///
+    /// ```notrust
+    /// forall<T> { IsUpstream(foo<T>). }
+    /// ```
+    ///
+    /// Otherwise, if the function `foo` is not marked `#[upstream]`, we generate:
+    /// ```notrust
+    /// forall<T> { IsLocal(foo<T>). }
+    /// ```
+    ///
+    /// Given an `#[upstream]` type that is also fundamental:
+    /// TODO(markmccaskey): find example of upstream, fundamental type and update these docs.
+    ///
+    /// ```notrust
+    /// #[upstream]
+    /// #[fundamental]
+    /// struct Box<T> {}
+    /// ```
+    ///
+    /// We generate the following clauses:
+    ///
+    /// ```notrust
+    /// forall<T> { IsLocal(Box<T>) :- IsLocal(T). }
+    ///
+    /// forall<T> { IsUpstream(Box<T>) :- IsUpstream(T). }
+    ///
+    /// // Generated for both upstream and local fundamental types
+    /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
+    /// ```
+    ///
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+        debug_heading!("FnDefDatum::to_program_clauses(self={:?})", self);
+
+        let interner = builder.interner();
+        let binders = self.binders.map_ref(|b| &b.where_clauses);
+        builder.push_binders(&binders, |builder, where_clauses| {
+            let self_appl_ty = &ApplicationTy {
+                name: self.id.cast(interner),
+                substitution: builder.substitution_in_scope(),
+            };
+            let self_ty = self_appl_ty.clone().intern(interner);
+
+            // forall<T> {
+            //     WF(foo<T>) :- WF(T: Eq).
+            // }
+            builder.push_clause(
+                WellFormed::Ty(self_ty.clone()),
+                where_clauses
+                    .iter()
+                    .cloned()
+                    .map(|qwc| qwc.into_well_formed_goal(interner)),
+            );
+
+            // forall<T> {
+            //     IsFullyVisible(foo<T>) :- IsFullyVisible(T).
+            // }
+            builder.push_clause(
+                DomainGoal::IsFullyVisible(self_ty.clone()),
+                self_appl_ty
+                    .type_parameters(interner)
+                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>(interner)),
+            );
+
+            // Fundamental types often have rules in the form of:
+            //     Goal(FundamentalType<T>) :- Goal(T)
+            // This macro makes creating that kind of clause easy
+            macro_rules! fundamental_rule {
+                ($goal:ident) => {
+                    // Fundamental types must always have at least one
+                    // type parameter for this rule to make any
+                    // sense. We currently do not have have any
+                    // fundamental types with more than one type
+                    // parameter, nor do we know what the behaviour
+                    // for that should be. Thus, we are asserting here
+                    // that there is only a single type parameter
+                    // until the day when someone makes a decision
+                    // about how that should behave.
+                    assert_eq!(
+                        self_appl_ty.len_type_parameters(interner),
+                        1,
+                        "Only fundamental types with a single parameter are supported"
+                    );
+
+                    builder.push_clause(
+                        DomainGoal::$goal(self_ty.clone()),
+                        Some(DomainGoal::$goal(
+                            // This unwrap is safe because we asserted
+                            // above for the presence of a type
+                            // parameter
+                            self_appl_ty.first_type_parameter(interner).unwrap(),
+                        )),
+                    );
+                };
+            }
+
+            // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
+            if !self.flags.upstream {
+                // `IsLocalTy(Ty)` depends *only* on whether the function
+                // is marked #[upstream] and nothing else
+                builder.push_fact(DomainGoal::IsLocal(self_ty.clone()));
+            } else if self.flags.fundamental {
+                // If a function is `#[upstream]`, but is also
+                // `#[fundamental]`, it satisfies IsLocal if and only
+                // if its parameters satisfy IsLocal
+                fundamental_rule!(IsLocal);
+                fundamental_rule!(IsUpstream);
+            } else {
+                // The function is just upstream and not fundamental
+                builder.push_fact(DomainGoal::IsUpstream(self_ty.clone()));
+            }
+
+            if self.flags.fundamental {
+                fundamental_rule!(DownstreamType);
+            }
+
+            for qwc in where_clauses {
+                // Generate implied bounds rules. We have to push the binders from the where-clauses
+                // too -- e.g., if we had `fn foo<T: for<'a> Bar<&'a i32>>`, we would
+                // create a reverse rule like:
+                //
+                // ```notrust
+                // forall<T, 'a> { FromEnv(T: Bar<&'a i32>) :- FromEnv(foo<T>) }
+                // ```
+                //
+                // In other words, you can assume `T: Bar<&'a i32>`
+                // for any `'a` *if* you are assuming that `foo<T>` is
+                // well formed.
+                builder.push_binders(&qwc, |builder, wc| {
+                    builder.push_clause(
+                        wc.into_from_env_goal(interner),
+                        Some(self_ty.clone().from_env()),
+                    );
+                });
+            }
+        });
+    }
+}
+
+impl<I: Interner> ToProgramClauses<I> for ClosureDatum<I> {
+    fn to_program_clauses(&self, _builder: &mut ClauseBuilder<'_, I>) {
+        debug_heading!("ClosureDatum::to_program_clauses(self={:?})", self);
+        todo!("to_program_clauses impl for `ClosureDatum`")
+    }
+}
+
 impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
     /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
     ///

@@ -22,6 +22,7 @@ pub struct Program {
 pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
+    FnDefn(FnDefn),
     Impl(Impl),
     Clause(Clause),
 }
@@ -39,6 +40,30 @@ pub struct StructDefn {
 pub struct StructFlags {
     pub upstream: bool,
     pub fundamental: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FnDefn {
+    pub name: Identifier,
+    pub generics: Vec<ParameterKind>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub flags: FnFlags,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FnFlags {
+    pub upstream: bool,
+    pub fundamental: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ClosureDefn {
+    // What's a closure's name? Need to generate an `Identifier` or something
+    // TODO(markmccaskey): investigate what rustc does here
+    pub name: Identifier,
+    pub parameter_kinds: Vec<ParameterKind>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub flags: FnFlags,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

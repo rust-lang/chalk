@@ -33,6 +33,12 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the impl with the given id.
     fn struct_datum(&self, struct_id: StructId<I>) -> Arc<StructDatum<I>>;
 
+    /// Returns the datum for the definition with the given id.
+    fn fn_def_datum(&self, fn_def_id: FnDefId<I>) -> Arc<FnDefDatum<I>>;
+
+    /// Returns the datum for the definition with the given id.
+    fn closure_datum(&self, closure_id: ClosureId<I>) -> Arc<ClosureDatum<I>>;
+
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>>;
 

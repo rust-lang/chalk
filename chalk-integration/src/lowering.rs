@@ -1,6 +1,6 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
-use chalk_ir::{self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, TraitId};
+use chalk_ir::{self, AssocTypeId, BoundVar, DebruijnIndex, FnDefId, ImplId, StructId, TraitId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
@@ -13,8 +13,12 @@ use crate::program::Program as LoweredProgram;
 use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
 type StructIds = BTreeMap<Ident, chalk_ir::StructId<ChalkIr>>;
+type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
+type ClosureIds = BTreeMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
 type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, TypeKind>;
+type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
+type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
@@ -27,6 +31,10 @@ pub type LowerResult<T> = Result<T, RustIrError>;
 struct Env<'k> {
     struct_ids: &'k StructIds,
     struct_kinds: &'k StructKinds,
+    fn_def_ids: &'k FnDefIds,
+    fn_def_kinds: &'k FnDefKinds,
+    closure_ids: &'k ClosureIds,
+    closure_kinds: &'k ClosureKinds,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
@@ -222,8 +230,12 @@ impl LowerProgram for Program {
         }
 
         let mut struct_ids = BTreeMap::new();
+        let mut fn_def_ids = BTreeMap::new();
+        let mut closure_ids = BTreeMap::new();
         let mut trait_ids = BTreeMap::new();
         let mut struct_kinds = BTreeMap::new();
+        let mut fn_def_kinds = BTreeMap::new();
+        let mut closure_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             match item {
@@ -232,6 +244,12 @@ impl LowerProgram for Program {
                     let id = StructId(raw_id);
                     struct_ids.insert(type_kind.name, id);
                     struct_kinds.insert(id, type_kind);
+                }
+                Item::FnDefn(defn) => {
+                    let type_kind = defn.lower_type_kind()?;
+                    let id = FnDefId(raw_id);
+                    fn_def_ids.insert(type_kind.name, id);
+                    fn_def_kinds.insert(id, type_kind);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -245,6 +263,8 @@ impl LowerProgram for Program {
         }
 
         let mut struct_data = BTreeMap::new();
+        let mut fn_def_data = BTreeMap::new();
+        let mut closure_data = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
@@ -254,6 +274,10 @@ impl LowerProgram for Program {
             let empty_env = Env {
                 struct_ids: &struct_ids,
                 struct_kinds: &struct_kinds,
+                fn_def_ids: &fn_def_ids,
+                fn_def_kinds: &fn_def_kinds,
+                closure_ids: &closure_ids,
+                closure_kinds: &closure_kinds,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 associated_ty_lookups: &associated_ty_lookups,
@@ -264,6 +288,10 @@ impl LowerProgram for Program {
                 Item::StructDefn(ref d) => {
                     let struct_id = StructId(raw_id);
                     struct_data.insert(struct_id, Arc::new(d.lower_struct(struct_id, &empty_env)?));
+                }
+                Item::FnDefn(ref d) => {
+                    let fn_def_id = FnDefId(raw_id);
+                    fn_def_data.insert(fn_def_id, Arc::new(d.lower_fn(fn_def_id, &empty_env)?));
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
@@ -362,10 +390,16 @@ impl LowerProgram for Program {
 
         let program = LoweredProgram {
             struct_ids,
+            fn_def_ids,
+            closure_ids,
             trait_ids,
             struct_kinds,
+            fn_def_kinds,
+            closure_kinds,
             trait_kinds,
             struct_data,
+            fn_def_data,
+            closure_data,
             trait_data,
             impl_data,
             associated_ty_values,
@@ -432,6 +466,16 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for StructDefn {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
+        None
+    }
+
+    fn declared_parameters(&self) -> &[ParameterKind] {
+        &self.parameter_kinds
+    }
+}
+
+impl LowerParameterMap for FnDefn {
     fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
         None
     }
@@ -528,7 +572,26 @@ impl LowerTypeKind for StructDefn {
     }
 }
 
+impl LowerTypeKind for FnDefn {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        Ok(TypeKind {
+            sort: TypeSort::Function,
+            name: self.name.str,
+            binders: chalk_ir::Binders {
+                binders: self.all_parameters().anonymize(),
+                value: (),
+            },
+        })
+    }
+}
+
 impl LowerWhereClauses for StructDefn {
+    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
+        &self.where_clauses
+    }
+}
+
+impl LowerWhereClauses for FnDefn {
     fn where_clauses(&self) -> &[QuantifiedWhereClause] {
         &self.where_clauses
     }
@@ -719,6 +782,49 @@ impl LowerStructDefn for StructDefn {
 
         Ok(rust_ir::StructDatum {
             id: struct_id,
+            binders,
+            flags,
+        })
+    }
+}
+
+trait LowerFnDefn {
+    fn lower_fn(
+        &self,
+        struct_id: chalk_ir::FnDefId<ChalkIr>,
+        env: &Env,
+    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>>;
+}
+
+impl LowerFnDefn for FnDefn {
+    fn lower_fn(
+        &self,
+        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
+        env: &Env,
+    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
+        if self.flags.fundamental && self.all_parameters().len() != 1 {
+            Err(RustIrError::InvalidFundamentalTypesParameters(self.name))?;
+        }
+
+        let binders = env.in_binders(self.all_parameters(), |env| {
+            let fn_params: LowerResult<_> = self.params.iter().map(|f| f.ty.lower(env)).collect();
+            let fn_returns: LowerResult<_> = self.returns.iter().map(|f| f.ty.lower(env)).collect();
+            let where_clauses = self.lower_where_clauses(env)?;
+
+            Ok(rust_ir::FnDefDatumBound {
+                params: fn_params?,
+                returns: fn_returns?,
+                where_clauses,
+            })
+        })?;
+
+        let flags = rust_ir::FnDefFlags {
+            upstream: self.flags.upstream,
+            fundamental: self.flags.fundamental,
+        };
+
+        Ok(rust_ir::FnDefDatum {
+            id: fn_def_id,
             binders,
             flags,
         })
@@ -1281,8 +1387,12 @@ impl LowerGoal<LoweredProgram> for Goal {
 
         let env = Env {
             struct_ids: &program.struct_ids,
+            fn_def_ids: &program.fn_def_ids,
+            closure_ids: &program.closure_ids,
             trait_ids: &program.trait_ids,
             struct_kinds: &program.struct_kinds,
+            fn_def_kinds: &program.fn_def_kinds,
+            closure_kinds: &program.closure_kinds,
             trait_kinds: &program.trait_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),

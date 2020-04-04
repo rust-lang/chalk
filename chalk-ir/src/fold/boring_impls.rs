@@ -200,6 +200,9 @@ copy_fold!(DebruijnIndex);
 copy_fold!(chalk_engine::TableIndex);
 copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
+copy_fold!(UintTy);
+copy_fold!(IntTy);
+copy_fold!(FloatTy);
 
 #[macro_export]
 macro_rules! id_fold {
@@ -225,6 +228,8 @@ macro_rules! id_fold {
 
 id_fold!(ImplId);
 id_fold!(StructId);
+id_fold!(FnDefId);
+id_fold!(ClosureId);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
 

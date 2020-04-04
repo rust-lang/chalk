@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
-    Parameter, ParameterKind, QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty,
-    TyData, TypeName, WhereClause,
+    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, ClosureId, DebruijnIndex, FnDefId, ImplId,
+    LifetimeData, Parameter, ParameterKind, QuantifiedWhereClause, StructId, Substitution, TraitId,
+    TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -88,6 +88,44 @@ pub struct StructDatumBound<I: Interner> {
 pub struct StructFlags {
     pub upstream: bool,
     pub fundamental: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FnDefDatumBound<I: Interner> {
+    pub params: Vec<Ty<I>>,
+    pub returns: Vec<Ty<I>>,
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FnDefFlags {
+    pub upstream: bool,
+    pub fundamental: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FnDefDatum<I: Interner> {
+    pub binders: Binders<FnDefDatumBound<I>>,
+    pub id: FnDefId<I>,
+    pub flags: FnDefFlags,
+}
+
+impl<I: Interner> FnDefDatum<I> {
+    pub fn name(&self, interner: &I) -> TypeName<I> {
+        self.id.cast(interner)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ClosureDatum<I: Interner> {
+    //pub binders: Binders<StructDatumBound<I>>,
+    pub id: ClosureId<I>,
+}
+
+impl<I: Interner> ClosureDatum<I> {
+    pub fn name(&self, interner: &I) -> TypeName<I> {
+        self.id.cast(interner)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

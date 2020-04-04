@@ -14,6 +14,18 @@ impl<I: Interner> Debug for StructId<I> {
     }
 }
 
+impl<I: Interner> Debug for FnDefId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_fn_def_id(*self, fmt).unwrap_or_else(|| write!(fmt, "FnDefId({:?})", self.0))
+    }
+}
+
+impl<I: Interner> Debug for ClosureId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_closure_id(*self, fmt).unwrap_or_else(|| write!(fmt, "ClosureId({:?})", self.0))
+    }
+}
+
 impl<I: Interner> Debug for AssocTypeId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_assoc_type_id(*self, fmt)
@@ -100,6 +112,8 @@ impl<I: Interner> Debug for TypeName<I> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::FnDef(id) => write!(fmt, "{:?}", id),
+            TypeName::Closure(id) => write!(fmt, "{:?}", id),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }

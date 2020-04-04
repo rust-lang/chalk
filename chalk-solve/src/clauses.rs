@@ -381,6 +381,8 @@ fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeNa
             .db
             .associated_ty_data(type_id)
             .to_program_clauses(builder),
+        TypeName::FnDef(fn_def_id) => match_fn_def(builder, fn_def_id),
+        TypeName::Closure(closure_id) => match_closure(builder, closure_id),
     }
 }
 
@@ -388,6 +390,20 @@ fn match_struct<I: Interner>(builder: &mut ClauseBuilder<'_, I>, struct_id: Stru
     builder
         .db
         .struct_datum(struct_id)
+        .to_program_clauses(builder)
+}
+
+fn match_fn_def<I: Interner>(builder: &mut ClauseBuilder<'_, I>, fn_def_id: FnDefId<I>) {
+    builder
+        .db
+        .fn_def_datum(fn_def_id)
+        .to_program_clauses(builder)
+}
+
+fn match_closure<I: Interner>(builder: &mut ClauseBuilder<'_, I>, closure_id: ClosureId<I>) {
+    builder
+        .db
+        .closure_datum(closure_id)
         .to_program_clauses(builder)
 }
 

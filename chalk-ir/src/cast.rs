@@ -296,6 +296,24 @@ where
     }
 }
 
+impl<I> CastTo<TypeName<I>> for FnDefId<I>
+where
+    I: Interner,
+{
+    fn cast_to(self, _interner: &I) -> TypeName<I> {
+        TypeName::FnDef(self)
+    }
+}
+
+impl<I> CastTo<TypeName<I>> for ClosureId<I>
+where
+    I: Interner,
+{
+    fn cast_to(self, _interner: &I) -> TypeName<I> {
+        TypeName::Closure(self)
+    }
+}
+
 impl<T> CastTo<T> for &T
 where
     T: Clone + HasInterner,

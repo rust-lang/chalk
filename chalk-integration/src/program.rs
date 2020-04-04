@@ -4,13 +4,13 @@ use chalk_ir::debug::Angle;
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, StructId, Substitution, TraitId, Ty,
-    TyData, TypeName,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, ClosureId, FnDefId, Goal, Goals,
+    ImplId, Lifetime, Parameter, ProgramClause, ProgramClauseImplication, StructId, Substitution,
+    TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
-    TraitDatum,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureDatum, FnDefDatum, ImplDatum,
+    ImplType, StructDatum, TraitDatum,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -26,6 +26,18 @@ pub struct Program {
     /// For each struct:
     pub struct_kinds: BTreeMap<StructId<ChalkIr>, TypeKind>,
 
+    /// From function name to item-id. Used during lowering only.
+    pub fn_def_ids: BTreeMap<Identifier, FnDefId<ChalkIr>>,
+
+    /// For each function definition:
+    pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
+
+    /// From closure to item-id. Used during lowering only.
+    pub closure_ids: BTreeMap<Identifier, ClosureId<ChalkIr>>,
+
+    /// For each closure:
+    pub closure_kinds: BTreeMap<ClosureId<ChalkIr>, TypeKind>,
+
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
 
@@ -34,6 +46,12 @@ pub struct Program {
 
     /// For each struct:
     pub struct_data: BTreeMap<StructId<ChalkIr>, Arc<StructDatum<ChalkIr>>>,
+
+    /// For each function definition:
+    pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
+
+    /// For each closure:
+    pub closure_data: BTreeMap<ClosureId<ChalkIr>, Arc<ClosureDatum<ChalkIr>>>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -74,6 +92,34 @@ impl tls::DebugContext for Program {
         } else {
             fmt.debug_struct("InvalidStructId")
                 .field("index", &struct_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_fn_def_id(
+        &self,
+        fn_def_id: FnDefId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.fn_def_kinds.get(&fn_def_id) {
+            write!(fmt, "{}", k.name)
+        } else {
+            fmt.debug_struct("InvalidFnDefId")
+                .field("index", &fn_def_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_closure_id(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.closure_kinds.get(&closure_id) {
+            write!(fmt, "{}", k.name)
+        } else {
+            fmt.debug_struct("InvalidClosureId")
+                .field("index", &closure_id.0)
                 .finish()
         }
     }
@@ -234,6 +280,14 @@ impl RustIrDatabase<ChalkIr> for Program {
             TypeName::Struct(struct_id) => Some(*struct_id),
             _ => None,
         }
+    }
+
+    fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
+        self.fn_def_data[&id].clone()
+    }
+
+    fn closure_datum(&self, id: ClosureId<ChalkIr>) -> Arc<ClosureDatum<ChalkIr>> {
+        self.closure_data[&id].clone()
     }
 
     fn impls_for_trait(

@@ -7,7 +7,9 @@ use chalk_ir::interner::ChalkIr;
 use chalk_ir::tls;
 use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
+use chalk_ir::ClosureId;
 use chalk_ir::ConstrainedSubst;
+use chalk_ir::FnDefId;
 use chalk_ir::Goal;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
@@ -20,6 +22,8 @@ use chalk_ir::UCanonical;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
+use chalk_rust_ir::ClosureDatum;
+use chalk_rust_ir::FnDefDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
@@ -109,6 +113,14 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
         self.program_ir().unwrap().as_struct_id(type_name)
+    }
+
+    fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
+        self.program_ir().unwrap().fn_def_datum(id)
+    }
+
+    fn closure_datum(&self, id: ClosureId<ChalkIr>) -> Arc<ClosureDatum<ChalkIr>> {
+        self.program_ir().unwrap().closure_datum(id)
     }
 
     fn impls_for_trait(
