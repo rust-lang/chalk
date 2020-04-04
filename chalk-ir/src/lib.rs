@@ -1244,33 +1244,40 @@ impl<I: Interner> ProgramClauseData<I> {
 
     pub fn intern(self, interner: &I) -> ProgramClause<I> {
         ProgramClause {
-            clause: interner.intern_program_clause(self),
+            interned: interner.intern_program_clause(self),
         }
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClause<I: Interner> {
-    clause: I::InternedProgramClause,
+    interned: I::InternedProgramClause,
 }
 
 impl<I: Interner> ProgramClause<I> {
+    pub fn new(interner: &I, clause: ProgramClauseData<I>) -> Self {
+        let interned = interner.intern_program_clause(clause);
+        Self { interned }
+    }
+
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
         let program_clause_data = self.data(interner);
         let new_clause = program_clause_data.clone().into_from_env_clause(interner);
-        ProgramClause {
-            clause: interner.intern_program_clause(new_clause),
-        }
+        Self::new(interner, new_clause)
+    }
+
+    pub fn interned(&self) -> &I::InternedProgramClause {
+        &self.interned
     }
 
     pub fn data(&self, interner: &I) -> &ProgramClauseData<I> {
-        interner.program_clause_data(&self.clause)
+        interner.program_clause_data(&self.interned)
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClauses<I: Interner> {
-    clauses: I::InternedProgramClauses,
+    interned: I::InternedProgramClauses,
 }
 
 impl<I: Interner> ProgramClauses<I> {
@@ -1279,7 +1286,7 @@ impl<I: Interner> ProgramClauses<I> {
     }
 
     pub fn interned(&self) -> &I::InternedProgramClauses {
-        &self.clauses
+        &self.interned
     }
 
     pub fn from(
@@ -1288,7 +1295,7 @@ impl<I: Interner> ProgramClauses<I> {
     ) -> Self {
         use crate::cast::Caster;
         ProgramClauses {
-            clauses: I::intern_program_clauses(interner, clauses.into_iter().casted(interner)),
+            interned: I::intern_program_clauses(interner, clauses.into_iter().casted(interner)),
         }
     }
 
@@ -1317,7 +1324,7 @@ impl<I: Interner> ProgramClauses<I> {
     }
 
     pub fn as_slice(&self, interner: &I) -> &[ProgramClause<I>] {
-        interner.program_clauses_data(&self.clauses)
+        interner.program_clauses_data(&self.interned)
     }
 }
 
