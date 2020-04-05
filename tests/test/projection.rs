@@ -142,7 +142,7 @@ fn projection_equality() {
             exists<U> {
                 S: Trait2<U>
             }
-        } yields {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := u32]"
         }
     }

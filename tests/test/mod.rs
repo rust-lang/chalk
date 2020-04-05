@@ -71,13 +71,15 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::default(), TestGoal::Aggregated($expected))
+                      (stringify!($goal), SolverChoice::slg_default(), TestGoal::Aggregated($expected))
+                      (stringify!($goal), SolverChoice::recursive(), TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
-    // goal { G } yields_all { "Y1", "Y2", ... , "YN" } -- test both solvers gets exactly N same answers in
-    // the same order
+    // goal { G } yields_all { "Y1", "Y2", ... , "YN" } -- test that the SLG
+    // solver gets exactly N answers in this order (the recursive solver can't
+    // return multiple answers)
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
         goal $goal:tt yields_all { $($expected:expr),* }
         $($unparsed_goals:tt)*
@@ -85,12 +87,13 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::default(), TestGoal::All(vec![$($expected),*]))
+                      (stringify!($goal), SolverChoice::slg_default(), TestGoal::All(vec![$($expected),*]))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
-    // goal { G } yields_first { "Y1", "Y2", ... , "YN" } -- test both solvers gets at least N same first answers
+    // goal { G } yields_first { "Y1", "Y2", ... , "YN" } -- test that the SLG
+    // solver gets at least N same first answers
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
         goal $goal:tt yields_first { $($expected:expr),* }
         $($unparsed_goals:tt)*
@@ -120,6 +123,20 @@ macro_rules! test {
                       (stringify!($goal), $C, TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[goal $($unparsed_goals)*])
+    };
+
+    // same as above, but there are multiple yields clauses => duplicate the goal
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt
+            yields[$C:expr] { $expected:expr }
+        yields $($unparsed_tail:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+              ]
+              @unparsed_goals[goal $goal yields $($unparsed_tail)*])
     };
 
     // same as above, but for the final goal in the list.

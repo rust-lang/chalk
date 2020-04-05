@@ -196,12 +196,17 @@ pub enum SolverChoice {
 }
 
 impl SolverChoice {
-    /// Returns the default SLG parameters.
+    /// Returns specific SLG parameters.
     pub fn slg(max_size: usize, expected_answers: Option<usize>) -> Self {
         SolverChoice::SLG {
             max_size,
             expected_answers,
         }
+    }
+
+    /// Returns the default SLG parameters.
+    pub fn slg_default() -> Self {
+        SolverChoice::slg(10, None)
     }
 
     /// Returns the default recursive solver setup.
@@ -234,8 +239,8 @@ impl SolverChoice {
 
 impl Default for SolverChoice {
     fn default() -> Self {
-        SolverChoice::recursive()
-        // SolverChoice::slg(10, None)
+        // SolverChoice::recursive()
+        SolverChoice::slg(10, None)
     }
 }
 
