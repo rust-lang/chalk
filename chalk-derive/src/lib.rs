@@ -356,7 +356,7 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
         // Hardcoded interner:
         //
         // impl Visit<ChalkIr> for Type {
-        // 
+        //
         // }
         let arg = attr
             .parse_args::<proc_macro2::TokenStream>()
@@ -369,8 +369,8 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
                     visitor: &mut dyn Visitor < 'i, #arg, Result = R >,
                     outer_binder: DebruijnIndex,
                 ) -> R
-                where 
-                    I: 'i 
+                where
+                    I: 'i
                 {
                     #body
                 }
@@ -404,9 +404,9 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
         // }
 
         let mut impl_generics = input.generics.clone();
-        impl_generics.params.extend(vec![
-            GenericParam::Type(syn::parse(quote! { _I: Interner }.into()).unwrap()),
-        ]);
+        impl_generics.params.extend(vec![GenericParam::Type(
+            syn::parse(quote! { _I: Interner }.into()).unwrap(),
+        )]);
 
         let mut where_clause = where_clause_ref
             .cloned()

@@ -7,8 +7,8 @@
 use chalk_derive::{Fold, HasInterner, Visit};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{shift::Shift, Fold, Folder};
-use chalk_ir::visit::{Visit, VisitResult, Visitor};
 use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
+use chalk_ir::visit::{Visit, VisitResult, Visitor};
 use chalk_ir::{
     AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
     Parameter, ParameterKind, QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty,

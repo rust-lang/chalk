@@ -17,7 +17,10 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &T {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         (**self).visit_with(visitor, outer_binder)
     }
 }
@@ -27,7 +30,10 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let mut result = R::new();
         for e in self {
             result = result.and_then(|| e.visit_with(visitor, outer_binder))
@@ -41,7 +47,10 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Box<T> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         (**self).visit_with(visitor, outer_binder)
     }
 }
@@ -51,7 +60,10 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Arc<T> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         (**self).visit_with(visitor, outer_binder)
     }
 }
@@ -80,7 +92,10 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         match self {
             Some(e) => e.visit_with(visitor, outer_binder),
             None => R::new(),
@@ -93,7 +108,10 @@ impl<I: Interner> Visit<I> for Parameter<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let interner = visitor.interner();
         self.data(interner).visit_with(visitor, outer_binder)
     }
@@ -104,7 +122,10 @@ impl<I: Interner> Visit<I> for Substitution<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let interner = visitor.interner();
         let mut result = R::new();
 
@@ -121,7 +142,10 @@ impl<I: Interner> Visit<I> for Goals<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let interner = visitor.interner();
         let mut result = R::new();
 
@@ -141,7 +165,10 @@ macro_rules! const_visit {
                 &self,
                 _visitor: &mut dyn ($crate::visit::Visitor<'i, I, Result = R>),
                 _outer_binder: DebruijnIndex,
-            ) -> R where I: 'i {
+            ) -> R
+            where
+                I: 'i,
+            {
                 R::new()
             }
         }
@@ -165,7 +192,10 @@ macro_rules! id_visit {
                 &self,
                 _visitor: &mut dyn ($crate::visit::Visitor<'i, I, Result = R>),
                 _outer_binder: DebruijnIndex,
-            ) -> R where I: 'i {
+            ) -> R
+            where
+                I: 'i,
+            {
                 R::new()
             }
         }
@@ -182,7 +212,10 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         match self {
             ProgramClause::Implies(pci) => pci.visit_with(visitor, outer_binder),
             ProgramClause::ForAll(pci) => pci.visit_with(visitor, outer_binder),
@@ -195,7 +228,10 @@ impl<I: Interner> Visit<I> for PhantomData<I> {
         &self,
         _visitor: &mut dyn Visitor<'i, I, Result = R>,
         _outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         R::new()
     }
 }
@@ -209,7 +245,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         match self {
             ParameterKind::Ty(a) => a.visit_with(visitor, outer_binder),
             ParameterKind::Lifetime(a) => a.visit_with(visitor, outer_binder),
@@ -229,7 +268,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let ExClause {
             subst,
             ambiguous: _,
@@ -263,7 +305,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let FlounderedSubgoal {
             floundered_literal,
             floundered_time,
@@ -284,7 +329,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         match self {
             Literal::Positive(goal) => goal.visit_with(visitor, outer_binder),
             Literal::Negative(goal) => goal.visit_with(visitor, outer_binder),

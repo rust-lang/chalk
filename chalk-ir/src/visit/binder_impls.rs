@@ -10,7 +10,10 @@ impl<I: Interner> Visit<I> for Fn<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         self.parameters
             .visit_with(visitor, outer_binder.shifted_in())
     }
@@ -24,7 +27,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         self.value.visit_with(visitor, outer_binder.shifted_in())
     }
 }
@@ -38,7 +44,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         self.value.visit_with(visitor, outer_binder.shifted_in())
     }
 }

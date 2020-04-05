@@ -3,7 +3,7 @@
 use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
-use crate::visit::{VisitResult, Visit, SuperVisit, Visitor};
+use crate::visit::{visitors::FindBound, SuperVisit, Visit, VisitResult, Visitor};
 use chalk_derive::{Fold, HasInterner, Visit};
 use chalk_engine::fallible::*;
 use std::iter;
@@ -237,8 +237,8 @@ impl<I: Interner> Ty<I> {
     /// needs to be shifted across binders. This is a very inefficient
     /// check, intended only for debug assertions, because I am lazy.
     pub fn needs_shift(&self, interner: &I) -> bool {
-        let ty = self.clone();
-        ty != ty.shifted_in(interner)
+        self.visit_with(&mut FindBound { interner }, DebruijnIndex::INNERMOST)
+            .found
     }
 }
 

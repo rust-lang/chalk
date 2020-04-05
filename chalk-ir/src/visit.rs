@@ -8,6 +8,7 @@ use crate::{
 
 mod binder_impls;
 mod boring_impls;
+pub mod visitors;
 
 pub trait VisitResult: Sized {
     fn new() -> Self;
@@ -15,17 +16,16 @@ pub trait VisitResult: Sized {
     fn and_then(self, op: impl FnOnce() -> Self) -> Self;
 }
 
-
 impl VisitResult for () {
     fn new() -> () {}
-    fn and_then(self, op: impl FnOnce() -> () ) -> () {
+    fn and_then(self, op: impl FnOnce() -> ()) -> () {
         op()
     }
 }
 
 /// A "visitor" recursively folds some term -- that is, some bit of IR,
-/// such as a `Goal`, and computes a value as a result. 
-/// 
+/// such as a `Goal`, and computes a value as a result.
+///
 ///
 /// To **apply** a visitor, use the `Visit::visit_with` method, like so
 ///
@@ -34,7 +34,7 @@ impl VisitResult for () {
 /// ```
 pub trait Visitor<'i, I: Interner>
 where
-I: 'i
+    I: 'i,
 {
     type Result: VisitResult;
 
@@ -219,7 +219,9 @@ pub trait Visit<I: Interner>: Debug {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i;
+    ) -> R
+    where
+        I: 'i;
 }
 
 /// For types where "visit" invokes a callback on the `visitor`, the
@@ -230,7 +232,9 @@ pub trait SuperVisit<I: Interner>: Visit<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i;
+    ) -> R
+    where
+        I: 'i;
 }
 
 /// "visiting" a type invokes the `visit_ty` method on the visitor; this
@@ -241,7 +245,10 @@ impl<I: Interner> Visit<I> for Ty<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         visitor.visit_ty(self, outer_binder)
     }
 }
@@ -255,7 +262,10 @@ where
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let interner = visitor.interner();
         match self.data(interner) {
             TyData::BoundVar(bound_var) => {
@@ -280,7 +290,10 @@ impl<I: Interner> Visit<I> for Lifetime<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         visitor.visit_lifetime(self, outer_binder)
     }
 }
@@ -290,7 +303,10 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let interner = visitor.interner();
         match self.data(interner) {
             LifetimeData::BoundVar(bound_var) => {
@@ -314,7 +330,10 @@ impl<I: Interner> Visit<I> for Goal<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         visitor.visit_goal(self, outer_binder)
     }
 }
@@ -324,7 +343,10 @@ impl<I: Interner> SuperVisit<I> for Goal<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         let interner = visitor.interner();
         self.data(interner).visit_with(visitor, outer_binder)
     }
@@ -335,7 +357,10 @@ impl<I: Interner> Visit<I> for ProgramClause<I> {
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
-    ) -> R where I: 'i {
+    ) -> R
+    where
+        I: 'i,
+    {
         visitor.visit_program_clause(self, outer_binder)
     }
 }

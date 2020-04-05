@@ -1,7 +1,7 @@
 use chalk_engine::fallible::*;
 use chalk_ir::fold::{Fold, Folder};
-use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::interner::Interner;
+use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
 
 use super::InferenceTable;
@@ -16,15 +16,13 @@ impl<I: Interner> InferenceTable<I> {
 
         // First, find all the universes that appear in `value`.
         let mut universes = UniverseMap::new();
-        value0
-            .value
-            .visit_with(
-                &mut UCollector {
-                    universes: &mut universes,
-                    interner,
-                },
-                DebruijnIndex::INNERMOST,
-            );
+        value0.value.visit_with(
+            &mut UCollector {
+                universes: &mut universes,
+                interner,
+            },
+            DebruijnIndex::INNERMOST,
+        );
 
         // Now re-map the universes found in value. We have to do this
         // in a second pass because it is only then that we know the
