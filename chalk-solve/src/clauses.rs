@@ -278,7 +278,7 @@ fn program_clauses_that_could_match<I: Interner>(
             match_ty(builder, environment, ty)?
         }
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(Normalize { alias, ty }) => {
+        DomainGoal::Normalize(Normalize { alias, ty: _ }) => {
             // Normalize goals derive from `AssociatedTyValue` datums,
             // which are found in impls. That is, if we are
             // normalizing (e.g.) `<T as Iterator>::Item>`, then
@@ -293,25 +293,6 @@ fn program_clauses_that_could_match<I: Interner>(
             let associated_ty_datum = db.associated_ty_data(alias.associated_ty_id);
             let trait_id = associated_ty_datum.trait_id;
             let trait_parameters = db.trait_parameters_from_projection(alias);
-
-            if let TyData::Apply(ApplicationTy {
-                name: TypeName::AssociatedType(_),
-                ..
-            }) = ty.data(interner)
-            {
-                // TODO this is probably wrong
-                // Associated types will never *normalize* to an associated type placeholder.
-                // It's important that we return early here so that we don't flounder in this case.
-                return Some(());
-            }
-
-            let trait_datum = builder.db.trait_datum(trait_id);
-            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                let self_ty = alias.self_type_parameter(interner);
-                if self_ty.bound(interner).is_some() || self_ty.inference_var(interner).is_some() {
-                    return None;
-                }
-            }
 
             push_program_clauses_for_associated_type_values_in_impls_of(
                 builder,

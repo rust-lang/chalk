@@ -333,10 +333,14 @@ impl<'me, I: Interner> Solver<'me, I> {
                 self.context.search_graph[dfn].solution_priority,
                 current_prio,
             ) == (ClausePriority::High, ClausePriority::Low)
+                && self.context.search_graph[dfn].solution.is_ok()
             {
                 // TODO check solution inputs?
                 // Not replacing the current answer, so we're at a fixed point?
-                debug!("solve_new_subgoal: new answer has lower priority");
+                debug!(
+                    "solve_new_subgoal: new answer has lower priority (old answer: {:?})",
+                    self.context.search_graph[dfn].solution
+                );
                 return *minimums;
             }
 
