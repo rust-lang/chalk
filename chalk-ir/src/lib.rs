@@ -1123,7 +1123,7 @@ pub struct Normalize<I: Interner> {
 /// Proves **equality** between a projection `T::Foo` and a type
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,

@@ -2,7 +2,7 @@
 use std::fmt::Debug;
 
 use crate::{
-    BoundVar, DebruijnIndex, Goal, InferenceVar, Interner, Lifetime, LifetimeData,
+    AliasEq, BoundVar, DebruijnIndex, Goal, InferenceVar, Interner, Lifetime, LifetimeData,
     PlaceholderIndex, ProgramClause, Ty, TyData,
 };
 
@@ -155,6 +155,14 @@ where
         } else {
             Self::Result::new()
         }
+    }
+
+    fn visit_alias_eq(
+        &mut self,
+        alias_eq: &AliasEq<I>,
+        outer_binder: DebruijnIndex,
+    ) -> Self::Result {
+        alias_eq.super_visit_with(self.as_dyn(), outer_binder)
     }
 
     /// As with `visit_free_placeholder_ty`, but for lifetimes.
@@ -362,5 +370,33 @@ impl<I: Interner> Visit<I> for ProgramClause<I> {
         I: 'i,
     {
         visitor.visit_program_clause(self, outer_binder)
+    }
+}
+
+impl<I: Interner> Visit<I> for AliasEq<I> {
+    fn visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        visitor.visit_alias_eq(self, outer_binder)
+    }
+}
+
+impl<I: Interner> SuperVisit<I> for AliasEq<I> {
+    fn super_visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        R::new()
+            .and_then(|| self.alias.visit_with(visitor, outer_binder))
+            .and_then(|| self.ty.visit_with(visitor, outer_binder))
     }
 }
