@@ -142,8 +142,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             ApplicationTy {
                 name: TypeName::OpaqueType(self.opaque_ty_id),
                 substitution,
-            }
-            .cast(interner),
+            },
         );
 
         builder.push_binders(&self.bound, |builder, opaque_ty_bound| {

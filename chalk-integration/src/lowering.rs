@@ -614,13 +614,11 @@ impl LowerTypeKind for TraitDefn {
 
 impl LowerTypeKind for OpaqueTyDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(TypeKind {
             sort: TypeSort::Opaque,
             name: self.identifier.str,
-            binders: chalk_ir::Binders::new(
-                vec![], //TODO do we need binders here?
-                (),
-            ),
+            binders: chalk_ir::Binders::new(binders.anonymize(), ()),
         })
     }
 }
