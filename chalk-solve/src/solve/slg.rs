@@ -15,7 +15,7 @@ use chalk_engine::{CompleteAnswer, ExClause, Literal};
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::could_match::CouldMatch;
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 
 use std::fmt::Debug;
@@ -177,17 +177,8 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         goal: &DomainGoal<I>,
         _infer: &mut TruncatingInferenceTable<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        let interner = self.program.interner();
-        let mut clauses: Vec<_> =
+        let clauses: Vec<_> =
             program_clauses_for_goal(self.program, environment, goal).ok_or(Floundered)?;
-
-        clauses.extend(
-            environment
-                .clauses
-                .iter(interner)
-                .filter(|&env_clause| env_clause.could_match(interner, goal))
-                .cloned(),
-        );
 
         Ok(clauses)
     }

@@ -415,6 +415,8 @@ fn program_clauses_for_env<'db, I: Interner>(
     environment: &Environment<I>,
     clauses: &mut Vec<ProgramClause<I>>,
 ) {
+    clauses.extend(environment.clauses.iter().cloned());
+
     let mut last_round = FxHashSet::default();
     elaborate_env_clauses(
         db,

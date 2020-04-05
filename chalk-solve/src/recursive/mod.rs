@@ -11,7 +11,6 @@ use chalk_engine::{
     context::Floundered,
     fallible::{Fallible, NoSolution},
 };
-use chalk_ir::could_match::CouldMatch;
 use clauses::program_clauses_for_goal;
 use rustc_hash::FxHashMap;
 
@@ -253,19 +252,6 @@ impl<'me, I: Interner> Solver<'me, I> {
                     // clauses. We try each approach in turn:
 
                     let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
-                    let (env_solution, env_prio) = {
-                        debug_heading!("env_clauses");
-
-                        // TODO use code from clauses module
-                        let env_clauses: Vec<_> = environment
-                            .clauses
-                            .iter()
-                            .filter(|&clause| clause.could_match(self.program.interner(), goal))
-                            .cloned()
-                            .collect();
-                        self.solve_from_clauses(&canonical_goal, env_clauses, minimums)
-                    };
-                    debug!("env_solution={:?}", env_solution);
 
                     let (prog_solution, prog_prio) = {
                         debug_heading!("prog_clauses");
@@ -282,18 +268,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     };
                     debug!("prog_solution={:?}", prog_solution);
 
-                    // Now that we have all the outcomes, we attempt to combine
-                    // them. Here, we apply a heuristic (also found in rustc): if we
-                    // have possible solutions via both the environment *and* the
-                    // program, we favor the environment; this only impacts type
-                    // inference. The idea is that the assumptions you've explicitly
-                    // made in a given context are more likely to be relevant than
-                    // general `impl`s.
-                    // TODO can we combine this logic with the priorization logic?
-                    (
-                        env_solution.merge_with(prog_solution, |env, prog| env.favor_over(prog)),
-                        prog_prio & env_prio, // FIXME
-                    )
+                    (prog_solution, prog_prio)
                 }
 
                 _ => {

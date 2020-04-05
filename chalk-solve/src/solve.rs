@@ -92,32 +92,6 @@ impl<I: Interner> Solution<I> {
         Solution::Ambig(guidance)
     }
 
-    /// There are multiple candidate solutions, which may or may not agree on
-    /// the values for existential variables; attempt to combine them, while
-    /// favoring `self` for the purposes of giving suggestions to type
-    /// inference. This is used in particular to favor the `where` clause
-    /// environment over `impl`s in guiding inference in ambiguous situations.
-    ///
-    /// It should always be the case that `x.favor_over(y)` is at least as
-    /// informative as `x.combine(y)`, in terms of guidance to type inference.
-    pub(crate) fn favor_over(self, other: Solution<I>) -> Solution<I> {
-        use self::Guidance::*;
-
-        if self == other {
-            return self;
-        }
-
-        debug!("favor_over {} with {}", self, other);
-
-        // Otherwise, always downgrade to Ambig:
-
-        let guidance = match (self.into_guidance(), other.into_guidance()) {
-            (Definite(subst), _) | (Suggested(subst), _) => Suggested(subst),
-            _ => Unknown,
-        };
-        Solution::Ambig(guidance)
-    }
-
     /// View this solution purely in terms of type inference guidance
     pub(crate) fn into_guidance(self) -> Guidance<I> {
         match self {
