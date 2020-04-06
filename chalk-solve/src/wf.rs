@@ -190,6 +190,8 @@ where
         let wg_goal = gb.forall(&struct_data, (), |gb, _, (fields, where_clauses), ()| {
             let interner = gb.interner();
 
+            let sized_constraint_goal = compute_struct_sized_constraint(gb.db(), fields);
+
             // (FromEnv(T: Eq) => ...)
             gb.implies(
                 where_clauses
@@ -203,7 +205,13 @@ where
                     fields.fold(gb.interner(), &mut input_types);
                     // ...in a where clause.
                     where_clauses.fold(gb.interner(), &mut input_types);
-                    gb.all(input_types.into_iter().map(|ty| ty.well_formed()))
+
+                    gb.all(
+                        input_types
+                            .into_iter()
+                            .map(|ty| ty.well_formed().cast(interner))
+                            .chain(sized_constraint_goal.into_iter()),
+                    )
                 },
             )
         });
@@ -462,5 +470,29 @@ fn compute_assoc_ty_goal<I: Interner>(
                 )
             })
         },
+    ))
+}
+
+fn compute_struct_sized_constraint<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    fields: &[Ty<I>],
+) -> Option<Goal<I>> {
+    if fields.len() <= 1 {
+        return None;
+    }
+
+    let interner = db.interner();
+
+    let sized_trait = db.require_lang_item(LangItem::SizedTrait);
+
+    Some(Goal::all(
+        interner,
+        fields[..fields.len() - 1].iter().map(|ty| {
+            TraitRef {
+                trait_id: sized_trait,
+                substitution: Substitution::from1(interner, ty.clone()),
+            }
+            .cast(interner)
+        }),
     ))
 }

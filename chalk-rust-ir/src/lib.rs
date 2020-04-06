@@ -15,8 +15,10 @@ use chalk_ir::{
 };
 use std::iter;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LangItem {}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LangItem {
+    SizedTrait,
+}
 
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -78,7 +80,7 @@ impl<I: Interner> StructDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub struct StructDatumBound<I: Interner> {
     pub fields: Vec<Ty<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,

@@ -76,6 +76,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         false
     }
 
+    /// Returns id of a trait lang item, if found
+    fn require_lang_item(&self, lang_item: LangItem) -> TraitId<I>;
+
     fn interner(&self) -> &I;
 }
 

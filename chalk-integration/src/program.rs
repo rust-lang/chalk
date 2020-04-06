@@ -9,8 +9,8 @@ use chalk_ir::{
     TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
-    TraitDatum,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, LangItem,
+    StructDatum, TraitDatum,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -44,6 +44,9 @@ pub struct Program {
 
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
+
+    /// For each trait lang item
+    pub trait_lang_items: BTreeMap<LangItem, TraitId<ChalkIr>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
@@ -307,6 +310,13 @@ impl RustIrDatabase<ChalkIr> for Program {
                     _ => false,
                 }
         })
+    }
+
+    fn require_lang_item(&self, lang_item: LangItem) -> TraitId<ChalkIr> {
+        *self
+            .trait_lang_items
+            .get(&lang_item)
+            .unwrap_or_else(|| panic!("No lang item found for {:?}", lang_item))
     }
 
     fn interner(&self) -> &ChalkIr {

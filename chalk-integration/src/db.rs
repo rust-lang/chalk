@@ -21,6 +21,7 @@ use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
 use chalk_rust_ir::ImplDatum;
+use chalk_rust_ir::LangItem;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_solve::RustIrDatabase;
@@ -135,6 +136,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir()
             .unwrap()
             .impl_provided_for(auto_trait_id, struct_id)
+    }
+
+    fn require_lang_item(&self, lang_item: LangItem) -> TraitId<ChalkIr> {
+        self.program_ir().unwrap().require_lang_item(lang_item)
     }
 
     fn interner(&self) -> &ChalkIr {

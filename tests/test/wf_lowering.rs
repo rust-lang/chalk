@@ -636,3 +636,79 @@ fn assoc_type_recursive_bound() {
         }
     }
 }
+
+#[test]
+fn duplicate_lang_item() {
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            #[lang(sized)]
+            trait Sized2 { }
+        } error_msg {
+            "duplicate lang item `SizedTrait`"
+        }
+    }
+}
+
+#[test]
+fn struct_sized_constraints() {
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct S<T> {
+                t1: T,
+                t2: T
+            }
+        } error_msg {
+            "type declaration `S` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo { }
+
+            struct S<T> {
+                t1: Foo,
+                t2: T
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct S<T> where T: Sized {
+                t1: T,
+                t2: T
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo {}
+
+            struct G<T> {
+                foo: S<S<Foo>>,
+                s: S<S<S<T>>>
+            }
+
+            struct S<T> {
+                t1: T
+            }
+        }
+    }
+}

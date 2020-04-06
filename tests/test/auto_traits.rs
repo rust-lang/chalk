@@ -6,6 +6,7 @@ use super::*;
 fn auto_semantics() {
     test! {
         program {
+            #[lang(sized)] trait Sized { }
             #[auto] trait Send { }
 
             struct i32 { }
@@ -13,7 +14,7 @@ fn auto_semantics() {
             struct Ptr<T> { }
             impl<T> Send for Ptr<T> where T: Send { }
 
-            struct List<T> {
+            struct List<T> where T: Sized {
                 data: T,
                 next: Ptr<List<T>>
             }
