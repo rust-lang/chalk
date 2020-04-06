@@ -166,27 +166,33 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 }
                 .cast(interner),
             ));
+
+            for bound in &opaque_ty_bound.bounds {
+                // Implemented(!T<..>: Bound).
+                builder.push_binders(&bound, |builder, bound| {
+                    builder.push_binders(&bound, |builder, bound| {
+                        builder.push_fact(bound.into_well_formed_goal(interner));
+                    });
+                });
+            }
+
+            for auto_trait_id in builder.db.auto_traits() {
+                // Implemented(!T<..>: AutoTrait) :- Implemented(HiddenTy: AutoTrait).
+                builder.push_clause(
+                    TraitRef {
+                        trait_id: auto_trait_id,
+                        substitution: Substitution::from1(interner, alias_ty.clone()),
+                    },
+                    iter::once(TraitRef {
+                        trait_id: auto_trait_id,
+                        substitution: Substitution::from1(
+                            interner,
+                            opaque_ty_bound.hidden_ty.clone(),
+                        ),
+                    }),
+                );
+            }
         });
-
-        let opaque_ty_bound = &self.bound.skip_binders();
-        for bound in &opaque_ty_bound.bounds {
-            // Implemented(!T<..>: Bound).
-            builder.push_fact(bound.skip_binders().clone().into_well_formed_goal(interner));
-        }
-
-        for auto_trait_id in builder.db.auto_traits() {
-            // Implemented(!T<..>: AutoTrait) :- Implemented(HiddenTy: AutoTrait).
-            builder.push_clause(
-                TraitRef {
-                    trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, alias_ty.clone()),
-                },
-                iter::once(TraitRef {
-                    trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, opaque_ty_bound.hidden_ty.clone()),
-                }),
-            );
-        }
     }
 }
 
