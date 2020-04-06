@@ -46,7 +46,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         G: CastTo<Goal<I>>,
     {
         GoalData::Implies(
-            clauses.into_iter().casted(self.interner()).collect(),
+            ProgramClauses::from(self.interner(), clauses),
             goal(self).cast(self.interner()),
         )
         .intern(self.interner())

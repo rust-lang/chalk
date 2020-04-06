@@ -48,20 +48,23 @@ pub mod tls;
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment<I: Interner> {
-    pub clauses: Vec<ProgramClause<I>>,
+    pub clauses: ProgramClauses<I>,
 }
 
 impl<I: Interner> Environment<I> {
-    pub fn new() -> Self {
-        Environment { clauses: vec![] }
+    pub fn new(interner: &I) -> Self {
+        Environment {
+            clauses: ProgramClauses::new(interner),
+        }
     }
 
-    pub fn add_clauses<II>(&self, clauses: II) -> Self
+    pub fn add_clauses<II>(&self, interner: &I, clauses: II) -> Self
     where
         II: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut env = self.clone();
-        env.clauses = env.clauses.into_iter().chain(clauses).collect();
+        env.clauses =
+            ProgramClauses::from(interner, env.clauses.iter(interner).cloned().chain(clauses));
         env
     }
 }
@@ -1208,8 +1211,8 @@ pub struct ProgramClauseImplication<I: Interner> {
     pub conditions: Goals<I>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
-pub enum ProgramClause<I: Interner> {
+#[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub enum ProgramClauseData<I: Interner> {
     Implies(ProgramClauseImplication<I>),
     ForAll(Binders<ProgramClauseImplication<I>>),
 }
@@ -1227,16 +1230,101 @@ impl<I: Interner> ProgramClauseImplication<I> {
     }
 }
 
-impl<I: Interner> ProgramClause<I> {
-    pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
+impl<I: Interner> ProgramClauseData<I> {
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseData<I> {
         match self {
-            ProgramClause::Implies(implication) => {
-                ProgramClause::Implies(implication.into_from_env_clause(interner))
+            ProgramClauseData::Implies(implication) => {
+                ProgramClauseData::Implies(implication.into_from_env_clause(interner))
             }
-            ProgramClause::ForAll(binders_implication) => {
-                ProgramClause::ForAll(binders_implication.map(|i| i.into_from_env_clause(interner)))
-            }
+            ProgramClauseData::ForAll(binders_implication) => ProgramClauseData::ForAll(
+                binders_implication.map(|i| i.into_from_env_clause(interner)),
+            ),
         }
+    }
+
+    pub fn intern(self, interner: &I) -> ProgramClause<I> {
+        ProgramClause {
+            interned: interner.intern_program_clause(self),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ProgramClause<I: Interner> {
+    interned: I::InternedProgramClause,
+}
+
+impl<I: Interner> ProgramClause<I> {
+    pub fn new(interner: &I, clause: ProgramClauseData<I>) -> Self {
+        let interned = interner.intern_program_clause(clause);
+        Self { interned }
+    }
+
+    pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
+        let program_clause_data = self.data(interner);
+        let new_clause = program_clause_data.clone().into_from_env_clause(interner);
+        Self::new(interner, new_clause)
+    }
+
+    pub fn interned(&self) -> &I::InternedProgramClause {
+        &self.interned
+    }
+
+    pub fn data(&self, interner: &I) -> &ProgramClauseData<I> {
+        interner.program_clause_data(&self.interned)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ProgramClauses<I: Interner> {
+    interned: I::InternedProgramClauses,
+}
+
+impl<I: Interner> ProgramClauses<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<ProgramClause<I>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedProgramClauses {
+        &self.interned
+    }
+
+    pub fn from(
+        interner: &I,
+        clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>,
+    ) -> Self {
+        use crate::cast::Caster;
+        ProgramClauses {
+            interned: I::intern_program_clauses(interner, clauses.into_iter().casted(interner)),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        clauses: impl IntoIterator<Item = Result<impl CastTo<ProgramClause<I>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        let clauses = clauses
+            .into_iter()
+            .casted(interner)
+            .collect::<Result<Vec<ProgramClause<I>>, _>>()?;
+        Ok(Self::from(interner, clauses))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ProgramClause<I>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[ProgramClause<I>] {
+        interner.program_clauses_data(&self.interned)
     }
 }
 
@@ -1385,10 +1473,10 @@ impl<I: Interner> Goal<I> {
             QuantifierKind::ForAll,
             Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
-                    vec![
-                        DomainGoal::Compatible(()).cast(interner),
-                        DomainGoal::DownstreamType(ty).cast(interner),
-                    ],
+                    ProgramClauses::from(
+                        interner,
+                        vec![DomainGoal::Compatible(()), DomainGoal::DownstreamType(ty)],
+                    ),
                     self.shifted_in(interner),
                 )
                 .intern(interner)
@@ -1397,7 +1485,7 @@ impl<I: Interner> Goal<I> {
         .intern(interner)
     }
 
-    pub fn implied_by(self, interner: &I, predicates: Vec<ProgramClause<I>>) -> Goal<I> {
+    pub fn implied_by(self, interner: &I, predicates: ProgramClauses<I>) -> Goal<I> {
         GoalData::Implies(predicates, self).intern(interner)
     }
 
@@ -1445,7 +1533,7 @@ pub enum GoalData<I: Interner> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Goal<I>>),
-    Implies(Vec<ProgramClause<I>>, Goal<I>),
+    Implies(ProgramClauses<I>, Goal<I>),
     All(Goals<I>),
     Not(Goal<I>),
 

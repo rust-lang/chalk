@@ -81,7 +81,7 @@ impl<I: Interner> context::Context for SlgContext<I> {
     type BindersGoal = Binders<Goal<I>>;
     type Parameter = Parameter<I>;
     type ProgramClause = ProgramClause<I>;
-    type ProgramClauses = Vec<ProgramClause<I>>;
+    type ProgramClauses = ProgramClauses<I>;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<I>>;
     type CanonicalAnswerSubst = Canonical<AnswerSubst<I>>;
     type GoalInEnvironment = InEnvironment<Goal<I>>;
@@ -136,11 +136,6 @@ impl<I: Interner> context::Context for SlgContext<I> {
 
     fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<I>>) -> &Goal<I> {
         &goal.goal
-    }
-
-    // Used by: simplify
-    fn add_clauses(env: &Environment<I>, clauses: Vec<ProgramClause<I>>) -> Environment<I> {
-        Environment::add_clauses(env, clauses)
     }
 
     // Used by: logic
@@ -216,12 +211,18 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         clauses.extend(
             environment
                 .clauses
-                .iter()
+                .iter(interner)
                 .filter(|&env_clause| env_clause.could_match(interner, goal))
                 .cloned(),
         );
 
         Ok(clauses)
+    }
+
+    // Used by: simplify
+    fn add_clauses(&self, env: &Environment<I>, clauses: ProgramClauses<I>) -> Environment<I> {
+        let interner = self.interner();
+        env.add_clauses(interner, clauses.iter(interner).cloned())
     }
 
     fn instantiate_ucanonical_goal(

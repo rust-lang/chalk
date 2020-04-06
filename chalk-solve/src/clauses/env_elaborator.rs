@@ -4,6 +4,7 @@ use crate::clauses::match_type_name;
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
+use crate::ProgramClauseData;
 use crate::RustIrDatabase;
 use crate::Ty;
 use crate::TyData;
@@ -19,7 +20,7 @@ use rustc_hash::FxHashSet;
 /// the rule `FromEnv(T: Copy) :- FromEnv(T: Clone)
 pub(super) fn elaborate_env_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
-    in_clauses: &Vec<ProgramClause<I>>,
+    in_clauses: &[ProgramClause<I>],
     out: &mut FxHashSet<ProgramClause<I>>,
 ) {
     let mut this_round = vec![];
@@ -105,9 +106,10 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
 
     fn visit_program_clause(&mut self, clause: &ProgramClause<I>) {
         debug!("visit_program_clause(clause={:?})", clause);
-        match clause {
-            ProgramClause::Implies(clause) => self.visit_domain_goal(&clause.consequence),
-            ProgramClause::ForAll(clause) => self.visit_domain_goal(&clause.value.consequence),
+        let interner = self.db.interner();
+        match clause.data(interner) {
+            ProgramClauseData::Implies(clause) => self.visit_domain_goal(&clause.consequence),
+            ProgramClauseData::ForAll(clause) => self.visit_domain_goal(&clause.value.consequence),
         }
     }
 }

@@ -1198,7 +1198,7 @@ impl LowerClause for Clause {
             .into_iter()
             .map(
                 |implication: chalk_ir::Binders<chalk_ir::ProgramClauseImplication<ChalkIr>>| {
-                    chalk_ir::ProgramClause::ForAll(implication)
+                    chalk_ir::ProgramClauseData::ForAll(implication).intern(interner)
                 },
             )
             .collect();
@@ -1303,11 +1303,12 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
                 // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
-                let where_clauses: LowerResult<Vec<_>> = hyp
+                let where_clauses = hyp
                     .into_iter()
                     .flat_map(|h| h.lower_clause(env).apply_result())
-                    .map(|result| result.map(|h| h.into_from_env_clause(interner)))
-                    .collect();
+                    .map(|result| result.map(|h| h.into_from_env_clause(interner)));
+                let where_clauses =
+                    chalk_ir::ProgramClauses::from_fallible(interner, where_clauses);
                 Ok(chalk_ir::GoalData::Implies(where_clauses?, g.lower(env)?).intern(interner))
             }
             Goal::And(g1, g2s) => {

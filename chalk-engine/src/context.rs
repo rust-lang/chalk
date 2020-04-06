@@ -154,9 +154,6 @@ pub trait Context: Clone + Debug {
 
     fn goal_from_goal_in_environment(goal: &Self::GoalInEnvironment) -> &Self::Goal;
 
-    // Used by: simplify
-    fn add_clauses(env: &Self::Environment, clauses: Self::ProgramClauses) -> Self::Environment;
-
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<Self>) -> usize;
@@ -179,6 +176,9 @@ pub trait ContextOps<C: Context>: Sized + Clone + Debug + AggregateOps<C> {
         goal: &C::DomainGoal,
         infer: &mut C::InferenceTable,
     ) -> Result<Vec<C::ProgramClause>, Floundered>;
+
+    // Used by: simplify
+    fn add_clauses(&self, env: &C::Environment, clauses: C::ProgramClauses) -> C::Environment;
 
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".

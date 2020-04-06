@@ -65,7 +65,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
     fn into_peeled_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
         let peeled_goal = {
-            let mut env_goal = InEnvironment::new(&Environment::new(), self);
+            let mut env_goal = InEnvironment::new(&Environment::new(interner), self);
             loop {
                 let InEnvironment { environment, goal } = env_goal;
                 match goal.data(interner) {
@@ -80,7 +80,8 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
                     }
 
                     GoalData::Implies(wc, subgoal) => {
-                        let new_environment = environment.add_clauses(wc.iter().cloned());
+                        let new_environment =
+                            environment.add_clauses(interner, wc.iter(interner).cloned());
                         env_goal = InEnvironment::new(&new_environment, Goal::clone(subgoal));
                     }
 
@@ -103,7 +104,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
     /// Will panic if this goal does in fact contain free variables.
     fn into_closed_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
-        let env_goal = InEnvironment::new(&Environment::new(), self);
+        let env_goal = InEnvironment::new(&Environment::new(interner), self);
         let canonical_goal = infer.canonicalize(interner, &env_goal).quantified;
         infer.u_canonicalize(interner, &canonical_goal).quantified
     }

@@ -44,18 +44,23 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
+        let interner = self.db.interner();
         let clause = ProgramClauseImplication {
-            consequence: consequence.cast(self.db.interner()),
-            conditions: Goals::from(self.db.interner(), conditions),
+            consequence: consequence.cast(interner),
+            conditions: Goals::from(interner, conditions),
         };
 
         if self.binders.len() == 0 {
-            self.clauses.push(ProgramClause::Implies(clause));
+            self.clauses
+                .push(ProgramClauseData::Implies(clause).intern(interner));
         } else {
-            self.clauses.push(ProgramClause::ForAll(Binders {
-                binders: self.binders.clone(),
-                value: clause,
-            }));
+            self.clauses.push(
+                ProgramClauseData::ForAll(Binders {
+                    binders: self.binders.clone(),
+                    value: clause,
+                })
+                .intern(interner),
+            );
         }
 
         debug!("pushed clause {:?}", self.clauses.last());

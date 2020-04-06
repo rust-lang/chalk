@@ -62,14 +62,22 @@ where
     }
 }
 
-impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClause<I> {
+impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClauseData<I> {
     fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
         match self {
-            ProgramClause::Implies(implication) => {
+            ProgramClauseData::Implies(implication) => {
                 implication.consequence.could_match(interner, other)
             }
 
-            ProgramClause::ForAll(clause) => clause.value.consequence.could_match(interner, other),
+            ProgramClauseData::ForAll(clause) => {
+                clause.value.consequence.could_match(interner, other)
+            }
         }
+    }
+}
+
+impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClause<I> {
+    fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
+        self.data(interner).could_match(interner, other)
     }
 }

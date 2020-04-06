@@ -58,6 +58,18 @@ impl<I: Interner> Debug for ProgramClauseImplication<I> {
     }
 }
 
+impl<I: Interner> Debug for ProgramClause<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_program_clause(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
+impl<I: Interner> Debug for ProgramClauses<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_program_clauses(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
 impl<I: Interner> Debug for ApplicationTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_application_ty(self, fmt).unwrap_or_else(|| write!(fmt, "ApplicationTy(?)"))
@@ -520,11 +532,11 @@ impl<T: Debug> Debug for Binders<T> {
     }
 }
 
-impl<I: Interner> Debug for ProgramClause<I> {
+impl<I: Interner> Debug for ProgramClauseData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
-            ProgramClause::ForAll(pc) => write!(fmt, "{:?}", pc),
+            ProgramClauseData::Implies(pc) => write!(fmt, "{:?}", pc),
+            ProgramClauseData::ForAll(pc) => write!(fmt, "{:?}", pc),
         }
     }
 }
