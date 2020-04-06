@@ -10,6 +10,8 @@ mod binder_impls;
 mod boring_impls;
 pub mod visitors;
 
+pub use visitors::VisitExt;
+
 pub trait VisitResult: Sized {
     fn new() -> Self;
 

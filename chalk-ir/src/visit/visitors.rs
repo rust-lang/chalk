@@ -1,8 +1,26 @@
-use crate::{BoundVar, DebruijnIndex, Interner, VisitResult, Visitor};
+use crate::{BoundVar, DebruijnIndex, Interner, Visit, VisitResult, Visitor};
+
+pub trait VisitExt<I: Interner>: Visit<I> {
+    fn has_free_vars(&self, interner: &I) -> bool {
+        self.visit_with(
+            &mut FindFreeVarsVisitor { interner },
+            DebruijnIndex::INNERMOST,
+        )
+        .to_bool()
+    }
+}
+
+impl<T, I: Interner> VisitExt<I> for T where T: Visit<I> {}
 
 #[derive(Clone, Copy, Debug)]
 pub struct FindAny {
     pub found: bool,
+}
+
+impl FindAny {
+    pub fn to_bool(&self) -> bool {
+        self.found
+    }
 }
 
 impl VisitResult for FindAny {
@@ -18,11 +36,11 @@ impl VisitResult for FindAny {
     }
 }
 
-pub struct FindBound<'i, I: Interner> {
+pub struct FindFreeVarsVisitor<'i, I: Interner> {
     pub interner: &'i I,
 }
 
-impl<'i, I: Interner> Visitor<'i, I> for FindBound<'i, I> {
+impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
     type Result = FindAny;
 
     fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
