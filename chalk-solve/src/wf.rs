@@ -232,7 +232,14 @@ where
 
     pub fn verify_trait_impl(&self, impl_id: ImplId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
+
         let impl_datum = self.db.impl_datum(impl_id);
+        let trait_id = impl_datum.trait_id();
+
+        // You can't manually implement Sized
+        if let Some(WellKnownTrait::SizedTrait) = self.db.trait_datum(trait_id).well_known {
+            return Err(WfError::IllFormedTraitImpl(trait_id));
+        }
 
         let impl_goal = Goal::all(
             interner,
@@ -258,8 +265,7 @@ where
         if is_legal {
             Ok(())
         } else {
-            let trait_ref = &impl_datum.binders.value.trait_ref;
-            Err(WfError::IllFormedTraitImpl(trait_ref.trait_id))
+            Err(WfError::IllFormedTraitImpl(trait_id))
         }
     }
 }

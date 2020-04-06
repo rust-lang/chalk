@@ -711,4 +711,17 @@ fn struct_sized_constraints() {
             }
         }
     }
+
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo {}
+
+            impl Sized for Foo {}
+        } error_msg {
+            "trait impl for `Sized` does not meet well-formedness requirements"
+        }
+    }
 }
