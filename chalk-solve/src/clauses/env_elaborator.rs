@@ -4,7 +4,6 @@ use crate::clauses::match_type_name;
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
-use crate::ProgramClauseData;
 use crate::RustIrDatabase;
 use crate::Ty;
 use crate::TyData;

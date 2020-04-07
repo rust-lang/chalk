@@ -6,8 +6,8 @@
 
 use crate::{
     AssocTypeId, DebruijnIndex, Goals, ImplId, Interner, Parameter, ParameterKind,
-    PlaceholderIndex, ProgramClause, QuantifierKind, StructId, Substitution, SuperVisit, TraitId,
-    UniverseIndex, Visit, VisitResult, Visitor,
+    PlaceholderIndex, ProgramClause, ProgramClauseData, ProgramClauses, QuantifierKind, StructId,
+    Substitution, SuperVisit, TraitId, UniverseIndex, Visit, VisitResult, Visitor,
 };
 use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 use std::{marker::PhantomData, sync::Arc};
@@ -47,6 +47,19 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &T {
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
+    fn visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        visit_iter(self.iter(), visitor, outer_binder)
+    }
+}
+
+impl<T: Visit<I>, I: Interner> Visit<I> for &[T] {
     fn visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
@@ -225,10 +238,27 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
     where
         I: 'i,
     {
-        match self {
-            ProgramClause::Implies(pci) => pci.visit_with(visitor, outer_binder),
-            ProgramClause::ForAll(pci) => pci.visit_with(visitor, outer_binder),
+        let interner = visitor.interner();
+
+        match self.data(interner) {
+            ProgramClauseData::Implies(pci) => pci.visit_with(visitor, outer_binder),
+            ProgramClauseData::ForAll(pci) => pci.visit_with(visitor, outer_binder),
         }
+    }
+}
+
+impl<I: Interner> Visit<I> for ProgramClauses<I> {
+    fn visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        let interner = visitor.interner();
+
+        visit_iter(self.iter(interner), visitor, outer_binder)
     }
 }
 
