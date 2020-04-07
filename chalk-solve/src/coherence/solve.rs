@@ -85,9 +85,12 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         let interner = self.db.interner();
 
+        let (lhs_binders, lhs_bound) = lhs.binders.as_ref().into();
+        let (rhs_binders, rhs_bound) = rhs.binders.as_ref().into();
+
         // Upshift the rhs variables in params to account for the joined binders
-        let lhs_params = params(interner, lhs).iter().cloned();
-        let rhs_params = params(interner, rhs)
+        let lhs_params = params(interner, lhs_bound).iter().cloned();
+        let rhs_params = params(interner, rhs_bound)
             .iter()
             .map(|param| param.shifted_in(interner));
 
@@ -98,10 +101,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .map(|(a, b)| GoalData::EqGoal(EqGoal { a, b }).intern(interner));
 
         // Upshift the rhs variables in where clauses
-        let lhs_where_clauses = lhs.binders.value.where_clauses.iter().cloned();
-        let rhs_where_clauses = rhs
-            .binders
-            .value
+        let lhs_where_clauses = lhs_bound.where_clauses.iter().cloned();
+        let rhs_where_clauses = rhs_bound
             .where_clauses
             .iter()
             .map(|wc| wc.shifted_in(interner));
@@ -114,16 +115,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         // Join all the goals we've created together with And, then quantify them
         // over the joined binders. This is our query.
         let goal = Box::new(Goal::all(interner, params_goals.chain(wc_goals)))
-            .quantify(
-                interner,
-                QuantifierKind::Exists,
-                lhs.binders.binders.clone(),
-            )
-            .quantify(
-                interner,
-                QuantifierKind::Exists,
-                rhs.binders.binders.clone(),
-            )
+            .quantify(interner, QuantifierKind::Exists, lhs_binders)
+            .quantify(interner, QuantifierKind::Exists, rhs_binders)
             .compatible(interner)
             .negate(interner);
 
@@ -268,11 +261,10 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     }
 }
 
-fn params<'a, I: Interner>(interner: &I, impl_datum: &'a ImplDatum<I>) -> &'a [Parameter<I>] {
-    impl_datum
-        .binders
-        .value
-        .trait_ref
-        .substitution
-        .parameters(interner)
+fn params<'a, I: Interner>(
+    interner: &I,
+    impl_datum_bound: &'a ImplDatumBound<I>,
+) -> &'a [Parameter<I>] {
+    // We can skip binders here because the caller is handling correct binders handling
+    impl_datum_bound.trait_ref.substitution.parameters(interner)
 }

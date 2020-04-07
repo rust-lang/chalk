@@ -25,7 +25,7 @@ pub fn add_sized_program_clauses<I: Interner>(
     let struct_datum = db.struct_datum(struct_id);
 
     // Structs with no fields are always Sized
-    if struct_datum.binders.map_ref(|b| b.fields.is_empty()).value {
+    if struct_datum.binders.skip_binders().fields.is_empty() {
         builder.push_fact(trait_ref.clone());
         return;
     }
