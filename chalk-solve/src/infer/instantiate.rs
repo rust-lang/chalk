@@ -123,7 +123,7 @@ where
     I: Interner,
 {
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
-    type Value = &'a Vec<Parameter<I>>;
+    type Value = &'a Substitution<I>;
 
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
         fn make_lifetime(_: usize) -> ParameterKind<()> {
@@ -131,7 +131,7 @@ where
         }
 
         let p: fn(usize) -> ParameterKind<()> = make_lifetime;
-        ((0..self.num_binders).map(p), &self.parameters)
+        ((0..self.num_binders).map(p), &self.substitution)
     }
 }
 

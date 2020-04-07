@@ -163,9 +163,9 @@ impl<I: Interner> Debug for Fn<I> {
         // FIXME -- we should introduce some names or something here
         let Fn {
             num_binders,
-            parameters,
+            substitution,
         } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, parameters)
+        write!(fmt, "for<{}> {:?}", num_binders, substitution)
     }
 }
 
