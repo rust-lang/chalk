@@ -10,7 +10,7 @@ use chalk_ir::{
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
-    TraitDatum,
+    TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -44,6 +44,9 @@ pub struct Program {
 
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
+
+    /// For each trait lang item
+    pub well_known_traits: BTreeMap<WellKnownTrait, TraitId<ChalkIr>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
@@ -316,6 +319,13 @@ impl RustIrDatabase<ChalkIr> for Program {
                     _ => false,
                 }
         })
+    }
+
+    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> TraitId<ChalkIr> {
+        *self
+            .well_known_traits
+            .get(&well_known_trait)
+            .unwrap_or_else(|| panic!("No lang item found for {:?}", well_known_trait))
     }
 
     fn interner(&self) -> &ChalkIr {

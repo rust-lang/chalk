@@ -196,6 +196,9 @@ where
         let wg_goal = gb.forall(&struct_data, (), |gb, _, (fields, where_clauses), ()| {
             let interner = gb.interner();
 
+            // struct is well-formed in terms of Sized
+            let sized_constraint_goal = compute_struct_sized_constraint(gb.db(), fields);
+
             // (FromEnv(T: Eq) => ...)
             gb.implies(
                 where_clauses
@@ -209,7 +212,13 @@ where
                     fields.fold(gb.interner(), &mut input_types);
                     // ...in a where clause.
                     where_clauses.fold(gb.interner(), &mut input_types);
-                    gb.all(input_types.into_iter().map(|ty| ty.well_formed()))
+
+                    gb.all(
+                        input_types
+                            .into_iter()
+                            .map(|ty| ty.well_formed().cast(interner))
+                            .chain(sized_constraint_goal.into_iter()),
+                    )
                 },
             )
         });
@@ -230,7 +239,14 @@ where
 
     pub fn verify_trait_impl(&self, impl_id: ImplId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
+
         let impl_datum = self.db.impl_datum(impl_id);
+        let trait_id = impl_datum.trait_id();
+
+        // You can't manually implement Sized
+        if let Some(WellKnownTrait::SizedTrait) = self.db.trait_datum(trait_id).well_known {
+            return Err(WfError::IllFormedTraitImpl(trait_id));
+        }
 
         let impl_goal = Goal::all(
             interner,
@@ -256,8 +272,7 @@ where
         if is_legal {
             Ok(())
         } else {
-            let trait_ref = &impl_datum.binders.value.trait_ref;
-            Err(WfError::IllFormedTraitImpl(trait_ref.trait_id))
+            Err(WfError::IllFormedTraitImpl(trait_id))
         }
     }
 }
@@ -468,5 +483,32 @@ fn compute_assoc_ty_goal<I: Interner>(
                 )
             })
         },
+    ))
+}
+
+/// Computes a goal to prove Sized constraints on a struct definition.
+/// Struct is considered well-formed (in terms of Sized) when it either
+/// has no fields or all of it's fields except the last are proven to be Sized.  
+fn compute_struct_sized_constraint<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    fields: &[Ty<I>],
+) -> Option<Goal<I>> {
+    if fields.len() <= 1 {
+        return None;
+    }
+
+    let interner = db.interner();
+
+    let sized_trait = db.well_known_trait_id(WellKnownTrait::SizedTrait);
+
+    Some(Goal::all(
+        interner,
+        fields[..fields.len() - 1].iter().map(|ty| {
+            TraitRef {
+                trait_id: sized_trait,
+                substitution: Substitution::from1(interner, ty.clone()),
+            }
+            .cast(interner)
+        }),
     ))
 }

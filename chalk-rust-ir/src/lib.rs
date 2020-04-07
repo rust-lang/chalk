@@ -15,9 +15,6 @@ use chalk_ir::{
 };
 use std::iter;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LangItem {}
-
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
@@ -78,7 +75,7 @@ impl<I: Interner> StructDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub struct StructDatumBound<I: Interner> {
     pub fields: Vec<Ty<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
@@ -134,7 +131,7 @@ pub struct TraitDatum<I: Interner> {
 
 /// A list of the traits that are "well known" to chalk, which means that
 /// the chalk-solve crate has special, hard-coded impls for them.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum WellKnownTrait {
     SizedTrait,
     CopyTrait,

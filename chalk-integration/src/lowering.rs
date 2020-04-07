@@ -249,6 +249,7 @@ impl LowerProgram for Program {
 
         let mut struct_data = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
+        let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
@@ -270,10 +271,13 @@ impl LowerProgram for Program {
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    trait_data.insert(
-                        trait_id,
-                        Arc::new(trait_defn.lower_trait(trait_id, &empty_env)?),
-                    );
+                    let trait_datum = trait_defn.lower_trait(trait_id, &empty_env)?;
+
+                    if let Some(well_known) = trait_datum.well_known {
+                        well_known_traits.insert(well_known, trait_id);
+                    }
+
+                    trait_data.insert(trait_id, Arc::new(trait_datum));
 
                     for assoc_ty_defn in &trait_defn.assoc_ty_defns {
                         let lookup = &associated_ty_lookups[&(trait_id, assoc_ty_defn.name.str)];
@@ -370,6 +374,7 @@ impl LowerProgram for Program {
             trait_kinds,
             struct_data,
             trait_data,
+            well_known_traits,
             impl_data,
             associated_ty_values,
             associated_ty_data,
