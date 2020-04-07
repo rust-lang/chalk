@@ -100,6 +100,8 @@ impl<I: Interner> Debug for TypeName<I> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::Scalar(scalar) => write!(fmt, "{:?}", scalar),
+            TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }

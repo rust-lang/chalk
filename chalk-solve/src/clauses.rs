@@ -381,6 +381,8 @@ fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeNa
             .db
             .associated_ty_data(type_id)
             .to_program_clauses(builder),
+        TypeName::Scalar(_) => todo!("Scalar match type name"),
+        TypeName::Tuple(_) => todo!("Tuple match type name"),
     }
 }
 
