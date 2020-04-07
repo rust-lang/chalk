@@ -1376,7 +1376,7 @@ impl<T> UCanonical<T> {
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 /// A list of goals.
 pub struct Goals<I: Interner> {
-    goals: I::InternedGoals,
+    interned: I::InternedGoals,
 }
 
 impl<I: Interner> Goals<I> {
@@ -1385,13 +1385,13 @@ impl<I: Interner> Goals<I> {
     }
 
     pub fn interned(&self) -> &I::InternedGoals {
-        &self.goals
+        &self.interned
     }
 
     pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
         use crate::cast::Caster;
         Goals {
-            goals: I::intern_goals(interner, goals.into_iter().casted(interner)),
+            interned: I::intern_goals(interner, goals.into_iter().casted(interner)),
         }
     }
 
@@ -1420,7 +1420,7 @@ impl<I: Interner> Goals<I> {
     }
 
     pub fn as_slice(&self, interner: &I) -> &[Goal<I>] {
-        interner.goals_data(&self.goals)
+        interner.goals_data(&self.interned)
     }
 }
 

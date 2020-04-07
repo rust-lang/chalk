@@ -47,7 +47,7 @@ impl<I: Interner> Debug for Goal<I> {
 
 impl<I: Interner> Debug for Goals<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.goals))
+        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
