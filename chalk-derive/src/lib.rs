@@ -494,11 +494,16 @@ fn derive_visit_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream 
         Data::Struct(s) => {
             let fields = s.fields.into_iter().map(|f| {
                 let name = f.ident.as_ref().expect("Unnamed field in a struct");
-                quote! { .and_then(|| self.#name.visit_with(visitor, outer_binder)) }
+                quote! {
+                   result = result.combine(self.#name.visit_with(visitor, outer_binder));
+                   if result.return_early() { return result; }
+                }
             });
             quote! {
-                R::new()
-                  #(#fields)*
+                let mut result = R::new();
+                #(#fields)*
+
+                result
             }
         }
         Data::Enum(e) => {
@@ -509,8 +514,12 @@ fn derive_visit_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream 
                         let fnames: &Vec<_> = &fields.named.iter().map(|f| &f.ident).collect();
                         quote! {
                             #type_name :: #variant { #(#fnames),* } => {
-                                R::new()
-                                    #(.and_then(|| #fnames.visit_with(visitor, outer_binder)))*
+                                let mut result = R::new();
+                                #(
+                                    result = result.combine(#fnames.visit_with(visitor, outer_binder));
+                                    if result.return_early() { return result; }
+                                )*
+                                result
                             }
                         }
                     }
@@ -521,8 +530,12 @@ fn derive_visit_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream 
                             .collect();
                         quote! {
                             #type_name::#variant( #(ref #names),* ) => {
-                                R::new()
-                                  #(.and_then(|| #names.visit_with(visitor, outer_binder)))*
+                                let mut result = R::new();
+                                #(
+                                    result = result.combine(#names.visit_with(visitor, outer_binder));
+                                    if result.return_early() { return result; }
+                                )*
+                                result
                             }
                         }
                     }

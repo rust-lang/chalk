@@ -54,6 +54,12 @@ impl<'i, I: Interner> InputTypeCollector<'i, I> {
             interner,
         }
     }
+
+    fn types_in(interner: &'i I, value: impl Visit<I>) -> Vec<Ty<I>> {
+        let mut collector = Self::new(interner);
+        value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+        collector.types
+    }
 }
 
 impl<'i, 't, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
@@ -168,13 +174,10 @@ where
                     .map(|wc| wc.into_from_env_goal(interner)),
                 |gb| {
                     // WellFormed(Vec<T>), for each field type `Vec<T>` or type that appears in the where clauses
-                    let mut type_collector = InputTypeCollector::new(gb.interner());
+                    let types =
+                        InputTypeCollector::types_in(gb.interner(), (&fields, &where_clauses));
 
-                    // ...in a field type...
-                    fields.visit_with(&mut type_collector, DebruijnIndex::INNERMOST);
-                    // ...in a where clause.
-                    where_clauses.visit_with(&mut type_collector, DebruijnIndex::INNERMOST);
-                    gb.all(type_collector.types.into_iter().map(|ty| ty.well_formed()).chain(sized_constraint_goal.into_iter()))
+                    gb.all(types.into_iter().map(|ty| ty.well_formed()).chain(sized_constraint_goal.into_iter()))
                 },
             )
         });
@@ -264,14 +267,12 @@ fn impl_header_wf_goal<I: Interner>(
                 // we would retrieve `HashSet<K>`, `Box<T>`, `Vec<Box<T>>`, `(HashSet<K>, Vec<Box<T>>)`.
                 // We will have to prove that these types are well-formed (e.g. an additional `K: Hash`
                 // bound would be needed here).
-                let mut type_collector = InputTypeCollector::new(interner);
-                where_clauses.visit_with(&mut type_collector, DebruijnIndex::INNERMOST);
+                let types = InputTypeCollector::types_in(gb.interner(), &where_clauses);
 
                 // Things to prove well-formed: input types of the where-clauses, projection types
                 // appearing in the header, associated type values, and of course the trait ref.
-                debug!("verify_trait_impl: input_types={:?}", type_collector.types);
-                let goals = type_collector
-                    .types
+                debug!("verify_trait_impl: input_types={:?}", types);
+                let goals = types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))
                     .chain(Some((*trait_ref).clone().well_formed().cast(interner)));
@@ -307,11 +308,9 @@ fn impl_wf_environment<'i, I: Interner>(
     //     // Inside here, we can rely on the fact that `K: Hash` holds
     // }
     // ```
-    let mut type_collector = InputTypeCollector::new(interner);
-    trait_ref.visit_with(&mut type_collector, DebruijnIndex::INNERMOST);
+    let types = InputTypeCollector::types_in(interner, trait_ref);
 
-    let types_wf = type_collector
-        .types
+    let types_wf = types
         .into_iter()
         .map(move |ty| ty.into_from_env_goal(interner).cast(interner));
 
@@ -412,12 +411,10 @@ fn compute_assoc_ty_goal<I: Interner>(
                         .cloned()
                         .map(|qwc| qwc.into_from_env_goal(interner)),
                     |gb| {
-                        let mut type_collector = InputTypeCollector::new(interner);
-                        value_ty.visit_with(&mut type_collector, DebruijnIndex::INNERMOST);
+                        let types = InputTypeCollector::types_in(gb.interner(), value_ty);
 
                         // We require that `WellFormed(T)` for each type that appears in the value
-                        let wf_goals = type_collector
-                            .types
+                        let wf_goals = types
                             .into_iter()
                             .map(|ty| ty.well_formed())
                             .casted(interner);

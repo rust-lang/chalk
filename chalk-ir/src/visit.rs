@@ -15,14 +15,25 @@ pub use visitors::VisitExt;
 pub trait VisitResult: Sized {
     fn new() -> Self;
 
-    fn and_then(self, op: impl FnOnce() -> Self) -> Self;
+    fn return_early(&self) -> bool;
+    fn combine(self, other: Self) -> Self;
+
+    fn and_then(self, op: impl FnOnce() -> Self) -> Self {
+        if self.return_early() {
+            self
+        } else {
+            self.combine(op())
+        }
+    }
 }
 
 impl VisitResult for () {
     fn new() -> () {}
-    fn and_then(self, op: impl FnOnce() -> ()) -> () {
-        op()
+
+    fn return_early(&self) -> bool {
+        false
     }
+    fn combine(self, _other: Self) {}
 }
 
 /// A "visitor" recursively folds some term -- that is, some bit of IR,

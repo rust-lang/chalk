@@ -12,6 +12,27 @@ use crate::{
 use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 use std::{marker::PhantomData, sync::Arc};
 
+pub fn visit_iter<'i, T, I, IT, R>(
+    it: IT,
+    visitor: &mut dyn Visitor<'i, I, Result = R>,
+    outer_binder: DebruijnIndex,
+) -> R
+where
+    T: Visit<I>,
+    I: 'i + Interner,
+    IT: Iterator<Item = T>,
+    R: VisitResult,
+{
+    let mut result = R::new();
+    for e in it {
+        result = result.combine(e.visit_with(visitor, outer_binder));
+        if result.return_early() {
+            return result;
+        }
+    }
+    result
+}
+
 impl<T: Visit<I>, I: Interner> Visit<I> for &T {
     fn visit_with<'i, R: VisitResult>(
         &self,
@@ -34,11 +55,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
     where
         I: 'i,
     {
-        let mut result = R::new();
-        for e in self {
-            result = result.and_then(|| e.visit_with(visitor, outer_binder))
-        }
-        result
+        visit_iter(self.iter(), visitor, outer_binder)
     }
 }
 
@@ -75,8 +92,12 @@ macro_rules! tuple_visit {
             {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
-                R::new()
-                  $(.and_then(|| $n.visit_with(visitor, outer_binder)))*
+                let mut result = R::new();
+                $(
+                    result = result.combine($n.visit_with(visitor, outer_binder));
+                    if result.return_early() { return result; }
+                )*
+                result
             }
         }
     }
@@ -127,13 +148,7 @@ impl<I: Interner> Visit<I> for Substitution<I> {
         I: 'i,
     {
         let interner = visitor.interner();
-        let mut result = R::new();
-
-        for p in self.iter(interner) {
-            result = result.and_then(|| p.visit_with(visitor, outer_binder));
-        }
-
-        result
+        visit_iter(self.iter(interner), visitor, outer_binder)
     }
 }
 
@@ -147,13 +162,7 @@ impl<I: Interner> Visit<I> for Goals<I> {
         I: 'i,
     {
         let interner = visitor.interner();
-        let mut result = R::new();
-
-        for p in self.iter(interner) {
-            result = result.and_then(|| p.visit_with(visitor, outer_binder));
-        }
-
-        result
+        visit_iter(self.iter(interner), visitor, outer_binder)
     }
 }
 

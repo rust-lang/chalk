@@ -27,11 +27,13 @@ impl VisitResult for FindAny {
     fn new() -> Self {
         FindAny { found: false }
     }
-    fn and_then(self, op: impl FnOnce() -> Self) -> Self {
-        if self.found {
-            self
-        } else {
-            op()
+
+    fn return_early(&self) -> bool {
+        self.found
+    }
+    fn combine(self, other: Self) -> Self {
+        FindAny {
+            found: self.found || other.found,
         }
     }
 }
