@@ -21,7 +21,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &T {
     where
         I: 'i,
     {
-        (**self).visit_with(visitor, outer_binder)
+        T::visit_with(self, visitor, outer_binder)
     }
 }
 
@@ -51,7 +51,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Box<T> {
     where
         I: 'i,
     {
-        (**self).visit_with(visitor, outer_binder)
+        T::visit_with(self, visitor, outer_binder)
     }
 }
 
@@ -64,7 +64,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Arc<T> {
     where
         I: 'i,
     {
-        (**self).visit_with(visitor, outer_binder)
+        T::visit_with(self, visitor, outer_binder)
     }
 }
 
