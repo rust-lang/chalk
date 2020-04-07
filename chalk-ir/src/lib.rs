@@ -4,7 +4,7 @@ use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
-use chalk_derive::{Fold, HasInterner, Visit};
+use chalk_derive::{Fold, HasInterner, SuperVisit, Visit};
 use chalk_engine::fallible::*;
 use std::iter;
 use std::marker::PhantomData;
@@ -864,7 +864,7 @@ impl<I: Interner> TraitRef<I> {
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner)]
 pub enum WhereClause<I: Interner> {
     Implemented(TraitRef<I>),
     AliasEq(AliasEq<I>),
@@ -932,7 +932,7 @@ pub enum FromEnv<I: Interner> {
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner)]
 pub enum DomainGoal<I: Interner> {
     Holds(WhereClause<I>),
 
@@ -1122,7 +1122,7 @@ pub struct Normalize<I: Interner> {
 /// Proves **equality** between a projection `T::Foo` and a type
 /// `U`. Equality can be proven via normalization, but we can also
 /// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
-#[derive(Clone, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,

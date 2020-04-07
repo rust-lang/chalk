@@ -2,8 +2,8 @@
 use std::fmt::Debug;
 
 use crate::{
-    AliasEq, BoundVar, DebruijnIndex, Goal, InferenceVar, Interner, Lifetime, LifetimeData,
-    PlaceholderIndex, ProgramClause, Ty, TyData,
+    BoundVar, DebruijnIndex, DomainGoal, Goal, InferenceVar, Interner, Lifetime, LifetimeData,
+    PlaceholderIndex, ProgramClause, Ty, TyData, WhereClause,
 };
 
 mod binder_impls;
@@ -83,6 +83,14 @@ where
         goal.super_visit_with(self.as_dyn(), outer_binder)
     }
 
+    fn visit_domain_goal(
+        &mut self,
+        domain_goal: &DomainGoal<I>,
+        outer_binder: DebruijnIndex,
+    ) -> Self::Result {
+        domain_goal.super_visit_with(self.as_dyn(), outer_binder)
+    }
+
     /// If overridden to return true, then visiting will panic if a
     /// free variable is encountered. This should be done if free
     /// type/lifetime variables are not expected.
@@ -159,12 +167,12 @@ where
         }
     }
 
-    fn visit_alias_eq(
+    fn visit_where_clause(
         &mut self,
-        alias_eq: &AliasEq<I>,
+        where_clause: &WhereClause<I>,
         outer_binder: DebruijnIndex,
     ) -> Self::Result {
-        alias_eq.super_visit_with(self.as_dyn(), outer_binder)
+        where_clause.super_visit_with(self.as_dyn(), outer_binder)
     }
 
     /// As with `visit_free_placeholder_ty`, but for lifetimes.
@@ -375,7 +383,7 @@ impl<I: Interner> Visit<I> for ProgramClause<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for AliasEq<I> {
+impl<I: Interner> Visit<I> for WhereClause<I> {
     fn visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
@@ -384,12 +392,12 @@ impl<I: Interner> Visit<I> for AliasEq<I> {
     where
         I: 'i,
     {
-        visitor.visit_alias_eq(self, outer_binder)
+        visitor.visit_where_clause(self, outer_binder)
     }
 }
 
-impl<I: Interner> SuperVisit<I> for AliasEq<I> {
-    fn super_visit_with<'i, R: VisitResult>(
+impl<I: Interner> Visit<I> for DomainGoal<I> {
+    fn visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
         outer_binder: DebruijnIndex,
@@ -397,8 +405,6 @@ impl<I: Interner> SuperVisit<I> for AliasEq<I> {
     where
         I: 'i,
     {
-        R::new()
-            .and_then(|| self.alias.visit_with(visitor, outer_binder))
-            .and_then(|| self.ty.visit_with(visitor, outer_binder))
+        visitor.visit_domain_goal(self, outer_binder)
     }
 }

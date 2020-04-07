@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DeriveInput, GenericParam, Ident, TypeParamBound};
 
@@ -346,6 +347,20 @@ fn bounded_by_trait<'p>(param: &'p GenericParam, name: &str) -> Option<&'p Ident
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
 #[proc_macro_derive(Visit, attributes(has_interner))]
 pub fn derive_visit(item: TokenStream) -> TokenStream {
+    let trait_name = Ident::new("Visit", Span::call_site());
+    let method_name = Ident::new("visit_with", Span::call_site());
+    derive_any_visit(item, trait_name, method_name)
+}
+
+/// Same as Visit, but derives SuperVisit instead
+#[proc_macro_derive(SuperVisit, attributes(has_interner))]
+pub fn derive_super_visit(item: TokenStream) -> TokenStream {
+    let trait_name = Ident::new("SuperVisit", Span::call_site());
+    let method_name = Ident::new("super_visit_with", Span::call_site());
+    derive_any_visit(item, trait_name, method_name)
+}
+
+fn derive_any_visit(item: TokenStream, trait_name: Ident, method_name: Ident) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
 
@@ -363,8 +378,8 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
             .expect("Expected has_interner argument");
 
         return TokenStream::from(quote! {
-            impl #impl_generics Visit < #arg > for #type_name #ty_generics #where_clause_ref {
-                fn visit_with<'i, R: VisitResult>(
+            impl #impl_generics #trait_name < #arg > for #type_name #ty_generics #where_clause_ref {
+                fn #method_name <'i, R: VisitResult>(
                     &self,
                     visitor: &mut dyn Visitor < 'i, #arg, Result = R >,
                     outer_binder: DebruijnIndex,
@@ -419,10 +434,10 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
             .push(syn::parse2(quote! { #param: Visit<_I> }).unwrap());
 
         return TokenStream::from(quote! {
-            impl #impl_generics Visit < _I > for #type_name < #param >
+            impl #impl_generics #trait_name < _I > for #type_name < #param >
                 #where_clause
             {
-                fn visit_with<'i, R: VisitResult>(
+                fn #method_name <'i, R: VisitResult>(
                     &self,
                     visitor: &mut dyn Visitor < 'i, _I, Result = R >,
                     outer_binder: DebruijnIndex,
@@ -450,10 +465,10 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
         let impl_generics = &input.generics;
 
         return TokenStream::from(quote! {
-            impl #impl_generics Visit < #i > for #type_name < #i >
+            impl #impl_generics #trait_name < #i > for #type_name < #i >
                 #where_clause_ref
             {
-                fn visit_with<'i, R: VisitResult>(
+                fn #method_name <'i, R: VisitResult>(
                     &self,
                     visitor: &mut dyn Visitor < 'i, #i, Result = R >,
                     outer_binder: DebruijnIndex,
@@ -467,7 +482,10 @@ pub fn derive_visit(item: TokenStream) -> TokenStream {
         });
     }
 
-    panic!("derive(Visit) requires a parameter that implements HasInterner or Interner");
+    panic!(
+        "derive({}) requires a parameter that implements HasInterner or Interner",
+        trait_name
+    );
 }
 
 /// Generates the body of the Visit impl

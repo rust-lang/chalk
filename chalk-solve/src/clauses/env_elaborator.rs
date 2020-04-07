@@ -9,7 +9,8 @@ use crate::RustIrDatabase;
 use crate::Ty;
 use crate::TyData;
 use chalk_ir::interner::Interner;
-use chalk_ir::AliasTy;
+use chalk_ir::visit::{Visit, Visitor};
+use chalk_ir::DebruijnIndex;
 use rustc_hash::FxHashSet;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
@@ -24,10 +25,10 @@ pub(super) fn elaborate_env_clauses<I: Interner>(
     out: &mut FxHashSet<ProgramClause<I>>,
 ) {
     let mut this_round = vec![];
-    let mut visitor = EnvElaborator::new(db, &mut this_round);
-    for clause in in_clauses {
-        visitor.visit_program_clause(&clause);
-    }
+    in_clauses.visit_with(
+        &mut EnvElaborator::new(db, &mut this_round),
+        DebruijnIndex::INNERMOST,
+    );
     out.extend(this_round);
 }
 
@@ -43,15 +44,20 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
             builder: ClauseBuilder::new(db, out),
         }
     }
+}
 
-    fn visit_alias_ty(&mut self, alias_ty: &AliasTy<I>) {
-        debug!("EnvElaborator::visit_alias_ty(alias_ty={:?})", alias_ty);
-        self.db
-            .associated_ty_data(alias_ty.associated_ty_id)
-            .to_program_clauses(&mut self.builder);
+impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
+    type Result = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I, Result = Self::Result> {
+        self
     }
 
-    fn visit_ty(&mut self, ty: &Ty<I>) {
+    fn interner(&self) -> &'me I {
+        self.db.interner()
+    }
+
+    fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
         debug!("EnvElaborator::visit_ty(ty={:?})", ty);
         let interner = self.db.interner();
         match ty.data(interner) {
@@ -61,7 +67,9 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
             TyData::Placeholder(_) => {}
 
             TyData::Alias(alias_ty) => {
-                self.visit_alias_ty(alias_ty);
+                self.db
+                    .associated_ty_data(alias_ty.associated_ty_id)
+                    .to_program_clauses(&mut self.builder);
             }
 
             // FIXME(#203) -- We haven't fully figured out the implied
@@ -72,44 +80,26 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
         }
     }
 
-    fn visit_from_env(&mut self, from_env: &FromEnv<I>) {
-        debug!("EnvElaborator::visit_from_env(from_env={:?})", from_env);
-        match from_env {
-            FromEnv::Trait(trait_ref) => {
-                let trait_datum = self.db.trait_datum(trait_ref.trait_id);
+    fn visit_domain_goal(&mut self, domain_goal: &DomainGoal<I>, outer_binder: DebruijnIndex) {
+        if let DomainGoal::FromEnv(from_env) = domain_goal {
+            debug!("EnvElaborator::visit_domain_goal(from_env={:?})", from_env);
+            match from_env {
+                FromEnv::Trait(trait_ref) => {
+                    let trait_datum = self.db.trait_datum(trait_ref.trait_id);
 
-                trait_datum.to_program_clauses(&mut self.builder);
+                    trait_datum.to_program_clauses(&mut self.builder);
 
-                // If we know that `T: Iterator`, then we also know
-                // things about `<T as Iterator>::Item`, so push those
-                // implied bounds too:
-                for &associated_ty_id in &trait_datum.associated_ty_ids {
-                    self.db
-                        .associated_ty_data(associated_ty_id)
-                        .to_program_clauses(&mut self.builder);
+                    // If we know that `T: Iterator`, then we also know
+                    // things about `<T as Iterator>::Item`, so push those
+                    // implied bounds too:
+                    for &associated_ty_id in &trait_datum.associated_ty_ids {
+                        self.db
+                            .associated_ty_data(associated_ty_id)
+                            .to_program_clauses(&mut self.builder);
+                    }
                 }
+                FromEnv::Ty(ty) => ty.visit_with(self, outer_binder),
             }
-            FromEnv::Ty(ty) => self.visit_ty(ty),
-        }
-    }
-
-    fn visit_domain_goal(&mut self, domain_goal: &DomainGoal<I>) {
-        debug!(
-            "EnvElaborator::visit_domain_goal(domain_goal={:?})",
-            domain_goal
-        );
-        match domain_goal {
-            DomainGoal::FromEnv(from_env) => self.visit_from_env(from_env),
-            _ => {}
-        }
-    }
-
-    fn visit_program_clause(&mut self, clause: &ProgramClause<I>) {
-        debug!("visit_program_clause(clause={:?})", clause);
-        let interner = self.db.interner();
-        match clause.data(interner) {
-            ProgramClauseData::Implies(clause) => self.visit_domain_goal(&clause.consequence),
-            ProgramClauseData::ForAll(clause) => self.visit_domain_goal(&clause.value.consequence),
         }
     }
 }
