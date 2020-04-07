@@ -190,6 +190,7 @@ where
         let wg_goal = gb.forall(&struct_data, (), |gb, _, (fields, where_clauses), ()| {
             let interner = gb.interner();
 
+            // struct is well-formed in terms of Sized
             let sized_constraint_goal = compute_struct_sized_constraint(gb.db(), fields);
 
             // (FromEnv(T: Eq) => ...)
@@ -479,6 +480,9 @@ fn compute_assoc_ty_goal<I: Interner>(
     ))
 }
 
+/// Computes a goal to prove Sized constraints on a struct definition.
+/// Struct is considered well-formed (in terms of Sized) when it either
+/// has no fields or all of it's fields except the last are proven to be Sized.  
 fn compute_struct_sized_constraint<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     fields: &[Ty<I>],
