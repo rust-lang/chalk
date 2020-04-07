@@ -12,12 +12,32 @@ pub mod visitors;
 
 pub use visitors::VisitExt;
 
+/// A "result type" that can be returned from a visitor. Visitors pick
+/// an appropriate result type depending on what sort of operation they
+/// are doing. A common choice is `FindAny`, which indicates that the visitor
+/// is searching for something and that the visitor should stop once it is found.
 pub trait VisitResult: Sized {
     fn new() -> Self;
 
+    /// Returns true if this result is "complete" and we can stop visiting any
+    /// further parts of the term. This is used by `FindAny`, for example, to
+    /// stop the search after a match has been found.
     fn return_early(&self) -> bool;
     fn combine(self, other: Self) -> Self;
 
+    /// Convenience helper for use in writing `Visitor` impls. Returns `self`
+    /// if `return_early()` is true, but otherwise combines `self` with the
+    /// result of invoking `op`.
+    ///
+    /// If you have a struct with two fields, `foo` and `bar`, you can
+    /// thus write code like
+    ///
+    /// ```rust,ignore
+    /// self.foo.visit_with(visitor, outer_binder)
+    ///     .and_then(|| self.bar.visit_with(visitor, outer_binder))
+    /// ```
+    ///
+    /// and `bar` will only be visited if necessary.
     fn and_then(self, op: impl FnOnce() -> Self) -> Self {
         if self.return_early() {
             self
@@ -27,6 +47,8 @@ pub trait VisitResult: Sized {
     }
 }
 
+/// Unit type for a visitor indicates a "side-effecting" visitor that
+/// should visit an entire term.
 impl VisitResult for () {
     fn new() -> () {}
 

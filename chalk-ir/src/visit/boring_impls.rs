@@ -6,21 +6,22 @@
 
 use crate::{
     AssocTypeId, DebruijnIndex, Goals, ImplId, Interner, Parameter, ParameterKind,
-    PlaceholderIndex, ProgramClause, ProgramClauseData, ProgramClauses, QuantifierKind, StructId,
-    Substitution, SuperVisit, TraitId, UniverseIndex, Visit, VisitResult, Visitor,
+    PlaceholderIndex, ProgramClause, ProgramClauseData, ProgramClauses, QuantifiedWhereClauses,
+    QuantifierKind, StructId, Substitution, SuperVisit, TraitId, UniverseIndex, Visit, VisitResult,
+    Visitor,
 };
 use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 use std::{marker::PhantomData, sync::Arc};
 
-pub fn visit_iter<'i, T, I, IT, R>(
-    it: IT,
+/// Convenience function to visit all the items in the iterator it.
+pub fn visit_iter<'i, T, I, R>(
+    it: impl Iterator<Item = T>,
     visitor: &mut dyn Visitor<'i, I, Result = R>,
     outer_binder: DebruijnIndex,
 ) -> R
 where
     T: Visit<I>,
     I: 'i + Interner,
-    IT: Iterator<Item = T>,
     R: VisitResult,
 {
     let mut result = R::new();
@@ -248,6 +249,21 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
 }
 
 impl<I: Interner> Visit<I> for ProgramClauses<I> {
+    fn visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        let interner = visitor.interner();
+
+        visit_iter(self.iter(interner), visitor, outer_binder)
+    }
+}
+
+impl<I: Interner> Visit<I> for QuantifiedWhereClauses<I> {
     fn visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,

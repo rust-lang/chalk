@@ -12,12 +12,14 @@ pub trait VisitExt<I: Interner>: Visit<I> {
 
 impl<T, I: Interner> VisitExt<I> for T where T: Visit<I> {}
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FindAny {
     pub found: bool,
 }
 
 impl FindAny {
+    pub const FOUND: FindAny = FindAny { found: true };
+
     pub fn to_bool(&self) -> bool {
         self.found
     }
@@ -38,8 +40,8 @@ impl VisitResult for FindAny {
     }
 }
 
-pub struct FindFreeVarsVisitor<'i, I: Interner> {
-    pub interner: &'i I,
+struct FindFreeVarsVisitor<'i, I: Interner> {
+    interner: &'i I,
 }
 
 impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
@@ -58,7 +60,7 @@ impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
         _bound_var: BoundVar,
         _outer_binder: DebruijnIndex,
     ) -> Self::Result {
-        FindAny { found: true }
+        FindAny::FOUND
     }
 
     fn visit_free_var_lifetime(
@@ -66,6 +68,6 @@ impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
         _bound_var: BoundVar,
         _outer_binder: DebruijnIndex,
     ) -> Self::Result {
-        FindAny { found: true }
+        FindAny::FOUND
     }
 }

@@ -177,7 +177,12 @@ where
                     let types =
                         InputTypeCollector::types_in(gb.interner(), (&fields, &where_clauses));
 
-                    gb.all(types.into_iter().map(|ty| ty.well_formed()).chain(sized_constraint_goal.into_iter()))
+                    gb.all(
+                        types
+                            .into_iter()
+                            .map(|ty| ty.well_formed().cast(interner))
+                            .chain(sized_constraint_goal.into_iter()),
+                    )
                 },
             )
         });
