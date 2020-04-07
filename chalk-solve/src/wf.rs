@@ -78,6 +78,12 @@ impl<I: Interner> FoldInputTypes for Substitution<I> {
     }
 }
 
+impl<I: Interner> FoldInputTypes for QuantifiedWhereClauses<I> {
+    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
+        self.as_slice(interner).fold(interner, accumulator)
+    }
+}
+
 impl<I: Interner> FoldInputTypes for Ty<I> {
     fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
         match self.data(interner) {

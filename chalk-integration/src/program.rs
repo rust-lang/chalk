@@ -217,6 +217,15 @@ impl tls::DebugContext for Program {
         let interner = self.interner();
         write!(fmt, "{:?}", separator_trait_ref.debug(interner))
     }
+
+    fn debug_quantified_where_clauses(
+        &self,
+        clauses: &chalk_ir::QuantifiedWhereClauses<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", clauses.as_slice(interner))
+    }
 }
 
 impl RustIrDatabase<ChalkIr> for Program {

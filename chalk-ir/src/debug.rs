@@ -89,6 +89,13 @@ impl<I: Interner> Debug for AliasTy<I> {
     }
 }
 
+impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_quantified_where_clauses(self, fmt)
+            .unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.parameters))

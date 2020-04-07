@@ -222,7 +222,7 @@ fn program_clauses_that_could_match<I: Interner>(
                 // and `bounded_ty` is the `exists<T> { .. }`
                 // clauses shown above.
 
-                for exists_qwc in &dyn_ty.bounds {
+                for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
                     // Replace the `T` from `exists<T> { .. }` with `self_ty`,
                     // yielding clases like
                     //

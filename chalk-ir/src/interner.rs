@@ -12,6 +12,8 @@ use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
 use crate::ProgramClauses;
+use crate::QuantifiedWhereClause;
+use crate::QuantifiedWhereClauses;
 use crate::SeparatorTraitRef;
 use crate::StructId;
 use crate::Substitution;
@@ -112,6 +114,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedProgramClause` is created by `intern_program_clause` and can be
     /// converted back to its underlying data via `program_clause_data`.
     type InternedProgramClause: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of a list of quantified where clauses.  
+    /// In normal user code, `Self::InternedQuantifiedWhereClauses` is not referenced.
+    /// Instead, we refer to `QuantifiedWhereClauses<Self>`, which wraps this type.
+    ///
+    /// An `InternedQuantifiedWhereClauses` is created by `intern_quantified_where_clauses`
+    /// and can be converted back to its underlying data via `quantified_where_clauses_data`.
+    type InternedQuantifiedWhereClauses: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -328,6 +338,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a QuantifiedWhereClauses. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
+    fn debug_quantified_where_clauses(
+        clauses: &QuantifiedWhereClauses<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyData::intern` (which
     /// will ultimately call this method).
@@ -413,6 +438,22 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         &self,
         clauses: &'a Self::InternedProgramClauses,
     ) -> &'a [ProgramClause<Self>];
+
+    /// Create an "interned" quantified where clauses from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `QuantifiedWhereClauses::from` (which will ultimately call this
+    /// method).
+    fn intern_quantified_where_clauses(
+        &self,
+        data: impl IntoIterator<Item = QuantifiedWhereClause<Self>>,
+    ) -> Self::InternedQuantifiedWhereClauses;
+
+    /// Lookup the slice of `QuantifiedWhereClause` that was interned to
+    /// create a `QuantifiedWhereClauses`.
+    fn quantified_where_clauses_data<'a>(
+        &self,
+        clauses: &'a Self::InternedQuantifiedWhereClauses,
+    ) -> &'a [QuantifiedWhereClause<Self>];
 }
 
 pub trait TargetInterner<I: Interner>: Interner {
@@ -469,6 +510,7 @@ mod default {
         type InternedSubstitution = Vec<Parameter<ChalkIr>>;
         type InternedProgramClause = ProgramClauseData<ChalkIr>;
         type InternedProgramClauses = Vec<ProgramClause<ChalkIr>>;
+        type InternedQuantifiedWhereClauses = Vec<QuantifiedWhereClause<ChalkIr>>;
         type DefId = RawId;
         type Identifier = Identifier;
 
@@ -574,6 +616,15 @@ mod default {
             })
         }
 
+        fn debug_quantified_where_clauses(
+            clauses: &QuantifiedWhereClauses<Self>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| {
+                Some(prog?.debug_quantified_where_clauses(clauses, fmt))
+            })
+        }
+
         fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
             Arc::new(ty)
         }
@@ -659,6 +710,20 @@ mod default {
             &self,
             clauses: &'a Vec<ProgramClause<Self>>,
         ) -> &'a [ProgramClause<Self>] {
+            clauses
+        }
+
+        fn intern_quantified_where_clauses(
+            &self,
+            data: impl IntoIterator<Item = QuantifiedWhereClause<Self>>,
+        ) -> Self::InternedQuantifiedWhereClauses {
+            data.into_iter().collect()
+        }
+
+        fn quantified_where_clauses_data<'a>(
+            &self,
+            clauses: &'a Self::InternedQuantifiedWhereClauses,
+        ) -> &'a [QuantifiedWhereClause<Self>] {
             clauses
         }
     }

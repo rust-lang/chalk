@@ -1,8 +1,8 @@
 use crate::interner::ChalkIr;
 use crate::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, Lifetime,
-    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, StructId, Substitution,
-    TraitId, Ty,
+    Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, QuantifiedWhereClauses,
+    StructId, Substitution, TraitId, Ty,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -96,6 +96,12 @@ pub trait DebugContext {
     fn debug_separator_trait_ref(
         &self,
         separator_trait_ref: &SeparatorTraitRef<'_, ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_quantified_where_clauses(
+        &self,
+        clauses: &QuantifiedWhereClauses<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }
