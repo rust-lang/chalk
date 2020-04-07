@@ -1,7 +1,8 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
 use chalk_ir::{
-    self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, Substitution, TraitId,
+    self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, QuantifiedWhereClauses, StructId,
+    Substitution, TraitId,
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
@@ -1000,10 +1001,9 @@ impl LowerTy for Ty {
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
                     |env| {
-                        Ok(bounds
-                            .lower(env)?
-                            .iter()
-                            .flat_map(|qil| {
+                        Ok(QuantifiedWhereClauses::from(
+                            interner,
+                            bounds.lower(env)?.iter().flat_map(|qil| {
                                 qil.into_where_clauses(
                                     interner,
                                     chalk_ir::TyData::BoundVar(BoundVar::new(
@@ -1012,8 +1012,8 @@ impl LowerTy for Ty {
                                     ))
                                     .intern(interner),
                                 )
-                            })
-                            .collect())
+                            }),
+                        ))
                     },
                 )?,
             })

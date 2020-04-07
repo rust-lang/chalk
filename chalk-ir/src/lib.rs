@@ -543,7 +543,7 @@ impl DebruijnIndex {
 /// level of binder).
 #[derive(Clone, PartialEq, Eq, Hash, Fold)]
 pub struct DynTy<I: Interner> {
-    pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
+    pub bounds: Binders<QuantifiedWhereClauses<I>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -1030,6 +1030,62 @@ impl<I: Interner> QuantifiedWhereClause<I> {
     /// FromEnv(T: Trait) }`.
     pub fn into_from_env_goal(self, interner: &I) -> Binders<DomainGoal<I>> {
         self.map(|wc| wc.into_from_env_goal(interner))
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct QuantifiedWhereClauses<I: Interner> {
+    interned: I::InternedQuantifiedWhereClauses,
+}
+
+impl<I: Interner> QuantifiedWhereClauses<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<QuantifiedWhereClause<I>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedQuantifiedWhereClauses {
+        &self.interned
+    }
+
+    pub fn from(
+        interner: &I,
+        clauses: impl IntoIterator<Item = impl CastTo<QuantifiedWhereClause<I>>>,
+    ) -> Self {
+        use crate::cast::Caster;
+        QuantifiedWhereClauses {
+            interned: I::intern_quantified_where_clauses(
+                interner,
+                clauses.into_iter().casted(interner),
+            ),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        clauses: impl IntoIterator<Item = Result<impl CastTo<QuantifiedWhereClause<I>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        let clauses = clauses
+            .into_iter()
+            .casted(interner)
+            .collect::<Result<Vec<QuantifiedWhereClause<I>>, _>>()?;
+        Ok(Self::from(interner, clauses))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, QuantifiedWhereClause<I>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[QuantifiedWhereClause<I>] {
+        interner.quantified_where_clauses_data(&self.interned)
     }
 }
 
