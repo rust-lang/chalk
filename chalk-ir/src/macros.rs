@@ -12,7 +12,7 @@ macro_rules! ty {
     (function $n:tt $($arg:tt)*) => {
         $crate::TyData::Function(Fn {
             num_binders: $n,
-            parameters: vec![$(arg!($arg)),*],
+            substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
         }).intern(&chalk_ir::interner::ChalkIr)
     };
 

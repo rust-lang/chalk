@@ -576,7 +576,7 @@ impl InferenceVar {
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub struct Fn<I: Interner> {
     pub num_binders: usize,
-    pub parameters: Vec<Parameter<I>>,
+    pub substitution: Substitution<I>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]

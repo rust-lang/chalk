@@ -362,8 +362,8 @@ fn match_ty<I: Interner>(
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
             quantified_ty
-                .parameters
-                .iter()
+                .substitution
+                .iter(interner)
                 .map(|p| p.assert_ty_ref(interner))
                 .for_each(|ty| match_ty(builder, environment, &ty))
         }

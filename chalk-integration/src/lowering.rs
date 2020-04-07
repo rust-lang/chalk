@@ -1,6 +1,8 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::ChalkIr;
-use chalk_ir::{self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, TraitId};
+use chalk_ir::{
+    self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, Substitution, TraitId,
+};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
@@ -1070,7 +1072,10 @@ impl LowerTy for Ty {
 
                 let function = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
-                    parameters: vec![ty.lower(&quantified_env)?.cast(interner)],
+                    substitution: Substitution::from(
+                        interner,
+                        Some(ty.lower(&quantified_env)?.cast(interner)),
+                    ),
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
