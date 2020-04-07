@@ -1,6 +1,5 @@
 use chalk_ir::interner::ChalkIr;
 use chalk_parse::ast::{Identifier, Kind};
-use chalk_rust_ir::LangItem;
 use chalk_solve::coherence::CoherenceError;
 use chalk_solve::wf::WfError;
 
@@ -57,7 +56,6 @@ impl std::error::Error for ChalkError {}
 pub enum RustIrError {
     InvalidTypeName(Identifier),
     InvalidLifetimeName(Identifier),
-    DuplicateLangItem(LangItem),
     NotTrait(Identifier),
     NotStruct(Identifier),
     DuplicateOrShadowedParameters,
@@ -100,7 +98,6 @@ impl std::fmt::Display for RustIrError {
         match self {
             RustIrError::InvalidTypeName(name) => write!(f, "invalid type name `{}`", name),
             RustIrError::InvalidLifetimeName(name) => write!(f, "invalid lifetime name `{}`", name),
-            RustIrError::DuplicateLangItem(item) => write!(f, "duplicate lang item `{:?}`", item),
             RustIrError::NotTrait(name) => write!(
                 f,
                 "expected a trait, found `{}`, which is not a trait",

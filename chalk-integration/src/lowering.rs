@@ -3,7 +3,7 @@ use chalk_ir::interner::ChalkIr;
 use chalk_ir::{self, AssocTypeId, BoundVar, DebruijnIndex, ImplId, StructId, TraitId};
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
-use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, LangItem, ToParameter};
+use chalk_rust_ir::{Anonymize, AssociatedTyValueId, IntoWhereClauses, ToParameter};
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -246,7 +246,7 @@ impl LowerProgram for Program {
 
         let mut struct_data = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
-        let mut trait_lang_items = BTreeMap::new();
+        let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
@@ -271,18 +271,7 @@ impl LowerProgram for Program {
                     let trait_datum = trait_defn.lower_trait(trait_id, &empty_env)?;
 
                     if let Some(well_known) = trait_datum.well_known {
-                        if let Some(lang_item) = match well_known {
-                            rust_ir::WellKnownTrait::SizedTrait => Some(LangItem::SizedTrait),
-                            _ => None,
-                        } {
-                            use std::collections::btree_map::Entry;
-                            match trait_lang_items.entry(lang_item) {
-                                Entry::Vacant(vacant) => vacant.insert(trait_id),
-                                Entry::Occupied(_) => {
-                                    return Err(RustIrError::DuplicateLangItem(lang_item))
-                                }
-                            };
-                        }
+                        well_known_traits.insert(well_known, trait_id);
                     }
 
                     trait_data.insert(trait_id, Arc::new(trait_datum));
@@ -382,7 +371,7 @@ impl LowerProgram for Program {
             trait_kinds,
             struct_data,
             trait_data,
-            trait_lang_items,
+            well_known_traits,
             impl_data,
             associated_ty_values,
             associated_ty_data,

@@ -15,11 +15,6 @@ use chalk_ir::{
 };
 use std::iter;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LangItem {
-    SizedTrait,
-}
-
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
@@ -136,7 +131,7 @@ pub struct TraitDatum<I: Interner> {
 
 /// A list of the traits that are "well known" to chalk, which means that
 /// the chalk-solve crate has special, hard-coded impls for them.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum WellKnownTrait {
     SizedTrait,
     CopyTrait,

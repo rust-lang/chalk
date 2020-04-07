@@ -638,21 +638,6 @@ fn assoc_type_recursive_bound() {
 }
 
 #[test]
-fn duplicate_lang_item() {
-    lowering_error! {
-        program {
-            #[lang(sized)]
-            trait Sized { }
-
-            #[lang(sized)]
-            trait Sized2 { }
-        } error_msg {
-            "duplicate lang item `SizedTrait`"
-        }
-    }
-}
-
-#[test]
 fn struct_sized_constraints() {
     lowering_error! {
         program {

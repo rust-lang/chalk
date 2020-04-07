@@ -35,8 +35,7 @@ pub fn add_sized_program_clauses<I: Interner>(
     let last_field_ty = struct_datum
         .binders
         .map_ref(|b| b.fields.last().unwrap())
-        .substitute(interner, substitution)
-        .clone();
+        .substitute(interner, substitution);
 
     let last_field_sized_goal = TraitRef {
         trait_id: trait_ref.trait_id,

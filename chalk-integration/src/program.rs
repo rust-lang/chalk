@@ -9,8 +9,8 @@ use chalk_ir::{
     TraitId, Ty, TyData, TypeName,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, LangItem,
-    StructDatum, TraitDatum,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
+    TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -46,7 +46,7 @@ pub struct Program {
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
 
     /// For each trait lang item
-    pub trait_lang_items: BTreeMap<LangItem, TraitId<ChalkIr>>,
+    pub well_known_traits: BTreeMap<WellKnownTrait, TraitId<ChalkIr>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
@@ -312,11 +312,11 @@ impl RustIrDatabase<ChalkIr> for Program {
         })
     }
 
-    fn require_lang_item(&self, lang_item: LangItem) -> TraitId<ChalkIr> {
+    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> TraitId<ChalkIr> {
         *self
-            .trait_lang_items
-            .get(&lang_item)
-            .unwrap_or_else(|| panic!("No lang item found for {:?}", lang_item))
+            .well_known_traits
+            .get(&well_known_trait)
+            .unwrap_or_else(|| panic!("No lang item found for {:?}", well_known_trait))
     }
 
     fn interner(&self) -> &ChalkIr {

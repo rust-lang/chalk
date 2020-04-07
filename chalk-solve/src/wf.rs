@@ -493,7 +493,7 @@ fn compute_struct_sized_constraint<I: Interner>(
 
     let interner = db.interner();
 
-    let sized_trait = db.require_lang_item(LangItem::SizedTrait);
+    let sized_trait = db.well_known_trait_id(WellKnownTrait::SizedTrait);
 
     Some(Goal::all(
         interner,
