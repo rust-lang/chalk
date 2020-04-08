@@ -81,7 +81,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     }
 
     /// Returns id of a trait lang item, if found
-    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> TraitId<I>;
+    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<I>>;
 
     fn interner(&self) -> &I;
 }

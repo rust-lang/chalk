@@ -138,7 +138,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .impl_provided_for(auto_trait_id, struct_id)
     }
 
-    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> TraitId<ChalkIr> {
+    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {
         self.program_ir()
             .unwrap()
             .well_known_trait_id(well_known_trait)

@@ -321,11 +321,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         })
     }
 
-    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> TraitId<ChalkIr> {
-        *self
-            .well_known_traits
-            .get(&well_known_trait)
-            .unwrap_or_else(|| panic!("No lang item found for {:?}", well_known_trait))
+    fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {
+        self.well_known_traits.get(&well_known_trait).map(|x| *x)
     }
 
     fn interner(&self) -> &ChalkIr {

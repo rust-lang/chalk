@@ -136,6 +136,7 @@ pub enum WellKnownTrait {
     SizedTrait,
     CopyTrait,
     CloneTrait,
+    DropTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {

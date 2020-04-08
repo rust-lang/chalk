@@ -207,11 +207,6 @@ where
         let impl_datum = self.db.impl_datum(impl_id);
         let trait_id = impl_datum.trait_id();
 
-        // You can't manually implement Sized
-        if let Some(WellKnownTrait::SizedTrait) = self.db.trait_datum(trait_id).well_known {
-            return Err(WfError::IllFormedTraitImpl(trait_id));
-        }
-
         let impl_goal = Goal::all(
             interner,
             impl_header_wf_goal(self.db, impl_id).into_iter().chain(
@@ -261,6 +256,8 @@ fn impl_header_wf_goal<I: Interner>(
         gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
             let interner = gb.interner();
 
+            let trait_constraint_goal = compute_well_known_impl_constraint(gb.db(), &trait_ref, where_clauses);
+
             // if (WC && input types are well formed) { ... }
             let impl_wf = impl_wf_environment(interner, &where_clauses, &trait_ref);
             gb.implies(impl_wf, |gb| {
@@ -280,7 +277,8 @@ fn impl_header_wf_goal<I: Interner>(
                 let goals = types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))
-                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)));
+                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)))
+                    .chain(trait_constraint_goal.into_iter());
 
                 gb.all::<_, Goal<I>>(goals)
             })
@@ -447,6 +445,18 @@ fn compute_assoc_ty_goal<I: Interner>(
     ))
 }
 
+fn compute_well_known_impl_constraint<I: Interner>(db: &dyn RustIrDatabase<I>, trait_ref: &TraitRef<I>, where_clause: &[Binders<WhereClause<I>>]) -> Option<Goal<I>> {
+    let interner = db.interner();
+
+    match db.trait_datum(trait_ref.trait_id).well_known? {
+        // You can't add a manual implementation of Sized
+        WellKnownTrait::SizedTrait => Some(GoalData::CannotProve(()).intern(interner)),
+        WellKnownTrait::CopyTrait => compute_copy_impl_constraint(db, trait_ref, where_clause),
+        WellKnownTrait::DropTrait => compute_drop_impl_constraint(db, trait_ref, where_clause),
+        WellKnownTrait::CloneTrait => None,
+    }
+}
+
 /// Computes a goal to prove Sized constraints on a struct definition.
 /// Struct is considered well-formed (in terms of Sized) when it either
 /// has no fields or all of it's fields except the last are proven to be Sized.  
@@ -460,7 +470,7 @@ fn compute_struct_sized_constraint<I: Interner>(
 
     let interner = db.interner();
 
-    let sized_trait = db.well_known_trait_id(WellKnownTrait::SizedTrait);
+    let sized_trait = db.well_known_trait_id(WellKnownTrait::SizedTrait)?;
 
     Some(Goal::all(
         interner,
@@ -472,4 +482,70 @@ fn compute_struct_sized_constraint<I: Interner>(
             .cast(interner)
         }),
     ))
+}
+
+/// Computes a goal to prove constraints on a Copy implementation.
+/// Copy impl is considered well-formed for
+///    a) certain builtin types (scalar values, shared ref, etc..)
+///    b) structs which
+///        1) have all Copy fields
+///        2) don't have a Drop impl
+fn compute_copy_impl_constraint<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    trait_ref: &TraitRef<I>,
+    _where_clause: &[Binders<WhereClause<I>>],
+) -> Option<Goal<I>> {
+    let interner = db.interner();
+
+    let ty = trait_ref.self_type_parameter(interner);
+
+    let copy_trait = db.well_known_trait_id(WellKnownTrait::CopyTrait)?;
+    let ty_data = ty.data(interner);
+
+    let (struct_id, substitution) = match ty_data {
+        TyData::Apply(ApplicationTy {
+            name: TypeName::Struct(struct_id),
+            substitution,
+        }) => (*struct_id, substitution),
+        // TODO(areredify)
+        // when #368 lands, extend this to handle everything accordingly
+        _ => return None,
+    };
+
+    let neg_drop_goal = db
+        .well_known_trait_id(WellKnownTrait::DropTrait)
+        .map(|drop_trait_id| {
+            TraitRef {
+                trait_id: drop_trait_id,
+                substitution: Substitution::from1(interner, ty.clone()),
+            }
+            .cast::<Goal<I>>(interner)
+            .negate(interner)
+        });
+
+    let struct_datum = db.struct_datum(struct_id);
+
+    let goals = struct_datum
+        .binders
+        .map_ref(|b| &b.fields)
+        .substitute(interner, substitution)
+        .into_iter()
+        .map(|f| {
+            TraitRef {
+                trait_id: copy_trait,
+                substitution: Substitution::from1(interner, f),
+            }
+            .cast(interner)
+        })
+        .chain(neg_drop_goal.into_iter());
+
+    Some(Goal::all(interner, goals))
+}
+
+fn compute_drop_impl_constraint<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    trait_ref: &TraitRef<I>,
+    where_clauses: &[Binders<WhereClause<I>>]
+) -> Option<Goal<I>> {
+    None
 }

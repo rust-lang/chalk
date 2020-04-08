@@ -710,3 +710,25 @@ fn struct_sized_constraints() {
         }
     }
 }
+
+#[test]
+fn copy_constraints() {
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T1, T2> where T1: Copy, T2: Copy {
+                t1: T1,
+                t2: T2
+            }
+
+            impl<T1, T2> Copy for S<T1, T2> { }
+        } error_msg {
+           ""
+        }
+    }
+}
