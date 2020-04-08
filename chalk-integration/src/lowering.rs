@@ -481,7 +481,7 @@ impl LowerParameterMap for FnDefn {
     }
 
     fn declared_parameters(&self) -> &[ParameterKind] {
-        &self.parameter_kinds
+        &self.generics
     }
 }
 
@@ -807,13 +807,11 @@ impl LowerFnDefn for FnDefn {
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let fn_params: LowerResult<_> = self.params.iter().map(|f| f.ty.lower(env)).collect();
-            let fn_returns: LowerResult<_> = self.returns.iter().map(|f| f.ty.lower(env)).collect();
+            let fields: LowerResult<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
             Ok(rust_ir::FnDefDatumBound {
-                params: fn_params?,
-                returns: fn_returns?,
+                fields: fields?,
                 where_clauses,
             })
         })?;

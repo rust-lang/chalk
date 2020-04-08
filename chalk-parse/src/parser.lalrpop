@@ -14,6 +14,7 @@ Items: Vec<Item> = {
 Item: Option<Item> = {
     Comment => None,
     StructDefn => Some(Item::StructDefn(<>)),
+    FnDefn => Some(Item::FnDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
@@ -56,6 +57,21 @@ StructDefn: StructDefn = {
         where_clauses: w,
         fields: f,
         flags: StructFlags {
+            upstream: upstream.is_some(),
+            fundamental: fundamental.is_some(),
+        },
+    }
+};
+
+FnDefn: FnDefn = {
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "fn" <n:Id><p:Angle<ParameterKind>>
+        "(" <f:Fields> ")" <w:QuantifiedWhereClauses> "{" "}" => FnDefn
+    {
+        name: n,
+        generics: p,
+        where_clauses: w,
+        fields: f,
+        flags: FnFlags {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
         },

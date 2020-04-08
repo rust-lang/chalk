@@ -636,3 +636,20 @@ fn assoc_type_recursive_bound() {
         }
     }
 }
+
+#[test]
+fn well_formed_fn_decl() {
+    lowering_success! {
+        program {
+            trait Clone { }
+            trait Copy where Self: Clone { }
+
+            struct i32 { }
+
+            impl Clone for i32 { }
+            impl Copy for i32 { }
+
+            fn copy<T>(arg: T) where T: Copy {}
+        }
+    }
+}

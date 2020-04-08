@@ -47,6 +47,7 @@ pub struct FnDefn {
     pub name: Identifier,
     pub generics: Vec<ParameterKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub fields: Vec<Field>,
     pub flags: FnFlags,
 }
 

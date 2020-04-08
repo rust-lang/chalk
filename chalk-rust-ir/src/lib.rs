@@ -92,8 +92,7 @@ pub struct StructFlags {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FnDefDatumBound<I: Interner> {
-    pub params: Vec<Ty<I>>,
-    pub returns: Vec<Ty<I>>,
+    pub fields: Vec<Ty<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
