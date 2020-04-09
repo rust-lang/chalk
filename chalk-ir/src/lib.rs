@@ -759,20 +759,22 @@ impl<T, L> ParameterKind<T, L> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct Parameter<I: Interner>(I::InternedParameter);
+pub struct Parameter<I: Interner> {
+    interned: I::InternedParameter,
+}
 
 impl<I: Interner> Parameter<I> {
     pub fn new(interner: &I, data: ParameterData<I>) -> Self {
         let interned = I::intern_parameter(interner, data);
-        Parameter(interned)
+        Parameter { interned }
     }
 
     pub fn interned(&self) -> &I::InternedParameter {
-        &self.0
+        &self.interned
     }
 
     pub fn data(&self, interner: &I) -> &ParameterData<I> {
-        I::parameter_data(interner, &self.0)
+        I::parameter_data(interner, &self.interned)
     }
 
     pub fn assert_ty_ref(&self, interner: &I) -> &Ty<I> {
@@ -1641,7 +1643,7 @@ pub struct Substitution<I: Interner> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
     /// the kind of the value.
-    parameters: I::InternedSubstitution,
+    interned: I::InternedSubstitution,
 }
 
 impl<I: Interner> Substitution<I> {
@@ -1664,12 +1666,12 @@ impl<I: Interner> Substitution<I> {
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         Ok(Substitution {
-            parameters: I::intern_substitution(interner, parameters.into_iter().casted(interner))?,
+            interned: I::intern_substitution(interner, parameters.into_iter().casted(interner))?,
         })
     }
 
     pub fn interned(&self) -> &I::InternedSubstitution {
-        &self.parameters
+        &self.interned
     }
 
     /// Index into the list of parameters
@@ -1694,7 +1696,7 @@ impl<I: Interner> Substitution<I> {
     }
 
     pub fn parameters(&self, interner: &I) -> &[Parameter<I>] {
-        interner.substitution_data(&self.parameters)
+        interner.substitution_data(&self.interned)
     }
 
     pub fn len(&self, interner: &I) -> usize {
