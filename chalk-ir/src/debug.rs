@@ -35,7 +35,7 @@ impl<I: Interner> Debug for Lifetime<I> {
 
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.0))
+        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
@@ -98,7 +98,7 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
 
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.parameters))
+        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
