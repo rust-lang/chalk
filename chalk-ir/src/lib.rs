@@ -1490,6 +1490,107 @@ impl<I: Interner> ProgramClauses<I> {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ParameterKinds<I: Interner> {
+    interned: I::InternedParameterKinds,
+}
+
+impl<I: Interner> ParameterKinds<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<ParameterKind<()>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedParameterKinds {
+        &self.interned
+    }
+
+    pub fn from(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = ParameterKind<()>>,
+    ) -> Self {
+        ParameterKinds {
+            interned: I::intern_parameter_kinds(interner, parameter_kinds.into_iter()),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
+    ) -> Result<Self, E> {
+        let parameter_kinds = parameter_kinds
+            .into_iter()
+            .collect::<Result<Vec<ParameterKind<()>>, _>>()?;
+        Ok(Self::from(interner, parameter_kinds))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<()>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[ParameterKind<()>] {
+        interner.parameter_kinds_data(&self.interned)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ParameterKindsWithUniverseIndex<I: Interner> {
+    interned: I::InternedParameterKindsWithUniverseIndex,
+}
+
+impl<I: Interner> ParameterKindsWithUniverseIndex<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<ParameterKind<UniverseIndex>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedParameterKindsWithUniverseIndex {
+        &self.interned
+    }
+
+    pub fn from(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
+    ) -> Self {
+        ParameterKindsWithUniverseIndex {
+            interned: I::intern_parameter_kinds_with_universe_index(interner, parameter_kinds.into_iter()),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+    ) -> Result<Self, E> {
+        let parameter_kinds = parameter_kinds
+            .into_iter()
+            .collect::<Result<Vec<ParameterKind<UniverseIndex>>, _>>()?;
+        Ok(Self::from(interner, parameter_kinds))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<UniverseIndex>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[ParameterKind<UniverseIndex>] {
+        interner.parameter_kinds_with_universe_index_data(&self.interned)
+    }
+}
+
+
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
 /// All unresolved existential variables are "renumbered" according to their
