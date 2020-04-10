@@ -1158,13 +1158,10 @@ impl<T> Binders<T> {
 
     /// Skips the binder and returns the "bound" value. This is a
     /// risky thing to do because it's easy to get confused about
-    /// De Bruijn indices and the like. It is usually better to
-    /// discharge the binder using `no_bound_vars` or something
-    /// like that. `skip_binder` is only valid when you are either
-    /// extracting data that has nothing to do with bound vars, you
-    /// are doing some sort of test that does not involve bound
-    /// regions, or you are being very careful about your depth
-    /// accounting.
+    /// De Bruijn indices and the like. `skip_binder` is only valid
+    /// when you are either extracting data that has nothing to
+    /// do with bound vars, or you are being very careful about
+    /// your depth accounting.
     ///
     /// Some examples where `skip_binder` is reasonable:
     ///
@@ -1174,6 +1171,9 @@ impl<T> Binders<T> {
         &self.value
     }
 
+    /// Converts `&Binders<T>` to `Binders<&T>`. Produces new `Binders`
+    /// with cloned quantifiers containing a reference to the original
+    /// value, leaving the original in place.
     pub fn as_ref(&self) -> Binders<&T> {
         Binders {
             binders: self.binders.clone(),
@@ -1216,27 +1216,6 @@ impl<T> Binders<T> {
         Binders {
             binders: iter::once(ParameterKind::Ty(())).collect(),
             value,
-        }
-    }
-
-    /// Unwraps and returns the value within, but only if it contains
-    /// no vars bound by this binder. (In other words, if this binder --
-    /// and indeed any enclosing binder -- doesn't bind anything at
-    /// all.) Otherwise, returns `None`.
-    ///
-    /// (One could imagine having a method that just unwraps a single
-    /// binder, but permits late-bound vars bound by enclosing
-    /// binders, but that would require adjusting the debruijn
-    /// indices, and given the shallow binding structure we often use,
-    /// would not be that useful.)
-    pub fn no_bound_vars<I: Interner>(&self, interner: &I) -> Option<&T>
-    where
-        T: Visit<I>,
-    {
-        if self.skip_binders().has_free_vars(interner) {
-            None
-        } else {
-            Some(self.skip_binders())
         }
     }
 

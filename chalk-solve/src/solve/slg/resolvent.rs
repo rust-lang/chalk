@@ -485,7 +485,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         T: Zip<I> + Fold<I, Result = T>,
     {
         self.outer_binder.shift_in();
-        Zip::zip_with(self, &answer.skip_binders(), &pending.skip_binders())?;
+        Zip::zip_with(self, answer.skip_binders(), pending.skip_binders())?;
         self.outer_binder.shift_out();
         Ok(())
     }

@@ -89,8 +89,16 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let (rhs_binders, rhs_bound) = rhs.binders.as_ref().into();
 
         // Upshift the rhs variables in params to account for the joined binders
-        let lhs_params = params(interner, lhs_bound).iter().cloned();
-        let rhs_params = params(interner, rhs_bound)
+        let lhs_params = lhs_bound
+            .trait_ref
+            .substitution
+            .parameters(interner)
+            .iter()
+            .cloned();
+        let rhs_params = rhs_bound
+            .trait_ref
+            .substitution
+            .parameters(interner)
             .iter()
             .map(|param| param.shifted_in(interner));
 
@@ -259,12 +267,4 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         result
     }
-}
-
-fn params<'a, I: Interner>(
-    interner: &I,
-    impl_datum_bound: &'a ImplDatumBound<I>,
-) -> &'a [Parameter<I>] {
-    // We can skip binders here because the caller is handling correct binders handling
-    impl_datum_bound.trait_ref.substitution.parameters(interner)
 }
