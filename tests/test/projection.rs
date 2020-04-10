@@ -149,6 +149,31 @@ fn projection_equality() {
 }
 
 #[test]
+fn projection_equality_from_env() {
+    test! {
+        program {
+            trait Trait1 {
+                type Type;
+            }
+
+            struct u32 {}
+        }
+
+        goal {
+            forall<T> {
+                if (T: Trait1<Type = u32>) {
+                    exists<U> {
+                        <T as Trait1>::Type = U
+                    }
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := u32]"
+        }
+    }
+}
+
+#[test]
 fn normalize_gat1() {
     test! {
         program {
