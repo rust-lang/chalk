@@ -23,8 +23,10 @@ pub fn add_builtin_program_clauses<I: Interner>(
 
     match well_known {
         WellKnownTrait::SizedTrait => sized::add_sized_program_clauses(db, builder, trait_ref, ty),
-        WellKnownTrait::CopyTrait => copy::add_copy_program_clauses(db, builder, trait_ref, ty),
-        // Drop and Clone impls are provided explicitly
-        WellKnownTrait::CloneTrait | WellKnownTrait::DropTrait => (),
+        WellKnownTrait::CopyTrait | WellKnownTrait::CloneTrait => {
+            copy::add_copy_clone_program_clauses(db, builder, trait_ref, ty)
+        }
+        // Drop impls are provided explicitly
+        WellKnownTrait::DropTrait => (),
     }
 }
