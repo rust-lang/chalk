@@ -3,6 +3,7 @@ use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::split::Split;
 use crate::RustIrDatabase;
+use chalk_engine::context::Floundered;
 use chalk_ir::cast::Cast;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;
@@ -102,8 +103,6 @@ pub fn push_auto_trait_impls<I: Interner>(
     });
 }
 
-// TODO add Floundered error instead of using Option
-
 /// Given some goal `goal` that must be proven, along with
 /// its `environment`, figures out the program clauses that apply
 /// to this goal from the Rust program. So for example if the goal
@@ -113,7 +112,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
-) -> Option<Vec<ProgramClause<I>>> {
+) -> Result<Vec<ProgramClause<I>>, Floundered> {
     debug_heading!(
         "program_clauses_for_goal(goal={:?}, environment={:?})",
         goal,
@@ -129,7 +128,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
 
     debug!("vec = {:#?}", vec);
 
-    Some(vec)
+    Ok(vec)
 }
 
 /// Returns a set of program clauses that could possibly match
@@ -141,7 +140,7 @@ fn program_clauses_that_could_match<I: Interner>(
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
     clauses: &mut Vec<ProgramClause<I>>,
-) -> Option<()> {
+) -> Result<(), Floundered> {
     let interner = db.interner();
     let builder = &mut ClauseBuilder::new(db, clauses);
 
@@ -154,7 +153,7 @@ fn program_clauses_that_could_match<I: Interner>(
             if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                 let self_ty = trait_ref.self_type_parameter(interner);
                 if self_ty.bound(interner).is_some() || self_ty.inference_var(interner).is_some() {
-                    return None;
+                    return Err(Floundered);
                 }
             }
 
@@ -180,7 +179,7 @@ fn program_clauses_that_could_match<I: Interner>(
                         }
                     }
                     TyData::InferenceVar(_) | TyData::BoundVar(_) => {
-                        return None;
+                        return Err(Floundered);
                     }
                     _ => {}
                 }
@@ -306,7 +305,7 @@ fn program_clauses_that_could_match<I: Interner>(
         DomainGoal::Compatible(()) => (),
     };
 
-    Some(())
+    Ok(())
 }
 
 /// Generate program clauses from the associated-type values
@@ -367,9 +366,9 @@ fn match_ty<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     environment: &Environment<I>,
     ty: &Ty<I>,
-) -> Option<()> {
+) -> Result<(), Floundered> {
     let interner = builder.interner();
-    Some(match ty.data(interner) {
+    Ok(match ty.data(interner) {
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
@@ -385,9 +384,9 @@ fn match_ty<I: Interner>(
                 .iter(interner)
                 .map(|p| p.assert_ty_ref(interner))
                 .map(|ty| match_ty(builder, environment, &ty))
-                .collect::<Option<_>>()?;
+                .collect::<Result<_, Floundered>>()?;
         }
-        TyData::BoundVar(_) | TyData::InferenceVar(_) => return None,
+        TyData::BoundVar(_) | TyData::InferenceVar(_) => return Err(Floundered),
         TyData::Dyn(_) => {}
     })
 }

@@ -520,7 +520,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        program_clauses_for_goal(self.program, environment, goal).ok_or(Floundered)
+        program_clauses_for_goal(self.program, environment, goal)
     }
 }
 
