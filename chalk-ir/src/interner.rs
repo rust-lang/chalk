@@ -10,6 +10,7 @@ use crate::OpaqueTy;
 use crate::OpaqueTyId;
 use crate::Parameter;
 use crate::ParameterData;
+use crate::ParameterKind;
 use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
@@ -23,6 +24,7 @@ use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
 use crate::TyData;
+use crate::UniverseIndex;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -125,6 +127,23 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedQuantifiedWhereClauses` is created by `intern_quantified_where_clauses`
     /// and can be converted back to its underlying data via `quantified_where_clauses_data`.
     type InternedQuantifiedWhereClauses: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of a list of parameter kind.  
+    /// In normal user code, `Self::InternedParameterKinds` is not referenced.
+    /// Instead, we refer to `ParameterKinds<Self>`, which wraps this type.
+    ///
+    /// An `InternedParameterKinds` is created by `intern_parameter_kinds`
+    /// and can be converted back to its underlying data via `parameter_kinds_data`.
+    type InternedParameterKinds: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of a list of parameter kind with universe index.  
+    /// In normal user code, `Self::InternedParameterKindsWithUniverseIndex` is not referenced.
+    /// Instead, we refer to `ParameterKindsWithUniverseIndex<Self>`, which wraps this type.
+    ///
+    /// An `InternedParameterKindsWithUniverseIndex` is created by
+    /// `intern_parameter_kinds_with_universe_index` and can be converted back
+    /// to its underlying data via `parameter_kinds_with_universe_index_data`.
+    type InternedParameterKindsWithUniverseIndex: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -493,6 +512,38 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         &self,
         clauses: &'a Self::InternedQuantifiedWhereClauses,
     ) -> &'a [QuantifiedWhereClause<Self>];
+
+    /// Create an "interned" parameter kinds from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `ParameterKinds::from` (which will ultimately call this
+    /// method).
+    fn intern_parameter_kinds(
+        &self,
+        data: impl IntoIterator<Item = ParameterKind<()>>,
+    ) -> Self::InternedParameterKinds;
+
+    /// Lookup the slice of `ParameterKind` that was interned to
+    /// create a `ParameterKinds`.
+    fn parameter_kinds_data<'a>(
+        &self,
+        parameter_kinds: &'a Self::InternedParameterKinds,
+    ) -> &'a [ParameterKind<()>];
+
+    /// Create an "interned" parameter kinds with universe index from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `ParameterKindsWithUniverseIndex::from` (which will ultimately call this
+    /// method).
+    fn intern_parameter_kinds_with_universe_index(
+        &self,
+        data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
+    ) -> Self::InternedParameterKindsWithUniverseIndex;
+
+    /// Lookup the slice of `ParameterKind` that was interned to
+    /// create a `ParameterKinds`.
+    fn parameter_kinds_with_universe_index_data<'a>(
+        &self,
+        parameter_kinds_with_universe_index: &'a Self::InternedParameterKindsWithUniverseIndex,
+    ) -> &'a [ParameterKind<UniverseIndex>];
 }
 
 pub trait TargetInterner<I: Interner>: Interner {
@@ -550,6 +601,8 @@ mod default {
         type InternedProgramClause = ProgramClauseData<ChalkIr>;
         type InternedProgramClauses = Vec<ProgramClause<ChalkIr>>;
         type InternedQuantifiedWhereClauses = Vec<QuantifiedWhereClause<ChalkIr>>;
+        type InternedParameterKinds = Vec<ParameterKind<()>>;
+        type InternedParameterKindsWithUniverseIndex = Vec<ParameterKind<UniverseIndex>>;
         type DefId = RawId;
         type Identifier = Identifier;
 
@@ -785,6 +838,30 @@ mod default {
             clauses: &'a Self::InternedQuantifiedWhereClauses,
         ) -> &'a [QuantifiedWhereClause<Self>] {
             clauses
+        }
+        fn intern_parameter_kinds(
+            &self,
+            data: impl IntoIterator<Item = ParameterKind<()>>,
+        ) -> Self::InternedParameterKinds {
+            data.into_iter().collect()
+        }
+        fn parameter_kinds_data<'a>(
+            &self,
+            parameter_kinds: &'a Self::InternedParameterKinds,
+        ) -> &'a [ParameterKind<()>] {
+            parameter_kinds
+        }
+        fn intern_parameter_kinds_with_universe_index(
+            &self,
+            data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
+        ) -> Self::InternedParameterKindsWithUniverseIndex {
+            data.into_iter().collect()
+        }
+        fn parameter_kinds_with_universe_index_data<'a>(
+            &self,
+            parameter_kinds_with_universe_index: &'a Self::InternedParameterKindsWithUniverseIndex,
+        ) -> &'a [ParameterKind<UniverseIndex>] {
+            parameter_kinds_with_universe_index
         }
     }
 
