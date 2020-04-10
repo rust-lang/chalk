@@ -183,7 +183,8 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                 self.push_goal(environment, subgoal)?;
             }
             GoalData::Implies(wc, subgoal) => {
-                let new_environment = &environment.add_clauses(wc.iter().cloned());
+                let new_environment =
+                    &environment.add_clauses(interner, wc.iter(interner).cloned());
                 self.push_goal(new_environment, subgoal.clone())?;
             }
             GoalData::All(goals) => {
@@ -293,7 +294,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // We use the empty environment for unification here because we're
         // really just doing a substitution on unconstrained variables, which is
         // guaranteed to succeed without generating any new constraints.
-        let empty_env = &Environment::new();
+        let empty_env = &Environment::new(self.solver.program.interner());
 
         for (i, free_var) in free_vars.into_iter().enumerate() {
             let subst_value = subst.at(self.interner(), i);

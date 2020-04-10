@@ -395,13 +395,13 @@ impl<'me, I: Interner> Solver<'me, I> {
         for program_clause in clauses {
             debug_heading!("clause={:?}", program_clause);
 
-            match program_clause {
-                ProgramClause::Implies(implication) => {
+            match program_clause.data(self.program.interner()) {
+                ProgramClauseData::Implies(implication) => {
                     let res = self.solve_via_implication(
                         canonical_goal,
-                        Binders {
+                        &Binders {
                             binders: vec![],
-                            value: implication,
+                            value: implication.clone(),
                         },
                         minimums,
                     );
@@ -436,7 +436,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                         debug!("error");
                     }
                 }
-                ProgramClause::ForAll(implication) => {
+                ProgramClauseData::ForAll(implication) => {
                     let res = self.solve_via_implication(canonical_goal, implication, minimums);
                     if let (Ok(solution), priority) = res {
                         debug!("ok: solution={:?} prio={:?}", solution, priority);
@@ -480,7 +480,7 @@ impl<'me, I: Interner> Solver<'me, I> {
     fn solve_via_implication(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-        clause: Binders<ProgramClauseImplication<I>>,
+        clause: &Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         info_heading!(
@@ -496,7 +496,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             consequence,
             conditions,
             priority: _,
-        } = fulfill.instantiate_binders_existentially(&clause);
+        } = fulfill.instantiate_binders_existentially(clause);
 
         debug!("the subst is {:?}", subst);
 
