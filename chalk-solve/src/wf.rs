@@ -7,7 +7,8 @@ use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::interner::Interner;
+use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
 use chalk_rust_ir::*;
 
@@ -41,69 +42,76 @@ pub struct WfSolver<'db, I: Interner> {
     solver_choice: SolverChoice,
 }
 
-/// A trait for retrieving all types appearing in some Chalk construction.
-///
-/// FIXME: why is this not a `Folder`?
-trait FoldInputTypes: HasInterner {
-    fn fold(&self, interner: &Self::Interner, accumulator: &mut Vec<Ty<Self::Interner>>);
+struct InputTypeCollector<'i, I: Interner> {
+    types: Vec<Ty<I>>,
+    interner: &'i I,
 }
 
-impl<T: FoldInputTypes> FoldInputTypes for [T] {
-    fn fold(&self, interner: &T::Interner, accumulator: &mut Vec<Ty<T::Interner>>) {
-        for f in self {
-            f.fold(interner, accumulator);
+impl<'i, I: Interner> InputTypeCollector<'i, I> {
+    fn new(interner: &'i I) -> Self {
+        Self {
+            types: Vec::new(),
+            interner,
         }
     }
+
+    fn types_in(interner: &'i I, value: impl Visit<I>) -> Vec<Ty<I>> {
+        let mut collector = Self::new(interner);
+        value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+        collector.types
+    }
 }
 
-impl<T: FoldInputTypes> FoldInputTypes for Vec<T> {
-    fn fold(&self, interner: &T::Interner, accumulator: &mut Vec<Ty<T::Interner>>) {
-        for f in self {
-            f.fold(interner, accumulator);
+impl<'i, 't, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
+    type Result = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
+        self
+    }
+
+    fn interner(&self) -> &'i I {
+        self.interner
+    }
+
+    fn visit_where_clause(&mut self, where_clause: &WhereClause<I>, outer_binder: DebruijnIndex) {
+        match where_clause {
+            WhereClause::AliasEq(alias_eq) => {
+                TyData::Alias(alias_eq.alias.clone())
+                    .intern(self.interner)
+                    .visit_with(self, outer_binder);
+                alias_eq.ty.visit_with(self, outer_binder);
+            }
+            WhereClause::Implemented(trait_ref) => {
+                trait_ref.visit_with(self, outer_binder);
+            }
         }
     }
-}
 
-impl<I: Interner> FoldInputTypes for Parameter<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        if let ParameterKind::Ty(ty) = self.data(interner) {
-            ty.fold(interner, accumulator)
-        }
-    }
-}
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) {
+        let interner = self.interner();
 
-impl<I: Interner> FoldInputTypes for Substitution<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        self.parameters(interner).fold(interner, accumulator)
-    }
-}
-
-impl<I: Interner> FoldInputTypes for QuantifiedWhereClauses<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        self.as_slice(interner).fold(interner, accumulator)
-    }
-}
-
-impl<I: Interner> FoldInputTypes for Ty<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        match self.data(interner) {
-            TyData::Apply(app) => {
-                accumulator.push(self.clone());
-                app.substitution.fold(interner, accumulator);
+        let mut push_ty = || {
+            self.types
+                .push(ty.shifted_out_to(interner, outer_binder).unwrap())
+        };
+        match ty.data(interner) {
+            TyData::Apply(apply) => {
+                push_ty();
+                apply.visit_with(self, outer_binder);
             }
 
-            TyData::Dyn(qwc) => {
-                accumulator.push(self.clone());
-                qwc.bounds.fold(interner, accumulator);
+            TyData::Dyn(clauses) => {
+                push_ty();
+                clauses.visit_with(self, outer_binder);
             }
 
             TyData::Alias(alias) => {
-                accumulator.push(self.clone());
-                alias.substitution.fold(interner, accumulator);
+                push_ty();
+                alias.visit_with(self, outer_binder);
             }
 
             TyData::Placeholder(_) => {
-                accumulator.push(self.clone());
+                push_ty();
             }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
@@ -117,50 +125,9 @@ impl<I: Interner> FoldInputTypes for Ty<I> {
             TyData::Function(..) => (),
 
             TyData::InferenceVar(..) => {
-                panic!("unexpected inference variable in wf rules: {:?}", self)
+                panic!("unexpected inference variable in wf rules: {:?}", ty)
             }
         }
-    }
-}
-
-impl<I: Interner> FoldInputTypes for TraitRef<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        self.substitution.fold(interner, accumulator);
-    }
-}
-
-impl<I: Interner> FoldInputTypes for AliasEq<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        TyData::Alias(self.alias.clone())
-            .intern(interner)
-            .fold(interner, accumulator);
-        self.ty.fold(interner, accumulator);
-    }
-}
-
-impl<I: Interner> FoldInputTypes for WhereClause<I> {
-    fn fold(&self, interner: &I, accumulator: &mut Vec<Ty<I>>) {
-        match self {
-            WhereClause::Implemented(tr) => tr.fold(interner, accumulator),
-            WhereClause::AliasEq(p) => p.fold(interner, accumulator),
-        }
-    }
-}
-
-impl<T: FoldInputTypes> FoldInputTypes for Binders<T> {
-    fn fold(&self, interner: &T::Interner, accumulator: &mut Vec<Ty<T::Interner>>) {
-        // FIXME: This aspect of how we've formulated implied bounds
-        // seems to have an "eager normalization" problem, what about
-        // where clauses like `for<T> { <Self as Foo<T>>::Bar }`?
-        //
-        // For now, the unwrap will panic.
-        let mut types = vec![];
-        self.value.fold(interner, &mut types);
-        accumulator.extend(
-            types
-                .into_iter()
-                .map(|ty| ty.shifted_out(interner).unwrap()),
-        );
     }
 }
 
@@ -207,14 +174,11 @@ where
                     .map(|wc| wc.into_from_env_goal(interner)),
                 |gb| {
                     // WellFormed(Vec<T>), for each field type `Vec<T>` or type that appears in the where clauses
-                    let mut input_types = Vec::new();
-                    // ...in a field type...
-                    fields.fold(gb.interner(), &mut input_types);
-                    // ...in a where clause.
-                    where_clauses.fold(gb.interner(), &mut input_types);
+                    let types =
+                        InputTypeCollector::types_in(gb.interner(), (&fields, &where_clauses));
 
                     gb.all(
-                        input_types
+                        types
                             .into_iter()
                             .map(|ty| ty.well_formed().cast(interner))
                             .chain(sized_constraint_goal.into_iter()),
@@ -308,13 +272,12 @@ fn impl_header_wf_goal<I: Interner>(
                 // we would retrieve `HashSet<K>`, `Box<T>`, `Vec<Box<T>>`, `(HashSet<K>, Vec<Box<T>>)`.
                 // We will have to prove that these types are well-formed (e.g. an additional `K: Hash`
                 // bound would be needed here).
-                let mut input_types = Vec::new();
-                where_clauses.fold(interner, &mut input_types);
+                let types = InputTypeCollector::types_in(gb.interner(), &where_clauses);
 
                 // Things to prove well-formed: input types of the where-clauses, projection types
                 // appearing in the header, associated type values, and of course the trait ref.
-                debug!("verify_trait_impl: input_types={:?}", input_types);
-                let goals = input_types
+                debug!("verify_trait_impl: input_types={:?}", types);
+                let goals = types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))
                     .chain(Some((*trait_ref).clone().well_formed().cast(interner)));
@@ -350,10 +313,9 @@ fn impl_wf_environment<'i, I: Interner>(
     //     // Inside here, we can rely on the fact that `K: Hash` holds
     // }
     // ```
-    let mut header_input_types = Vec::new();
-    trait_ref.fold(interner, &mut header_input_types);
+    let types = InputTypeCollector::types_in(interner, trait_ref);
 
-    let types_wf = header_input_types
+    let types_wf = types
         .into_iter()
         .map(move |ty| ty.into_from_env_goal(interner).cast(interner));
 
@@ -454,11 +416,10 @@ fn compute_assoc_ty_goal<I: Interner>(
                         .cloned()
                         .map(|qwc| qwc.into_from_env_goal(interner)),
                     |gb| {
-                        let mut input_types = Vec::new();
-                        value_ty.fold(interner, &mut input_types);
+                        let types = InputTypeCollector::types_in(gb.interner(), value_ty);
 
                         // We require that `WellFormed(T)` for each type that appears in the value
-                        let wf_goals = input_types
+                        let wf_goals = types
                             .into_iter()
                             .map(|ty| ty.well_formed())
                             .casted(interner);
