@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, iter};
 
 use crate::ext::*;
 use crate::goal_builder::GoalBuilder;
@@ -252,15 +252,27 @@ fn impl_header_wf_goal<I: Interner>(
 
     let mut gb = GoalBuilder::new(db);
     // forall<P0...Pn> {...}
-    Some(
-        gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
+    Some(gb.forall(
+        &impl_fields,
+        impl_id,
+        |gb, _, (trait_ref, where_clauses), impl_id| {
             let interner = gb.interner();
 
-            let trait_constraint_goal = compute_well_known_impl_constraint(gb.db(), &trait_ref, where_clauses);
-
             // if (WC && input types are well formed) { ... }
-            let impl_wf = impl_wf_environment(interner, &where_clauses, &trait_ref);
-            gb.implies(impl_wf, |gb| {
+            let impl_wf = ProgramClauses::from(
+                interner,
+                impl_wf_environment(interner, &where_clauses, &trait_ref),
+            );
+
+            let trait_constraint_goal = compute_well_known_impl_constraint(
+                gb.db(),
+                impl_id,
+                &impl_wf,
+                &trait_ref,
+                where_clauses,
+            );
+
+            let well_formed_goal = gb.implies(impl_wf.iter(interner), |gb| {
                 // We retrieve all the input types of the where clauses appearing on the trait impl,
                 // e.g. in:
                 // ```
@@ -277,13 +289,16 @@ fn impl_header_wf_goal<I: Interner>(
                 let goals = types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))
-                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)))
-                    .chain(trait_constraint_goal.into_iter());
+                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)));
 
                 gb.all::<_, Goal<I>>(goals)
-            })
-        }),
-    )
+            });
+
+            gb.all::<_, Goal<I>>(
+                iter::once(well_formed_goal).chain(trait_constraint_goal.into_iter()),
+            )
+        },
+    ))
 }
 
 /// Creates the conditions that an impl (and its contents of an impl)
@@ -445,14 +460,22 @@ fn compute_assoc_ty_goal<I: Interner>(
     ))
 }
 
-fn compute_well_known_impl_constraint<I: Interner>(db: &dyn RustIrDatabase<I>, trait_ref: &TraitRef<I>, where_clause: &[Binders<WhereClause<I>>]) -> Option<Goal<I>> {
+fn compute_well_known_impl_constraint<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    impl_id: ImplId<I>,
+    impl_wf: &ProgramClauses<I>,
+    trait_ref: &TraitRef<I>,
+    where_clause: &[Binders<WhereClause<I>>],
+) -> Option<Goal<I>> {
     let interner = db.interner();
 
     match db.trait_datum(trait_ref.trait_id).well_known? {
         // You can't add a manual implementation of Sized
         WellKnownTrait::SizedTrait => Some(GoalData::CannotProve(()).intern(interner)),
-        WellKnownTrait::CopyTrait => compute_copy_impl_constraint(db, trait_ref, where_clause),
-        WellKnownTrait::DropTrait => compute_drop_impl_constraint(db, trait_ref, where_clause),
+        WellKnownTrait::CopyTrait => compute_copy_impl_constraint(db, impl_wf, trait_ref),
+        WellKnownTrait::DropTrait => {
+            compute_drop_impl_constraint(db, impl_id, trait_ref, where_clause)
+        }
         WellKnownTrait::CloneTrait => None,
     }
 }
@@ -492,14 +515,12 @@ fn compute_struct_sized_constraint<I: Interner>(
 ///        2) don't have a Drop impl
 fn compute_copy_impl_constraint<I: Interner>(
     db: &dyn RustIrDatabase<I>,
+    impl_wf: &ProgramClauses<I>,
     trait_ref: &TraitRef<I>,
-    _where_clause: &[Binders<WhereClause<I>>],
 ) -> Option<Goal<I>> {
     let interner = db.interner();
 
     let ty = trait_ref.self_type_parameter(interner);
-
-    let copy_trait = db.well_known_trait_id(WellKnownTrait::CopyTrait)?;
     let ty_data = ty.data(interner);
 
     let (struct_id, substitution) = match ty_data {
@@ -532,20 +553,98 @@ fn compute_copy_impl_constraint<I: Interner>(
         .into_iter()
         .map(|f| {
             TraitRef {
-                trait_id: copy_trait,
+                trait_id: trait_ref.trait_id,
                 substitution: Substitution::from1(interner, f),
             }
             .cast(interner)
         })
         .chain(neg_drop_goal.into_iter());
 
-    Some(Goal::all(interner, goals))
+    Some(GoalData::Implies(impl_wf.clone(), Goal::all(interner, goals)).intern(interner))
 }
 
+/// Computes goal to prove constraints on a Drop implementation
+/// Drop implementation is considered well-formed if:
+///     a) it's implemented on an ADT
+///     b) The generic parameters of the impl's type must all be parameters
+///        of the Drop impl itself (i.e., no specialization like
+///        `impl Drop for S<Foo> {...}` is allowed).
+///     c) Any bounds on the genereic parameters of the impl must be
+///        deductible from the bounds imposed by the struct definition
+///        (i.e. the implementation must be exactly as generic as the ADT definition).
 fn compute_drop_impl_constraint<I: Interner>(
     db: &dyn RustIrDatabase<I>,
+    impl_id: ImplId<I>,
     trait_ref: &TraitRef<I>,
-    where_clauses: &[Binders<WhereClause<I>>]
+    where_clauses: &[QuantifiedWhereClause<I>],
 ) -> Option<Goal<I>> {
-    None
+    let interner = db.interner();
+
+    let ty = trait_ref.self_type_parameter(interner);
+    let ty_data = ty.data(interner);
+
+    let (struct_id, substitution) = match ty_data {
+        TyData::Apply(ApplicationTy {
+            name: TypeName::Struct(struct_id),
+            substitution,
+        }) => (*struct_id, substitution),
+        _ => return Some(GoalData::CannotProve(()).intern(interner)),
+    };
+
+    let mut gb = GoalBuilder::new(db);
+
+    let struct_datum = db.struct_datum(struct_id);
+    let struct_name = struct_datum.name(interner);
+
+    let implied_by_struct_def_goal = gb.implies(
+        struct_datum
+            .binders
+            .map_ref(|b| &b.where_clauses)
+            .substitute(interner, substitution)
+            .into_iter()
+            .map(move |qwc| {
+                qwc.into_from_env_goal(interner)
+                    .cast::<ProgramClause<I>>(interner)
+            }),
+        |gb| {
+            gb.all(
+                where_clauses
+                    .iter()
+                    .map(|wc| wc.clone().into_well_formed_goal(interner)),
+            )
+        },
+    );
+
+    let eq_goal = gb.forall(
+        &struct_datum.binders,
+        (struct_name, impl_id),
+        |gb, substitution, _, (struct_name, impl_id)| {
+            let interner = gb.interner();
+
+            let impl_datum = gb.db().impl_datum(impl_id);
+            let def_struct: Ty<I> = ApplicationTy {
+                name: struct_name,
+                substitution,
+            }
+            .cast(interner)
+            .intern(interner);
+
+            gb.exists(
+                &impl_datum
+                    .binders
+                    .map_ref(|b| b.trait_ref.self_type_parameter(interner)),
+                def_struct,
+                |gb, _, impl_struct, def_struct| {
+                    let interner = gb.interner();
+                    GoalData::EqGoal(EqGoal {
+                        a: ParameterData::Ty(def_struct).intern(interner),
+                        b: ParameterData::Ty(impl_struct.clone()).intern(interner),
+                    })
+                    .intern(interner)
+                },
+            )
+        },
+    );
+
+    Some(gb.all([implied_by_struct_def_goal, eq_goal].iter()))
 }

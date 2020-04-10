@@ -721,12 +721,10 @@ fn copy_constraints() {
             #[lang(drop)]
             trait Drop { }
 
-            struct S<T1, T2> where T1: Copy, T2: Copy {
-                t1: T1,
-                t2: T2
-            }
+            struct S<T> {}
+            struct F {}
 
-            impl<T1, T2> Copy for S<T1, T2> { }
+            impl<T> Drop for S<T> {}
         } error_msg {
            ""
         }
