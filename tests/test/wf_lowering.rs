@@ -721,12 +721,102 @@ fn copy_constraints() {
             #[lang(drop)]
             trait Drop { }
 
-            struct S<T> {}
-            struct F {}
+            struct S<T> { t: T }
 
-            impl<T> Drop for S<T> {}
+            impl<T> Copy for S<T> { }
         } error_msg {
-           ""
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            trait MyTrait where Self: Copy { }
+
+            struct S<T> where T: MyTrait { t: T }
+
+            impl<T> Copy for S<T> { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T> where T: Copy { t: T }
+
+            impl<T> Copy for S<T> { }
+
+            impl<T> Drop for S<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn drop_constraints() {
+    lowering_error! {
+        program {
+            #[lang(drop)]
+            trait Drop { }
+
+            struct Foo { }
+            struct S<T> { }
+
+            impl Drop for S<Foo> { }
+        } error_msg {
+           "trait impl for `Drop` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Trait where Self: SuperTrait { }
+            trait SuperTrait {}
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T> where T: Trait { }
+
+            impl<T> Drop for S<T> where T: SuperTrait { }
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T1, T2> { }
+
+            impl<T1, T2> Drop for S<T2, T1> { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait MyTrait { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T>{ }
+
+            impl<T> Drop for S<T> where T: MyTrait { }
+        } error_msg {
+           "trait impl for `Drop` does not meet well-formedness requirements"
         }
     }
 }

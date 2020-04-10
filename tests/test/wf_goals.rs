@@ -57,27 +57,19 @@ fn recursive_where_clause_on_type() {
 }
 
 #[test]
-fn my_test() {
+fn drop_compatible() {
     test! {
         program {
-            #[lang(copy)]
-            trait Copy { }
-
             #[lang(drop)]
             trait Drop { }
 
-            struct S<T1, T2> where T1: Copy, T2: Copy {
-                t1: T1,
-                t2: T2
-            }
-
-            impl<T1, T2> Copy for S<T1, T2> { }
+            struct S<T> { }
         }
 
         goal {
-            compatible { not { exists<T1, T2> { S<T1, T2>: Drop } } }
+            compatible { not { exists<T> { S<T>: Drop } } }
         } yields {
-            "No possible solution"
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
