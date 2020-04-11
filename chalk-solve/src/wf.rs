@@ -62,7 +62,7 @@ impl<'i, I: Interner> InputTypeCollector<'i, I> {
     }
 }
 
-impl<'i, 't, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
+impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
     type Result = ();
 
     fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {

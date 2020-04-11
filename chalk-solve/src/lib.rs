@@ -71,9 +71,13 @@ pub trait RustIrDatabase<I: Interner>: Debug {
 
     /// A stop-gap solution to force an impl for a given well-known trait.
     /// Useful when the logic for a given trait is absent or incomplete.
+    /// A value of `Some(true)` means that the the clause for the impl will be
+    /// added. A value of `Some(false)` means that the clause for the impl will
+    /// not be added, and fallback logic will not be checked. A value of `None`
+    /// means that the clause will not be added, but fallback logic may add logic.
     #[allow(unused_variables)]
-    fn force_impl_for(&self, well_known: WellKnownTrait, ty: &TyData<I>) -> bool {
-        false
+    fn force_impl_for(&self, well_known: WellKnownTrait, ty: &TyData<I>) -> Option<bool> {
+        None
     }
 
     /// Returns id of a trait lang item, if found
