@@ -74,14 +74,16 @@ struct Canonicalizer<'q, I: Interner> {
 }
 
 impl<'q, I: Interner> Canonicalizer<'q, I> {
-    fn into_binders(self) -> Vec<ParameterKind<UniverseIndex>> {
+    fn into_binders(self) -> ParameterKindsWithUniverseIndex<I> {
         let Canonicalizer {
-            table, free_vars, ..
+            table, free_vars, interner, ..
         } = self;
-        free_vars
-            .into_iter()
-            .map(|p_v| p_v.map(|v| table.universe_of_unbound_var(v)))
-            .collect()
+        ParameterKindsWithUniverseIndex::from(
+            interner,
+            free_vars
+                .into_iter()
+                .map(|p_v| p_v.map(|v| table.universe_of_unbound_var(v)))
+        )
     }
 
     fn add(&mut self, free_var: ParameterEnaVariable<I>) -> usize {

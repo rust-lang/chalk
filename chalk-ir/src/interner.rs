@@ -11,6 +11,8 @@ use crate::OpaqueTyId;
 use crate::Parameter;
 use crate::ParameterData;
 use crate::ParameterKind;
+use crate::ParameterKinds;
+use crate::ParameterKindsWithUniverseIndex;
 use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
@@ -282,6 +284,36 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a parameter kinds list. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
+    fn debug_parameter_kinds(
+        parameter_kinds: &ParameterKinds<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of an parameter kinds list with universe index.
+    /// To get good results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
+    fn debug_parameter_kinds_with_universe_index(
+        parameter_kinds_with_universe_index: &ParameterKindsWithUniverseIndex<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
     /// Prints the debug representation of an goal. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
@@ -548,11 +580,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
 pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
+
+    fn transfer_parameter_kinds_with_universe_index(
+        parameter_kinds: I::InternedParameterKindsWithUniverseIndex,
+    ) -> Self::InternedParameterKindsWithUniverseIndex;
 }
 
 impl<I: Interner> TargetInterner<I> for I {
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId {
         def_id
+    }
+
+    fn transfer_parameter_kinds_with_universe_index(
+        parameter_kinds: I::InternedParameterKindsWithUniverseIndex,
+    ) -> Self::InternedParameterKindsWithUniverseIndex {
+        parameter_kinds
     }
 }
 
@@ -672,6 +714,27 @@ mod default {
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| Some(prog?.debug_parameter(parameter, fmt)))
+        }
+
+        fn debug_parameter_kinds(
+            parameter_kinds: &ParameterKinds<Self>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| {
+                Some(prog?.debug_parameter_kinds(parameter_kinds, fmt))
+            })
+        }
+
+        fn debug_parameter_kinds_with_universe_index(
+            parameter_kinds_with_universe_index: &ParameterKindsWithUniverseIndex<Self>,
+            fmt: &mut fmt::Formatter<'_>,
+        ) -> Option<fmt::Result> {
+            tls::with_current_program(|prog| {
+                Some(prog?.debug_parameter_kinds_with_universe_index(
+                    parameter_kinds_with_universe_index,
+                    fmt,
+                ))
+            })
         }
 
         fn debug_goal(goal: &Goal<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {

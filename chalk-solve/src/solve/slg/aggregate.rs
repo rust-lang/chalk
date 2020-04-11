@@ -146,7 +146,7 @@ fn merge_into_guidance<I: Interner>(
             // We have two values for some variable X that
             // appears in the root goal. Find out the universe
             // of X.
-            let universe = root_goal.binders[index].into_inner();
+            let universe = root_goal.binders.as_slice(interner)[index].into_inner();
 
             let ty = match value.data(interner) {
                 ParameterKind::Ty(ty) => ty,

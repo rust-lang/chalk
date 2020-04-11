@@ -30,9 +30,9 @@ impl<I: Interner> InferenceTable<I> {
         bound: &Canonical<T>,
     ) -> T::Result
     where
-        T: Fold<I> + Debug,
+        T: HasInterner<Interner = I> + Fold<I> + Debug,
     {
-        let subst = self.fresh_subst(interner, &bound.binders);
+        let subst = self.fresh_subst(interner, &bound.binders.as_slice(interner));
         subst.apply(&bound.value, interner)
     }
 

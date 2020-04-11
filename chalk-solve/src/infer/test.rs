@@ -181,11 +181,11 @@ fn quantify_simple() {
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (bound 0) (bound 1) (bound 2)),
-            binders: vec![
+            binders: ParameterKindsWithUniverseIndex::from(interner, vec![
                 ParameterKind::Ty(U2),
                 ParameterKind::Ty(U1),
                 ParameterKind::Ty(U0),
-            ],
+            ]),
         }
     );
 }
@@ -219,11 +219,11 @@ fn quantify_bound() {
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (apply (item 1) (bound 0) (bound 1)) (bound 2) (bound 0) (bound 1)),
-            binders: vec![
+            binders: ParameterKindsWithUniverseIndex::from(interner, vec![
                 ParameterKind::Ty(U1),
                 ParameterKind::Ty(U0),
                 ParameterKind::Ty(U2),
-            ],
+            ]),
         }
     );
 }
@@ -260,7 +260,7 @@ fn quantify_ty_under_binder() {
             .quantified,
         Canonical {
             value: ty!(function 3 (apply (item 0) (bound 1) (bound 1 0) (bound 1 0) (lifetime (bound 1 1)))),
-            binders: vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)],
+            binders: ParameterKindsWithUniverseIndex::from(interner, vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)]),
         }
     );
 }

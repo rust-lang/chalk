@@ -1,17 +1,21 @@
 use chalk_engine::fallible::*;
 use chalk_ir::fold::{Fold, Folder};
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
 
 use super::InferenceTable;
 
 impl<I: Interner> InferenceTable<I> {
-    pub(crate) fn u_canonicalize<T: Fold<I> + Visit<I>>(
+    pub(crate) fn u_canonicalize<T>(
         &mut self,
         interner: &I,
         value0: &Canonical<T>,
-    ) -> UCanonicalized<T::Result> {
+    ) -> UCanonicalized<T::Result>
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T::Result: HasInterner<Interner = I>,
+    {
         debug!("u_canonicalize({:#?})", value0);
 
         // First, find all the universes that appear in `value`.
@@ -37,11 +41,12 @@ impl<I: Interner> InferenceTable<I> {
                 DebruijnIndex::INNERMOST,
             )
             .unwrap();
-        let binders = value0
+        let binders = 
+        ParameterKindsWithUniverseIndex::from(interner,
+        value0
             .binders
-            .iter()
-            .map(|pk| pk.map(|ui| universes.map_universe_to_canonical(ui)))
-            .collect();
+            .iter(interner)
+            .map(|pk| pk.map(|ui| universes.map_universe_to_canonical(ui))));
 
         UCanonicalized {
             quantified: UCanonical {
@@ -57,7 +62,7 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCanonicalized<T> {
+pub(crate) struct UCanonicalized<T: HasInterner> {
     /// The canonicalized result.
     pub(crate) quantified: UCanonical<T>,
 

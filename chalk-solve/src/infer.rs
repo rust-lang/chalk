@@ -1,4 +1,4 @@
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 
@@ -52,7 +52,7 @@ impl<I: Interner> InferenceTable<I> {
         canonical: &Canonical<T>,
     ) -> (Self, Substitution<I>, T)
     where
-        T: Fold<I, Result = T> + Clone,
+        T: HasInterner<Interner = I> + Fold<I, Result = T> + Clone,
     {
         let mut table = InferenceTable::new();
 
@@ -61,7 +61,7 @@ impl<I: Interner> InferenceTable<I> {
             table.new_universe();
         }
 
-        let subst = table.fresh_subst(interner, &canonical.binders);
+        let subst = table.fresh_subst(interner, canonical.binders.as_slice(interner));
         let value = subst.apply(&canonical.value, interner);
         // let value = canonical.value.fold_with(&mut &subst, 0).unwrap();
 

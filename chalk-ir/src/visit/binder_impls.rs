@@ -37,10 +37,10 @@ where
     }
 }
 
-impl<T, I> Visit<I> for Canonical<T>
+impl<I, T> Visit<I> for Canonical<T>
 where
-    T: Visit<I>,
     I: Interner,
+    T: HasInterner<Interner = I> + Visit<I>,
 {
     fn visit_with<'i, R: VisitResult>(
         &self,

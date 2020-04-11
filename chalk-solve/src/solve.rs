@@ -138,18 +138,35 @@ impl<I: Interner> Solution<I> {
             _ => false,
         }
     }
+
+    pub fn display<'a>(&'a self, interner: &'a I) -> SolutionDisplay<'a, I> {
+        SolutionDisplay {
+            solution: self,
+            interner,
+        }
+    }
 }
 
-impl<I: Interner> fmt::Display for Solution<I> {
+pub struct SolutionDisplay<'a, I: Interner> {
+    solution: &'a Solution<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match self {
-            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained,),
-            Solution::Ambig(Guidance::Definite(subst)) => {
-                write!(f, "Ambiguous; definite substitution {}", subst)
-            }
-            Solution::Ambig(Guidance::Suggested(subst)) => {
-                write!(f, "Ambiguous; suggested substitution {}", subst)
-            }
+        let SolutionDisplay { solution, interner } = self;
+        match solution {
+            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained.display(interner)),
+            Solution::Ambig(Guidance::Definite(subst)) => write!(
+                f,
+                "Ambiguous; definite substitution {}",
+                subst.display(interner)
+            ),
+            Solution::Ambig(Guidance::Suggested(subst)) => write!(
+                f,
+                "Ambiguous; suggested substitution {}",
+                subst.display(interner)
+            ),
             Solution::Ambig(Guidance::Unknown) => write!(f, "Ambiguous; no inference guidance"),
         }
     }

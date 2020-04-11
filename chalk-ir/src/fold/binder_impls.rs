@@ -55,10 +55,11 @@ where
     }
 }
 
-impl<T, I, TI> Fold<I, TI> for Canonical<T>
+impl<I, T, TI> Fold<I, TI> for Canonical<T>
 where
-    T: Fold<I, TI>,
     I: Interner,
+    T: HasInterner<Interner = I> + Fold<I, TI>,
+    <T as Fold<I, TI>>::Result: HasInterner<Interner = TI>,
     TI: TargetInterner<I>,
 {
     type Result = Canonical<T::Result>;
@@ -76,8 +77,13 @@ where
             value: self_value,
         } = self;
         let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
+        let binders = ParameterKindsWithUniverseIndex {
+            interned: TI::transfer_parameter_kinds_with_universe_index(
+                self_binders.interned().clone(),
+            ),
+        };
         Ok(Canonical {
-            binders: self_binders.clone(),
+            binders: binders,
             value: value,
         })
     }

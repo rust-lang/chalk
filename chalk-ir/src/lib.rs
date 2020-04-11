@@ -1596,16 +1596,13 @@ impl<I: Interner> ParameterKindsWithUniverseIndex<I> {
 /// All unresolved existential variables are "renumbered" according to their
 /// first appearance; the kind/universe of the variable is recorded in the
 /// `binders` field.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Canonical<T> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Canonical<T: HasInterner> {
     pub value: T,
-    pub binders: Vec<ParameterKind<UniverseIndex>>,
+    pub binders: ParameterKindsWithUniverseIndex<T::Interner>,
 }
 
-impl<T> HasInterner for Canonical<T>
-where
-    T: HasInterner,
-{
+impl<T: HasInterner> HasInterner for Canonical<T> {
     type Interner = T::Interner;
 }
 
@@ -1615,21 +1612,21 @@ where
 /// distinctions.
 ///
 /// To produce one of these values, use the `u_canonicalize` method.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct UCanonical<T> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UCanonical<T: HasInterner> {
     pub canonical: Canonical<T>,
     pub universes: usize,
 }
 
-impl<T> UCanonical<T> {
-    pub fn is_trivial_substitution<I: Interner>(
+impl<T: HasInterner> UCanonical<T> {
+    pub fn is_trivial_substitution(
         &self,
-        interner: &I,
-        canonical_subst: &Canonical<AnswerSubst<I>>,
+        interner: &T::Interner,
+        canonical_subst: &Canonical<AnswerSubst<T::Interner>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(
-            self.canonical.binders.len(),
+            self.canonical.binders.len(interner),
             subst.parameters(interner).len()
         );
         subst.is_identity_subst(interner)
