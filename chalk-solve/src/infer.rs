@@ -80,6 +80,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Current maximum universe -- one that can see all existing names.
+    #[allow(dead_code)]
     pub(crate) fn max_universe(&self) -> UniverseIndex {
         self.max_universe
     }
