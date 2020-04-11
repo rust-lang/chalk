@@ -126,12 +126,12 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         let obligation = match obligation {
             Obligation::Prove(goal) => {
                 let truncated =
-                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 10, &goal);
+                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 30, &goal);
                 Obligation::Prove(truncated.value)
             }
             Obligation::Refute(goal) => {
                 let truncated =
-                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 10, &goal);
+                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 30, &goal);
                 Obligation::Refute(truncated.value)
             }
         };
