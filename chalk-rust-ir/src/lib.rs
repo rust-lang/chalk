@@ -36,7 +36,7 @@ impl<I: Interner> ImplDatum<I> {
     }
 
     pub fn trait_id(&self) -> TraitId<I> {
-        self.binders.value.trait_ref.trait_id
+        self.binders.skip_binders().trait_ref.trait_id
     }
 }
 
@@ -234,13 +234,8 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
 
     fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
         let self_ty = self_ty.shifted_in(interner);
-        self.value
-            .into_where_clauses(interner, self_ty)
+        self.map_ref(|b| b.into_where_clauses(interner, self_ty))
             .into_iter()
-            .map(|wc| Binders {
-                binders: self.binders.clone(),
-                value: wc,
-            })
             .collect()
     }
 }
@@ -413,8 +408,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
     /// these quantified where clauses are in the scope of the
     /// `binders` field.
     pub fn bounds_on_self(&self, interner: &I) -> Vec<QuantifiedWhereClause<I>> {
-        let Binders { binders, value } = &self.binders;
-
+        let (binders, assoc_ty_datum) = self.binders.as_ref().into();
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
         let substitution = Substitution::from(
@@ -435,7 +429,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
         // ```
         // <P0 as Foo<P1..Pn>>::Item<Pn..Pm>: Debug
         // ```
-        value
+        assoc_ty_datum
             .bounds
             .iter()
             .flat_map(|b| b.into_where_clauses(interner, self_ty.clone()))

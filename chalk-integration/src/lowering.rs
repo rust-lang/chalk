@@ -169,10 +169,7 @@ impl<'k> Env<'k> {
     {
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
-        Ok(chalk_ir::Binders {
-            binders: binders.anonymize(),
-            value: op(&env)?,
-        })
+        Ok(chalk_ir::Binders::new(binders.anonymize(), op(&env)?))
     }
 }
 
@@ -528,10 +525,7 @@ impl LowerTypeKind for StructDefn {
         Ok(TypeKind {
             sort: TypeSort::Struct,
             name: self.name.str,
-            binders: chalk_ir::Binders {
-                binders: self.all_parameters().anonymize(),
-                value: (),
-            },
+            binders: chalk_ir::Binders::new(self.all_parameters().anonymize(), ()),
         })
     }
 }
@@ -548,11 +542,11 @@ impl LowerTypeKind for TraitDefn {
         Ok(TypeKind {
             sort: TypeSort::Trait,
             name: self.name.str,
-            binders: chalk_ir::Binders {
+            binders: chalk_ir::Binders::new(
                 // for the purposes of the *type*, ignore `Self`:
-                binders: binders.anonymize(),
-                value: (),
-            },
+                binders.anonymize(),
+                (),
+            ),
         })
     }
 }

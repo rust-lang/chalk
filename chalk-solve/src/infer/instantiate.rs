@@ -114,7 +114,7 @@ impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
     type Value = &'a T;
 
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
-        (self.binders.iter().cloned(), &self.value)
+        (self.binders.iter().cloned(), self.skip_binders())
     }
 }
 

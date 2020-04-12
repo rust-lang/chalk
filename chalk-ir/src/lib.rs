@@ -1144,7 +1144,7 @@ impl<I: Interner> HasInterner for AliasEq<I> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Binders<T> {
     pub binders: Vec<ParameterKind<()>>,
-    pub value: T,
+    value: T,
 }
 
 impl<T: HasInterner> HasInterner for Binders<T> {
@@ -1152,6 +1152,35 @@ impl<T: HasInterner> HasInterner for Binders<T> {
 }
 
 impl<T> Binders<T> {
+    pub fn new(binders: Vec<ParameterKind<()>>, value: T) -> Self {
+        Self { binders, value }
+    }
+
+    /// Skips the binder and returns the "bound" value. This is a
+    /// risky thing to do because it's easy to get confused about
+    /// De Bruijn indices and the like. `skip_binder` is only valid
+    /// when you are either extracting data that has nothing to
+    /// do with bound vars, or you are being very careful about
+    /// your depth accounting.
+    ///
+    /// Some examples where `skip_binder` is reasonable:
+    ///
+    /// - extracting the `TraitId` from a TraitRef;
+    /// - checking if there are any fields in a StructDatum
+    pub fn skip_binders(&self) -> &T {
+        &self.value
+    }
+
+    /// Converts `&Binders<T>` to `Binders<&T>`. Produces new `Binders`
+    /// with cloned quantifiers containing a reference to the original
+    /// value, leaving the original in place.
+    pub fn as_ref(&self) -> Binders<&T> {
+        Binders {
+            binders: self.binders.clone(),
+            value: &self.value,
+        }
+    }
+
     pub fn map<U, OP>(self, op: OP) -> Binders<U>
     where
         OP: FnOnce(T) -> U,
@@ -1167,11 +1196,7 @@ impl<T> Binders<T> {
     where
         OP: FnOnce(&'a T) -> U,
     {
-        let value = op(&self.value);
-        Binders {
-            binders: self.binders.clone(),
-            value,
-        }
+        self.as_ref().map(op)
     }
 
     /// Creates a fresh binders that contains a single type
@@ -1196,6 +1221,12 @@ impl<T> Binders<T> {
 
     pub fn len(&self) -> usize {
         self.binders.len()
+    }
+}
+
+impl<T> From<Binders<T>> for (Vec<ParameterKind<()>>, T) {
+    fn from(binders: Binders<T>) -> Self {
+        (binders.binders, binders.value)
     }
 }
 

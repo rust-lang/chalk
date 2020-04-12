@@ -55,11 +55,8 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .push(ProgramClauseData::Implies(clause).intern(interner));
         } else {
             self.clauses.push(
-                ProgramClauseData::ForAll(Binders {
-                    binders: self.binders.clone(),
-                    value: clause,
-                })
-                .intern(interner),
+                ProgramClauseData::ForAll(Binders::new(self.binders.clone(), clause))
+                    .intern(interner),
             );
         }
 
@@ -121,10 +118,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     #[allow(dead_code)]
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
-        let binders = Binders {
-            binders: vec![ParameterKind::Ty(())],
-            value: PhantomData::<I>,
-        };
+        let binders = Binders::new(vec![ParameterKind::Ty(())], PhantomData::<I>);
         self.push_binders(&binders, |this, PhantomData| {
             let ty = this
                 .placeholders_in_scope()
