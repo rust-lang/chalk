@@ -200,6 +200,7 @@ Impl: Impl = {
 VariableKind: VariableKind = {
     Id => VariableKind::Ty(<>),
     LifetimeId => VariableKind::Lifetime(<>),
+    ConstId => VariableKind::Const(<>),
 };
 
 AssocTyValue: AssocTyValue = {
@@ -281,7 +282,13 @@ Lifetime: Lifetime = {
 GenericArg: GenericArg = {
     Ty => GenericArg::Ty(<>),
     Lifetime => GenericArg::Lifetime(<>),
-};
+    Const => Parameter::Const(<>),
+}
+
+Const: Const = {
+    <n:ConstId> => Const::Id { name: n },
+    <v:ConstVal> => Const::Value { value: v }
+}
 
 ProjectionTy: ProjectionTy = {
     "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => ProjectionTy {
@@ -404,6 +411,8 @@ LeafGoal: LeafGoal = {
     <a:Ty> "=" <b:Ty> => LeafGoal::UnifyTys { a, b },
 
     <a:Lifetime> "=" <b:Lifetime> => LeafGoal::UnifyLifetimes { a, b },
+
+    <a:Const> "=" <b:Const> => LeafGoal::UnifyConsts { a, b },
 };
 
 TraitRef<S>: TraitRef = {
@@ -463,3 +472,12 @@ LifetimeId: Identifier = {
         span: Span::new(l, r),
     }
 };
+
+ConstId: Identifier = {
+    <l:@L> "$" <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
+        str: intern(s),
+        span: Span::new(l, r),
+    }
+}
+
+ConstVal: u32 = <s:r"[0-9]+"> => u32::from_str_radix(s, 10).unwrap();

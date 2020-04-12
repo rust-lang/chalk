@@ -87,13 +87,25 @@ where
     /// Top-level callback: invoked for each `Lifetime<I>` that is
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
-    /// specialized folding methods below, like `fold_free_lifetime_ty`.
+    /// specialized folding methods below, like `fold_free_var_lifetime`.
     fn fold_lifetime(
         &mut self,
         lifetime: &Lifetime<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<TI>> {
         lifetime.super_fold_with(self.as_dyn(), outer_binder)
+    }
+
+    /// Top-level callback: invoked for each `Const<I>` that is
+    /// encountered when folding. By default, invokes
+    /// `super_fold_with`, which will in turn invoke the more
+    /// specialized folding methods below, like `fold_free_var_const`.
+    fn fold_const(
+        &mut self,
+        constant: &Const<I>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<TI>> {
+        constant.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every program clause. By default, recursively folds the goals contents.
@@ -159,8 +171,24 @@ where
         }
     }
 
-    /// If overriden to return true, we will panic when a free
-    /// placeholder type/lifetime is encountered.
+    fn fold_free_var_const(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<TI>> {
+        if self.forbid_free_vars() {
+            panic!(
+                "unexpected free variable with depth `{:?}` with outer binder {:?}",
+                bound_var, outer_binder
+            )
+        } else {
+            let bound_var = bound_var.shifted_in_from(outer_binder);
+            Ok(ConstData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
+        }
+    }
+
+    /// If overridden to return true, we will panic when a free
+    /// placeholder type/lifetime/const is encountered.
     fn forbid_free_placeholders(&self) -> bool {
         false
     }
@@ -196,6 +224,19 @@ where
             panic!("unexpected placeholder lifetime `{:?}`", universe)
         } else {
             Ok(universe.to_lifetime(self.target_interner()))
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn fold_free_placeholder_const(
+        &mut self,
+        universe: PlaceholderIndex,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<TI>> {
+        if self.forbid_free_placeholders() {
+            panic!("unexpected placeholder const `{:?}`", universe)
+        } else {
+            Ok(universe.to_const(self.target_interner()))
         }
     }
 
@@ -237,6 +278,19 @@ where
             panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
             Ok(var.to_lifetime(self.target_interner()))
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn fold_inference_const(
+        &mut self,
+        var: InferenceVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<TI>> {
+        if self.forbid_inference_vars() {
+            panic!("unexpected inference const `{:?}`", var)
+        } else {
+            Ok(var.to_const(self.target_interner()))
         }
     }
 
@@ -415,6 +469,60 @@ where
                 folder.fold_free_placeholder_lifetime(*universe, outer_binder)
             }
             LifetimeData::Phantom(..) => unreachable!(),
+        }
+    }
+}
+
+/// "Folding" a const invokes the `fold_const` method on the folder; this
+/// usually (in turn) invokes `super_fold_const` to fold the individual
+/// parts.
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Const<I> {
+    type Result = Const<TI>;
+
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        folder.fold_const(self, outer_binder)
+    }
+}
+
+impl<I, TI> SuperFold<I, TI> for Const<I>
+where
+    I: Interner,
+    TI: TargetInterner<I>,
+{
+    fn super_fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<TI>>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let interner = folder.interner();
+        match self.data(interner) {
+            ConstData::BoundVar(bound_var) => {
+                if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
+                    folder.fold_free_var_const(bound_var1, outer_binder)
+                } else {
+                    Ok(ConstData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
+                }
+            }
+            ConstData::InferenceVar(var) => folder.fold_inference_const(*var, outer_binder),
+            ConstData::Placeholder(universe) => {
+                folder.fold_free_placeholder_const(*universe, outer_binder)
+            }
+            ConstData::Concrete(ev) => Ok(ConstData::Concrete(ConcreteConst {
+                interned: folder.target_interner().transfer_const(&ev.interned),
+            })
+            .intern(folder.target_interner())),
         }
     }
 }

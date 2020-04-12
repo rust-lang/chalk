@@ -5,7 +5,7 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
 
-use super::{EnaVariable, InferenceTable, ParameterEnaVariable};
+use super::{InferenceTable, ParameterEnaVariable};
 
 impl<I: Interner> InferenceTable<I> {
     /// Given a value `value` with variables in it, replaces those variables
@@ -131,6 +131,16 @@ where
         Ok(universe.to_lifetime(interner))
     }
 
+    fn fold_free_placeholder_const(
+        &mut self,
+        universe: PlaceholderIndex,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let interner = self.interner;
+        self.max_universe = max(self.max_universe, universe.ui);
+        Ok(universe.to_const(interner))
+    }
+
     fn forbid_free_vars(&self) -> bool {
         true
     }
@@ -146,9 +156,9 @@ where
             outer_binder
         );
         let interner = self.interner;
-        let var = EnaVariable::from(var);
-        match self.table.probe_ty_var(interner, var) {
+        match self.table.probe_var(var) {
             Some(ty) => {
+                let ty = ty.assert_ty_ref(interner);
                 debug!("bound to {:?}", ty);
                 Ok(ty
                     .fold_with(self, DebruijnIndex::INNERMOST)?
@@ -180,9 +190,9 @@ where
             outer_binder
         );
         let interner = self.interner;
-        let var = EnaVariable::from(var);
-        match self.table.probe_lifetime_var(interner, var) {
+        match self.table.probe_var(var) {
             Some(l) => {
+                let l = l.assert_lifetime_ref(interner);
                 debug!("bound to {:?}", l);
                 Ok(l.fold_with(self, DebruijnIndex::INNERMOST)?
                     .shifted_in_from(interner, outer_binder))
@@ -196,6 +206,33 @@ where
                     LifetimeData::BoundVar(bound_var.shifted_in_from(outer_binder))
                         .intern(interner),
                 )
+            }
+        }
+    }
+
+    fn fold_inference_const(
+        &mut self,
+        var: InferenceVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        debug_heading!(
+            "fold_inference_const(depth={:?}, outer_binder={:?})",
+            var,
+            outer_binder
+        );
+        let interner = self.interner;
+        match self.table.probe_var(var) {
+            Some(c) => {
+                let c = c.assert_const_ref(interner);
+                debug!("bound to {:?}", c);
+                Ok(c.fold_with(self, DebruijnIndex::INNERMOST)?
+                    .shifted_in_from(interner, outer_binder))
+            }
+            None => {
+                let free_var = ParameterKind::Const(self.table.unify.find(var));
+                let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
+                debug!("not yet unified: position={:?}", bound_var);
+                Ok(ConstData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
             }
         }
     }

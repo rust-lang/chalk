@@ -55,15 +55,7 @@ impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
         self.interner
     }
 
-    fn visit_free_var_ty(
-        &mut self,
-        _bound_var: BoundVar,
-        _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
-        FindAny::FOUND
-    }
-
-    fn visit_free_var_lifetime(
+    fn visit_free_var(
         &mut self,
         _bound_var: BoundVar,
         _outer_binder: DebruijnIndex,

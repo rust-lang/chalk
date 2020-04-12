@@ -118,35 +118,36 @@ impl<I: Interner> InferenceTable<I> {
         self.unify.commit(snapshot.unify_snapshot);
     }
 
-    /// If type `leaf` is a free inference variable, and that variable has been
-    /// bound, returns `Some(T)` where `T` is the type to which it has been bound.
-    ///
-    /// `binders` is the number of binders under which `leaf` appears;
-    /// the return value will also be shifted accordingly so that it
-    /// can appear under that same number of binders.
-    pub(crate) fn normalize_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
-        let var = EnaVariable::from(leaf.inference_var(interner)?);
-        match self.unify.probe_value(var) {
-            InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => {
-                let ty = val.assert_ty_ref(interner).clone();
-                assert!(!ty.needs_shift(interner));
-                Some(ty)
-            }
-        }
+    pub(crate) fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+        self.probe_var(leaf.inference_var(interner)?)
+            .map(|p| p.assert_ty_ref(interner).clone())
     }
 
-    /// If `leaf` represents an inference variable `X`, and `X` is bound,
-    /// returns `Some(v)` where `v` is the value to which `X` is bound.
-    pub(crate) fn normalize_lifetime(
+    pub(crate) fn normalize_lifetime_shallow(
         &mut self,
         interner: &I,
         leaf: &Lifetime<I>,
     ) -> Option<Lifetime<I>> {
-        let var = EnaVariable::from(leaf.inference_var(interner)?);
-        let v1 = self.probe_lifetime_var(interner, var)?;
-        assert!(!v1.needs_shift(interner));
-        Some(v1)
+        self.probe_var(leaf.inference_var(interner)?)
+            .map(|p| p.assert_lifetime_ref(interner).clone())
+    }
+
+    pub(crate) fn normalize_const_shallow(
+        &mut self,
+        interner: &I,
+        leaf: &Const<I>,
+    ) -> Option<Const<I>> {
+        self.probe_var(leaf.inference_var(interner)?)
+            .map(|p| p.assert_const_ref(interner).clone())
+    }
+
+    /// If type `leaf` is a free inference variable, and that variable has been
+    /// bound, returns `Some(P)` where `P` is the parameter to which it has been bound.
+    pub(crate) fn probe_var(&mut self, leaf: InferenceVar) -> Option<Parameter<I>> {
+        match self.unify.probe_value(EnaVariable::from(leaf)) {
+            InferenceValue::Unbound(_) => None,
+            InferenceValue::Bound(val) => Some(val),
+        }
     }
 
     /// Returns true if `var` has been bound.
@@ -154,35 +155,6 @@ impl<I: Interner> InferenceTable<I> {
         match self.unify.probe_value(EnaVariable::from(var)) {
             InferenceValue::Unbound(_) => false,
             InferenceValue::Bound(_) => true,
-        }
-    }
-
-    /// Finds the type to which `var` is bound, returning `None` if it is not yet
-    /// bound.
-    ///
-    /// # Panics
-    ///
-    /// This method is only valid for inference variables of kind
-    /// type. If this variable is of a different kind, then the
-    /// function may panic.
-    fn probe_ty_var(&mut self, interner: &I, var: EnaVariable<I>) -> Option<Ty<I>> {
-        match self.unify.probe_value(var) {
-            InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => Some(val.assert_ty_ref(interner).clone()),
-        }
-    }
-
-    /// Finds the lifetime to which `var` is bound, returning `None` if it is not yet
-    /// bound.
-    ///
-    /// # Panics
-    ///
-    /// This method is only valid for inference variables of kind
-    /// lifetime. If this variable is of a different kind, then the function may panic.
-    fn probe_lifetime_var(&mut self, interner: &I, var: EnaVariable<I>) -> Option<Lifetime<I>> {
-        match self.unify.probe_value(var) {
-            InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => Some(val.assert_lifetime_ref(interner).clone()),
         }
     }
 
@@ -222,6 +194,14 @@ impl<I: Interner> InferenceTable<I> {
                         }
                     }
                 }
+
+                ParameterKind::Const(constant) => {
+                    if let Some(var) = constant.inference_var(interner) {
+                        if self.var_is_bound(var) {
+                            return false;
+                        }
+                    }
+                }
             }
         }
 
@@ -240,7 +220,7 @@ impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
         match self.kind {
             VariableKind::Ty => ena_variable.to_ty(interner).cast(interner),
             VariableKind::Lifetime => ena_variable.to_lifetime(interner).cast(interner),
-            VariableKind::Phantom(..) => unreachable!(),
+            VariableKind::Const(v) => ena_variable.to_const(interner).cast(interner),
         }
     }
 }

@@ -4,7 +4,7 @@ use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
-use super::{EnaVariable, InferenceTable};
+use super::InferenceTable;
 
 impl<I: Interner> InferenceTable<I> {
     /// Given a value `value` with variables in it, replaces those variables
@@ -50,9 +50,9 @@ where
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner;
-        let var = EnaVariable::from(var);
-        match self.table.probe_ty_var(interner, var) {
+        match self.table.probe_var(var) {
             Some(ty) => Ok(ty
+                .assert_ty_ref(interner)
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)), // FIXME shift
             None => Ok(var.to_ty(interner)),
@@ -65,12 +65,27 @@ where
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         let interner = self.interner;
-        let var = EnaVariable::from(var);
-        match self.table.probe_lifetime_var(interner, var) {
+        match self.table.probe_var(var) {
             Some(l) => Ok(l
+                .assert_lifetime_ref(interner)
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)),
             None => Ok(var.to_lifetime(interner)), // FIXME shift
+        }
+    }
+
+    fn fold_inference_const(
+        &mut self,
+        var: InferenceVar,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let interner = self.interner;
+        match self.table.probe_var(var) {
+            Some(c) => Ok(c
+                .assert_const_ref(interner)
+                .fold_with(self, DebruijnIndex::INNERMOST)?
+                .shifted_in(interner)),
+            None => Ok(var.to_const(interner)), // FIXME shift
         }
     }
 

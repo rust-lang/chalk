@@ -46,7 +46,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
     }
 
     fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) {
-        if let Some(normalized_ty) = self.infer.normalize_shallow(self.interner, ty) {
+        if let Some(normalized_ty) = self.infer.normalize_ty_shallow(self.interner, ty) {
             normalized_ty.visit_with(self, outer_binder);
             return;
         }

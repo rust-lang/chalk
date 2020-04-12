@@ -28,6 +28,7 @@ use crate::Ty;
 use crate::TyData;
 use crate::VariableKind;
 use crate::VariableKinds;
+use crate::{Const, ConstData};
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -52,7 +53,7 @@ use std::sync::Arc;
 /// end.
 pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// "Interned" representation of types.  In normal user code,
-    /// `Self::InternedType` is not referenced Instead, we refer to
+    /// `Self::InternedType` is not referenced. Instead, we refer to
     /// `Ty<Self>`, which wraps this type.
     ///
     /// An `InternedType` must be something that can be created from a
@@ -63,13 +64,31 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     type InternedType: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of lifetimes.  In normal user code,
-    /// `Self::InternedLifetime` is not referenced Instead, we refer to
+    /// `Self::InternedLifetime` is not referenced. Instead, we refer to
     /// `Lifetime<Self>`, which wraps this type.
     ///
     /// An `InternedLifetime` must be something that can be created
     /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
     /// then later converted back (by the [`lifetime_data`] method).
     type InternedLifetime: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of const expressions. In normal user code,
+    /// `Self::InternedConst` is not referenced. Instead, we refer to
+    /// `Const<Self>`, which wraps this type.
+    ///
+    /// An `InternedConst` must be something that can be created
+    /// from a `ConstData` (by the [`intern_const`] method) and
+    /// then later converted back (by the [`const_data`] method).
+    type InternedConst: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of an evaluated const value.
+    /// `Self::InternedConcreteConst` is not referenced. Instead,
+    /// we refer to `ConcreteConst<Self>`, which wraps this type.
+    ///
+    /// `InternedConcreteConst` instances are not created by chalk,
+    /// it can only make a query asking about equality of two
+    /// evaluated consts.
+    type InternedConcreteConst: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "generic parameter", which can
     /// be either a type or a lifetime.  In normal user code,
@@ -257,7 +276,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an type. To get good
+    /// Prints the debug representation of a type. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
     /// fully known types).
@@ -269,7 +288,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an lifetime. To get good
+    /// Prints the debug representation of a lifetime. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
     /// fully known types).
@@ -281,6 +300,18 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         lifetime: &Lifetime<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of a const. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
+    fn debug_const(constant: &Const<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
@@ -490,6 +521,17 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn lifetime_data<'a>(&self, lifetime: &'a Self::InternedLifetime) -> &'a LifetimeData<Self>;
 
+    /// Create an "interned" const from `const`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `ConstData::intern` (which will ultimately call this
+    /// method).
+    fn intern_const(&self, constant: ConstData<Self>) -> Self::InternedConst;
+
+    /// Lookup the `ConstData` that was interned to create a `InternedConst`.
+    fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
+
+    fn const_eq(&self, c1: &Self::InternedConcreteConst, c2: &Self::InternedConcreteConst) -> bool;
+
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `GenericArgData::intern` (which will ultimately call this
@@ -626,6 +668,10 @@ pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_canonical_var_kinds(
         variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
+    fn transfer_const(
+        &self,
+        const_evaluated: &I::InternedConcreteConst,
+    ) -> Self::InternedConcreteConst;
 }
 
 impl<I: Interner> TargetInterner<I> for I {
@@ -647,6 +693,13 @@ impl<I: Interner> TargetInterner<I> for I {
         variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds {
         variable_kinds
+    }
+
+    fn transfer_const(
+        &self,
+        const_evaluated: &I::InternedConcreteConst,
+    ) -> Self::InternedConcreteConst {
+        const_evaluated.clone()
     }
 }
 

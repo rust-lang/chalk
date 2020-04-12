@@ -161,7 +161,9 @@ fn program_clauses_that_could_match<I: Interner>(
 
             if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                 let self_ty = trait_ref.self_type_parameter(interner);
-                if self_ty.bound(interner).is_some() || self_ty.inference_var(interner).is_some() {
+                if self_ty.bound_var(interner).is_some()
+                    || self_ty.inference_var(interner).is_some()
+                {
                     return Err(Floundered);
                 }
             }

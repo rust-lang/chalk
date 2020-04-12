@@ -85,6 +85,10 @@ enum LifetimeLookup {
     GenericArg(BoundVar),
 }
 
+enum ConstLookup {
+    Parameter(BoundVar),
+}
+
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
@@ -153,6 +157,17 @@ impl<'k> Env<'k> {
         &self.fn_def_kinds[&id]
     }
 
+    fn lookup_const(&self, name: Identifier) -> LowerResult<ConstLookup> {
+        if let Some(k) = self
+            .parameter_map
+            .get(&chalk_ir::ParameterKind::Const(name.str))
+        {
+            return Ok(ConstLookup::Parameter(*k));
+        }
+
+        Err(RustIrError::InvalidConstName(name))
+    }
+    
     fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
         &self.trait_kinds[&id]
     }
@@ -867,6 +882,11 @@ impl LowerLeafGoal for LeafGoal {
                 b: b.lower(env)?.cast(interner),
             }
             .cast::<chalk_ir::Goal<ChalkIr>>(interner),
+            LeafGoal::UnifyConsts { ref a, ref b } => chalk_ir::EqGoal {
+                a: a.lower(env)?.cast(interner),
+                b: b.lower(env)?.cast(interner),
+            }
+            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
         })
     }
 }
@@ -1409,6 +1429,28 @@ impl LowerGenericArg for GenericArg {
         match *self {
             GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
             GenericArg::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
+            GenericArg::Const(ref c) => Ok(c.lower(env)?.cast(interner)),
+        }
+    }
+}
+
+trait LowerConst {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>>;
+}
+
+impl LowerConst for Const {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>> {
+        let interner = env.interner();
+        match *self {
+            Const::Id { name } => match env.lookup_const(name)? {
+                ConstLookup::Parameter(d) => Ok(chalk_ir::ConstData::BoundVar(d).intern(interner)),
+            },
+            Const::Value { value } => {
+                Ok(
+                    chalk_ir::ConstData::Concrete(chalk_ir::ConcreteConst { interned: value })
+                        .intern(interner),
+                )
+            }
         }
     }
 }
@@ -1722,6 +1764,7 @@ impl Kinded for VariableKind {
         match *self {
             VariableKind::Ty(_) => Kind::Ty,
             VariableKind::Lifetime(_) => Kind::Lifetime,
+            VariableKind::Const(_) => Kind::Const,
         }
     }
 }
@@ -1731,6 +1774,7 @@ impl Kinded for GenericArg {
         match *self {
             GenericArg::Ty(_) => Kind::Ty,
             GenericArg::Lifetime(_) => Kind::Lifetime,
+            GenericArg::Const(_) => Kind::Const,
         }
     }
 }
@@ -1740,7 +1784,7 @@ impl Kinded for chalk_ir::VariableKind<ChalkIr> {
         match self {
             chalk_ir::VariableKind::Ty => Kind::Ty,
             chalk_ir::VariableKind::Lifetime => Kind::Lifetime,
-            chalk_ir::VariableKind::Phantom(..) => unreachable!(),
+            chalk_ir::VariableKind::Const(_) => Kind::Const,
         }
     }
 }

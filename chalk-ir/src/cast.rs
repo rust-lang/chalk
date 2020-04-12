@@ -76,6 +76,7 @@ macro_rules! reflexive_impl {
 
 reflexive_impl!(for(I: Interner) TyData<I>);
 reflexive_impl!(for(I: Interner) LifetimeData<I>);
+reflexive_impl!(for(I: Interner) ConstData<I>);
 reflexive_impl!(for(I: Interner) TraitRef<I>);
 reflexive_impl!(for(I: Interner) DomainGoal<I>);
 reflexive_impl!(for(I: Interner) Goal<I>);
@@ -171,6 +172,12 @@ impl<I: Interner> CastTo<GenericArg<I>> for Ty<I> {
 impl<I: Interner> CastTo<GenericArg<I>> for Lifetime<I> {
     fn cast_to(self, interner: &I) -> GenericArg<I> {
         GenericArg::new(interner, GenericArgData::Lifetime(self))
+    }
+}
+
+impl<I: Interner> CastTo<Parameter<I>> for Const<I> {
+    fn cast_to(self, interner: &I) -> Parameter<I> {
+        Parameter::new(interner, ParameterKind::Const(self))
     }
 }
 

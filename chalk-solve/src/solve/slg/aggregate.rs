@@ -142,7 +142,7 @@ fn merge_into_guidance<I: Interner>(
         .iter(interner)
         .zip(subst1.iter(interner))
         .enumerate()
-        .map(|(index, (value, value1))| {
+        .map(|(index, (p1, p2))| {
             // We have two values for some variable X that
             // appears in the root goal. Find out the universe
             // of X.
@@ -158,9 +158,8 @@ fn merge_into_guidance<I: Interner>(
                         .to_lifetime(interner)
                         .cast(interner);
                 }
+                GenericArgData::Const(_) => (),
             };
-
-            let ty1 = value1.assert_ty_ref(interner);
 
             // Combine the two types into a new type.
             let mut aggr = AntiUnifier {
@@ -168,7 +167,7 @@ fn merge_into_guidance<I: Interner>(
                 universe,
                 interner,
             };
-            aggr.aggregate_tys(&ty, ty1).cast(interner)
+            aggr.aggregate_parameters(p1, p2)
         })
         .collect();
 
@@ -183,11 +182,8 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
         .value
         .iter(interner)
         .enumerate()
-        .all(|(index, generic_arg)| match generic_arg.data(interner) {
-            // All types are mapped to distinct variables.  Since this
-            // has been canonicalized, those will also be the first N
-            // variables.
-            GenericArgData::Ty(t) => match t.bound(interner) {
+        .all(|(index, parameter)| {
+            let is_trivial = |b: Option<BoundVar>| match b {
                 None => false,
                 Some(bound_var) => {
                     if let Some(index1) = bound_var.index_if_innermost() {
@@ -196,11 +192,19 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
                         false
                     }
                 }
-            },
+            };
 
-            // And no lifetime mappings. (This is too strict, but we never
-            // product substs with lifetimes.)
-            GenericArgData::Lifetime(_) => false,
+            match parameter.data(interner) {
+                // All types and consts are mapped to distinct variables. Since this
+                // has been canonicalized, those will also be the first N
+                // variables.
+                GenericArgData::Ty(t) => is_trivial(t.bound_var(interner)),
+                GenericArgData::Const(t) => is_trivial(t.bound_var(interner)),
+
+                // And no lifetime mappings. (This is too strict, but we never
+                // product substs with lifetimes.)
+                GenericArgData::Lifetime(_) => false,
+            }
         })
 }
 
@@ -225,7 +229,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             // overgeneralize.  So for example if we have two
             // solutions that are both `(X, X)`, we just produce `(Y,
             // Z)` in all cases.
-            (TyData::InferenceVar(_), TyData::InferenceVar(_)) => self.new_variable(),
+            (TyData::InferenceVar(_), TyData::InferenceVar(_)) => self.new_ty_variable(),
 
             // Ugh. Aggregating two types like `for<'a> fn(&'a u32,
             // &'a u32)` and `for<'a, 'b> fn(&'a u32, &'b u32)` seems
@@ -233,7 +237,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             // variable in there and be done with it.
             (TyData::BoundVar(_), TyData::BoundVar(_))
             | (TyData::Function(_), TyData::Function(_))
-            | (TyData::Dyn(_), TyData::Dyn(_)) => self.new_variable(),
+            | (TyData::Dyn(_), TyData::Dyn(_)) => self.new_ty_variable(),
 
             (TyData::Apply(apply1), TyData::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
@@ -260,7 +264,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             | (TyData::Function(_), _)
             | (TyData::Apply(_), _)
             | (TyData::Alias(_), _)
-            | (TyData::Placeholder(_), _) => self.new_variable(),
+            | (TyData::Placeholder(_), _) => self.new_ty_variable(),
         }
     }
 
@@ -283,7 +287,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             .map(|(&name, substitution)| {
                 TyData::Apply(ApplicationTy { name, substitution }).intern(interner)
             })
-            .unwrap_or_else(|| self.new_variable())
+            .unwrap_or_else(|| self.new_ty_variable())
     }
 
     fn aggregate_placeholder_tys(
@@ -293,7 +297,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     ) -> Ty<I> {
         let interner = self.interner;
         if index1 != index2 {
-            self.new_variable()
+            self.new_ty_variable()
         } else {
             TyData::Placeholder(index1.clone()).intern(interner)
         }
@@ -322,7 +326,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 }))
                 .intern(interner)
             })
-            .unwrap_or_else(|| self.new_variable())
+            .unwrap_or_else(|| self.new_ty_variable())
     }
 
     fn aggregate_opaque_ty_tys(
@@ -347,7 +351,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 }))
                 .intern(self.interner)
             })
-            .unwrap_or_else(|| self.new_variable())
+            .unwrap_or_else(|| self.new_ty_variable())
     }
 
     fn aggregate_name_and_substs<N>(
@@ -396,7 +400,12 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             (GenericArgData::Lifetime(l1), GenericArgData::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2).cast(interner)
             }
-            (GenericArgData::Ty(_), _) | (GenericArgData::Lifetime(_), _) => {
+            (GenericArgData::Const(c1), GenericArgData::Const(c2)) => {
+                self.aggregate_consts(c1, c2).cast(interner)
+            }
+            (GenericArgData::Ty(_), _)
+            | (GenericArgData::Lifetime(_), _)
+            | (GenericArgData::Const(_), _) => {
                 panic!("mismatched parameter kinds: p1={:?} p2={:?}", p1, p2)
             }
         }
@@ -425,7 +434,37 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         }
     }
 
-    fn new_variable(&mut self) -> Ty<I> {
+    fn aggregate_consts(&mut self, c1: &Const<I>, c2: &Const<I>) -> Const<I> {
+        let interner = self.interner;
+        match (c1.data(interner), c2.data(interner)) {
+            (ConstData::InferenceVar(_), _) | (_, ConstData::InferenceVar(_)) => {
+                self.new_const_variable()
+            }
+
+            (ConstData::BoundVar(_), _) | (_, ConstData::BoundVar(_)) => self.new_const_variable(),
+
+            (ConstData::Placeholder(_), ConstData::Placeholder(_)) => {
+                if c1 == c2 {
+                    c1.clone()
+                } else {
+                    self.new_const_variable()
+                }
+            }
+            (ConstData::Concrete(e1), ConstData::Concrete(e2)) => {
+                if e1.const_eq(e2, interner) {
+                    c1.clone()
+                } else {
+                    self.new_const_variable()
+                }
+            }
+
+            (ConstData::Placeholder(_), _) | (_, ConstData::Placeholder(_)) => {
+                self.new_const_variable()
+            }
+        }
+    }
+
+    fn new_ty_variable(&mut self) -> Ty<I> {
         let interner = self.interner;
         self.infer.new_variable(self.universe).to_ty(interner)
     }
@@ -433,6 +472,11 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     fn new_lifetime_variable(&mut self) -> Lifetime<I> {
         let interner = self.interner;
         self.infer.new_variable(self.universe).to_lifetime(interner)
+    }
+
+    fn new_const_variable(&mut self) -> Const<I> {
+        let interner = self.interner;
+        self.infer.new_variable(self.universe).to_const(interner)
     }
 }
 

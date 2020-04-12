@@ -64,6 +64,13 @@ impl<I: Interner> EnaVariable<I> {
     pub(crate) fn to_lifetime(self, interner: &I) -> Lifetime<I> {
         self.var.to_lifetime(interner)
     }
+
+    /// Convert this inference variable into a const. When using this
+    /// method, naturally you should know from context that the kind
+    /// of this inference variable is a const (we can't check it).
+    pub(crate) fn to_const(self, interner: &I) -> Const<I> {
+        self.var.to_const(interner)
+    }
 }
 
 impl<I: Interner> UnifyKey for EnaVariable<I> {
@@ -98,6 +105,10 @@ impl<I: Interner> InferenceValue<I> {
 
     pub fn from_lifetime(interner: &I, lifetime: Lifetime<I>) -> Self {
         InferenceValue::Bound(lifetime.cast(interner))
+    }
+
+    pub fn from_const(interner: &I, constant: Const<I>) -> Self {
+        InferenceValue::Bound(constant.cast(interner))
     }
 }
 

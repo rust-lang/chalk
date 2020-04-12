@@ -101,12 +101,14 @@ pub struct OpaqueTyDefn {
 pub enum VariableKind {
     Ty(Identifier),
     Lifetime(Identifier),
+    Const(Identifier),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum GenericArg {
     Ty(Ty),
     Lifetime(Lifetime),
+    Const(Const),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -144,6 +146,7 @@ pub struct AliasEqBound {
 pub enum Kind {
     Ty,
     Lifetime,
+    Const,
 }
 
 impl fmt::Display for Kind {
@@ -151,6 +154,7 @@ impl fmt::Display for Kind {
         f.write_str(match *self {
             Kind::Ty => "type",
             Kind::Lifetime => "lifetime",
+            Kind::Const => "const",
         })
     }
 }
@@ -265,6 +269,12 @@ pub enum Lifetime {
     Id { name: Identifier },
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Const {
+    Id { name: Identifier },
+    Value { value: u32 },
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
@@ -338,6 +348,7 @@ pub enum LeafGoal {
     DomainGoal { goal: DomainGoal },
     UnifyTys { a: Ty, b: Ty },
     UnifyLifetimes { a: Lifetime, b: Lifetime },
+    UnifyConsts { a: Const, b: Const },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
