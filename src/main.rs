@@ -197,7 +197,9 @@ fn process(
     rl: &mut rustyline::Editor<()>,
     prog: &mut Option<LoadedProgram>,
 ) -> Result<()> {
-    if command == "help" || command == "h" {
+    if command.is_empty() {
+        // Ignore empty commands.
+    } else if command == "help" || command == "h" {
         // Print out interpreter commands.
         // TODO: Implement "help <command>" for more specific help.
         help()
