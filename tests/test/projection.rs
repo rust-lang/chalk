@@ -712,7 +712,7 @@ fn rust_analyzer_regression() {
                     PI: ParallelIterator
                 }
             }
-        } yields_all[SolverChoice::slg(4, None)] {
+        } yields_all[SolverChoice::slg(5, None)] {
             "substitution [], lifetime constraints []"
         }
     }
