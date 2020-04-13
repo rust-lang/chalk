@@ -79,11 +79,6 @@ impl<I: Interner> InferenceTable<I> {
         u
     }
 
-    /// Current maximum universe -- one that can see all existing names.
-    pub(crate) fn max_universe(&self) -> UniverseIndex {
-        self.max_universe
-    }
-
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.

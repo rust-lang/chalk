@@ -3,7 +3,7 @@ use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
-use crate::solve::truncate::{self, Truncated};
+use crate::solve::truncate;
 use crate::solve::Solution;
 use crate::RustIrDatabase;
 use chalk_derive::HasInterner;
@@ -347,38 +347,14 @@ impl<I: Interner> TruncatingInferenceTable<I> {
 }
 
 impl<I: Interner> context::TruncateOps<SlgContext<I>> for TruncatingInferenceTable<I> {
-    fn truncate_goal(
-        &mut self,
-        interner: &I,
-        subgoal: &InEnvironment<Goal<I>>,
-    ) -> Option<InEnvironment<Goal<I>>> {
-        // We only want to truncate the goal itself. We keep the environment intact.
+    fn goal_needs_truncation(&mut self, interner: &I, subgoal: &InEnvironment<Goal<I>>) -> bool {
+        // We only want to check the goal itself. We keep the environment intact.
         // See rust-lang/chalk#280
-        let InEnvironment { environment, goal } = subgoal;
-        let Truncated { overflow, value } =
-            truncate::truncate(interner, &mut self.infer, self.max_size, goal);
-        if overflow {
-            Some(InEnvironment {
-                environment: environment.clone(),
-                goal: value,
-            })
-        } else {
-            None
-        }
+        truncate::needs_truncation(interner, &mut self.infer, self.max_size, &subgoal.goal)
     }
 
-    fn truncate_answer(
-        &mut self,
-        interner: &I,
-        subst: &Substitution<I>,
-    ) -> Option<Substitution<I>> {
-        let Truncated { overflow, value } =
-            truncate::truncate(interner, &mut self.infer, self.max_size, subst);
-        if overflow {
-            Some(value)
-        } else {
-            None
-        }
+    fn answer_needs_truncation(&mut self, interner: &I, subst: &Substitution<I>) -> bool {
+        truncate::needs_truncation(interner, &mut self.infer, self.max_size, subst)
     }
 }
 

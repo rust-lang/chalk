@@ -369,8 +369,7 @@ pub trait UnificationOps<C: Context> {
 /// refers to the act of modifying a goal or answer that has become
 /// too large in order to guarantee termination.
 ///
-/// The SLG solver doesn't care about the precise truncation function,
-/// so long as it's deterministic and so forth.
+/// Currently we don't perform truncation (but it might me readded later).
 ///
 /// Citations:
 ///
@@ -379,21 +378,15 @@ pub trait UnificationOps<C: Context> {
 /// - Radial Restraint
 ///   - Grosof and Swift; 2013
 pub trait TruncateOps<C: Context> {
-    /// If `subgoal` is too large, return a truncated variant (else
-    /// return `None`).
-    fn truncate_goal(
+    /// Check if `subgoal` is too large
+    fn goal_needs_truncation(
         &mut self,
         interner: &C::Interner,
         subgoal: &C::GoalInEnvironment,
-    ) -> Option<C::GoalInEnvironment>;
+    ) -> bool;
 
-    /// If `subst` is too large, return a truncated variant (else
-    /// return `None`).
-    fn truncate_answer(
-        &mut self,
-        interner: &C::Interner,
-        subst: &C::Substitution,
-    ) -> Option<C::Substitution>;
+    /// Check if `subst` is too large
+    fn answer_needs_truncation(&mut self, interner: &C::Interner, subst: &C::Substitution) -> bool;
 }
 
 pub trait ResolventOps<C: Context> {
