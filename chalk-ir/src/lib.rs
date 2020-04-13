@@ -1,5 +1,8 @@
 #![deny(rust_2018_idioms)]
 
+// Allows macros to refer to this crate as `::chalk_ir`
+extern crate self as chalk_ir;
+
 use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
@@ -41,7 +44,7 @@ pub mod visit;
 pub mod cast;
 
 pub mod interner;
-use interner::{HasInterner, Interner, TargetInterner};
+use interner::{HasInterner, Interner};
 
 pub mod could_match;
 pub mod debug;
