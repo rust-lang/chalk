@@ -13,8 +13,11 @@ pub fn add_builtin_program_clauses<I: Interner>(
     trait_ref: &TraitRef<I>,
     ty: &TyData<I>,
 ) {
-    if db.force_impl_for(well_known, ty) {
-        builder.push_fact(trait_ref.clone());
+    if let Some(force_impl) = db.force_impl_for(well_known, ty) {
+        if force_impl {
+            builder.push_fact(trait_ref.clone());
+        }
+        return;
     }
 
     match well_known {
