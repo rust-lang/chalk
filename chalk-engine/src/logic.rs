@@ -328,9 +328,10 @@ impl<C: Context> Forest<C> {
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
     ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
-        match infer.goal_needs_truncation(context.interner(), subgoal) {
-            true => None,
-            false => Some(infer.fully_canonicalize_goal(context.interner(), subgoal)),
+        if infer.goal_needs_truncation(context.interner(), subgoal) {
+            None
+        } else {
+            Some(infer.fully_canonicalize_goal(context.interner(), subgoal))
         }
     }
 
@@ -385,9 +386,10 @@ impl<C: Context> Forest<C> {
         // affect completeness when it comes to subgoal abstraction.
         let inverted_subgoal = infer.invert_goal(context.interner(), subgoal)?;
 
-        match infer.goal_needs_truncation(context.interner(), &inverted_subgoal) {
-            true => None,
-            false => Some(infer.fully_canonicalize_goal(context.interner(), &inverted_subgoal)),
+        if infer.goal_needs_truncation(context.interner(), &inverted_subgoal) {
+            None
+        } else {
+            Some(infer.fully_canonicalize_goal(context.interner(), &inverted_subgoal))
         }
     }
 }
