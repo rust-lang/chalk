@@ -1,4 +1,5 @@
 use chalk_ir::fold::*;
+use chalk_ir::interner::HasInterner;
 use std::fmt::Debug;
 
 use super::*;
@@ -109,12 +110,16 @@ pub(crate) trait IntoBindersAndValue {
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value);
 }
 
-impl<'a, T> IntoBindersAndValue for &'a Binders<T> {
+impl<'a, I, T> IntoBindersAndValue for (&'a Binders<T>, &'a I)
+where
+    I: Interner,
+    T: HasInterner<Interner = I>,
+{
     type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
     type Value = &'a T;
 
     fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
-        (self.binders.iter().cloned(), self.skip_binders())
+        (self.0.binders.iter(self.1).cloned(), self.0.skip_binders())
     }
 }
 

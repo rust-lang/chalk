@@ -76,6 +76,12 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
+    fn debug_parameter_kinds_with_angles(
+        &self,
+        parameter_kinds: &ParameterKinds<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
     fn debug_parameter_kinds_with_universe_index(
         &self,
         parameter_kinds: &ParameterKindsWithUniverseIndex<ChalkIr>,

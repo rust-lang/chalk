@@ -58,12 +58,16 @@ pub fn push_auto_trait_impls<I: Interner>(
     );
 
     let struct_datum = &builder.db.struct_datum(struct_id);
+    let interner = builder.interner();
 
     // Must be an auto trait.
     assert!(builder.db.trait_datum(auto_trait_id).is_auto_trait());
 
     // Auto traits never have generic parameters of their own (apart from `Self`).
-    assert_eq!(builder.db.trait_datum(auto_trait_id).binders.len(), 1);
+    assert_eq!(
+        builder.db.trait_datum(auto_trait_id).binders.len(interner),
+        1
+    );
 
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the struct we're looking at, then
@@ -74,7 +78,6 @@ pub fn push_auto_trait_impls<I: Interner>(
     }
 
     let binders = struct_datum.binders.map_ref(|b| &b.fields);
-    let interner = builder.interner();
     builder.push_binders(&binders, |builder, fields| {
         let self_ty: Ty<_> = ApplicationTy {
             name: struct_id.cast(interner),

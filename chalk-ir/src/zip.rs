@@ -31,7 +31,7 @@ pub trait Zipper<'i, I: Interner> {
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, I, Result = T>;
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>;
 
     /// Retreives the interner from the underlying zipper object
     fn interner(&self) -> &'i I;
@@ -52,7 +52,7 @@ where
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>,
     {
         (**self).zip_binders(a, b)
     }
@@ -166,7 +166,9 @@ impl<I: Interner> Zip<I> for Lifetime<I> {
     }
 }
 
-impl<I: Interner, T: Zip<I> + Fold<I, I, Result = T>> Zip<I> for Binders<T> {
+impl<I: Interner, T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>> Zip<I>
+    for Binders<T>
+{
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,

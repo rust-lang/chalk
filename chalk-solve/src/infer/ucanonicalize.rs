@@ -41,12 +41,13 @@ impl<I: Interner> InferenceTable<I> {
                 DebruijnIndex::INNERMOST,
             )
             .unwrap();
-        let binders = 
-        ParameterKindsWithUniverseIndex::from(interner,
-        value0
-            .binders
-            .iter(interner)
-            .map(|pk| pk.map(|ui| universes.map_universe_to_canonical(ui))));
+        let binders = ParameterKindsWithUniverseIndex::from(
+            interner,
+            value0
+                .binders
+                .iter(interner)
+                .map(|pk| pk.map(|ui| universes.map_universe_to_canonical(ui))),
+        );
 
         UCanonicalized {
             quantified: UCanonical {

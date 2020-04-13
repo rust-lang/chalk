@@ -11,6 +11,7 @@ pub mod program;
 pub mod program_environment;
 pub mod query;
 
+use chalk_ir::interner::{ChalkIr, HasInterner};
 pub use chalk_ir::interner::{Identifier, RawId};
 use chalk_ir::Binders;
 
@@ -21,9 +22,16 @@ pub enum TypeSort {
     Opaque,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Unit;
+
+impl HasInterner for Unit {
+    type Interner = ChalkIr;
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeKind {
     pub sort: TypeSort,
     pub name: Identifier,
-    pub binders: Binders<()>,
+    pub binders: Binders<Unit>,
 }

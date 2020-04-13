@@ -323,7 +323,8 @@ impl<I: Interner> context::InferenceTable<SlgContext<I>> for TruncatingInference
 
 impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInferenceTable<I> {
     fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I> {
-        self.infer.instantiate_binders_universally(interner, arg)
+        self.infer
+            .instantiate_binders_universally(interner, (arg, interner))
     }
 
     fn instantiate_binders_existentially(
@@ -331,7 +332,8 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
         interner: &I,
         arg: &Binders<Goal<I>>,
     ) -> Goal<I> {
-        self.infer.instantiate_binders_existentially(interner, arg)
+        self.infer
+            .instantiate_binders_existentially(interner, (arg, interner))
     }
 
     fn debug_ex_clause<'v>(
