@@ -83,7 +83,7 @@ reflexive_impl!(for(I: Interner) WhereClause<I>);
 reflexive_impl!(for(I: Interner) ProgramClause<I>);
 reflexive_impl!(for(I: Interner) QuantifiedWhereClause<I>);
 reflexive_impl!(for(I: Interner) ParameterKinds<I>);
-reflexive_impl!(for(I: Interner) ParameterKindsWithUniverseIndex<I>);
+reflexive_impl!(for(I: Interner) CanonicalVarKinds<I>);
 
 impl<I: Interner> CastTo<WhereClause<I>> for TraitRef<I> {
     fn cast_to(self, _interner: &I) -> WhereClause<I> {

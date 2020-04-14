@@ -1,6 +1,7 @@
 use crate::AliasTy;
 use crate::ApplicationTy;
 use crate::AssocTypeId;
+use crate::CanonicalVarKinds;
 use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
@@ -12,7 +13,6 @@ use crate::Parameter;
 use crate::ParameterData;
 use crate::ParameterKind;
 use crate::ParameterKinds;
-use crate::ParameterKindsWithUniverseIndex;
 use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
@@ -139,13 +139,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     type InternedParameterKinds: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of parameter kind with universe index.  
-    /// In normal user code, `Self::InternedParameterKindsWithUniverseIndex` is not referenced.
-    /// Instead, we refer to `ParameterKindsWithUniverseIndex<Self>`, which wraps this type.
+    /// In normal user code, `Self::InternedCanonicalVarKinds` is not referenced.
+    /// Instead, we refer to `CanonicalVarKinds<Self>`, which wraps this type.
     ///
-    /// An `InternedParameterKindsWithUniverseIndex` is created by
-    /// `intern_parameter_kinds_with_universe_index` and can be converted back
-    /// to its underlying data via `parameter_kinds_with_universe_index_data`.
-    type InternedParameterKindsWithUniverseIndex: Debug + Clone + Eq + Hash;
+    /// An `InternedCanonicalVarKinds` is created by
+    /// `intern_canonical_var_kinds` and can be converted back
+    /// to its underlying data via `canonical_var_kinds_data`.
+    type InternedCanonicalVarKinds: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for struct-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -322,8 +322,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter_kinds_with_universe_index(
-        parameter_kinds_with_universe_index: &ParameterKindsWithUniverseIndex<Self>,
+    fn debug_canonical_var_kinds(
+        canonical_var_kinds: &CanonicalVarKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -578,18 +578,18 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter kinds with universe index from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `ParameterKindsWithUniverseIndex::from` (which will ultimately call this
+    /// `CanonicalVarKinds::from` (which will ultimately call this
     /// method).
-    fn intern_parameter_kinds_with_universe_index(
+    fn intern_canonical_var_kinds(
         &self,
         data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
-    ) -> Self::InternedParameterKindsWithUniverseIndex;
+    ) -> Self::InternedCanonicalVarKinds;
 
     /// Lookup the slice of `ParameterKind` that was interned to
     /// create a `ParameterKinds`.
-    fn parameter_kinds_with_universe_index_data<'a>(
+    fn canonical_var_kinds_data<'a>(
         &self,
-        parameter_kinds_with_universe_index: &'a Self::InternedParameterKindsWithUniverseIndex,
+        canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
     ) -> &'a [ParameterKind<UniverseIndex>];
 }
 
@@ -600,9 +600,9 @@ pub trait TargetInterner<I: Interner>: Interner {
         parameter_kinds: I::InternedParameterKinds,
     ) -> Self::InternedParameterKinds;
 
-    fn transfer_parameter_kinds_with_universe_index(
-        parameter_kinds: I::InternedParameterKindsWithUniverseIndex,
-    ) -> Self::InternedParameterKindsWithUniverseIndex;
+    fn transfer_canonical_var_kinds(
+        parameter_kinds: I::InternedCanonicalVarKinds,
+    ) -> Self::InternedCanonicalVarKinds;
 }
 
 impl<I: Interner> TargetInterner<I> for I {
@@ -616,9 +616,9 @@ impl<I: Interner> TargetInterner<I> for I {
         parameter_kinds
     }
 
-    fn transfer_parameter_kinds_with_universe_index(
-        parameter_kinds: I::InternedParameterKindsWithUniverseIndex,
-    ) -> Self::InternedParameterKindsWithUniverseIndex {
+    fn transfer_canonical_var_kinds(
+        parameter_kinds: I::InternedCanonicalVarKinds,
+    ) -> Self::InternedCanonicalVarKinds {
         parameter_kinds
     }
 }
@@ -669,7 +669,7 @@ mod default {
         type InternedProgramClauses = Vec<ProgramClause<ChalkIr>>;
         type InternedQuantifiedWhereClauses = Vec<QuantifiedWhereClause<ChalkIr>>;
         type InternedParameterKinds = Vec<ParameterKind<()>>;
-        type InternedParameterKindsWithUniverseIndex = Vec<ParameterKind<UniverseIndex>>;
+        type InternedCanonicalVarKinds = Vec<ParameterKind<UniverseIndex>>;
         type DefId = RawId;
         type Identifier = Identifier;
 
@@ -759,15 +759,12 @@ mod default {
             })
         }
 
-        fn debug_parameter_kinds_with_universe_index(
-            parameter_kinds_with_universe_index: &ParameterKindsWithUniverseIndex<Self>,
+        fn debug_canonical_var_kinds(
+            canonical_var_kinds: &CanonicalVarKinds<Self>,
             fmt: &mut fmt::Formatter<'_>,
         ) -> Option<fmt::Result> {
             tls::with_current_program(|prog| {
-                Some(prog?.debug_parameter_kinds_with_universe_index(
-                    parameter_kinds_with_universe_index,
-                    fmt,
-                ))
+                Some(prog?.debug_canonical_var_kinds(canonical_var_kinds, fmt))
             })
         }
 
@@ -948,17 +945,17 @@ mod default {
         ) -> &'a [ParameterKind<()>] {
             parameter_kinds
         }
-        fn intern_parameter_kinds_with_universe_index(
+        fn intern_canonical_var_kinds(
             &self,
             data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
-        ) -> Self::InternedParameterKindsWithUniverseIndex {
+        ) -> Self::InternedCanonicalVarKinds {
             data.into_iter().collect()
         }
-        fn parameter_kinds_with_universe_index_data<'a>(
+        fn canonical_var_kinds_data<'a>(
             &self,
-            parameter_kinds_with_universe_index: &'a Self::InternedParameterKindsWithUniverseIndex,
+            canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
         ) -> &'a [ParameterKind<UniverseIndex>] {
-            parameter_kinds_with_universe_index
+            canonical_var_kinds
         }
     }
 

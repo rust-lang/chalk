@@ -206,9 +206,9 @@ impl tls::DebugContext for Program {
         write!(fmt, "{:?}", parameter_kinds.inner_debug(interner))
     }
 
-    fn debug_parameter_kinds_with_universe_index(
+    fn debug_canonical_var_kinds(
         &self,
-        parameter_kinds: &chalk_ir::ParameterKindsWithUniverseIndex<ChalkIr>,
+        parameter_kinds: &chalk_ir::CanonicalVarKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();

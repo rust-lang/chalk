@@ -661,9 +661,9 @@ impl<I: Interner> Debug for Environment<I> {
     }
 }
 
-impl<I: Interner> Debug for ParameterKindsWithUniverseIndex<I> {
+impl<I: Interner> Debug for CanonicalVarKinds<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter_kinds_with_universe_index(self, fmt)
+        I::debug_canonical_var_kinds(self, fmt)
             .unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }

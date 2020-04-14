@@ -41,7 +41,7 @@ impl<I: Interner> InferenceTable<I> {
                 DebruijnIndex::INNERMOST,
             )
             .unwrap();
-        let binders = ParameterKindsWithUniverseIndex::from(
+        let binders = CanonicalVarKinds::from(
             interner,
             value0
                 .binders

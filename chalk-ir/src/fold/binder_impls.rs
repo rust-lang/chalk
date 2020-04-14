@@ -78,10 +78,8 @@ where
             value: self_value,
         } = self;
         let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
-        let binders = ParameterKindsWithUniverseIndex {
-            interned: TI::transfer_parameter_kinds_with_universe_index(
-                self_binders.interned().clone(),
-            ),
+        let binders = CanonicalVarKinds {
+            interned: TI::transfer_canonical_var_kinds(self_binders.interned().clone()),
         };
         Ok(Canonical {
             binders: binders,

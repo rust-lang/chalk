@@ -74,14 +74,14 @@ struct Canonicalizer<'q, I: Interner> {
 }
 
 impl<'q, I: Interner> Canonicalizer<'q, I> {
-    fn into_binders(self) -> ParameterKindsWithUniverseIndex<I> {
+    fn into_binders(self) -> CanonicalVarKinds<I> {
         let Canonicalizer {
             table,
             free_vars,
             interner,
             ..
         } = self;
-        ParameterKindsWithUniverseIndex::from(
+        CanonicalVarKinds::from(
             interner,
             free_vars
                 .into_iter()

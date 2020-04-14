@@ -1548,16 +1548,16 @@ impl<I: Interner> ParameterKinds<I> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct ParameterKindsWithUniverseIndex<I: Interner> {
-    interned: I::InternedParameterKindsWithUniverseIndex,
+pub struct CanonicalVarKinds<I: Interner> {
+    interned: I::InternedCanonicalVarKinds,
 }
 
-impl<I: Interner> ParameterKindsWithUniverseIndex<I> {
+impl<I: Interner> CanonicalVarKinds<I> {
     pub fn new(interner: &I) -> Self {
         Self::from(interner, None::<ParameterKind<UniverseIndex>>)
     }
 
-    pub fn interned(&self) -> &I::InternedParameterKindsWithUniverseIndex {
+    pub fn interned(&self) -> &I::InternedCanonicalVarKinds {
         &self.interned
     }
 
@@ -1565,11 +1565,8 @@ impl<I: Interner> ParameterKindsWithUniverseIndex<I> {
         interner: &I,
         parameter_kinds: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
     ) -> Self {
-        ParameterKindsWithUniverseIndex {
-            interned: I::intern_parameter_kinds_with_universe_index(
-                interner,
-                parameter_kinds.into_iter(),
-            ),
+        CanonicalVarKinds {
+            interned: I::intern_canonical_var_kinds(interner, parameter_kinds.into_iter()),
         }
     }
 
@@ -1596,7 +1593,7 @@ impl<I: Interner> ParameterKindsWithUniverseIndex<I> {
     }
 
     pub fn as_slice(&self, interner: &I) -> &[ParameterKind<UniverseIndex>] {
-        interner.parameter_kinds_with_universe_index_data(&self.interned)
+        interner.canonical_var_kinds_data(&self.interned)
     }
 }
 
@@ -1608,7 +1605,7 @@ impl<I: Interner> ParameterKindsWithUniverseIndex<I> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Canonical<T: HasInterner> {
     pub value: T,
-    pub binders: ParameterKindsWithUniverseIndex<T::Interner>,
+    pub binders: CanonicalVarKinds<T::Interner>,
 }
 
 impl<T: HasInterner> HasInterner for Canonical<T> {
