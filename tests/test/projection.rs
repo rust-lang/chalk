@@ -174,6 +174,74 @@ fn projection_equality_from_env() {
 }
 
 #[test]
+fn projection_equality_nested() {
+    test! {
+        program {
+            trait Iterator {
+                type Item;
+            }
+
+            struct u32 {}
+        }
+
+        goal {
+            forall<I> {
+                if (I: Iterator) {
+                    if (<I as Iterator>::Item: Iterator<Item = u32>) {
+                        exists<U> {
+                            <<I as Iterator>::Item as Iterator>::Item = U
+                        }
+                    }
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := u32]"
+        }
+    }
+}
+
+#[test]
+fn iterator_flatten() {
+    test! {
+        program {
+            trait Iterator {
+                type Item;
+            }
+            #[non_enumerable]
+            trait IntoIterator {
+                type Item;
+                type IntoIter: Iterator<Item = <Self as IntoIterator>::Item>;
+            }
+            struct Flatten<I> {}
+
+            impl<I, U> Iterator for Flatten<I>
+            where
+                I: Iterator,
+                <I as Iterator>::Item: IntoIterator<IntoIter = U>,
+                <I as Iterator>::Item: IntoIterator<Item = <U as Iterator>::Item>,
+                U: Iterator
+            {
+                type Item = <U as Iterator>::Item;
+            }
+
+            struct u32 {}
+        }
+
+        goal {
+            forall<I, U> {
+                if (I: Iterator<Item = U>; U: IntoIterator<Item = u32>) {
+                    exists<T> {
+                        <Flatten<I> as Iterator>::Item = T
+                    }
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := u32]"
+        }
+    }
+}
+
+#[test]
 fn normalize_gat1() {
     test! {
         program {
