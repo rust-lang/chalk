@@ -8,7 +8,7 @@ fn auto_semantics() {
         program {
             #[auto] trait Send { }
 
-            struct i32 { }
+            struct TypeA { }
 
             struct Ptr<T> { }
             impl<T> Send for Ptr<T> where T: Send { }
@@ -37,7 +37,7 @@ fn auto_semantics() {
         }
 
         goal {
-            List<i32>: Send
+            List<TypeA>: Send
         } yields {
             "Unique"
         }
@@ -58,7 +58,7 @@ fn auto_trait_without_impls() {
         program {
             #[auto] trait Send { }
 
-            struct i32 { }
+            struct TypeA { }
 
             struct Useless<T> { }
 
@@ -68,7 +68,7 @@ fn auto_trait_without_impls() {
         }
 
         goal {
-            i32: Send
+            TypeA: Send
         } yields {
             "Unique"
         }
@@ -100,34 +100,34 @@ fn auto_trait_with_impls() {
         program {
             #[auto] trait Send { }
 
-            struct i32 { }
-            struct f32 { }
+            struct TypeA { }
+            struct TypeB { }
             struct Vec<T> { }
 
             impl<T> Send for Vec<T> where T: Send { }
-            impl !Send for i32 { }
+            impl !Send for TypeA { }
         }
 
         goal {
-            i32: Send
+            TypeA: Send
         } yields {
             "No possible solution"
         }
 
         goal {
-            f32: Send
+            TypeB: Send
         } yields {
             "Unique"
         }
 
         goal {
-            Vec<i32>: Send
+            Vec<TypeA>: Send
         } yields {
             "No possible solution"
         }
 
         goal {
-            Vec<f32>: Send
+            Vec<TypeB>: Send
         } yields {
             "Unique"
         }

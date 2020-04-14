@@ -18,11 +18,11 @@ fn inner_cycle() {
             #[marker]
             trait B { }
 
-            struct i32 { }
+            struct Foo { }
             struct Vec<T> { }
 
             impl<T> A for T where T: B { }
-            impl A for i32 { }
+            impl A for Foo { }
 
             impl<T> B for T where T: A { }
             impl<T> B for Vec<T> where T: B { }
@@ -62,12 +62,12 @@ fn cycle_many_solutions() {
         program {
             trait Foo { }
             struct S<T> { }
-            struct i32 { }
+            struct Zero { }
             impl<T> Foo for S<T> where T: Foo { }
-            impl Foo for i32 { }
+            impl Foo for Zero { }
         }
 
-        // infinite family of solutions: {i32, S<i32>, S<S<i32>>, ... }
+        // infinite family of solutions: {Zero, S<Zero>, S<S<Zero>>, ... }
         goal {
             exists<T> {
                 T: Foo
@@ -85,9 +85,9 @@ fn cycle_unique_solution() {
             trait Foo { }
             trait Bar { }
             struct S<T> { }
-            struct i32 { }
+            struct Zero { }
             impl<T> Foo for S<T> where T: Foo, T: Bar { }
-            impl Foo for i32 { }
+            impl Foo for Zero { }
         }
 
         goal {
@@ -95,7 +95,7 @@ fn cycle_unique_solution() {
                 T: Foo
             }
         } yields {
-            "Unique; substitution [?0 := i32]"
+            "Unique; substitution [?0 := Zero]"
         }
     }
 }

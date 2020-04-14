@@ -160,10 +160,10 @@ fn prove_forall() {
 fn higher_ranked() {
     test! {
         program {
-            struct u8 { }
+            struct BestType { }
             struct SomeType<T> { }
             trait Foo<T> { }
-            impl<U> Foo<u8> for SomeType<U> { }
+            impl<U> Foo<BestType> for SomeType<U> { }
         }
 
         goal {
@@ -173,7 +173,7 @@ fn higher_ranked() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := u8], lifetime constraints []"
+            "Unique; substitution [?0 := BestType], lifetime constraints []"
         }
     }
 }
@@ -205,18 +205,18 @@ fn normalize_rev_infer() {
     test! {
         program {
             trait Identity { type Item; }
-            struct u32 { }
-            struct i32 { }
-            impl Identity for u32 { type Item = u32; }
-            impl Identity for i32 { type Item = i32; }
+            struct A { }
+            struct B { }
+            impl Identity for A { type Item = A; }
+            impl Identity for B { type Item = B; }
         }
 
         goal {
             exists<T> {
-                T: Identity<Item = u32>
+                T: Identity<Item = A>
             }
         } yields {
-            "Unique; substitution [?0 := u32]"
+            "Unique; substitution [?0 := A]"
         }
     }
 }
@@ -228,20 +228,20 @@ fn normalize_rev_infer_gat() {
     test! {
         program {
             trait Combine { type Item<T>; }
-            struct u32 { }
-            struct i32 { }
+            struct A { }
+            struct B { }
             struct Either<T, U> { }
-            impl Combine for u32 { type Item<U> = Either<u32, U>; }
-            impl Combine for i32 { type Item<U> = Either<i32, U>; }
+            impl Combine for A { type Item<U> = Either<A, U>; }
+            impl Combine for B { type Item<U> = Either<B, U>; }
         }
 
         goal {
             exists<T, U> {
-                T: Combine<Item<U> = Either<u32, i32>>
+                T: Combine<Item<U> = Either<A, B>>
             }
         } yields {
             // T is ?1 and U is ?0, so this is surprising, but correct! (See #126.)
-            "Unique; substitution [?0 := i32, ?1 := u32]"
+            "Unique; substitution [?0 := B, ?1 := A]"
         }
     }
 }
@@ -362,11 +362,11 @@ fn suggested_subst() {
             trait SomeTrait<A> {}
             struct Foo {}
             struct Bar {}
-            struct i32 {}
-            struct bool {}
-            impl SomeTrait<i32> for Foo {}
-            impl SomeTrait<bool> for Bar {}
-            impl SomeTrait<i32> for Bar {}
+            struct Baz {}
+            struct Qux {}
+            impl SomeTrait<Baz> for Foo {}
+            impl SomeTrait<Qux> for Bar {}
+            impl SomeTrait<Baz> for Bar {}
         }
 
         goal {
@@ -374,42 +374,42 @@ fn suggested_subst() {
                 Foo: SomeTrait<T>
             }
         } yields {
-            "Unique; substitution [?0 := i32]"
+            "Unique; substitution [?0 := Baz]"
         }
 
         goal {
             exists<T> {
-                if (i32: SomeTrait<bool>) {
-                    i32: SomeTrait<T>
+                if (Baz: SomeTrait<Qux>) {
+                    Baz: SomeTrait<T>
                 }
             }
         } yields {
-            "Unique; substitution [?0 := bool]"
+            "Unique; substitution [?0 := Qux]"
         }
 
         goal {
             exists<T> {
-                if (i32: SomeTrait<bool>) {
+                if (Baz: SomeTrait<Qux>) {
                     Foo: SomeTrait<T>
                 }
             }
         } yields {
-            "Unique; substitution [?0 := i32]"
+            "Unique; substitution [?0 := Baz]"
         }
 
         goal {
             exists<T> {
-                if (Foo: SomeTrait<i32>) {
+                if (Foo: SomeTrait<Baz>) {
                     Foo: SomeTrait<T>
                 }
             }
         } yields {
-            "Unique; substitution [?0 := i32]"
+            "Unique; substitution [?0 := Baz]"
         }
 
         goal {
             exists<T> {
-                if (Foo: SomeTrait<bool>) {
+                if (Foo: SomeTrait<Qux>) {
                     Foo: SomeTrait<T>
                 }
             }
@@ -422,7 +422,7 @@ fn suggested_subst() {
         goal {
             exists<T> {
                 if (Foo: SomeTrait<bool>) {
-                    if (Foo: SomeTrait<i32>) {
+                    if (Foo: SomeTrait<Baz>) {
                         Foo: SomeTrait<T>
                     }
                 }
@@ -441,7 +441,7 @@ fn suggested_subst() {
 
         goal {
             exists<T> {
-                if (Bar: SomeTrait<bool>) {
+                if (Bar: SomeTrait<Qux>) {
                     Bar: SomeTrait<T>
                 }
             }
@@ -452,8 +452,8 @@ fn suggested_subst() {
 
         goal {
             exists<T> {
-                if (Bar: SomeTrait<bool>) {
-                    if (Bar: SomeTrait<i32>) {
+                if (Bar: SomeTrait<Qux>) {
+                    if (Bar: SomeTrait<Baz>) {
                         Bar: SomeTrait<T>
                     }
                 }
@@ -490,18 +490,18 @@ fn where_clause_trumps() {
 fn inapplicable_assumption_does_not_shadow() {
     test! {
         program {
-            struct i32 { }
-            struct u32 { }
+            struct A { }
+            struct B { }
 
             trait Foo<T> { }
 
-            impl<T> Foo<i32> for T { }
+            impl<T> Foo<A> for T { }
         }
 
         goal {
             forall<T> {
                 exists<U> {
-                    if (i32: Foo<T>) {
+                    if (A: Foo<T>) {
                         T: Foo<U>
                     }
                 }
@@ -520,11 +520,11 @@ fn partial_overlap_2() {
             trait Foo {}
             trait Bar {}
 
-            struct i32 {}
-            struct u32 {}
+            struct TypeA {}
+            struct TypeB {}
 
-            impl<T> Marker<i32> for T where T: Foo {}
-            impl<T> Marker<u32> for T where T: Bar {}
+            impl<T> Marker<TypeA> for T where T: Foo {}
+            impl<T> Marker<TypeB> for T where T: Bar {}
         }
 
         goal {
@@ -540,7 +540,7 @@ fn partial_overlap_2() {
         goal {
             forall<T> {
                 if (T: Foo; T: Bar) {
-                    T: Marker<u32>
+                    T: Marker<TypeB>
                 }
             }
         } yields {
@@ -550,7 +550,7 @@ fn partial_overlap_2() {
         goal {
             forall<T> {
                 if (T: Foo; T: Bar) {
-                    T: Marker<i32>
+                    T: Marker<TypeA>
                 }
             }
         } yields {
@@ -570,9 +570,9 @@ fn partial_overlap_3() {
             impl<T> Marker for T where T: Foo {}
             impl<T> Marker for T where T: Bar {}
 
-            struct i32 {}
-            impl Foo for i32 {}
-            impl Bar for i32 {}
+            struct Struct {}
+            impl Foo for Struct {}
+            impl Bar for Struct {}
         }
 
         goal {
@@ -584,7 +584,7 @@ fn partial_overlap_3() {
         }
 
         goal {
-            i32: Marker
+            Struct: Marker
         } yields {
             "Unique"
         }
@@ -597,7 +597,7 @@ fn clauses_in_if_goals() {
         program {
             trait Foo { }
             struct Vec<T> { }
-            struct i32 { }
+            struct A { }
         }
 
         goal {
@@ -622,8 +622,8 @@ fn clauses_in_if_goals() {
 
         goal {
             if (forall<T> { Vec<T>: Foo :- T: Foo }) {
-                if (i32: Foo) {
-                    Vec<i32>: Foo
+                if (A: Foo) {
+                    Vec<A>: Foo
                 }
             }
         } yields {
@@ -632,7 +632,7 @@ fn clauses_in_if_goals() {
 
         goal {
             if (forall<T> { Vec<T>: Foo :- T: Foo }) {
-                Vec<i32>: Foo
+                Vec<A>: Foo
             }
         } yields {
             "No possible solution"

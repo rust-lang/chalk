@@ -192,10 +192,10 @@ fn overlapping_negative_positive_impls() {
     lowering_error! {
         program {
             trait Send { }
-            struct i32 { }
+            struct MyType { }
 
-            impl Send for i32 { }
-            impl !Send for i32 { }
+            impl Send for MyType { }
+            impl !Send for MyType { }
         } error_msg {
             "overlapping impls of trait `Send`"
         }
@@ -211,10 +211,10 @@ fn overlapping_negative_impls() {
             trait Bar { }
 
             struct Vec<T> { }
-            struct i32 { }
+            struct MyType { }
 
-            impl Foo for i32 { }
-            impl Bar for i32 { }
+            impl Foo for MyType { }
+            impl Bar for MyType { }
 
             impl<T> !Send for Vec<T> where T: Foo { }
             impl<T> !Send for Vec<T> where T: Bar { }
@@ -365,17 +365,17 @@ fn orphan_check() {
         program {
             #[auto] #[upstream] trait Send { }
             #[upstream] trait TheTrait<T> { }
-            #[upstream] struct isize { }
-            #[upstream] struct usize { }
+            #[upstream] struct TypeA { }
+            #[upstream] struct TypeB { }
 
             struct TheType { }
 
             // These impls should be fine because they contain the local type
-            impl TheTrait<TheType> for isize { }
-            impl TheTrait<isize> for TheType { }
+            impl TheTrait<TheType> for TypeA { }
+            impl TheTrait<TypeA> for TheType { }
 
             // This impl should fail because it contains only upstream type
-            impl TheTrait<usize> for isize { }
+            impl TheTrait<TypeB> for TypeA { }
         } error_msg {
             "impl for trait `TheTrait` violates the orphan rules"
         }
@@ -385,9 +385,9 @@ fn orphan_check() {
         program {
             #[auto] #[upstream] trait Send { }
             #[upstream] struct Vec<T> { }
-            #[upstream] struct isize { }
+            #[upstream] struct TypeA { }
 
-            impl !Send for Vec<isize> { }
+            impl !Send for Vec<TypeA> { }
         } error_msg {
             "impl for trait `Send` violates the orphan rules"
         }
@@ -410,11 +410,11 @@ fn orphan_check() {
         program {
             #[upstream] trait Remote1<T> { }
             #[upstream] struct Pair<T, U> { }
-            #[upstream] struct i32 { }
+            #[upstream] struct TypeA { }
 
             struct Local<T> { }
 
-            impl<T, U> Remote1<Pair<T, Local<U>>> for i32 { }
+            impl<T, U> Remote1<Pair<T, Local<U>>> for TypeA { }
         } error_msg {
             "impl for trait `Remote1` violates the orphan rules"
         }

@@ -178,6 +178,7 @@ pub Ty: Ty = {
 };
 
 TyWithoutFor: Ty = {
+    <ScalarType> => Ty::Scalar { ty: <> },
     <n:Id> => Ty::Id { name: n},
     "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: vec![],
@@ -188,7 +189,33 @@ TyWithoutFor: Ty = {
     },
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
     <a:AliasTy> => Ty::Alias { alias: a },
-    "(" <Ty> ")",
+    "(" <t:TupleOrParensInner> ")" => t,
+};
+
+ScalarType: ScalarType = {
+   "u8" => ScalarType::Uint(UintTy::U8),
+   "u16" => ScalarType::Uint(UintTy::U16),
+   "u32" => ScalarType::Uint(UintTy::U32),
+   "u64" => ScalarType::Uint(UintTy::U64),
+   "u128" => ScalarType::Uint(UintTy::U128),
+   "usize" => ScalarType::Uint(UintTy::Usize),
+   "i8" => ScalarType::Int(IntTy::I8),
+   "i16" => ScalarType::Int(IntTy::I16),
+   "i32" => ScalarType::Int(IntTy::I32),
+   "i64" => ScalarType::Int(IntTy::I64),
+   "i128" => ScalarType::Int(IntTy::I128),
+   "isize" => ScalarType::Int(IntTy::Isize),
+   "f32" => ScalarType::Float(FloatTy::F32),
+   "f64" => ScalarType::Float(FloatTy::F64),
+   "bool" => ScalarType::Bool,
+   "char" => ScalarType::Char,
+};
+
+TupleOrParensInner: Ty = {
+    <l:Comma2<Ty>> => Ty::Tuple { arity: l.len() }, 
+    <Ty> "," => Ty::Tuple { arity: 1 },
+    <Ty>,
+    () => Ty::Tuple { arity: 0 },
 };
 
 Lifetime: Lifetime = {
@@ -343,9 +370,24 @@ Separator1<S, T>: Vec<T> = {
     }
 };
 
+Separator2<S, T>: Vec<T> = {
+    <t1:T> S <t2:T> => vec![t1, t2],
+    <t1:T> S <t2:T> S <v:Separator<S, T>> => {
+        let mut v = v;
+        v.push(t1);
+        v.push(t2);
+        v
+    }
+};
+
 #[inline]
 Comma<T>: Vec<T> = {
     <Separator<",", T>>
+};
+
+#[inline]
+Comma2<T>: Vec<T> = {
+    <Separator2<",", T>>
 };
 
 #[inline]

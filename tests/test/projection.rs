@@ -8,7 +8,7 @@ fn normalize_basic() {
         program {
             trait Iterator { type Item; }
             struct Vec<T> { }
-            struct u32 { }
+            struct Foo { }
             impl<T> Iterator for Vec<T> {
                 type Item = T;
             }
@@ -34,8 +34,8 @@ fn normalize_basic() {
 
         goal {
             forall<T> {
-                if (T: Iterator<Item = u32>) {
-                    <T as Iterator>::Item = u32
+                if (T: Iterator<Item = Foo>) {
+                    <T as Iterator>::Item = Foo
                 }
             }
         } yields {
@@ -98,7 +98,7 @@ fn normalize_into_iterator() {
             trait IntoIterator { type Item; }
             trait Iterator { type Item; }
             struct Vec<T> { }
-            struct u32 { }
+            struct Foo { }
             impl<T> IntoIterator for Vec<T> {
                 type Item = T;
             }
@@ -129,10 +129,10 @@ fn projection_equality() {
             trait Trait2<T> { }
             impl<T, U> Trait2<T> for U where U: Trait1<Type = T> {}
 
-            struct u32 {}
+            struct Foo {}
             struct S {}
             impl Trait1 for S {
-                type Type = u32;
+                type Type = Foo;
             }
         }
 
@@ -142,7 +142,7 @@ fn projection_equality() {
             }
         } yields {
             // FIXME(rust-lang/chalk#234) -- there is really only one
-            // *reasonable* solution here, which is `u32`, but we get
+            // *reasonable* solution here, which is `Foo`, but we get
             // confused because `(Trait1::Type)<S>` seems valid too.
             "Ambiguous; no inference guidance"
         }
@@ -196,7 +196,7 @@ fn normalize_gat2() {
             trait StreamingIterator<T> { type Item<'a>; }
             struct Span<'a, T> { }
             struct StreamIterMut<T> { }
-            struct u32 { }
+            struct Foo { }
             impl<T> StreamingIterator<T> for StreamIterMut<T> {
                 type Item<'a> = Span<'a, T>;
             }
@@ -281,8 +281,8 @@ fn normalize_gat_with_where_clause2() {
                 type Item<U> where U: Bar<T>;
             }
 
-            struct i32 { }
-            impl<T> Foo<T> for i32 {
+            struct Baz { }
+            impl<T> Foo<T> for Baz {
                 type Item<U> = U;
             }
         }
@@ -290,7 +290,7 @@ fn normalize_gat_with_where_clause2() {
         goal {
             forall<T, U> {
                 exists<V> {
-                    Normalize(<i32 as Foo<T>>::Item<U> -> V)
+                    Normalize(<Baz as Foo<T>>::Item<U> -> V)
                 }
             }
         } yields {
@@ -301,7 +301,7 @@ fn normalize_gat_with_where_clause2() {
             forall<T, U> {
                 exists<V> {
                     if (U: Bar<T>) {
-                        Normalize(<i32 as Foo<T>>::Item<U> -> V)
+                        Normalize(<Baz as Foo<T>>::Item<U> -> V)
                     }
                 }
             }
@@ -316,15 +316,15 @@ fn normalize_gat_with_higher_ranked_trait_bound() {
     test! {
         program {
             trait Foo<'a, T> { }
-            struct i32 { }
+            struct Baz { }
 
             trait Bar<'a, T> {
                 type Item<V>: Foo<'a, T> where forall<'b> V: Foo<'b, T>;
             }
 
-            impl<'a, T> Foo<'a, T> for i32 { }
-            impl<'a, T> Bar<'a, T> for i32 {
-                type Item<V> = i32;
+            impl<'a, T> Foo<'a, T> for Baz { }
+            impl<'a, T> Bar<'a, T> for Baz {
+                type Item<V> = Baz;
             }
         }
 
@@ -332,12 +332,12 @@ fn normalize_gat_with_higher_ranked_trait_bound() {
             forall<'a, T, V> {
                 if (forall<'b> { V: Foo<'b, T> }) {
                     exists<U> {
-                        Normalize(<i32 as Bar<'a, T>>::Item<V> -> U)
+                        Normalize(<Baz as Bar<'a, T>>::Item<V> -> U)
                     }
                 }
             }
         } yields {
-            "Unique; substitution [?0 := i32], lifetime constraints []"
+            "Unique; substitution [?0 := Baz], lifetime constraints []"
         }
     }
 }
@@ -594,9 +594,9 @@ fn projection_from_env_slow() {
             struct Slice<T> where T: Sized { }
             impl<T> Sized for Slice<T> { }
 
-            struct u32 { }
-            impl Clone for u32 { }
-            impl Sized for u32 { }
+            struct Foo { }
+            impl Clone for Foo { }
+            impl Sized for Foo { }
 
             trait SliceExt
                 where <Self as SliceExt>::Item: Clone
