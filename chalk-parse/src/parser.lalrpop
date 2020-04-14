@@ -45,6 +45,9 @@ CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 
 WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::SizedTrait,
+     "#" "[" "lang" "(" "copy" ")" "]" => WellKnownTrait::CopyTrait,
+     "#" "[" "lang" "(" "clone" ")" "]" => WellKnownTrait::CloneTrait,
+     "#" "[" "lang" "(" "drop" ")" "]" => WellKnownTrait::DropTrait,
 };
 
 StructDefn: StructDefn = {

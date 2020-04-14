@@ -54,6 +54,9 @@ pub struct TraitDefn {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum WellKnownTrait {
     SizedTrait,
+    CopyTrait,
+    CloneTrait,
+    DropTrait,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
