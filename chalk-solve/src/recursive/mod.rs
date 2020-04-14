@@ -105,7 +105,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
-        self.solve_goal(canonical_goal.clone(), minimums).0
+        self.solve_goal(canonical_goal.clone(), minimums)
     }
 
     /// Attempt to solve a goal that has been fully broken down into leaf form
@@ -115,13 +115,13 @@ impl<'me, I: Interner> Solver<'me, I> {
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> Fallible<Solution<I>> {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
             debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return (value.clone(), ClausePriority::High);
+            return value.clone();
         }
 
         // Next, check if the goal is in the search tree already.
@@ -139,13 +139,10 @@ impl<'me, I: Interner> Solver<'me, I> {
                         constraints: vec![],
                     };
                     debug!("applying coinductive semantics");
-                    return (
-                        Ok(Solution::Unique(Canonical {
-                            value,
-                            binders: goal.canonical.binders,
-                        })),
-                        ClausePriority::High,
-                    );
+                    return Ok(Solution::Unique(Canonical {
+                        value,
+                        binders: goal.canonical.binders,
+                    }));
                 }
 
                 self.context.stack[depth].flag_cycle();
@@ -160,7 +157,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
                 previous_solution, previous_solution_priority
             );
-            (previous_solution, previous_solution_priority)
+            previous_solution
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table is error.
@@ -195,7 +192,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             }
 
             info!("solve_goal: solution = {:?} prio {:?}", result, priority);
-            (result, priority)
+            result
         }
     }
 
@@ -345,11 +342,11 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal, ClausePriority::High);
+        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
         if let Err(e) = fulfill.push_goal(&goal.environment, goal.goal) {
             return (Err(e), ClausePriority::High);
         }
-        fulfill.solve(subst, minimums)
+        (fulfill.solve(subst, minimums), ClausePriority::High)
     }
 
     /// See whether we can solve a goal by implication on any of the given
@@ -434,7 +431,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             clause
         );
         let interner = self.program.interner();
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal, clause.value.priority);
+        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
         let ProgramClauseImplication {
             consequence,
             conditions,
@@ -455,7 +452,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         }
 
         // and then try to solve
-        fulfill.solve(subst, minimums)
+        (fulfill.solve(subst, minimums), clause.value.priority)
     }
 
     fn program_clauses_for_goal(
