@@ -121,7 +121,7 @@ impl tls::DebugContext for Program {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         if let Some(d) = self.opaque_ty_data.get(&opaque_ty_id) {
-            write!(fmt, "{:?}", d.bound)
+            write!(fmt, "{:?}", d.bound.value.hidden_ty)
         } else {
             fmt.debug_struct("InvalidItemId")
                 .field("index", &opaque_ty_id.0)

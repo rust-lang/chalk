@@ -167,12 +167,10 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 .cast(interner),
             ));
 
+            let substitution = Substitution::from1(interner, alias_placeholder_ty.clone());
             for bound in &opaque_ty_bound.bounds {
                 // Implemented(!T<..>: Bound).
-                let bound_with_placeholder_ty = bound.substitute(
-                    interner,
-                    &Substitution::from1(interner, alias_placeholder_ty.clone()),
-                );
+                let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
                 builder.push_binders(&bound_with_placeholder_ty, |builder, bound| {
                     builder.push_fact(bound.into_well_formed_goal(interner));
                 });
@@ -183,7 +181,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 builder.push_clause(
                     TraitRef {
                         trait_id: auto_trait_id,
-                        substitution: Substitution::from1(interner, alias_placeholder_ty.clone()),
+                        substitution: substitution.clone(),
                     },
                     iter::once(TraitRef {
                         trait_id: auto_trait_id,
