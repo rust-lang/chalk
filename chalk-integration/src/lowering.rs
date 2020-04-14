@@ -388,9 +388,13 @@ impl LowerProgram for Program {
                             .map(|k| k.lower())
                             .collect::<Vec<_>>();
 
+                        // Introduce the parameters declared on the opaque type definition.
+                        // So if we have `type Foo<P1..Pn> = impl Trait<T1..Tn>`, this would introduce `P1..Pn`
                         let binders = empty_env.in_binders(parameter_kinds, |env| {
                             let hidden_ty = opaque_ty.ty.lower(&env)?;
 
+                            // Introduce a variable to represent the hidden "self type". This will be used in the bounds.
+                            // So the `impl Trait<T1..Tn>` will be lowered to `exists<Self> { Self: Trait<T1..Tn> }`.
                             let bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
                                 .in_binders(
                                     Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
@@ -401,6 +405,7 @@ impl LowerProgram for Program {
                                             .lower(&env1)?
                                             .iter()
                                             .flat_map(|qil| {
+                                                // Instantiate the bounds with the innermost bound variable, which represents Self, as the self type.
                                                 qil.into_where_clauses(
                                                     interner,
                                                     chalk_ir::TyData::BoundVar(BoundVar::new(
