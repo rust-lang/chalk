@@ -37,6 +37,22 @@ impl<I: Interner> ImplDatum<I> {
     pub fn trait_id(&self) -> TraitId<I> {
         self.binders.skip_binders().trait_ref.trait_id
     }
+
+    pub fn self_type_struct_id(&self, interner: &I) -> Option<StructId<I>> {
+        match self
+            .binders
+            .skip_binders()
+            .trait_ref
+            .self_type_parameter(interner)
+            .data(interner)
+        {
+            TyData::Apply(apply) => match apply.name {
+                TypeName::Struct(id) => Some(id),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, Fold)]

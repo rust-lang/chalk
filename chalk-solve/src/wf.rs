@@ -612,20 +612,10 @@ impl WfWellKnownGoals {
     ) -> Option<Goal<I>> {
         let interner = db.interner();
 
-        let struct_id = if let TyData::Apply(ApplicationTy {
-            name: TypeName::Struct(struct_id),
-            ..
-        }) = impl_datum
-            .binders
-            .skip_binders()
-            .trait_ref
-            .self_type_parameter(interner)
-            .data(interner)
-        {
-            *struct_id
-        } else {
+        let struct_id = match impl_datum.self_type_struct_id(interner) {
+            Some(id) => id,
             // Drop can only be implemented on a nominal type
-            return Some(GoalData::CannotProve(()).intern(interner));
+            None => return Some(GoalData::CannotProve(()).intern(interner)),
         };
 
         let mut gb = GoalBuilder::new(db);
