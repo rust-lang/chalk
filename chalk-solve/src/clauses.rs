@@ -233,6 +233,11 @@ fn program_clauses_that_could_match<I: Interner>(
                 // and `bounded_ty` is the `exists<T> { .. }`
                 // clauses shown above.
 
+                // Turn free BoundVars in the type into new existentials. E.g.
+                // we might get some `dyn Foo<?X>`, and we don't want to return
+                // a clause with a free variable. We can instead return a
+                // slightly more general clause by basically turning this into
+                // `exists<A> dyn Foo<A>`.
                 let generalized_dyn_ty = generalize::Generalize::apply(db.interner(), dyn_ty);
 
                 builder.push_binders(&generalized_dyn_ty, |builder, dyn_ty| {
@@ -278,7 +283,7 @@ fn program_clauses_that_could_match<I: Interner>(
             match_ty(builder, environment, ty)?
         }
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(Normalize { alias, ty }) => {
+        DomainGoal::Normalize(Normalize { alias, ty: _ }) => {
             // Normalize goals derive from `AssociatedTyValue` datums,
             // which are found in impls. That is, if we are
             // normalizing (e.g.) `<T as Iterator>::Item>`, then
@@ -294,30 +299,12 @@ fn program_clauses_that_could_match<I: Interner>(
             let trait_id = associated_ty_datum.trait_id;
             let trait_parameters = db.trait_parameters_from_projection(alias);
 
-            if (alias
-                .self_type_parameter(interner)
-                .bound(interner)
-                .is_some()
-                || alias
-                    .self_type_parameter(interner)
-                    .inference_var(interner)
-                    .is_some())
-                && (ty.bound(interner).is_some() || ty.inference_var(interner).is_some())
-            {
-                return Err(Floundered);
-            }
-
             let trait_datum = db.trait_datum(trait_id);
 
-            // FIXME
-            if (alias
-                .self_type_parameter(interner)
-                .bound(interner)
-                .is_some()
-                || alias
-                    .self_type_parameter(interner)
-                    .inference_var(interner)
-                    .is_some())
+            // Flounder if the self-type is unknown and the trait is non-enumerable.
+            //
+            // e.g., Normalize(<?X as Iterator>::Item = u32)
+            if (alias.self_type_parameter(interner).is_var(interner))
                 && trait_datum.is_non_enumerable_trait()
             {
                 return Err(Floundered);

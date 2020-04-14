@@ -76,7 +76,6 @@ fn normalize_basic() {
             "Unique"
         }
 
-        /* TODO: this doesn't seem to be correct, actually
         goal {
             forall<T> {
                 if (T: Iterator) {
@@ -86,10 +85,9 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            // True for `U = T`, of course, but also true for `U = Vec<T>`.
+            // True for `U = T`, of course, but also true for `U = Vec<<T as Iterator>::Item>`.
             "Ambiguous"
         }
-        */
     }
 }
 
@@ -142,6 +140,9 @@ fn projection_equality() {
             exists<U> {
                 S: Trait2<U>
             }
+        } yields[SolverChoice::slg_default()] {
+            // this is wrong, chalk#234
+            "Ambiguous"
         } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := u32]"
         }
@@ -167,6 +168,9 @@ fn projection_equality_from_env() {
                     }
                 }
             }
+        } yields[SolverChoice::slg_default()] {
+            // this is wrong, chalk#234
+            "Ambiguous"
         } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := u32]"
         }
@@ -194,7 +198,10 @@ fn projection_equality_nested() {
                     }
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::slg_default()] {
+            // this is wrong, chalk#234
+            "Ambiguous"
+        }  yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := u32]"
         }
     }
@@ -235,6 +242,9 @@ fn iterator_flatten() {
                     }
                 }
             }
+        } yields[SolverChoice::slg_default()] {
+            // this is wrong, chalk#234
+            "Ambiguous"
         } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := u32]"
         }
@@ -536,17 +546,18 @@ fn normalize_under_binder() {
             }
         }
 
-        /* TODO: this doesn't seem to be correct, actually
         goal {
             exists<U> {
                 forall<'a> {
                     Ref<'a, I32>: Deref<'a, Item = U>
                 }
             }
-        } yields {
+        } yields[SolverChoice::slg_default()] {
+            // chalk#234, I think
             "Ambiguous"
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := I32], lifetime constraints []"
         }
-        */
 
         goal {
             exists<U> {
@@ -558,17 +569,18 @@ fn normalize_under_binder() {
             "Unique; substitution [?0 := I32], lifetime constraints []"
         }
 
-        /* TODO: this doesn't seem to be correct, actually
         goal {
             forall<'a> {
                 exists<U> {
                     Ref<'a, I32>: Id<'a, Item = U>
                 }
             }
-        } yields {
+        } yields[SolverChoice::slg_default()] {
+            // chalk#234, I think
             "Ambiguous"
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := Ref<'!1_0, I32>], lifetime constraints []"
         }
-        */
 
         goal {
             forall<'a> {

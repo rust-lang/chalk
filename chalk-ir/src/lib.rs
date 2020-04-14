@@ -229,6 +229,14 @@ impl<I: Interner> Ty<I> {
         }
     }
 
+    /// Returns true if this is a `BoundVar` or `InferenceVar`.
+    pub fn is_var(&self, interner: &I) -> bool {
+        match self.data(interner) {
+            TyData::BoundVar(_) | TyData::InferenceVar(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_alias(&self, interner: &I) -> bool {
         match self.data(interner) {
             TyData::Alias(..) => true,

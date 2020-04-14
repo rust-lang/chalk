@@ -2,7 +2,9 @@
 //! ones. We use this when building clauses that contain types passed to
 //! `program_clauses`; these may contain variables, and just copying those
 //! variables verbatim leads to problems. Instead, we return a slightly more
-//! general program clause, with new variables in those places.
+//! general program clause, with new variables in those places. This can only
+//! happen with `dyn Trait` currently; that's the only case where we use the
+//! types passed to `program_clauses` in the clauses we generate.
 
 use chalk_engine::fallible::Fallible;
 use chalk_ir::{
