@@ -230,11 +230,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
         match (&solver_choice, &expected) {
             (SolverChoice::Recursive { .. }, TestGoal::All(_))
             | (SolverChoice::Recursive { .. }, TestGoal::First(_)) => {
-                println!(
-                    "skipping goal {} for recursive solver because it requires solve_multiple",
-                    goal_text
-                );
-                continue;
+                panic!("cannot test the recursive solver with yields_first or yields_all");
             }
             _ => {}
         };
