@@ -164,8 +164,7 @@ where
             let interner = gb.interner();
 
             // struct is well-formed in terms of Sized
-            let sized_constraint_goal =
-                WellKnownConstraints::struct_sized_constraint(gb.db(), fields);
+            let sized_constraint_goal = WfWellKnownGoals::struct_sized_constraint(gb.db(), fields);
 
             // (FromEnv(T: Eq) => ...)
             gb.implies(
@@ -256,7 +255,7 @@ fn impl_header_wf_goal<I: Interner>(
     let well_formed_goal = gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
         let interner = gb.interner();
 
-        let trait_constraint_goal = WellKnownConstraints::inside_impl(gb.db(), &trait_ref);
+        let trait_constraint_goal = WfWellKnownGoals::inside_impl(gb.db(), &trait_ref);
 
         // if (WC && input types are well formed) { ... }
         gb.implies(
@@ -289,7 +288,7 @@ fn impl_header_wf_goal<I: Interner>(
     Some(
         gb.all(
             iter::once(well_formed_goal)
-                .chain(WellKnownConstraints::outside_impl(db, &impl_datum).into_iter()),
+                .chain(WfWellKnownGoals::outside_impl(db, &impl_datum).into_iter()),
         ),
     )
 }
@@ -453,9 +452,13 @@ fn compute_assoc_ty_goal<I: Interner>(
     ))
 }
 
-struct WellKnownConstraints {}
+/// Defines methods to compute well-formedness goals for well-known
+/// traits (e.g. a goal for all fields of struct in a Copy impl to be Copy)
+struct WfWellKnownGoals {}
 
-impl WellKnownConstraints {
+impl WfWellKnownGoals {
+    /// A convenience method to compute the goal assuming `trait_ref`
+    /// well-formedness requirements are in the environment.
     pub fn inside_impl<I: Interner>(
         db: &dyn RustIrDatabase<I>,
         trait_ref: &TraitRef<I>,
@@ -468,6 +471,9 @@ impl WellKnownConstraints {
         }
     }
 
+    /// Computes well-formedness goals without any assumptions about the environment.
+    /// Note that `outside_impl` does not call `inside_impl`, one needs to call both
+    /// in order to get the full set of goals to be proven.
     pub fn outside_impl<I: Interner>(
         db: &dyn RustIrDatabase<I>,
         impl_datum: &ImplDatum<I>,
@@ -534,6 +540,7 @@ impl WellKnownConstraints {
             _ => return None,
         };
 
+        // not { Implemented(ImplSelfTy: Drop) }
         let neg_drop_goal =
             db.well_known_trait_id(WellKnownTrait::DropTrait)
                 .map(|drop_trait_id| {
@@ -553,6 +560,7 @@ impl WellKnownConstraints {
             .substitute(interner, substitution)
             .into_iter()
             .map(|f| {
+                // Implemented(FieldTy: Copy)
                 TraitRef {
                     trait_id: trait_ref.trait_id,
                     substitution: Substitution::from1(interner, f),
@@ -609,7 +617,7 @@ impl WellKnownConstraints {
             ..
         }) = impl_datum
             .binders
-            .value
+            .skip_binders()
             .trait_ref
             .self_type_parameter(interner)
             .data(interner)
@@ -629,16 +637,19 @@ impl WellKnownConstraints {
             .binders
             .map_ref(|v| (&v.trait_ref, &v.where_clauses));
 
+        // forall<ImplP1...ImplPn> { .. }
         let implied_by_struct_def_goal =
             gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
                 let interner = gb.interner();
 
+                // FromEnv(ImplSelfType) => ...
                 gb.implies(
                     iter::once(
                         FromEnv::Ty(trait_ref.self_type_parameter(interner))
                             .cast::<DomainGoal<I>>(interner),
                     ),
                     |gb| {
+                        // All(ImplWhereClauses)
                         gb.all(
                             where_clauses
                                 .iter()
@@ -652,6 +663,7 @@ impl WellKnownConstraints {
             .binders
             .map_ref(|b| b.trait_ref.self_type_parameter(interner));
 
+        // forall<StructP1..StructPN> {...}
         let eq_goal = gb.forall(
             &struct_datum.binders,
             (struct_name, impl_self_ty),
@@ -665,11 +677,14 @@ impl WellKnownConstraints {
                 .cast(interner)
                 .intern(interner);
 
+                // exists<ImplP1...ImplPn> { .. }
                 gb.exists(
                     &impl_self_ty,
                     def_struct,
                     |gb, _, impl_struct, def_struct| {
                         let interner = gb.interner();
+
+                        // StructName<StructP1..StructPn> = ImplSelfType
                         GoalData::EqGoal(EqGoal {
                             a: ParameterData::Ty(def_struct).intern(interner),
                             b: ParameterData::Ty(impl_struct.clone()).intern(interner),
