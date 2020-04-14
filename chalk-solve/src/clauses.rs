@@ -258,6 +258,14 @@ fn program_clauses_that_could_match<I: Interner>(
                 });
             }
 
+            if let TyData::Apply(ApplicationTy {
+                name: TypeName::OpaqueType(opaque_ty_id),
+                ..
+            }) = self_ty.data(interner)
+            {
+                db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder);
+            }
+
             if let Some(well_known) = trait_datum.well_known {
                 builtin_traits::add_builtin_program_clauses(
                     db,
