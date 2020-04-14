@@ -173,7 +173,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 // Implemented(!T<..>: Bound).
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
                 builder.push_binders(&bound_with_placeholder_ty, |builder, bound| {
-                    builder.push_fact(bound.into_well_formed_goal(interner));
+                    builder.push_fact(bound);
                 });
             }
 
