@@ -145,6 +145,8 @@ fn program_clauses_that_could_match<I: Interner>(
     let interner = db.interner();
     let builder = &mut ClauseBuilder::new(db, clauses);
 
+    debug_heading!("program_clauses_that_could_match(goal={:?})", goal);
+
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
             let trait_id = trait_ref.trait_id;
@@ -258,12 +260,15 @@ fn program_clauses_that_could_match<I: Interner>(
                 });
             }
 
-            if let TyData::Apply(ApplicationTy {
-                name: TypeName::OpaqueType(opaque_ty_id),
-                ..
-            }) = self_ty.data(interner)
-            {
-                db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder);
+            match self_ty.data(interner) {
+                TyData::Apply(ApplicationTy {
+                    name: TypeName::OpaqueType(opaque_ty_id),
+                    ..
+                })
+                | TyData::Alias(AliasTy::Opaque(OpaqueTy { opaque_ty_id, .. })) => {
+                    db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder);
+                }
+                _ => {}
             }
 
             if let Some(well_known) = trait_datum.well_known {

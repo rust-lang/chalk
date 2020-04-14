@@ -130,6 +130,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// ```
     /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+        debug_heading!("to_program_clauses({:?})", self);
         builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
             let interner = builder.interner();
             let substitution = builder.substitution_in_scope();
