@@ -185,14 +185,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    fn unify_binders<T, R>(
+    fn unify_binders<'a, T, R>(
         &mut self,
-        a: impl IntoBindersAndValue<Value = T> + Copy + Debug,
-        b: impl IntoBindersAndValue<Value = T> + Copy + Debug,
+        a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
+        b: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
     ) -> Fallible<()>
     where
         T: Fold<I, Result = R>,
         R: Zip<I> + Fold<I, Result = R>,
+        't: 'a,
     {
         // for<'a...> T == for<'b...> U
         //
@@ -354,7 +355,6 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
     where
         T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
-        let interner = self.interner();
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.
         //
@@ -366,7 +366,7 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         //
         // In both cases we can use the same `unify_binders` routine.
 
-        self.unify_binders((a, interner), (b, interner))
+        self.unify_binders(a, b)
     }
 
     fn interner(&self) -> &'i I {

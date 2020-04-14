@@ -62,28 +62,28 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
-    pub(crate) fn instantiate_binders_existentially<T>(
+    pub(crate) fn instantiate_binders_existentially<'a, T>(
         &mut self,
-        interner: &I,
-        arg: impl IntoBindersAndValue<Value = T>,
+        interner: &'a I,
+        arg: impl IntoBindersAndValue<'a, I, Value = T>,
     ) -> T::Result
     where
         T: Fold<I>,
     {
-        let (binders, value) = arg.into_binders_and_value();
+        let (binders, value) = arg.into_binders_and_value(interner);
         let max_universe = self.max_universe;
         self.instantiate_in(interner, max_universe, binders, &value)
     }
 
-    pub(crate) fn instantiate_binders_universally<T>(
+    pub(crate) fn instantiate_binders_universally<'a, T>(
         &mut self,
-        interner: &I,
-        arg: impl IntoBindersAndValue<Value = T>,
+        interner: &'a I,
+        arg: impl IntoBindersAndValue<'a, I, Value = T>,
     ) -> T::Result
     where
         T: Fold<I>,
     {
-        let (binders, value) = arg.into_binders_and_value();
+        let (binders, value) = arg.into_binders_and_value(interner);
         let ui = self.new_universe();
         let parameters: Vec<_> = binders
             .into_iter()
@@ -103,14 +103,14 @@ impl<I: Interner> InferenceTable<I> {
     }
 }
 
-pub(crate) trait IntoBindersAndValue {
+pub(crate) trait IntoBindersAndValue<'a, I: Interner> {
     type Binders: IntoIterator<Item = ParameterKind<()>>;
     type Value;
 
-    fn into_binders_and_value(self) -> (Self::Binders, Self::Value);
+    fn into_binders_and_value(self, interner: &'a I) -> (Self::Binders, Self::Value);
 }
 
-impl<'a, I, T> IntoBindersAndValue for (&'a Binders<T>, &'a I)
+impl<'a, I, T> IntoBindersAndValue<'a, I> for &'a Binders<T>
 where
     I: Interner,
     T: HasInterner<Interner = I>,
@@ -118,19 +118,19 @@ where
     type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
     type Value = &'a T;
 
-    fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
-        (self.0.binders.iter(self.1).cloned(), self.0.skip_binders())
+    fn into_binders_and_value(self, interner: &'a I) -> (Self::Binders, Self::Value) {
+        (self.binders.iter(interner).cloned(), self.skip_binders())
     }
 }
 
-impl<'a, I> IntoBindersAndValue for &'a Fn<I>
+impl<'a, I> IntoBindersAndValue<'a, I> for &'a Fn<I>
 where
     I: Interner,
 {
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
     type Value = &'a Substitution<I>;
 
-    fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
+    fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
         fn make_lifetime(_: usize) -> ParameterKind<()> {
             ParameterKind::Lifetime(())
         }
@@ -140,11 +140,11 @@ where
     }
 }
 
-impl<'a, T> IntoBindersAndValue for (&'a Vec<ParameterKind<()>>, &'a T) {
+impl<'a, T, I: Interner> IntoBindersAndValue<'a, I> for (&'a Vec<ParameterKind<()>>, &'a T) {
     type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
     type Value = &'a T;
 
-    fn into_binders_and_value(self) -> (Self::Binders, Self::Value) {
+    fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
         (self.0.iter().cloned(), &self.1)
     }
 }
