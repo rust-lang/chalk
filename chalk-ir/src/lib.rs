@@ -840,15 +840,12 @@ impl<I: Interner> AliasTy<I> {
         Ty::new(interner, self)
     }
 
-    pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
+    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
         self.substitution
             .iter(interner)
-            .filter_map(move |p| p.ty(interner))
-            .cloned()
-    }
-
-    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
-        self.type_parameters(interner).next().unwrap()
+            .find_map(move |p| p.ty(interner))
+            .unwrap()
+            .clone()
     }
 }
 
