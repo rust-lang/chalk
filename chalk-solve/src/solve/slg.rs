@@ -348,9 +348,7 @@ impl<I: Interner> TruncatingInferenceTable<I> {
 
 impl<I: Interner> context::TruncateOps<SlgContext<I>> for TruncatingInferenceTable<I> {
     fn goal_needs_truncation(&mut self, interner: &I, subgoal: &InEnvironment<Goal<I>>) -> bool {
-        // We only want to check the goal itself. We keep the environment intact.
-        // See rust-lang/chalk#280
-        truncate::needs_truncation(interner, &mut self.infer, self.max_size, &subgoal.goal)
+        truncate::needs_truncation(interner, &mut self.infer, self.max_size, &subgoal)
     }
 
     fn answer_needs_truncation(&mut self, interner: &I, subst: &Substitution<I>) -> bool {
