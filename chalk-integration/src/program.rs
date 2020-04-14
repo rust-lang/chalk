@@ -6,7 +6,7 @@ use chalk_ir::tls;
 use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
     Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses, StructId, Substitution,
-    TraitId, Ty, TyData, TypeName,
+    TraitId, Ty, TypeName,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, StructDatum,
@@ -308,16 +308,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         // Look for an impl like `impl Send for Foo` where `Foo` is
         // the struct.  See `push_auto_trait_impls` for more.
         self.impl_data.values().any(|impl_datum| {
-            let impl_trait_ref = &impl_datum.binders.skip_binders().trait_ref;
-            impl_trait_ref.trait_id == auto_trait_id
-                && match impl_trait_ref.self_type_parameter(interner).data(interner) {
-                    TyData::Apply(apply) => match apply.name {
-                        TypeName::Struct(id) => id == struct_id,
-                        _ => false,
-                    },
-
-                    _ => false,
-                }
+            impl_datum.trait_id() == auto_trait_id
+                && impl_datum.self_type_struct_id(interner) == Some(struct_id)
         })
     }
 
