@@ -294,25 +294,22 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return *minimums;
             }
 
+            let old_answer = &self.context.search_graph[dfn].solution;
+            let old_prio = self.context.search_graph[dfn].solution_priority;
+
+            let (current_answer, current_prio) = combine_with_priorities_for_goal(
+                self.program.interner(),
+                &canonical_goal.canonical.value.goal,
+                old_answer.clone(),
+                old_prio,
+                current_answer,
+                current_prio,
+            );
+
             // Some of our subgoals depended on us. We need to re-run
             // with the current answer.
             if self.context.search_graph[dfn].solution == current_answer {
                 // Reached a fixed point.
-                return *minimums;
-            }
-
-            if (
-                self.context.search_graph[dfn].solution_priority,
-                current_prio,
-            ) == (ClausePriority::High, ClausePriority::Low)
-                && self.context.search_graph[dfn].solution.is_ok()
-            {
-                // TODO check solution inputs?
-                // Not replacing the current answer, so we're at a fixed point?
-                debug!(
-                    "solve_new_subgoal: new answer has lower priority (old answer: {:?})",
-                    self.context.search_graph[dfn].solution
-                );
                 return *minimums;
             }
 
@@ -378,7 +375,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                             None => (solution, priority),
                             Some((cur, cur_priority)) => combine_with_priorities(
                                 self.program.interner(),
-                                canonical_goal,
+                                &canonical_goal.canonical.value.goal,
                                 cur,
                                 cur_priority,
                                 solution,
@@ -397,7 +394,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                             None => (solution, priority),
                             Some((cur, cur_priority)) => combine_with_priorities(
                                 self.program.interner(),
-                                canonical_goal,
+                                &canonical_goal.canonical.value.goal,
                                 cur,
                                 cur_priority,
                                 solution,
@@ -466,23 +463,47 @@ impl<'me, I: Interner> Solver<'me, I> {
 
 fn calculate_inputs<I: Interner>(
     interner: &I,
-    canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
+    domain_goal: &DomainGoal<I>,
     solution: &Solution<I>,
 ) -> Vec<Parameter<I>> {
     if let Some(subst) = solution.constrained_subst() {
-        let subst_goal = subst
-            .value
-            .subst
-            .apply(&canonical_goal.canonical.value.goal, interner);
+        let subst_goal = subst.value.subst.apply(&domain_goal, interner);
         subst_goal.inputs(interner)
     } else {
-        canonical_goal.canonical.value.goal.inputs(interner)
+        domain_goal.inputs(interner)
+    }
+}
+
+fn combine_with_priorities_for_goal<I: Interner>(
+    interner: &I,
+    goal: &Goal<I>,
+    a: Fallible<Solution<I>>,
+    prio_a: ClausePriority,
+    b: Fallible<Solution<I>>,
+    prio_b: ClausePriority,
+) -> (Fallible<Solution<I>>, ClausePriority) {
+    let domain_goal = match goal.data(interner) {
+        GoalData::DomainGoal(domain_goal) => domain_goal,
+        _ => {
+            // non-domain goals currently have no priorities, so we always take the new solution here
+            return (b, prio_b);
+        }
+    };
+    match (a, b) {
+        (Ok(a), Ok(b)) => {
+            let (solution, prio) =
+                combine_with_priorities(interner, domain_goal, a, prio_a, b, prio_b);
+            (Ok(solution), prio)
+        }
+        (Ok(solution), Err(_)) => (Ok(solution), prio_a),
+        (Err(_), Ok(solution)) => (Ok(solution), prio_b),
+        (Err(_), Err(e)) => (Err(e), prio_b),
     }
 }
 
 fn combine_with_priorities<I: Interner>(
     interner: &I,
-    canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
+    domain_goal: &DomainGoal<I>,
     a: Solution<I>,
     prio_a: ClausePriority,
     b: Solution<I>,
@@ -491,8 +512,8 @@ fn combine_with_priorities<I: Interner>(
     match (prio_a, prio_b, a, b) {
         (ClausePriority::High, ClausePriority::Low, higher, lower)
         | (ClausePriority::Low, ClausePriority::High, lower, higher) => {
-            let inputs_higher = calculate_inputs(interner, canonical_goal, &higher);
-            let inputs_lower = calculate_inputs(interner, canonical_goal, &lower);
+            let inputs_higher = calculate_inputs(interner, domain_goal, &higher);
+            let inputs_lower = calculate_inputs(interner, domain_goal, &lower);
             if inputs_higher == inputs_lower {
                 debug!(
                     "preferring solution: {:?} over {:?} because of higher prio",
