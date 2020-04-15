@@ -369,10 +369,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 ProgramClauseData::Implies(implication) => {
                     let res = self.solve_via_implication(
                         canonical_goal,
-                        &Binders {
-                            binders: vec![],
-                            value: implication.clone(),
-                        },
+                        &Binders::new(vec![], implication.clone()),
                         minimums,
                     );
                     if let (Ok(solution), priority) = res {
@@ -452,7 +449,10 @@ impl<'me, I: Interner> Solver<'me, I> {
         }
 
         // and then try to solve
-        (fulfill.solve(subst, minimums), clause.value.priority)
+        (
+            fulfill.solve(subst, minimums),
+            clause.skip_binders().priority,
+        )
     }
 
     fn program_clauses_for_goal(

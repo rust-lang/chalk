@@ -119,16 +119,30 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
 
     fn push_obligation(&mut self, obligation: Obligation<I>) {
         // truncate to avoid overflows
-        let obligation = match obligation {
+        match &obligation {
             Obligation::Prove(goal) => {
-                let truncated =
-                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 30, &goal);
-                Obligation::Prove(truncated.value)
+                if truncate::needs_truncation(
+                    self.solver.program.interner(),
+                    &mut self.infer,
+                    30,
+                    goal,
+                ) {
+                    // the goal is too big. Record that we should return Ambiguous
+                    self.cannot_prove = true;
+                    return;
+                }
             }
             Obligation::Refute(goal) => {
-                let truncated =
-                    truncate::truncate(self.solver.program.interner(), &mut self.infer, 30, &goal);
-                Obligation::Refute(truncated.value)
+                if truncate::needs_truncation(
+                    self.solver.program.interner(),
+                    &mut self.infer,
+                    30,
+                    goal,
+                ) {
+                    // the goal is too big. Record that we should return Ambiguous
+                    self.cannot_prove = true;
+                    return;
+                }
             }
         };
         self.obligations.push(obligation);

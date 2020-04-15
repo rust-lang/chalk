@@ -14,8 +14,7 @@ use chalk_engine::hh::HhGoal;
 use chalk_engine::{CompleteAnswer, ExClause, Literal};
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
-use chalk_ir::could_match::CouldMatch;
-use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
 use std::fmt::Debug;
