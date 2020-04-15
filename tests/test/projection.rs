@@ -138,6 +138,17 @@ fn projection_equality() {
 
         goal {
             exists<U> {
+                S: Trait1<Type = U>
+            }
+        } yields[SolverChoice::slg_default()] {
+            // this is wrong, chalk#234
+            "Ambiguous"
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := u32]"
+        }
+
+        goal {
+            exists<U> {
                 S: Trait2<U>
             }
         } yields[SolverChoice::slg_default()] {
@@ -149,6 +160,127 @@ fn projection_equality() {
     }
 }
 
+#[test]
+fn projection_equality_priority1() {
+    test! {
+        program {
+            trait Trait1<T> {
+                type Type;
+            }
+
+            struct u32 {}
+            struct S1 {}
+            struct S2 {}
+            struct S3 {}
+
+            impl Trait1<S2> for S1 {
+                type Type = u32;
+            }
+        }
+
+        goal {
+            exists<T, U> {
+                S1: Trait1<T, Type = U>
+            }
+        } yields[SolverChoice::slg_default()] {
+            // this is wrong, chalk#234
+            "Ambiguous"
+        } yields[SolverChoice::recursive()] {
+            // This is.. interesting, but not necessarily wrong.
+            // It's certainly true that based on the impls we see
+            // the only possible value for `U` is `u32`.
+            //
+            // Can we come to any harm by inferring that `T = S2`
+            // here, even though we could've chosen to say that
+            // `U = !<S1 as Trait1<T>>::Type` and thus not
+            // constrained `T` at all? I can't come up with
+            // an example where that's the case, so maybe
+            // not. -Niko
+            "Unique; substitution [?0 := S2, ?1 := u32]"
+        }
+    }
+}
+
+#[test]
+fn projection_equality_priority2() {
+    test! {
+        program {
+            trait Trait1<T> {
+                type Type;
+            }
+
+            struct u32 {}
+            struct S1 {}
+            struct S2 {}
+            struct S3 {}
+
+            impl<X> Trait1<S1> for X {
+                type Type = u32;
+            }
+        }
+
+        goal {
+            forall<X, Y> {
+                if (X: Trait1<Y>) {
+                    exists<Out1, Out2> {
+                        X: Trait1<Out1, Type = Out2>
+                    }
+                }
+            }
+        } yields {
+            // Correct: Ambiguous because Out1 = Y and Out1 = S1 are both value.
+            "Ambiguous; no inference guidance"
+        }
+
+        goal {
+            forall<X, Y> {
+                if (X: Trait1<Y>) {
+                    exists<Out1, Out2> {
+                        X: Trait1<Out1, Type = Out2>,
+                        Out1 = Y
+                    }
+                }
+            }
+        } yields {
+            // Constraining Out1 = Y gives us only one choice.
+            "Unique; substitution [?0 := !1_1, ?1 := (Trait1::Type)<!1_0, !1_1>], lifetime constraints []"
+        }
+
+        goal {
+            forall<X, Y> {
+                if (X: Trait1<Y>) {
+                    exists<Out1, Out2> {
+                        Out1 = Y,
+                        X: Trait1<Out1, Type = Out2>
+                    }
+                }
+            }
+        } yields {
+            // Constraining Out1 = Y gives us only one choice.
+            "Unique; substitution [?0 := !1_1, ?1 := (Trait1::Type)<!1_0, !1_1>], lifetime constraints []"
+        }
+
+        goal {
+            forall<X, Y> {
+                if (X: Trait1<Y>) {
+                    exists<Out1, Out2> {
+                        Out1 = S1,
+                        X: Trait1<Out1, Type = Out2>
+                    }
+                }
+            }
+        } yields[SolverChoice::slg_default()] {
+            // chalk#234: Constraining Out1 = S1 gives us only the choice to
+            // use the impl, but the SLG solver can't decide between
+            // the placeholder and the normalized form.
+            "Ambiguous; definite substitution for<?U1> { [?0 := S1, ?1 := ^0.0] }"
+        } yields[SolverChoice::recursive()] {
+            // Constraining Out1 = S1 gives us only one choice, use the impl,
+            // and the recursive solver prefers the normalized form.
+            "Unique; substitution [?0 := S1, ?1 := u32], lifetime constraints []"
+        }
+    }
+}
 #[test]
 fn projection_equality_from_env() {
     test! {
