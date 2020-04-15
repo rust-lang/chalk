@@ -5,7 +5,7 @@
 //! The more interesting impls of `Visit` remain in the `visit` module.
 
 use crate::{
-    AssocTypeId, DebruijnIndex, Goals, ImplId, Interner, Parameter, ParameterKind,
+    AssocTypeId, ClausePriority, DebruijnIndex, Goals, ImplId, Interner, Parameter, ParameterKind,
     PlaceholderIndex, ProgramClause, ProgramClauseData, ProgramClauses, QuantifiedWhereClauses,
     QuantifierKind, StructId, Substitution, SuperVisit, TraitId, UniverseIndex, Visit, VisitResult,
     Visitor,
@@ -205,6 +205,7 @@ const_visit!(QuantifierKind);
 const_visit!(DebruijnIndex);
 const_visit!(chalk_engine::TableIndex);
 const_visit!(chalk_engine::TimeStamp);
+const_visit!(ClausePriority);
 const_visit!(());
 
 #[macro_export]

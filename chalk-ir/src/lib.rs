@@ -229,6 +229,14 @@ impl<I: Interner> Ty<I> {
         }
     }
 
+    /// Returns true if this is a `BoundVar` or `InferenceVar`.
+    pub fn is_var(&self, interner: &I) -> bool {
+        match self.data(interner) {
+            TyData::BoundVar(_) | TyData::InferenceVar(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn is_alias(&self, interner: &I) -> bool {
         match self.data(interner) {
             TyData::Alias(..) => true,
@@ -547,7 +555,7 @@ impl DebruijnIndex {
 /// known. It is referenced within the type using `^1`, indicating
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct DynTy<I: Interner> {
     pub bounds: Binders<QuantifiedWhereClauses<I>>,
 }
@@ -839,6 +847,14 @@ impl<I: Interner> AliasTy<I> {
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
     }
+
+    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
+        self.substitution
+            .iter(interner)
+            .find_map(move |p| p.ty(interner))
+            .unwrap()
+            .clone()
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
@@ -1106,6 +1122,15 @@ impl<I: Interner> DomainGoal<I> {
             goal => goal,
         }
     }
+
+    pub fn inputs(&self, interner: &I) -> Vec<Parameter<I>> {
+        match self {
+            DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
+                vec![ParameterKind::Ty(alias_eq.alias.clone().intern(interner)).intern(interner)]
+            }
+            _ => Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
@@ -1304,6 +1329,23 @@ impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
 pub struct ProgramClauseImplication<I: Interner> {
     pub consequence: DomainGoal<I>,
     pub conditions: Goals<I>,
+    pub priority: ClausePriority,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ClausePriority {
+    High,
+    Low,
+}
+
+impl std::ops::BitAnd for ClausePriority {
+    type Output = ClausePriority;
+    fn bitand(self, rhs: ClausePriority) -> Self::Output {
+        match (self, rhs) {
+            (ClausePriority::High, ClausePriority::High) => ClausePriority::High,
+            _ => ClausePriority::Low,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
@@ -1318,6 +1360,7 @@ impl<I: Interner> ProgramClauseImplication<I> {
             ProgramClauseImplication {
                 consequence: self.consequence.into_from_env_goal(interner),
                 conditions: self.conditions.clone(),
+                priority: self.priority,
             }
         } else {
             self
@@ -1465,6 +1508,30 @@ impl<T> UCanonical<T> {
             subst.parameters(interner).len()
         );
         subst.is_identity_subst(interner)
+    }
+
+    pub fn trivial_substitution<I: Interner>(&self, interner: &I) -> Substitution<I> {
+        let binders = &self.canonical.binders;
+        Substitution::from(
+            interner,
+            binders
+                .iter()
+                .enumerate()
+                .map(|(index, pk)| {
+                    let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);
+                    match pk {
+                        ParameterKind::Ty(_) => {
+                            ParameterKind::Ty(TyData::BoundVar(bound_var).intern(interner))
+                                .intern(interner)
+                        }
+                        ParameterKind::Lifetime(_) => ParameterKind::Lifetime(
+                            LifetimeData::BoundVar(bound_var).intern(interner),
+                        )
+                        .intern(interner),
+                    }
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 }
 

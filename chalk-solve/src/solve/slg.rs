@@ -14,7 +14,6 @@ use chalk_engine::hh::HhGoal;
 use chalk_engine::{CompleteAnswer, ExClause, Literal};
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
-use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
@@ -175,45 +174,9 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         &self,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        _infer: &mut TruncatingInferenceTable<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        // Look for floundering goals:
-        let interner = self.interner();
-        match goal {
-            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
-            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
-                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter(interner);
-                    if let Some(v) = self_ty.inference_var(interner) {
-                        if !infer.infer.var_is_bound(v) {
-                            return Err(Floundered);
-                        }
-                    }
-                }
-            }
-
-            DomainGoal::WellFormed(WellFormed::Ty(ty))
-            | DomainGoal::IsUpstream(ty)
-            | DomainGoal::DownstreamType(ty)
-            | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty.data(interner) {
-                TyData::InferenceVar(_) => return Err(Floundered),
-                _ => {}
-            },
-
-            _ => {}
-        }
-
-        let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
-
-        clauses.extend(
-            environment
-                .clauses
-                .iter(interner)
-                .filter(|&env_clause| env_clause.could_match(interner, goal))
-                .cloned(),
-        );
+        let clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal)?;
 
         Ok(clauses)
     }

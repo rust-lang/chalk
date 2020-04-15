@@ -163,7 +163,9 @@ fn overflow() {
         // Will try to prove S<G<Z>>: Q then S<G<G<Z>>>: Q etc ad infinitum
         goal {
             S<Z>: Q
-        } yields {
+        } yields[SolverChoice::slg(10, None)] {
+            "Ambiguous; no inference guidance"
+        } yields[SolverChoice::recursive()] {
             "Ambiguous; no inference guidance"
         }
     }

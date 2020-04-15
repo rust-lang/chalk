@@ -243,6 +243,7 @@ copy_fold!(DebruijnIndex);
 copy_fold!(chalk_engine::TableIndex);
 copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
+copy_fold!(ClausePriority);
 
 #[macro_export]
 macro_rules! id_fold {

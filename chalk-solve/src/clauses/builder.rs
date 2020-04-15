@@ -35,6 +35,18 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         self.push_clause(consequence, None::<Goal<_>>);
     }
 
+    /// Pushes a "fact" `forall<..> { consequence }` into the set of
+    /// program clauses, meaning something that we can assume to be
+    /// true unconditionally. The `forall<..>` binders will be
+    /// whichever binders have been pushed (see `push_binders`).
+    pub fn push_fact_with_priority(
+        &mut self,
+        consequence: impl CastTo<DomainGoal<I>>,
+        priority: ClausePriority,
+    ) {
+        self.push_clause_with_priority(consequence, None::<Goal<_>>, priority);
+    }
+
     /// Pushes a clause `forall<..> { consequence :- conditions }`
     /// into the set of program clauses, meaning that `consequence`
     /// can be proven if `conditions` are all true.  The `forall<..>`
@@ -44,10 +56,24 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
+        self.push_clause_with_priority(consequence, conditions, ClausePriority::High)
+    }
+
+    /// Pushes a clause `forall<..> { consequence :- conditions }`
+    /// into the set of program clauses, meaning that `consequence`
+    /// can be proven if `conditions` are all true.  The `forall<..>`
+    /// binders will be whichever binders have been pushed (see `push_binders`).
+    pub fn push_clause_with_priority(
+        &mut self,
+        consequence: impl CastTo<DomainGoal<I>>,
+        conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
+        priority: ClausePriority,
+    ) {
         let interner = self.db.interner();
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(interner),
             conditions: Goals::from(interner, conditions),
+            priority,
         };
 
         if self.binders.len() == 0 {

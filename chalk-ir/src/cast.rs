@@ -187,6 +187,7 @@ where
         ProgramClauseData::Implies(ProgramClauseImplication {
             consequence: self.cast(interner),
             conditions: Goals::new(interner),
+            priority: ClausePriority::High,
         })
         .intern(interner)
     }
@@ -201,6 +202,7 @@ where
         ProgramClauseData::ForAll(self.map(|bound| ProgramClauseImplication {
             consequence: bound.cast(interner),
             conditions: Goals::new(interner),
+            priority: ClausePriority::High,
         }))
         .intern(interner)
     }

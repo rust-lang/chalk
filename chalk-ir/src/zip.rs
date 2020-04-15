@@ -200,6 +200,7 @@ eq_zip!(I => TypeName<I>);
 eq_zip!(I => QuantifierKind);
 eq_zip!(I => PhantomData<I>);
 eq_zip!(I => PlaceholderIndex);
+eq_zip!(I => ClausePriority);
 
 /// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {
@@ -242,7 +243,8 @@ struct_zip!(impl[I: Interner] Zip<I> for AliasEq<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for EqGoal<I> { a, b });
 struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
     consequence,
-    conditions
+    conditions,
+    priority,
 });
 
 impl<I: Interner> Zip<I> for Environment<I> {
