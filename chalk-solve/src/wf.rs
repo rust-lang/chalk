@@ -75,10 +75,11 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
 
     fn visit_where_clause(&mut self, where_clause: &WhereClause<I>, outer_binder: DebruijnIndex) {
         match where_clause {
-            WhereClause::AliasEq(alias_eq) => {
-                alias_eq.alias.visit_with(self, outer_binder);
-                alias_eq.ty.visit_with(self, outer_binder);
-            }
+            WhereClause::AliasEq(alias_eq) => alias_eq
+                .alias
+                .clone()
+                .intern(self.interner)
+                .visit_with(self, outer_binder),
             WhereClause::Implemented(trait_ref) => {
                 trait_ref.visit_with(self, outer_binder);
             }
