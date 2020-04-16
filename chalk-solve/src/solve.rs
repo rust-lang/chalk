@@ -69,14 +69,18 @@ impl<I: Interner> Solution<I> {
     //    Clone`.
     //
     // But you get the idea.
-    pub(crate) fn combine(self, other: Solution<I>) -> Solution<I> {
+    pub(crate) fn combine(self, other: Solution<I>, interner: &I) -> Solution<I> {
         use self::Guidance::*;
 
         if self == other {
             return self;
         }
 
-        debug!("combine {} with {}", self, other);
+        debug!(
+            "combine {} with {}",
+            self.display(interner),
+            other.display(interner)
+        );
 
         // Otherwise, always downgrade to Ambig:
 

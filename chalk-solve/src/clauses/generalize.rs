@@ -9,8 +9,9 @@
 use chalk_engine::fallible::Fallible;
 use chalk_ir::{
     fold::{Fold, Folder},
-    interner::Interner,
-    Binders, BoundVar, DebruijnIndex, Lifetime, LifetimeData, ParameterKind, Ty, TyData,
+    interner::{HasInterner, Interner},
+    Binders, BoundVar, DebruijnIndex, Lifetime, LifetimeData, ParameterKind, ParameterKinds, Ty,
+    TyData,
 };
 use std::collections::HashMap;
 
@@ -21,7 +22,11 @@ pub struct Generalize<'i, I: Interner> {
 }
 
 impl<I: Interner> Generalize<'_, I> {
-    pub fn apply<T: Fold<I, I>>(interner: &I, value: &T) -> Binders<T::Result> {
+    pub fn apply<T>(interner: &I, value: &T) -> Binders<T::Result>
+    where
+        T: HasInterner<Interner = I> + Fold<I, I>,
+        T::Result: HasInterner<Interner = I>,
+    {
         let mut generalize = Generalize {
             binders: Vec::new(),
             mapping: HashMap::new(),
@@ -30,7 +35,7 @@ impl<I: Interner> Generalize<'_, I> {
         let value = value
             .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
             .unwrap();
-        Binders::new(generalize.binders, value)
+        Binders::new(ParameterKinds::from(interner, generalize.binders), value)
     }
 }
 

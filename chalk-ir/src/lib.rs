@@ -1638,12 +1638,12 @@ impl<T: HasInterner> UCanonical<T> {
         subst.is_identity_subst(interner)
     }
 
-    pub fn trivial_substitution<I: Interner>(&self, interner: &I) -> Substitution<I> {
+    pub fn trivial_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
         let binders = &self.canonical.binders;
         Substitution::from(
             interner,
             binders
-                .iter()
+                .iter(interner)
                 .enumerate()
                 .map(|(index, pk)| {
                     let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);

@@ -1,8 +1,8 @@
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{ChalkIr, HasInterner};
 use chalk_ir::{
-    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId, ParameterKinds, QuantifiedWhereClauses,
-    StructId, Substitution, TraitId,
+    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId, ParameterKinds,
+    QuantifiedWhereClauses, StructId, Substitution, TraitId,
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
@@ -635,11 +635,15 @@ impl LowerTypeKind for TraitDefn {
 
 impl LowerTypeKind for OpaqueTyDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        let interner = &ChalkIr;
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(TypeKind {
             sort: TypeSort::Opaque,
             name: self.identifier.str,
-            binders: chalk_ir::Binders::new(binders.anonymize(), ()),
+            binders: chalk_ir::Binders::new(
+                ParameterKinds::from(interner, binders.anonymize()),
+                crate::Unit,
+            ),
         })
     }
 }

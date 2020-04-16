@@ -1,8 +1,9 @@
 use crate::interner::ChalkIr;
 use crate::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds, Goal, Goals,
-    Lifetime, OpaqueTy, OpaqueTyId, Parameter, ParameterKinds, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
+    Lifetime, OpaqueTy, OpaqueTyId, Parameter, ParameterKinds, ProgramClause,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, StructId,
+    Substitution, TraitId, Ty,
 };
 use std::cell::RefCell;
 use std::fmt;
