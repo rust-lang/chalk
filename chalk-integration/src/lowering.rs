@@ -1074,14 +1074,18 @@ impl LowerTy for Ty {
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
-            Ty::Tuple { arity } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Tuple(arity),
-                substitution: chalk_ir::Substitution::empty(interner),
+            Ty::Tuple { ref types } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Tuple(types.len()),
+                substitution: chalk_ir::Substitution::from_fallible(
+                    interner,
+                    types.iter().map(|t| Ok(t.lower(env)?)),
+                )?,
             })
             .intern(interner)),
 
             Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(ty)),
+                // substitution: chalk_ir::Substitution::from_fallible(interner, ty.lower(env)?)?,
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
