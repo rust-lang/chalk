@@ -270,5 +270,7 @@ mod impls;
 mod misc;
 mod negation;
 mod projection;
+mod scalars;
+mod tuples;
 mod unify;
 mod wf_goals;

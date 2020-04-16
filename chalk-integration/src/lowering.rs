@@ -1085,7 +1085,6 @@ impl LowerTy for Ty {
 
             Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(ty)),
-                // substitution: chalk_ir::Substitution::from_fallible(interner, ty.lower(env)?)?,
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
