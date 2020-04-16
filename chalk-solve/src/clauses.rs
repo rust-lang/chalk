@@ -16,6 +16,7 @@ mod dyn_ty;
 mod env_elaborator;
 mod generalize;
 pub mod program_clauses;
+pub mod syntactic_eq;
 
 /// For auto-traits, we generate a default rule for every struct,
 /// unless there is a manual impl for that struct given explicitly.
