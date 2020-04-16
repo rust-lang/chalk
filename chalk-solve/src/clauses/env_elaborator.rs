@@ -1,6 +1,6 @@
 use super::program_clauses::ToProgramClauses;
 use crate::clauses::builder::ClauseBuilder;
-use crate::clauses::match_type_name;
+use crate::clauses::{match_alias_ty, match_type_name};
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
@@ -63,13 +63,8 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
             TyData::Apply(application_ty) => {
                 match_type_name(&mut self.builder, application_ty.name)
             }
+            TyData::Alias(alias_ty) => match_alias_ty(&mut self.builder, alias_ty),
             TyData::Placeholder(_) => {}
-
-            TyData::Alias(alias_ty) => {
-                self.db
-                    .associated_ty_data(alias_ty.associated_ty_id)
-                    .to_program_clauses(&mut self.builder);
-            }
 
             // FIXME(#203) -- We haven't fully figured out the implied
             // bounds story around `dyn Trait` types.

@@ -114,6 +114,9 @@ pub enum TypeName<I: Interner> {
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(AssocTypeId<I>),
 
+    /// a placeholder for opaque types like `impl Trait`
+    OpaqueType(OpaqueTyId<I>),
+
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
     Error,
@@ -175,6 +178,9 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct OpaqueTyId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
@@ -838,9 +844,9 @@ impl<I: Interner> ParameterData<I> {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct AliasTy<I: Interner> {
-    pub associated_ty_id: AssocTypeId<I>,
-    pub substitution: Substitution<I>,
+pub enum AliasTy<I: Interner> {
+    Projection(ProjectionTy<I>),
+    Opaque(OpaqueTy<I>),
 }
 
 impl<I: Interner> AliasTy<I> {
@@ -849,12 +855,28 @@ impl<I: Interner> AliasTy<I> {
     }
 
     pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
-        self.substitution
-            .iter(interner)
-            .find_map(move |p| p.ty(interner))
-            .unwrap()
-            .clone()
+        match self {
+            AliasTy::Projection(projection_ty) => projection_ty
+                .substitution
+                .iter(interner)
+                .find_map(move |p| p.ty(interner))
+                .unwrap()
+                .clone(),
+            _ => todo!(),
+        }
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+pub struct ProjectionTy<I: Interner> {
+    pub associated_ty_id: AssocTypeId<I>,
+    pub substitution: Substitution<I>,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+pub struct OpaqueTy<I: Interner> {
+    pub opaque_ty_id: OpaqueTyId<I>,
+    pub substitution: Substitution<I>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
@@ -1014,6 +1036,10 @@ pub enum DomainGoal<I: Interner> {
     ///
     /// This makes a new type `T` available and makes `DownstreamType(T)` provable for that type.
     DownstreamType(Ty<I>),
+
+    /// Used to activate the "reveal mode", in which opaque (`impl Trait`) types can be equated
+    /// to their actual type.
+    Reveal(()),
 }
 
 pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;
@@ -1021,7 +1047,7 @@ pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;
 impl<I: Interner> WhereClause<I> {
     /// Turn a where clause into the WF version of it i.e.:
     /// * `Implemented(T: Trait)` maps to `WellFormed(T: Trait)`
-    /// * `AliasEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
+    /// * `ProjectionEq(<T as Trait>::Item = Foo)` maps to `WellFormed(<T as Trait>::Item = Foo)`
     /// * any other clause maps to itself
     pub fn into_well_formed_goal(self, interner: &I) -> DomainGoal<I> {
         match self {
@@ -1149,9 +1175,7 @@ pub struct Normalize<I: Interner> {
     pub ty: Ty<I>,
 }
 
-/// Proves **equality** between a projection `T::Foo` and a type
-/// `U`. Equality can be proven via normalization, but we can also
-/// prove that `T::Foo = V::Foo` if `T = V` without normalizing.
+/// Proves **equality** between an alias and a type.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,

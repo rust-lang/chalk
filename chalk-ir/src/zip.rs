@@ -196,6 +196,7 @@ macro_rules! eq_zip {
 eq_zip!(I => StructId<I>);
 eq_zip!(I => TraitId<I>);
 eq_zip!(I => AssocTypeId<I>);
+eq_zip!(I => OpaqueTyId<I>);
 eq_zip!(I => TypeName<I>);
 eq_zip!(I => QuantifierKind);
 eq_zip!(I => PhantomData<I>);
@@ -234,10 +235,6 @@ struct_zip!(impl[
 });
 struct_zip!(impl[I: Interner] Zip<I> for ApplicationTy<I> { name, substitution });
 struct_zip!(impl[I: Interner] Zip<I> for DynTy<I> { bounds });
-struct_zip!(impl[I: Interner] Zip<I> for AliasTy<I> {
-    associated_ty_id,
-    substitution,
-});
 struct_zip!(impl[I: Interner] Zip<I> for Normalize<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for AliasEq<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for EqGoal<I> { a, b });
@@ -245,6 +242,14 @@ struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
     consequence,
     conditions,
     priority,
+});
+struct_zip!(impl[I: Interner] Zip<I> for ProjectionTy<I> {
+    associated_ty_id,
+    substitution
+});
+struct_zip!(impl[I: Interner] Zip<I> for OpaqueTy<I> {
+    opaque_ty_id,
+    substitution
 });
 
 impl<I: Interner> Zip<I> for Environment<I> {
@@ -336,9 +341,11 @@ enum_zip!(impl<I> for DomainGoal<I> {
     IsFullyVisible,
     LocalImplAllowed,
     Compatible,
-    DownstreamType
+    DownstreamType,
+    Reveal,
 });
 enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
+enum_zip!(impl<I> for AliasTy<I> { Projection, Opaque });
 
 impl<I: Interner> Zip<I> for Substitution<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>

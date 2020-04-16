@@ -22,6 +22,7 @@ pub struct Program {
 pub enum Item {
     StructDefn(StructDefn),
     TraitDefn(TraitDefn),
+    OpaqueTyDefn(OpaqueTyDefn),
     Impl(Impl),
     Clause(Clause),
 }
@@ -75,6 +76,14 @@ pub struct AssocTyDefn {
     pub parameter_kinds: Vec<ParameterKind>,
     pub bounds: Vec<QuantifiedInlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct OpaqueTyDefn {
+    pub ty: Ty,
+    pub parameter_kinds: Vec<ParameterKind>,
+    pub identifier: Identifier,
+    pub bounds: Vec<QuantifiedInlineBound>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -171,8 +180,8 @@ pub enum Ty {
         name: Identifier,
         args: Vec<Parameter>,
     },
-    Alias {
-        alias: AliasTy,
+    Projection {
+        proj: ProjectionTy,
     },
     ForAll {
         lifetime_names: Vec<Identifier>,
@@ -186,7 +195,7 @@ pub enum Lifetime {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct AliasTy {
+pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
     pub args: Vec<Parameter>,
@@ -232,13 +241,13 @@ impl fmt::Display for Identifier {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
-    AliasEq { alias: AliasTy, ty: Ty },
+    ProjectionEq { projection: ProjectionTy, ty: Ty },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
     Holds { where_clause: WhereClause },
-    Normalize { alias: AliasTy, ty: Ty },
+    Normalize { projection: ProjectionTy, ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
     TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },
@@ -249,6 +258,7 @@ pub enum DomainGoal {
     LocalImplAllowed { trait_ref: TraitRef },
     Compatible,
     DownstreamType { ty: Ty },
+    Reveal,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

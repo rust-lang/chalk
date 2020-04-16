@@ -164,8 +164,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying two dyn is possible if they have the same bounds.
             (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
 
-            // Unifying an associated type projection `<T as
-            // Trait>::Item` with some other type `U`.
+            // Unifying an alias type with some other type `U`.
             (&TyData::Apply(_), &TyData::Alias(ref alias))
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
@@ -218,11 +217,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    /// Unify an associated type projection `proj` like `<T as Trait>::Item` with some other
-    /// type `ty` (which might also be a projection). Creates a goal like
+    /// Unify an alias like `<T as Trait>::Item` or `impl Trait` with some other
+    /// type `ty` (which might also be an alias). Creates a goal like
     ///
     /// ```notrust
-    /// AliasEq(<T as Trait>::Item = U)
+    /// AliasEq(<T as Trait>::Item = U) // associated type projection
+    /// AliasEq(impl Trait = U) // impl trait
     /// ```
     fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;

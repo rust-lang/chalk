@@ -11,6 +11,7 @@ use chalk_ir::ConstrainedSubst;
 use chalk_ir::Goal;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
+use chalk_ir::OpaqueTyId;
 use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
 use chalk_ir::StructId;
@@ -21,6 +22,7 @@ use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
 use chalk_rust_ir::ImplDatum;
+use chalk_rust_ir::OpaqueTyDatum;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_rust_ir::WellKnownTrait;
@@ -102,6 +104,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         id: AssociatedTyValueId<ChalkIr>,
     ) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_values[&id].clone()
+    }
+
+    fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {
+        self.program_ir().unwrap().opaque_ty_data(id)
     }
 
     fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {

@@ -239,9 +239,15 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
-            (TyData::Alias(alias1), TyData::Alias(alias2)) => {
-                self.aggregate_alias_tys(alias1, alias2)
-            }
+            (
+                TyData::Alias(AliasTy::Projection(proj1)),
+                TyData::Alias(AliasTy::Projection(proj2)),
+            ) => self.aggregate_projection_tys(proj1, proj2),
+
+            (
+                TyData::Alias(AliasTy::Opaque(opaque_ty1)),
+                TyData::Alias(AliasTy::Opaque(opaque_ty2)),
+            ) => self.aggregate_opaque_ty_tys(opaque_ty1, opaque_ty2),
 
             (TyData::Placeholder(placeholder1), TyData::Placeholder(placeholder2)) => {
                 self.aggregate_placeholder_tys(placeholder1, placeholder2)
@@ -293,24 +299,53 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         }
     }
 
-    fn aggregate_alias_tys(&mut self, alias1: &AliasTy<I>, alias2: &AliasTy<I>) -> Ty<I> {
+    fn aggregate_projection_tys(
+        &mut self,
+        proj1: &ProjectionTy<I>,
+        proj2: &ProjectionTy<I>,
+    ) -> Ty<I> {
         let interner = self.interner;
-        let AliasTy {
+        let ProjectionTy {
             associated_ty_id: name1,
             substitution: substitution1,
-        } = alias1;
-        let AliasTy {
+        } = proj1;
+        let ProjectionTy {
             associated_ty_id: name2,
             substitution: substitution2,
-        } = alias2;
+        } = proj2;
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
             .map(|(&associated_ty_id, substitution)| {
-                TyData::Alias(AliasTy {
+                TyData::Alias(AliasTy::Projection(ProjectionTy {
                     associated_ty_id,
                     substitution,
-                })
+                }))
                 .intern(interner)
+            })
+            .unwrap_or_else(|| self.new_variable())
+    }
+
+    fn aggregate_opaque_ty_tys(
+        &mut self,
+        opaque_ty1: &OpaqueTy<I>,
+        opaque_ty2: &OpaqueTy<I>,
+    ) -> Ty<I> {
+        let OpaqueTy {
+            opaque_ty_id: name1,
+            substitution: substitution1,
+        } = opaque_ty1;
+        let OpaqueTy {
+            opaque_ty_id: name2,
+            substitution: substitution2,
+        } = opaque_ty2;
+
+        self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
+            .map(|(&opaque_ty_id, substitution)| {
+                TyData::Alias(AliasTy::Opaque(OpaqueTy {
+                    opaque_ty_id,
+                    substitution,
+                }))
+                .intern(self.interner)
             })
             .unwrap_or_else(|| self.new_variable())
     }

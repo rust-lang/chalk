@@ -15,17 +15,17 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// any type parameters itself.
     fn split_projection<'p>(
         &self,
-        alias: &'p AliasTy<I>,
+        projection: &'p ProjectionTy<I>,
     ) -> (
         Arc<AssociatedTyDatum<I>>,
         &'p [Parameter<I>],
         &'p [Parameter<I>],
     ) {
         let interner = self.interner();
-        let AliasTy {
+        let ProjectionTy {
             associated_ty_id,
             ref substitution,
-        } = *alias;
+        } = *projection;
         let parameters = substitution.parameters(interner);
         let associated_ty_data = &self.associated_ty_data(associated_ty_id);
         let trait_datum = &self.trait_datum(associated_ty_data.trait_id);
@@ -38,15 +38,18 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_parameters_from_projection<'p>(&self, alias: &'p AliasTy<I>) -> &'p [Parameter<I>] {
-        let (_, trait_params, _) = self.split_projection(alias);
+    fn trait_parameters_from_projection<'p>(
+        &self,
+        projection: &'p ProjectionTy<I>,
+    ) -> &'p [Parameter<I>] {
+        let (_, trait_params, _) = self.split_projection(projection);
         trait_params
     }
 
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_ref_from_projection<'p>(&self, projection: &'p AliasTy<I>) -> TraitRef<I> {
+    fn trait_ref_from_projection<'p>(&self, projection: &'p ProjectionTy<I>) -> TraitRef<I> {
         let interner = self.interner();
         let (associated_ty_data, trait_params, _) = self.split_projection(&projection);
         TraitRef {
@@ -120,7 +123,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         &self,
         parameters: &'p [Parameter<I>],
         associated_ty_value: &AssociatedTyValue<I>,
-    ) -> (&'p [Parameter<I>], AliasTy<I>) {
+    ) -> (&'p [Parameter<I>], ProjectionTy<I>) {
         let interner = self.interner();
         debug_heading!(
             "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
@@ -134,9 +137,9 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         let (impl_parameters, atv_parameters) =
             self.split_associated_ty_value_parameters(&parameters, associated_ty_value);
         let trait_ref = {
-            let impl_trait_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
-            debug!("impl_trait_ref: {:?}", impl_trait_ref);
-            impl_trait_ref.substitute(interner, impl_parameters)
+            let opaque_ty_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
+            debug!("opaque_ty_ref: {:?}", opaque_ty_ref);
+            opaque_ty_ref.substitute(interner, impl_parameters)
         };
 
         // Create the parameters for the projection -- in our example
@@ -150,16 +153,16 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
                 .cloned(),
         );
 
-        let alias = AliasTy {
+        let projection = ProjectionTy {
             associated_ty_id: associated_ty_value.associated_ty_id,
             substitution: projection_substitution,
         };
 
         debug!("impl_parameters: {:?}", impl_parameters);
         debug!("trait_ref: {:?}", trait_ref);
-        debug!("alias: {:?}", alias);
+        debug!("projection: {:?}", projection);
 
-        (impl_parameters, alias)
+        (impl_parameters, projection)
     }
 }
 

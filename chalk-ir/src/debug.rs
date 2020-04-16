@@ -96,9 +96,31 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
     }
 }
 
+impl<I: Interner> Debug for ProjectionTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format ProjectionTy without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Debug for OpaqueTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_opaque_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format OpaqueTy without setting Program in tls")
+        })
+    }
+}
+
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
+impl<I: Interner> Debug for OpaqueTyId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_opaque_ty_id(*self, fmt).unwrap_or_else(|| write!(fmt, "OpaqueTyId({:?})", self.0))
     }
 }
 
@@ -119,6 +141,7 @@ impl<I: Interner> Debug for TypeName<I> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::OpaqueType(opaque_ty) => write!(fmt, "{:?}", opaque_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
@@ -428,6 +451,64 @@ impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
     }
 }
 
+pub struct ProjectionTyDebug<'a, I: Interner> {
+    projection_ty: &'a ProjectionTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let ProjectionTyDebug {
+            projection_ty,
+            interner,
+        } = self;
+        write!(
+            fmt,
+            "({:?}){:?}",
+            projection_ty.associated_ty_id,
+            projection_ty.substitution.with_angle(interner)
+        )
+    }
+}
+
+impl<I: Interner> ProjectionTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> ProjectionTyDebug<'a, I> {
+        ProjectionTyDebug {
+            projection_ty: self,
+            interner,
+        }
+    }
+}
+
+pub struct OpaqueTyDebug<'a, I: Interner> {
+    opaque_ty: &'a OpaqueTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let OpaqueTyDebug {
+            opaque_ty,
+            interner,
+        } = self;
+        write!(
+            fmt,
+            "{:?}{:?}",
+            opaque_ty.opaque_ty_id,
+            opaque_ty.substitution.with_angle(interner)
+        )
+    }
+}
+
+impl<I: Interner> OpaqueTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> OpaqueTyDebug<'a, I> {
+        OpaqueTyDebug {
+            opaque_ty: self,
+            interner,
+        }
+    }
+}
+
 pub struct Angle<'a, T>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
@@ -501,6 +582,7 @@ impl<I: Interner> Debug for DomainGoal<I> {
             }
             DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
+            DomainGoal::Reveal(_) => write!(fmt, "Reveal"),
         }
     }
 }

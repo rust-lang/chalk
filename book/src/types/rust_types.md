@@ -56,7 +56,7 @@ evaluated. For example, when typing the body of a generic function
 like `fn foo<T: Iterator>`, the type `T` would be represented with a
 placeholder. Similarly, in that same function, the associated type
 `T::Item` might be represented with a placeholder.
-    
+
 Like application types, placeholder *types* are only known to be
 equal.
 
@@ -96,7 +96,7 @@ type. In chalk, these are represented as an existential type where we
 store the predicates that are known to be true. So a type like `dyn
 Write` would be represented as, effectively, an `exists<T> { T: Write
 }` type.
-  
+
 When equating, two `dyn P` and `dyn Q` types are equal if `P = Q` --
 i.e., they have the same bounds. Note that -- for this purpose --
 ordering of bounds is significant. That means that if you create a
@@ -115,7 +115,7 @@ application types, but with one crucial difference: they also contain
 a `forall` binder that for lifetimes whose value is determined when
 the function is called. Consider e.g. a type like `fn(&u32)` or --
 more explicitly -- `for<'a> fn(&'a u32)`.
-  
+
 Two `Fn` types `A, B` are equal `A = B` if `A <: B` and `B <: A`
 
 Two `Fn` types `A, B` are subtypes `A <: B` if
@@ -124,7 +124,7 @@ Two `Fn` types `A, B` are subtypes `A <: B` if
     * You can instantiate the lifetime parameters on `A` existentially...
         * And then you find that `P_B <: P_A` for every parameter type `P` on `A` and `B` and
           `R_A <: R_B` for the return type `R` of `A` and `B`.
-          
+
 We currently handle type inference with a bit of a hack (same as
 rustc); when relating a `Fn` type `F` to an unbounded type
 variable `V`, we instantiate `V` with `F`.  But in practice
@@ -155,16 +155,14 @@ contained within.
 
 The `Alias` variant wraps an `AliasTy` and is used to represent some form of *type
 alias*. These correspond to associated type projections like `<T as Iterator>::Item`
-but also `impl Trait` types and named type aliases like `type Foo<X> = Vec<X>`. 
+but also `impl Trait` types and named type aliases like `type Foo<X> = Vec<X>`.
 
 Each alias has an alias id as well as parameters. Aliases effectively
 represent a *type function*.
 
 Aliases are quite special when equating types. In general, an alias
-type `A` can also be equal to *any other type* `T` if evaluating the
-alias `A` yields `T` (this is currently handled in Chalk via a
-`ProjectionEq` goal, but it would be renamed to `AliasEq` under this
-proposal).
+type `A` can also be equal to *any other type* `T` (`AliasEq`) if evaluating the
+alias `A` yields `T`.
 
 However, some alias types can also be instantiated as "alias
 placeholders". This occurs when the precise type of the alias is not

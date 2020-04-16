@@ -10,8 +10,8 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
     AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
-    Parameter, ParameterKind, QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty,
-    TyData, TypeName, WhereClause,
+    OpaqueTyId, Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId,
+    Substitution, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -307,10 +307,10 @@ impl<I: Interner> AliasEqBound<I> {
         vec![
             WhereClause::Implemented(trait_ref),
             WhereClause::AliasEq(AliasEq {
-                alias: AliasTy {
+                alias: AliasTy::Projection(ProjectionTy {
                     associated_ty_id: self.associated_ty_id,
                     substitution,
-                },
+                }),
                 ty: self.value.clone(),
             }),
         ]
@@ -433,10 +433,10 @@ impl<I: Interner> AssociatedTyDatum<I> {
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = TyData::Alias(AliasTy {
+        let self_ty = TyData::Alias(AliasTy::Projection(ProjectionTy {
             associated_ty_id: self.id,
             substitution,
-        })
+        }))
         .intern(interner);
 
         // Now use that as the self type for the bounds, transforming
@@ -504,6 +504,29 @@ pub struct AssociatedTyValue<I: Interner> {
 pub struct AssociatedTyValueBound<I: Interner> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<I>,
+}
+
+/// Represents the bounds for an `impl Trait` type.
+///
+/// ```ignore
+/// opaque type T: A + B = HiddenTy;
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+pub struct OpaqueTyDatum<I: Interner> {
+    /// The placeholder `!T` that corresponds to the opaque type `T`.
+    pub opaque_ty_id: OpaqueTyId<I>,
+
+    /// The type bound to when revealed.
+    pub bound: Binders<OpaqueTyDatumBound<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct OpaqueTyDatumBound<I: Interner> {
+    /// The value for the "hidden type" for `opaque type Foo = ...`
+    pub hidden_ty: Ty<I>,
+
+    /// Trait bounds for the opaque type.
+    pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

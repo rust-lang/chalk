@@ -75,12 +75,11 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
 
     fn visit_where_clause(&mut self, where_clause: &WhereClause<I>, outer_binder: DebruijnIndex) {
         match where_clause {
-            WhereClause::AliasEq(alias_eq) => {
-                TyData::Alias(alias_eq.alias.clone())
-                    .intern(self.interner)
-                    .visit_with(self, outer_binder);
-                alias_eq.ty.visit_with(self, outer_binder);
-            }
+            WhereClause::AliasEq(alias_eq) => alias_eq
+                .alias
+                .clone()
+                .intern(self.interner)
+                .visit_with(self, outer_binder),
             WhereClause::Implemented(trait_ref) => {
                 trait_ref.visit_with(self, outer_binder);
             }
@@ -105,9 +104,14 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 clauses.visit_with(self, outer_binder);
             }
 
-            TyData::Alias(alias) => {
+            TyData::Alias(AliasTy::Projection(proj)) => {
                 push_ty();
-                alias.visit_with(self, outer_binder);
+                proj.visit_with(self, outer_binder);
+            }
+
+            TyData::Alias(AliasTy::Opaque(opaque_ty)) => {
+                push_ty();
+                opaque_ty.visit_with(self, outer_binder);
             }
 
             TyData::Placeholder(_) => {
@@ -490,7 +494,7 @@ impl WfWellKnownGoals {
 
     /// Computes a goal to prove Sized constraints on a struct definition.
     /// Struct is considered well-formed (in terms of Sized) when it either
-    /// has no fields or all of it's fields except the last are proven to be Sized.  
+    /// has no fields or all of it's fields except the last are proven to be Sized.
     pub fn struct_sized_constraint<I: Interner>(
         db: &dyn RustIrDatabase<I>,
         fields: &[Ty<I>],
@@ -581,7 +585,7 @@ impl WfWellKnownGoals {
     ///     c) Any bounds on the genereic parameters of the impl must be
     ///        deductible from the bounds imposed by the struct definition
     ///        (i.e. the implementation must be exactly as generic as the ADT definition).
-    ///  
+    ///
     /// ```rust,ignore
     /// struct S<T1, T2> { }
     /// struct Foo<T> { }
