@@ -446,6 +446,7 @@ impl LowerProgram for Program {
             associated_ty_values,
             associated_ty_data,
             opaque_ty_ids,
+            opaque_ty_kinds,
             opaque_ty_data,
             custom_clauses,
         };

@@ -46,6 +46,9 @@ pub struct Program {
     pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
 
     /// For each opaque type:
+    pub opaque_ty_kinds: BTreeMap<OpaqueTyId<ChalkIr>, TypeKind>,
+
+    /// For each opaque type:
     pub opaque_ty_data: BTreeMap<OpaqueTyId<ChalkIr>, Arc<OpaqueTyDatum<ChalkIr>>>,
 
     /// For each trait:
@@ -120,8 +123,8 @@ impl tls::DebugContext for Program {
         opaque_ty_id: OpaqueTyId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(d) = self.opaque_ty_data.get(&opaque_ty_id) {
-            write!(fmt, "{:?}", d.bound.skip_binders().hidden_ty)
+        if let Some(k) = self.opaque_ty_kinds.get(&opaque_ty_id) {
+            write!(fmt, "{}", k.name)
         } else {
             fmt.debug_struct("InvalidItemId")
                 .field("index", &opaque_ty_id.0)
@@ -162,7 +165,7 @@ impl tls::DebugContext for Program {
         opaque_ty: &OpaqueTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        write!(fmt, "impl {:?}", opaque_ty.opaque_ty_id)
+        write!(fmt, "{:?}", opaque_ty.opaque_ty_id)
     }
 
     fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
