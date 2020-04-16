@@ -48,6 +48,7 @@ fn scalar_trait_impl() {
     test! {
         program {
             trait Foo { }
+            trait UnsignedFoo { }
 
             impl Foo for i8 { }
             impl Foo for i16 { }
@@ -65,6 +66,14 @@ fn scalar_trait_impl() {
             impl Foo for f64 { }
             impl Foo for bool { }
             impl Foo for char { }
+
+            impl UnsignedFoo for u8 { }
+            impl UnsignedFoo for u16 { }
+            impl UnsignedFoo for u32 { }
+            impl UnsignedFoo for u64 { }
+            impl UnsignedFoo for u128 { }
+            impl UnsignedFoo for usize { }
+
         }
 
         goal { i8: Foo } yields { "Unique" }
@@ -83,5 +92,23 @@ fn scalar_trait_impl() {
         goal { f64: Foo } yields { "Unique" }
         goal { bool: Foo } yields { "Unique" }
         goal { char: Foo } yields { "Unique" }
+
+        goal { i8: UnsignedFoo } yields { "No possible solution" }
+        goal { i16: UnsignedFoo } yields { "No possible solution" }
+        goal { i32: UnsignedFoo } yields { "No possible solution" }
+        goal { i64: UnsignedFoo } yields { "No possible solution" }
+        goal { i128: UnsignedFoo } yields { "No possible solution" }
+        goal { isize: UnsignedFoo } yields { "No possible solution" }
+        goal { u8: UnsignedFoo } yields { "Unique" }
+        goal { u16: UnsignedFoo } yields { "Unique" }
+        goal { u32: UnsignedFoo } yields { "Unique" }
+        goal { u64: UnsignedFoo } yields { "Unique" }
+        goal { u128: UnsignedFoo } yields { "Unique" }
+        goal { usize: UnsignedFoo } yields { "Unique" }
+        goal { f32: UnsignedFoo } yields { "No possible solution" }
+        goal { f64: UnsignedFoo } yields { "No possible solution" }
+        goal { bool: UnsignedFoo } yields { "No possible solution" }
+        goal { char: UnsignedFoo } yields { "No possible solution" }
+
     }
 }

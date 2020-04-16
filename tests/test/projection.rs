@@ -129,10 +129,9 @@ fn projection_equality() {
             trait Trait2<T> { }
             impl<T, U> Trait2<T> for U where U: Trait1<Type = T> {}
 
-            struct Foo {}
             struct S {}
             impl Trait1 for S {
-                type Type = Foo;
+                type Type = u32;
             }
         }
 
@@ -144,7 +143,7 @@ fn projection_equality() {
             // this is wrong, chalk#234
             "Ambiguous"
         } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := u32]"
+            "Unique; substitution [?0 := Uint(U32)]"
         }
 
         goal {
@@ -155,7 +154,7 @@ fn projection_equality() {
             // this is wrong, chalk#234
             "Ambiguous"
         } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := u32]"
+            "Unique; substitution [?0 := Uint(U32)]"
         }
     }
 }
@@ -168,7 +167,6 @@ fn projection_equality_priority1() {
                 type Type;
             }
 
-            struct u32 {}
             struct S1 {}
             struct S2 {}
             struct S3 {}
@@ -196,7 +194,7 @@ fn projection_equality_priority1() {
             // constrained `T` at all? I can't come up with
             // an example where that's the case, so maybe
             // not. -Niko
-            "Unique; substitution [?0 := S2, ?1 := u32]"
+            "Unique; substitution [?0 := S2, ?1 := Uint(U32)]"
         }
     }
 }
@@ -277,7 +275,7 @@ fn projection_equality_priority2() {
         } yields[SolverChoice::recursive()] {
             // Constraining Out1 = S1 gives us only one choice, use the impl,
             // and the recursive solver prefers the normalized form.
-            "Unique; substitution [?0 := S1, ?1 := u32], lifetime constraints []"
+            "Unique; substitution [?0 := S1, ?1 := Uint(U32)], lifetime constraints []"
         }
     }
 }
@@ -304,7 +302,7 @@ fn projection_equality_from_env() {
             // this is wrong, chalk#234
             "Ambiguous"
         } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := u32]"
+            "Unique; substitution [?0 := Uint(U32)]"
         }
     }
 }
@@ -334,7 +332,7 @@ fn projection_equality_nested() {
             // this is wrong, chalk#234
             "Ambiguous"
         }  yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := u32]"
+            "Unique; substitution [?0 := Uint(U32)]"
         }
     }
 }
@@ -378,7 +376,7 @@ fn iterator_flatten() {
             // this is wrong, chalk#234
             "Ambiguous"
         } yields[SolverChoice::recursive()] {
-            "Unique; substitution [?0 := u32]"
+            "Unique; substitution [?0 := Uint(U32)]"
         }
     }
 }
