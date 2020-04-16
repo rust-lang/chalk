@@ -176,23 +176,6 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                     builder.push_fact(bound);
                 });
             }
-
-            for auto_trait_id in builder.db.auto_traits() {
-                // Implemented(!T<..>: AutoTrait) :- Implemented(HiddenTy: AutoTrait).
-                builder.push_clause(
-                    TraitRef {
-                        trait_id: auto_trait_id,
-                        substitution: substitution.clone(),
-                    },
-                    iter::once(TraitRef {
-                        trait_id: auto_trait_id,
-                        substitution: Substitution::from1(
-                            interner,
-                            opaque_ty_bound.hidden_ty.clone(),
-                        ),
-                    }),
-                );
-            }
         });
     }
 }
