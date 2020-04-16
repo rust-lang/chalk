@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
+use crate::clauses::syntactic_eq::syn_eq_lower;
 use crate::RustIrDatabase;
 use chalk_ir::fold::{Fold, Shift};
 use chalk_ir::interner::{HasInterner, Interner};
@@ -95,14 +96,13 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         } else {
             clause
         };
+        let clause = ProgramClauseData(Binders::new(
+            VariableKinds::from_iter(interner, self.binders.clone()),
+            clause,
+        ))
+        .intern(interner);
 
-        self.clauses.push(
-            ProgramClauseData(Binders::new(
-                VariableKinds::from_iter(interner, self.binders.clone()),
-                clause,
-            ))
-            .intern(interner),
-        );
+        self.clauses.push(syn_eq_lower(interner, &clause));
 
         debug!("pushed clause {:?}", self.clauses.last());
     }

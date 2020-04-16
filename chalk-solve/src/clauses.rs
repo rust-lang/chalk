@@ -18,6 +18,7 @@ mod dyn_ty;
 mod env_elaborator;
 mod generalize;
 pub mod program_clauses;
+pub mod syntactic_eq;
 
 // yields the types "contained" in `app_ty`
 fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) -> Vec<Ty<I>> {
