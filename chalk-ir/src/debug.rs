@@ -141,7 +141,7 @@ impl<I: Interner> Debug for TypeName<I> {
         match self {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
-            TypeName::OpaqueType(opaque_ty) => write!(fmt, "{:?}", opaque_ty),
+            TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
