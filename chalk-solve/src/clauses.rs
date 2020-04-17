@@ -416,6 +416,12 @@ fn match_ty<I: Interner>(
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
     Ok(match ty.data(interner) {
+        TyData::Apply(ApplicationTy {
+            name: TypeName::Scalar(_),
+            ..
+        }) => {
+            builder.push_fact(WellFormed::Ty(ty.clone()));
+        }
         TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));

@@ -10,12 +10,10 @@ trait Clone { }
 trait Copy where Self: Clone { }
 trait Sized { }
 
-struct i32 { }
 impl Copy for i32 { }
 impl Clone for i32 { }
 impl Sized for i32 { }
 
-struct u32 { }
 impl Copy for u32 { }
 impl Clone for u32 { }
 impl Sized for u32 { }

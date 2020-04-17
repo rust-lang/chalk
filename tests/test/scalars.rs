@@ -112,3 +112,27 @@ fn scalar_trait_impl() {
 
     }
 }
+
+#[test]
+fn scalars_are_well_formed() {
+    test! {
+        program { }
+
+        goal { WellFormed(i8) } yields { "Unique" }
+        goal { WellFormed(i16) } yields { "Unique" }
+        goal { WellFormed(i32) } yields { "Unique" }
+        goal { WellFormed(i64) } yields { "Unique" }
+        goal { WellFormed(i128) } yields { "Unique" }
+        goal { WellFormed(isize) } yields { "Unique" }
+        goal { WellFormed(u8) } yields { "Unique" }
+        goal { WellFormed(u16) } yields { "Unique" }
+        goal { WellFormed(u32) } yields { "Unique" }
+        goal { WellFormed(u64) } yields { "Unique" }
+        goal { WellFormed(u128) } yields { "Unique" }
+        goal { WellFormed(usize) } yields { "Unique" }
+        goal { WellFormed(f32) } yields { "Unique" }
+        goal { WellFormed(f64) } yields { "Unique" }
+        goal { WellFormed(bool) } yields { "Unique" }
+        goal { WellFormed(char) } yields { "Unique" }
+    }
+}

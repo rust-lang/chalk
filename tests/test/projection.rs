@@ -207,7 +207,6 @@ fn projection_equality_priority2() {
                 type Type;
             }
 
-            struct u32 {}
             struct S1 {}
             struct S2 {}
             struct S3 {}
@@ -286,8 +285,6 @@ fn projection_equality_from_env() {
             trait Trait1 {
                 type Type;
             }
-
-            struct u32 {}
         }
 
         goal {
@@ -314,8 +311,6 @@ fn projection_equality_nested() {
             trait Iterator {
                 type Item;
             }
-
-            struct u32 {}
         }
 
         goal {
@@ -360,8 +355,6 @@ fn iterator_flatten() {
             {
                 type Item = <U as Iterator>::Item;
             }
-
-            struct u32 {}
         }
 
         goal {
