@@ -127,8 +127,13 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     let mut vec = vec![];
     vec.extend(db.custom_clauses());
     program_clauses_that_could_match(db, environment, goal, &mut vec)?;
-    program_clauses_for_env(db, environment, &mut vec);
     vec.retain(|c| c.could_match(interner, goal));
+    vec.extend(
+        db.program_clauses_for_env(environment)
+            .iter(interner)
+            .filter(|c| (*c).could_match(interner, goal))
+            .cloned(),
+    );
 
     debug!("vec = {:#?}", vec);
 
@@ -468,20 +473,16 @@ fn match_struct<I: Interner>(builder: &mut ClauseBuilder<'_, I>, struct_id: Stru
         .to_program_clauses(builder)
 }
 
-fn program_clauses_for_env<'db, I: Interner>(
+pub fn program_clauses_for_env<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
-    clauses: &mut Vec<ProgramClause<I>>,
-) {
-    clauses.extend(environment.clauses.iter(db.interner()).cloned());
-
-    let mut last_round = FxHashSet::default();
-    elaborate_env_clauses(
-        db,
-        environment.clauses.as_slice(db.interner()),
-        &mut last_round,
-    );
-
+) -> ProgramClauses<I> {
+    let mut last_round = environment
+        .clauses
+        .as_slice(db.interner())
+        .iter()
+        .cloned()
+        .collect::<FxHashSet<_>>();
     let mut closure = last_round.clone();
     let mut next_round = FxHashSet::default();
     while !last_round.is_empty() {
@@ -493,5 +494,5 @@ fn program_clauses_for_env<'db, I: Interner>(
         );
     }
 
-    clauses.extend(closure.drain())
+    ProgramClauses::from(db.interner(), closure)
 }

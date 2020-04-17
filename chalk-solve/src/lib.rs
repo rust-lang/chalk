@@ -87,8 +87,14 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns id of a trait lang item, if found
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<I>>;
 
+    /// Calculates program clauses from an env. This is intended to call the
+    /// `program_clauses_for_env` function and then possibly cache the clauses.
+    fn program_clauses_for_env(&self, environment: &Environment<I>) -> ProgramClauses<I>;
+
     fn interner(&self) -> &I;
 }
+
+pub use clauses::program_clauses_for_env;
 
 pub use solve::Guidance;
 pub use solve::Solution;
