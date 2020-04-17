@@ -313,6 +313,7 @@ mod implied_bounds;
 mod impls;
 mod misc;
 mod negation;
+mod opaque_types;
 mod projection;
 mod unify;
 mod wf_goals;
