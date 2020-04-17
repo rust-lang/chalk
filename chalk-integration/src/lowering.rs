@@ -23,6 +23,7 @@ type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
+type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
@@ -37,6 +38,7 @@ struct Env<'k> {
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
+    opaque_ty_kinds: &'k OpaqueTyKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
     /// Parameter identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
@@ -140,6 +142,10 @@ impl<'k> Env<'k> {
 
     fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
         &self.trait_kinds[&id]
+    }
+
+    fn opaque_kind(&self, id: chalk_ir::OpaqueTyId<ChalkIr>) -> &TypeKind {
+        &self.opaque_ty_kinds[&id]
     }
 
     /// Introduces new parameters, shifting the indices of existing
@@ -281,6 +287,7 @@ impl LowerProgram for Program {
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
+                opaque_ty_kinds: &opaque_ty_kinds,
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
             };
@@ -1126,18 +1133,18 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Apply { name, ref args } => {
-                let id = match env.lookup_type(name)? {
-                    TypeLookup::Struct(id) => id,
-                    TypeLookup::Parameter(_) | TypeLookup::Opaque(_) => {
-                        Err(RustIrError::CannotApplyTypeParameter(name))?
+                let (kind, type_name) = match env.lookup_type(name)? {
+                    TypeLookup::Struct(id) => (env.struct_kind(id), chalk_ir::TypeName::Struct(id)),
+                    TypeLookup::Opaque(id) => {
+                        (env.opaque_kind(id), chalk_ir::TypeName::OpaqueType(id))
                     }
+                    TypeLookup::Parameter(_) => Err(RustIrError::CannotApplyTypeParameter(name))?,
                 };
 
-                let k = env.struct_kind(id);
-                if k.binders.len(interner) != args.len() {
+                if kind.binders.len(interner) != args.len() {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name,
-                        expected: k.binders.len(interner),
+                        expected: kind.binders.len(interner),
                         actual: args.len(),
                     })?;
                 }
@@ -1147,7 +1154,7 @@ impl LowerTy for Ty {
                     args.iter().map(|t| Ok(t.lower(env)?)),
                 )?;
 
-                for (param, arg) in k.binders.binders.iter(interner).zip(args.iter()) {
+                for (param, arg) in kind.binders.binders.iter(interner).zip(args.iter()) {
                     if param.kind() != arg.kind() {
                         Err(RustIrError::IncorrectParameterKind {
                             identifier: name,
@@ -1158,8 +1165,8 @@ impl LowerTy for Ty {
                 }
 
                 Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Struct(id),
-                    substitution: substitution,
+                    name: type_name,
+                    substitution,
                 })
                 .intern(interner))
             }
@@ -1402,6 +1409,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             opaque_ty_ids: &program.opaque_ty_ids,
             struct_kinds: &program.struct_kinds,
             trait_kinds: &program.trait_kinds,
+            opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),
         };
