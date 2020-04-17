@@ -81,8 +81,11 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .push(ProgramClauseData::Implies(clause).intern(interner));
         } else {
             self.clauses.push(
-                ProgramClauseData::ForAll(Binders::new(self.binders.clone(), clause))
-                    .intern(interner),
+                ProgramClauseData::ForAll(Binders::new(
+                    ParameterKinds::from(interner, self.binders.clone()),
+                    clause,
+                ))
+                .intern(interner),
             );
         }
 
@@ -119,11 +122,11 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
 
         let old_len = self.binders.len();
         let interner = self.interner();
-        self.binders.extend(binders.binders.clone());
+        self.binders.extend(binders.binders.iter(interner).cloned());
         self.parameters.extend(
             binders
                 .binders
-                .iter()
+                .iter(interner)
                 .zip(old_len..)
                 .map(|p| p.to_parameter(interner)),
         );
@@ -144,7 +147,10 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     #[allow(dead_code)]
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
-        let binders = Binders::new(vec![ParameterKind::Ty(())], PhantomData::<I>);
+        let binders = Binders::new(
+            ParameterKinds::from(interner, vec![ParameterKind::Ty(())]),
+            PhantomData::<I>,
+        );
         self.push_binders(&binders, |this, PhantomData| {
             let ty = this
                 .placeholders_in_scope()

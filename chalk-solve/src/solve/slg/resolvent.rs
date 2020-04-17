@@ -3,7 +3,7 @@ use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
 use chalk_engine::fallible::Fallible;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
 
@@ -483,7 +483,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
     fn zip_binders<T>(&mut self, answer: &Binders<T>, pending: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         self.outer_binder.shift_in();
         Zip::zip_with(self, answer.skip_binders(), pending.skip_binders())?;

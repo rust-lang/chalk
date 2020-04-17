@@ -50,7 +50,7 @@ where
 
             fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
             where
-                T: Zip<I>,
+                T: HasInterner + Zip<I>,
             {
                 Zip::zip_with(self, &a.value, &b.value)
             }

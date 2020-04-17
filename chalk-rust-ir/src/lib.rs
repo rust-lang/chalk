@@ -72,7 +72,7 @@ pub struct DefaultImplDatum<I: Interner> {
     pub binders: Binders<DefaultImplDatumBound<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner)]
 pub struct DefaultImplDatumBound<I: Interner> {
     pub trait_ref: TraitRef<I>,
     pub accessible_tys: Vec<Ty<I>>,
@@ -169,7 +169,7 @@ impl<I: Interner> TraitDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner)]
 pub struct TraitDatumBound<I: Interner> {
     /// Where clauses defined on the trait:
     ///
@@ -429,7 +429,10 @@ impl<I: Interner> AssociatedTyDatum<I> {
         // scope for this associated type:
         let substitution = Substitution::from(
             interner,
-            binders.iter().zip(0..).map(|p| p.to_parameter(interner)),
+            binders
+                .iter(interner)
+                .zip(0..)
+                .map(|p| p.to_parameter(interner)),
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc

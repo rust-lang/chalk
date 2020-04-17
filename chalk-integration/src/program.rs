@@ -188,6 +188,33 @@ impl tls::DebugContext for Program {
         write!(fmt, "{:?}", parameter.data(interner).inner_debug())
     }
 
+    fn debug_parameter_kinds(
+        &self,
+        parameter_kinds: &chalk_ir::ParameterKinds<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", parameter_kinds.as_slice(interner))
+    }
+
+    fn debug_parameter_kinds_with_angles(
+        &self,
+        parameter_kinds: &chalk_ir::ParameterKinds<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", parameter_kinds.inner_debug(interner))
+    }
+
+    fn debug_canonical_var_kinds(
+        &self,
+        parameter_kinds: &chalk_ir::CanonicalVarKinds<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", parameter_kinds.as_slice(interner))
+    }
+
     fn debug_goal(
         &self,
         goal: &Goal<ChalkIr>,

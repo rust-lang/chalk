@@ -1193,9 +1193,9 @@ impl<I: Interner> HasInterner for AliasEq<I> {
 ///
 /// (IOW, we use deBruijn indices, where binders are introduced in reverse order
 /// of `self.binders`.)
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Binders<T> {
-    pub binders: Vec<ParameterKind<()>>,
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct Binders<T: HasInterner> {
+    pub binders: ParameterKinds<T::Interner>,
     value: T,
 }
 
@@ -1203,8 +1203,8 @@ impl<T: HasInterner> HasInterner for Binders<T> {
     type Interner = T::Interner;
 }
 
-impl<T> Binders<T> {
-    pub fn new(binders: Vec<ParameterKind<()>>, value: T) -> Self {
+impl<T: HasInterner> Binders<T> {
+    pub fn new(binders: ParameterKinds<T::Interner>, value: T) -> Self {
         Self { binders, value }
     }
 
@@ -1236,6 +1236,7 @@ impl<T> Binders<T> {
     pub fn map<U, OP>(self, op: OP) -> Binders<U>
     where
         OP: FnOnce(T) -> U,
+        U: HasInterner<Interner = T::Interner>,
     {
         let value = op(self.value);
         Binders {
@@ -1247,6 +1248,7 @@ impl<T> Binders<T> {
     pub fn map_ref<'a, U, OP>(&'a self, op: OP) -> Binders<U>
     where
         OP: FnOnce(&'a T) -> U,
+        U: HasInterner<Interner = T::Interner>,
     {
         self.as_ref().map(op)
     }
@@ -1257,26 +1259,23 @@ impl<T> Binders<T> {
     /// from the closure to account for the binder that will be added.
     ///
     /// XXX FIXME -- this is potentially a pretty footgun-y function.
-    pub fn with_fresh_type_var<I>(interner: &I, op: impl FnOnce(Ty<I>) -> T) -> Binders<T>
-    where
-        I: Interner,
-    {
+    pub fn with_fresh_type_var(
+        interner: &T::Interner,
+        op: impl FnOnce(Ty<T::Interner>) -> T,
+    ) -> Binders<T> {
         // The new variable is at the front and everything afterwards is shifted up by 1
-        let new_var =
-            TyData::<I>::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
+        let new_var = TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
         let value = op(new_var);
-        Binders {
-            binders: iter::once(ParameterKind::Ty(())).collect(),
-            value,
-        }
+        let binders = ParameterKinds::from(interner, iter::once(ParameterKind::Ty(())));
+        Binders { binders, value }
     }
 
-    pub fn len(&self) -> usize {
-        self.binders.len()
+    pub fn len(&self, interner: &T::Interner) -> usize {
+        self.binders.len(interner)
     }
 }
 
-impl<T> From<Binders<T>> for (Vec<ParameterKind<()>>, T) {
+impl<T: HasInterner> From<Binders<T>> for (ParameterKinds<T::Interner>, T) {
     fn from(binders: Binders<T>) -> Self {
         (binders.binders, binders.value)
     }
@@ -1297,7 +1296,7 @@ where
         parameters: &(impl AsParameters<I> + ?Sized),
     ) -> T::Result {
         let parameters = parameters.as_parameters(interner);
-        assert_eq!(self.binders.len(), parameters.len());
+        assert_eq!(self.binders.len(interner), parameters.len());
         Subst::apply(interner, parameters, &self.value)
     }
 }
@@ -1308,6 +1307,7 @@ impl<'a, V> IntoIterator for &'a Binders<V>
 where
     V: HasInterner,
     &'a V: IntoIterator,
+    <&'a V as IntoIterator>::Item: HasInterner<Interner = V::Interner>,
 {
     type Item = Binders<<&'a V as IntoIterator>::Item>;
     type IntoIter = BindersIntoIterator<&'a V>;
@@ -1319,8 +1319,12 @@ where
 
 /// Allows iterating over a Binders<Vec<T>>, for instance.
 /// Each element will include the same set of parameter bounds.
-impl<V: IntoIterator> IntoIterator for Binders<V> {
-    type Item = Binders<<V as IntoIterator>::Item>;
+impl<V, U> IntoIterator for Binders<V>
+where
+    V: HasInterner + IntoIterator<Item = U>,
+    U: HasInterner<Interner = V::Interner>,
+{
+    type Item = Binders<U>;
     type IntoIter = BindersIntoIterator<V>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -1331,18 +1335,21 @@ impl<V: IntoIterator> IntoIterator for Binders<V> {
     }
 }
 
-pub struct BindersIntoIterator<V: IntoIterator> {
+pub struct BindersIntoIterator<V: HasInterner + IntoIterator> {
     iter: <V as IntoIterator>::IntoIter,
-    binders: Vec<ParameterKind<()>>,
+    binders: ParameterKinds<V::Interner>,
 }
 
-impl<V: IntoIterator> Iterator for BindersIntoIterator<V> {
+impl<V> Iterator for BindersIntoIterator<V>
+where
+    V: HasInterner + IntoIterator,
+    <V as IntoIterator>::Item: HasInterner<Interner = V::Interner>,
+{
     type Item = Binders<<V as IntoIterator>::Item>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|v| Binders {
-            binders: self.binders.clone(),
-            value: v,
-        })
+        self.iter
+            .next()
+            .map(|v| Binders::new(self.binders.clone(), v))
     }
 }
 
@@ -1490,21 +1497,118 @@ impl<I: Interner> ProgramClauses<I> {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct ParameterKinds<I: Interner> {
+    interned: I::InternedParameterKinds,
+}
+
+impl<I: Interner> ParameterKinds<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<ParameterKind<()>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedParameterKinds {
+        &self.interned
+    }
+
+    pub fn from(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = ParameterKind<()>>,
+    ) -> Self {
+        ParameterKinds {
+            interned: I::intern_parameter_kinds(interner, parameter_kinds.into_iter()),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
+    ) -> Result<Self, E> {
+        let parameter_kinds = parameter_kinds
+            .into_iter()
+            .collect::<Result<Vec<ParameterKind<()>>, _>>()?;
+        Ok(Self::from(interner, parameter_kinds))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<()>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[ParameterKind<()>] {
+        interner.parameter_kinds_data(&self.interned)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct CanonicalVarKinds<I: Interner> {
+    interned: I::InternedCanonicalVarKinds,
+}
+
+impl<I: Interner> CanonicalVarKinds<I> {
+    pub fn new(interner: &I) -> Self {
+        Self::from(interner, None::<ParameterKind<UniverseIndex>>)
+    }
+
+    pub fn interned(&self) -> &I::InternedCanonicalVarKinds {
+        &self.interned
+    }
+
+    pub fn from(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
+    ) -> Self {
+        CanonicalVarKinds {
+            interned: I::intern_canonical_var_kinds(interner, parameter_kinds.into_iter()),
+        }
+    }
+
+    pub fn from_fallible<E>(
+        interner: &I,
+        parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+    ) -> Result<Self, E> {
+        let parameter_kinds = parameter_kinds
+            .into_iter()
+            .collect::<Result<Vec<ParameterKind<UniverseIndex>>, _>>()?;
+        Ok(Self::from(interner, parameter_kinds))
+    }
+
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<UniverseIndex>> {
+        self.as_slice(interner).iter()
+    }
+
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    pub fn as_slice(&self, interner: &I) -> &[ParameterKind<UniverseIndex>] {
+        interner.canonical_var_kinds_data(&self.interned)
+    }
+}
+
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
 /// All unresolved existential variables are "renumbered" according to their
 /// first appearance; the kind/universe of the variable is recorded in the
 /// `binders` field.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Canonical<T> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Canonical<T: HasInterner> {
     pub value: T,
-    pub binders: Vec<ParameterKind<UniverseIndex>>,
+    pub binders: CanonicalVarKinds<T::Interner>,
 }
 
-impl<T> HasInterner for Canonical<T>
-where
-    T: HasInterner,
-{
+impl<T: HasInterner> HasInterner for Canonical<T> {
     type Interner = T::Interner;
 }
 
@@ -1514,32 +1618,32 @@ where
 /// distinctions.
 ///
 /// To produce one of these values, use the `u_canonicalize` method.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct UCanonical<T> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UCanonical<T: HasInterner> {
     pub canonical: Canonical<T>,
     pub universes: usize,
 }
 
-impl<T> UCanonical<T> {
-    pub fn is_trivial_substitution<I: Interner>(
+impl<T: HasInterner> UCanonical<T> {
+    pub fn is_trivial_substitution(
         &self,
-        interner: &I,
-        canonical_subst: &Canonical<AnswerSubst<I>>,
+        interner: &T::Interner,
+        canonical_subst: &Canonical<AnswerSubst<T::Interner>>,
     ) -> bool {
         let subst = &canonical_subst.value.subst;
         assert_eq!(
-            self.canonical.binders.len(),
+            self.canonical.binders.len(interner),
             subst.parameters(interner).len()
         );
         subst.is_identity_subst(interner)
     }
 
-    pub fn trivial_substitution<I: Interner>(&self, interner: &I) -> Substitution<I> {
+    pub fn trivial_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
         let binders = &self.canonical.binders;
         Substitution::from(
             interner,
             binders
-                .iter()
+                .iter(interner)
                 .enumerate()
                 .map(|(index, pk)| {
                     let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);
@@ -1634,16 +1738,9 @@ impl<I: Interner> Goal<I> {
         self,
         interner: &I,
         kind: QuantifierKind,
-        binders: Vec<ParameterKind<()>>,
+        binders: ParameterKinds<I>,
     ) -> Goal<I> {
-        GoalData::Quantified(
-            kind,
-            Binders {
-                value: self,
-                binders,
-            },
-        )
-        .intern(interner)
+        GoalData::Quantified(kind, Binders::new(binders, self)).intern(interner)
     }
 
     /// Takes a goal `G` and turns it into `not { G }`

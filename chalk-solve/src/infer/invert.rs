@@ -88,7 +88,7 @@ impl<I: Interner> InferenceTable<I> {
         }
 
         // If this contains free universal variables, replace them with existentials.
-        assert!(quantified.binders.is_empty());
+        assert!(quantified.binders.is_empty(interner));
         let inverted = quantified
             .value
             .fold_with(&mut Inverter::new(interner, self), DebruijnIndex::INNERMOST)

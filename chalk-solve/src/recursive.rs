@@ -366,7 +366,10 @@ impl<'me, I: Interner> Solver<'me, I> {
                 ProgramClauseData::Implies(implication) => {
                     let res = self.solve_via_implication(
                         canonical_goal,
-                        &Binders::new(vec![], implication.clone()),
+                        &Binders::new(
+                            ParameterKinds::from(self.program.interner(), vec![]),
+                            implication.clone(),
+                        ),
                         minimums,
                     );
                     if let (Ok(solution), priority) = res {
@@ -521,10 +524,10 @@ fn combine_with_priorities<I: Interner>(
                 );
                 (higher, ClausePriority::High)
             } else {
-                (higher.combine(lower), ClausePriority::High)
+                (higher.combine(lower, interner), ClausePriority::High)
             }
         }
-        (_, _, a, b) => (a.combine(b), prio_a),
+        (_, _, a, b) => (a.combine(b, interner), prio_a),
     }
 }
 

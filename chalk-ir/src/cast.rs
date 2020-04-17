@@ -82,6 +82,8 @@ reflexive_impl!(for(I: Interner) Goal<I>);
 reflexive_impl!(for(I: Interner) WhereClause<I>);
 reflexive_impl!(for(I: Interner) ProgramClause<I>);
 reflexive_impl!(for(I: Interner) QuantifiedWhereClause<I>);
+reflexive_impl!(for(I: Interner) ParameterKinds<I>);
+reflexive_impl!(for(I: Interner) CanonicalVarKinds<I>);
 
 impl<I: Interner> CastTo<WhereClause<I>> for TraitRef<I> {
     fn cast_to(self, _interner: &I) -> WhereClause<I> {
@@ -138,7 +140,7 @@ impl<I: Interner> CastTo<Goal<I>> for EqGoal<I> {
     }
 }
 
-impl<T: CastTo<Goal<I>>, I: Interner> CastTo<Goal<I>> for Binders<T> {
+impl<I: Interner, T: HasInterner<Interner = I> + CastTo<Goal<I>>> CastTo<Goal<I>> for Binders<T> {
     fn cast_to(self, interner: &I) -> Goal<I> {
         GoalData::Quantified(
             QuantifierKind::ForAll,
@@ -193,10 +195,10 @@ where
     }
 }
 
-impl<T, I> CastTo<ProgramClause<I>> for Binders<T>
+impl<I, T> CastTo<ProgramClause<I>> for Binders<T>
 where
-    T: CastTo<DomainGoal<I>>,
     I: Interner,
+    T: HasInterner<Interner = I> + CastTo<DomainGoal<I>>,
 {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
         ProgramClauseData::ForAll(self.map(|bound| ProgramClauseImplication {
@@ -268,16 +270,16 @@ where
 impl<T, U> CastTo<Canonical<U>> for Canonical<T>
 where
     T: CastTo<U> + HasInterner,
-    U: HasInterner,
+    U: HasInterner<Interner = T::Interner>,
 {
-    fn cast_to(self, interner: &U::Interner) -> Canonical<U> {
+    fn cast_to(self, interner: &T::Interner) -> Canonical<U> {
         // Subtle point: It should be ok to re-use the binders here,
         // because `cast()` never introduces new inference variables,
         // nor changes the "substance" of the type we are working
         // with. It just introduces new wrapper types.
         Canonical {
             value: self.value.cast(interner),
-            binders: self.binders,
+            binders: self.binders.cast(interner),
         }
     }
 }

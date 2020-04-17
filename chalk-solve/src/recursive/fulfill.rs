@@ -108,7 +108,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     /// Wraps `InferenceTable::instantiate_in`
     pub(crate) fn instantiate_binders_existentially<T>(
         &mut self,
-        arg: impl IntoBindersAndValue<Value = T>,
+        arg: impl IntoBindersAndValue<'s, I, Value = T>,
     ) -> T::Result
     where
         T: Fold<I, I>,

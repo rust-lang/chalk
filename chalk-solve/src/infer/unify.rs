@@ -4,7 +4,7 @@ use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use std::fmt::Debug;
 
@@ -185,14 +185,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    fn unify_binders<T, R>(
+    fn unify_binders<'a, T, R>(
         &mut self,
-        a: impl IntoBindersAndValue<Value = T> + Copy + Debug,
-        b: impl IntoBindersAndValue<Value = T> + Copy + Debug,
+        a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
+        b: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
     ) -> Fallible<()>
     where
         T: Fold<I, Result = R>,
         R: Zip<I> + Fold<I, Result = R>,
+        't: 'a,
     {
         // for<'a...> T == for<'b...> U
         //
@@ -352,7 +353,7 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.

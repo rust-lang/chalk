@@ -69,14 +69,18 @@ impl<I: Interner> Solution<I> {
     //    Clone`.
     //
     // But you get the idea.
-    pub(crate) fn combine(self, other: Solution<I>) -> Solution<I> {
+    pub(crate) fn combine(self, other: Solution<I>, interner: &I) -> Solution<I> {
         use self::Guidance::*;
 
         if self == other {
             return self;
         }
 
-        debug!("combine {} with {}", self, other);
+        debug!(
+            "combine {} with {}",
+            self.display(interner),
+            other.display(interner)
+        );
 
         // Otherwise, always downgrade to Ambig:
 
@@ -138,18 +142,35 @@ impl<I: Interner> Solution<I> {
             _ => false,
         }
     }
+
+    pub fn display<'a>(&'a self, interner: &'a I) -> SolutionDisplay<'a, I> {
+        SolutionDisplay {
+            solution: self,
+            interner,
+        }
+    }
 }
 
-impl<I: Interner> fmt::Display for Solution<I> {
+pub struct SolutionDisplay<'a, I: Interner> {
+    solution: &'a Solution<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match self {
-            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained,),
-            Solution::Ambig(Guidance::Definite(subst)) => {
-                write!(f, "Ambiguous; definite substitution {}", subst)
-            }
-            Solution::Ambig(Guidance::Suggested(subst)) => {
-                write!(f, "Ambiguous; suggested substitution {}", subst)
-            }
+        let SolutionDisplay { solution, interner } = self;
+        match solution {
+            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained.display(interner)),
+            Solution::Ambig(Guidance::Definite(subst)) => write!(
+                f,
+                "Ambiguous; definite substitution {}",
+                subst.display(interner)
+            ),
+            Solution::Ambig(Guidance::Suggested(subst)) => write!(
+                f,
+                "Ambiguous; suggested substitution {}",
+                subst.display(interner)
+            ),
             Solution::Ambig(Guidance::Unknown) => write!(f, "Ambiguous; no inference guidance"),
         }
     }

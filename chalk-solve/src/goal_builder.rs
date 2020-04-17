@@ -137,7 +137,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
             interner,
             binders
                 .binders
-                .iter()
+                .iter(interner)
                 .zip(0..)
                 .map(|p| p.to_parameter(interner)),
         );

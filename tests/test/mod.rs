@@ -26,7 +26,7 @@ fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str) {
         _ => {}
     }
     let result = match result {
-        Some(v) => format!("{}", v),
+        Some(v) => format!("{}", v.display(&ChalkIr)),
         None => format!("No possible solution"),
     };
 
@@ -262,7 +262,13 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         db.solve_multiple(&peeled_goal, |result, next_result| {
                             match expected.next() {
                                 Some(expected) => {
-                                    assert_same(&format!("{}", &result), expected);
+                                    assert_same(
+                                        &format!(
+                                            "{}",
+                                            result.as_ref().map(|v| v.display(&ChalkIr))
+                                        ),
+                                        expected,
+                                    );
                                 }
                                 None => {
                                     assert!(!next_result, "Unexpected next solution");
@@ -280,7 +286,10 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                     let mut expected = expected.into_iter();
                     db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
                         Some(solution) => {
-                            assert_same(&format!("{}", &result), solution);
+                            assert_same(
+                                &format!("{}", result.as_ref().map(|v| v.display(&ChalkIr))),
+                                solution,
+                            );
                             if !next_result {
                                 assert!(expected.next().is_none(), "Not enough solutions found");
                             }

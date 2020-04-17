@@ -113,6 +113,23 @@ pub enum SubstitutionResult<S> {
     Floundered,
 }
 
+impl<S> SubstitutionResult<S> {
+    pub fn as_ref(&self) -> SubstitutionResult<&S> {
+        match self {
+            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(subst),
+            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(subst),
+            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
+        }
+    }
+    pub fn map<U, F: FnOnce(S) -> U>(self, f: F) -> SubstitutionResult<U> {
+        match self {
+            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(f(subst)),
+            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(f(subst)),
+            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
+        }
+    }
+}
+
 impl<S: Display> Display for SubstitutionResult<S> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
