@@ -239,11 +239,10 @@ pub struct ParameterKindsInnerDebug<'a, I: Interner> {
 
 impl<'a, I: Interner> Debug for ParameterKindsInnerDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        // NB: We always print the `for<>`, even if it is empty,
-        // because it may affect the debruijn indices of things
-        // contained within. For example, `for<> { ^1.0 }` is very
-        // different from `^1.0` in terms of what variable is being
-        // referenced.
+        // NB: We print parameter kinds as a list delimited by `<>`,
+        // like `<K1, K2, ..>`. This is because parameter kind lists
+        // are always associated with binders like `forall<type> {
+        // ... }`.
         write!(fmt, "<")?;
         for (index, binder) in self.parameter_kinds.iter(self.interner).enumerate() {
             if index > 0 {
