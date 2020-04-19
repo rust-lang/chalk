@@ -7,6 +7,8 @@
 A [Prolog-ish][Prolog] interpreter written in Rust, intended perhaps for use in
 the compiler, but also for experimentation.
 
+See the [Chalk book](https://rust-lang.github.io/chalk/book/) for more information.
+
 ## FAQ
 
 **How does chalk relate to rustc?** The plan is to have rustc use the `chalk-engine` crate (in this repo), which defines chalk's solver. The rest of chalk can then be considered an elaborate unit testing harness. For more details, see [the Traits chapter of the rustc-dev-guide](https://rustc-dev-guide.rust-lang.org/traits/index.html).
@@ -51,8 +53,9 @@ Unique; substitution [], lifetime constraints []
 If you'd like to contribute, consider joining the [Traits Working Group][working-group].
 We hang out on the [rust-lang zulip][rust-lang-zulip] in the [#wg-traits][wg-traits-stream] stream.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more info.
+See [the contributing chapter][contributing] in the chalk book for more info.
 
 [working-group]: https://rust-lang.github.io/compiler-team/working-groups/traits/
 [rust-lang-zulip]:https://rust-lang.zulipchat.com
 [wg-traits-stream]: https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits
+[contributing]: https://rust-lang.github.io/chalk/book/contributing.html
