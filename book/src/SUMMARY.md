@@ -11,7 +11,6 @@
     - [Rust lifetimes](./types/rust_lifetimes.md)
     - [Operations](./types/operations.md)
         - [Fold and the Folder trait](./types/operations/fold.md)
-- [Intermediate representations](./rust_ir.md)
 - [Lowering Rust IR to logic](./clauses.md)
     - [Goals and clauses](./clauses/goals_and_clauses.md)
     - [Type equality and unification](./clauses/type_equality.md)
