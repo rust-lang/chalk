@@ -4,3 +4,5 @@ mod test_util;
 mod test;
 
 mod lowering;
+
+mod integration;
