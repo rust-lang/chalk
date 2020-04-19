@@ -124,6 +124,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     );
     let interner = db.interner();
 
+    // FIXME: change this to use `.chain().filter()`
     let mut vec = vec![];
     vec.extend(db.custom_clauses());
     program_clauses_that_could_match(db, environment, goal, &mut vec)?;
