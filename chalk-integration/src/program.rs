@@ -390,6 +390,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.well_known_traits.get(&well_known_trait).map(|x| *x)
     }
 
+    fn program_clauses_for_env(
+        &self,
+        environment: &chalk_ir::Environment<ChalkIr>,
+    ) -> ProgramClauses<ChalkIr> {
+        chalk_solve::program_clauses_for_env(self, environment)
+    }
+
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
     }

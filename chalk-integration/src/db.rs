@@ -8,6 +8,7 @@ use chalk_ir::tls;
 use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
+use chalk_ir::Environment;
 use chalk_ir::Goal;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
@@ -17,7 +18,7 @@ use chalk_ir::ProgramClause;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
 use chalk_ir::TypeName;
-use chalk_ir::UCanonical;
+use chalk_ir::{ProgramClauses, UCanonical};
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
@@ -148,6 +149,13 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir()
             .unwrap()
             .well_known_trait_id(well_known_trait)
+    }
+
+    fn program_clauses_for_env(
+        &self,
+        environment: &Environment<ChalkIr>,
+    ) -> ProgramClauses<ChalkIr> {
+        chalk_solve::program_clauses_for_env(self, environment)
     }
 
     fn interner(&self) -> &ChalkIr {
