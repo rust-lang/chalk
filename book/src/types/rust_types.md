@@ -204,7 +204,7 @@ types. The intention is that, at least when transitioning, rustc would
 implement the `Interner` trait and would map from the [`TyKind`]
 enum to chalk's `TyData` on the fly, when `data()` is invoked.
 
-[`TyKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc/ty/enum.TyKind.html
+[`TyKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html
 
 This section describes how each of rustc's variants can be mapped to
 Chalk variants.

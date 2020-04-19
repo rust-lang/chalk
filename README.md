@@ -1,4 +1,6 @@
 [![Build Status](https://github.com/rust-lang/chalk/workflows/CI/badge.svg)](https://github.com/rust-lang/chalk/actions?workflow=CI)
+[![Chalk Book](https://img.shields.io/badge/book-chalk-blue.svg)](https://rust-lang.github.io/chalk/book/)
+[![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://rust-lang.github.io/chalk/chalk/)
 
 # chalk
 
