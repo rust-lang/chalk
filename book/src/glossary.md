@@ -7,7 +7,7 @@ There are sixteen logical connectives on two boolean variables. The most
 interesting in this context are listed below. There is also a truth table given
 which encodes the possible results of the operations like this
 
-```
+```notrust
 f(false, false) f(false, true) f(true, false) f(true, true).
 ```
 
@@ -50,7 +50,7 @@ the optional positive literal. Due to the equivalence `(P => Q) <=> (!P || Q)`
 the clause can be expressed as `B && C && ... => A` which means that A is true
 if `B`, `C`, etc. are all true. All rules in chalk are in this form. For example
 
-```
+```notrust
 struct A<T> {}
 impl<T> B for A<T> where T: C + D {}
 ```
@@ -58,7 +58,7 @@ impl<T> B for A<T> where T: C + D {}
 is expressed as the *Horn clause* `(T: C) && (T: D) => (A<T>: B)`. This formula
 has to hold for all values of `T`. The second example
 
-```
+```notrust
 struct A {}
 impl B for A {}
 impl C for A {}
@@ -149,7 +149,7 @@ syntactic rules.
 In the context of the Rust type system this means that basic rules for type
 construction have to be met. Two examples: 1) Given a struct definition
 
-```rust
+```notrust
 struct HashSet<T: Hash>
 ```
 then a type `HashSet<i32>` is well-formed since `i32` implements `Hash`. A type
