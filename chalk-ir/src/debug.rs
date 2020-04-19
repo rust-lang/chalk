@@ -512,8 +512,6 @@ impl<I: Interner> TraitRef<I> {
             separator: ": ",
         }
     }
-
-    pub fn as_impl(&self) -> impl std::fmt::Debug + '_ {}
 }
 
 impl<I: Interner> Debug for TraitRef<I> {
@@ -554,24 +552,6 @@ impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
             separator_trait_ref.separator,
             separator_trait_ref.trait_ref.trait_id,
             Angle(&parameters[1..])
-        )
-    }
-}
-
-struct ImplTraitRef<'me, I: Interner> {
-    trait_ref: &'me TraitRef<I>,
-    interner: &'me I,
-}
-
-impl<I: Interner> Debug for ImplTraitRef<'_, I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let parameters = self.trait_ref.substitution.parameters(self.interner);
-        write!(
-            fmt,
-            "impl{:?} {:?} for {:?}",
-            Angle(&parameters[1..]),
-            parameters[0],
-            self.trait_ref.trait_id,
         )
     }
 }
