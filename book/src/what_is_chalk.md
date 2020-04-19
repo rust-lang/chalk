@@ -206,7 +206,7 @@ Likewise, lowering tests use the [`lowering_success!` and
 ## More Resources
 
 * [Chalk Source Code](https://github.com/rust-lang/chalk)
-* [Chalk Glossary](https://github.com/rust-lang/chalk/blob/master/GLOSSARY.md)
+* [Chalk Glossary](glossary.md)
 
 [goals-and-clauses]: ./clauses/goals_and_clauses.html
 [HIR]: https://rustc-dev-guide.rust-lang.org/hir.html
