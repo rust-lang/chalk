@@ -89,7 +89,7 @@ works for outlive requirements, super trait bounds, and bounds on associated
 types. The full RFC can be found [here][RFC]. We'll give here a brief view
 of how implied bounds work and why we chose to implement it that way. The
 complete set of lowering rules can be found in the corresponding
-[chapter](./lowering-rules.md).
+[chapter](./lowering_rules.md).
 
 [RFC]: https://github.com/rust-lang/rfcs/blob/master/text/2089-implied-bounds.md
 
@@ -449,7 +449,7 @@ this clearly is a cycle and cycles are usually rejected by the trait solver,
 unless...  if the `WellFormed` predicate was made to be co-inductive.
 
 A co-inductive predicate, as discussed in the chapter on
-[goals and clauses](./goals-and-clauses.md#coinductive-goals), are predicates
+[goals and clauses](./goals_and_clauses.html#coinductive-goals), are predicates
 for which the
 trait solver accepts cycles. In our setting, this would be a valid thing to do:
 indeed, the `WellFormed` predicate just serves as a way of enumerating all

@@ -8,7 +8,7 @@ the trait.
 
 For each declaration in a Rust program, we will generate a logical goal and try
 to prove it using the lowered rules we described in the
-[lowering rules](./lowering-rules.md) chapter. If we are able to prove it, we
+[lowering rules](./lowering_rules.md) chapter. If we are able to prove it, we
 say that the construct is well-formed. If not, we report an error to the user.
 
 Well-formedness checking happens in the [`chalk/chalk-solve/src/wf.rs`][wf]
@@ -285,7 +285,7 @@ the input types of `SomeType<A2...>` are well-formed, we prove that
 `WellFormed(SomeType<A2...>: Trait<A1...>)` hold. That is, we want to prove
 that `SomeType<A2...>` verify all the where clauses that might transitively
 be required by the `Trait` definition (see
-[this subsection](./implied-bounds.md#co-inductiveness-of-wellformed)).
+[this subsection](./implied_bounds.md#co-inductiveness-of-wellformed)).
 
 Lastly, assuming in addition that the where clauses on the associated type
 `WC_assoc` hold,

@@ -8,7 +8,7 @@ For example, `exists<T> { Vec<T>: FromIterator<u32> }` has one solution, so
 its result is `Unique; substitution [?T := u32]`. A solution also comes with
 a set of region constraints, which we'll ignore in this introduction.
 
-[lowering]: ./lowering-rules.html
+[lowering]: ../clauses.html
 
 ## Goals of the Solver
 
@@ -23,7 +23,7 @@ done. This is similar to how Prolog works.
 
 *See also: [The traditional, interactive Prolog query][pq]*
 
-[pq]: ./canonical-queries.html#the-traditional-interactive-prolog-query
+[pq]: ../canonical_queries.html#the-traditional-interactive-prolog-query
 
 ### Breadth-first
 
@@ -246,7 +246,7 @@ applied to the table goal; actually, in the code, the goals for each
 X-clause are also represented as substitutions, but in this exposition
 I've chosen to write them as full goals, following [NFTD].
 
-[NFTD]: ./bibliography.html#slg
+[NFTD]: ../bibliography.html#slg
 
 Since we now have an answer, `ensure_answer(T1, A0)` will return `Ok`
 to the table T0, indicating that answer A0 is available. T0 now has

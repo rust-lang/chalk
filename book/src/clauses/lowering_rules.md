@@ -4,8 +4,8 @@ This section gives the complete lowering rules for Rust traits into
 [program clauses][pc]. It is a kind of reference. These rules
 reference the [domain goals][dg] defined in an earlier section.
 
-[pc]: ./goals-and-clauses.html
-[dg]: ./goals-and-clauses.html#domain-goals
+[pc]: ./goals_and_clauses.html
+[dg]: ./goals_and_clauses.html#domain-goals
 
 ## Notation
 
@@ -16,7 +16,7 @@ The nonterminal `Ai` is used to mean some generic *argument*, which
 might be a lifetime like `'a` or a type like `Vec<A>`.
 
 When defining the lowering rules, we will give goals and clauses in
-the [notation given in this section](./goals-and-clauses.html).
+the [notation given in this section](./goals_and_clauses.html).
 We sometimes insert "macros" like `LowerWhereClause!` into these
 definitions; these macros reference other sections within this chapter.
 
@@ -107,7 +107,7 @@ The next few clauses have to do with implied bounds (see also
 cover). For each trait, we produce two clauses:
 
 [RFC 2089]: https://rust-lang.github.io/rfcs/2089-implied-bounds.html
-[implied_bounds]: ./implied-bounds.md
+[implied_bounds]: ./implied_bounds.md
 
 ```text
 // Rule Implied-Bound-From-Trait
@@ -147,7 +147,7 @@ This `WellFormed` rule states that `T: Trait` is well-formed if (a)
 `T: Trait` is implemented and (b) all the where-clauses declared on
 `Trait` are well-formed (and hence they are implemented). Remember
 that the `WellFormed` predicate is
-[coinductive](./goals-and-clauses.html#coinductive); in this
+[coinductive](./goals_and_clauses.html#coinductive); in this
 case, it is serving as a kind of "carrier" that allows us to enumerate
 all the where clauses that are transitively implied by `T: Trait`.
 
@@ -272,7 +272,7 @@ where WC
 
 We will produce a number of program clauses. The first two define
 the rules by which `ProjectionEq` can succeed; these two clauses are discussed
-in detail in the [section on associated types](./associated-types.html),
+in detail in the [section on associated types](./type_equality.html),
 but reproduced here for reference:
 
 ```text
