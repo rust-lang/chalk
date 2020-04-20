@@ -35,6 +35,18 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         self.push_clause(consequence, None::<Goal<_>>);
     }
 
+    /// Pushes a "fact" `forall<..> { consequence }` into the set of
+    /// program clauses, meaning something that we can assume to be
+    /// true unconditionally. The `forall<..>` binders will be
+    /// whichever binders have been pushed (see `push_binders`).
+    pub fn push_fact_with_priority(
+        &mut self,
+        consequence: impl CastTo<DomainGoal<I>>,
+        priority: ClausePriority,
+    ) {
+        self.push_clause_with_priority(consequence, None::<Goal<_>>, priority);
+    }
+
     /// Pushes a clause `forall<..> { consequence :- conditions }`
     /// into the set of program clauses, meaning that `consequence`
     /// can be proven if `conditions` are all true.  The `forall<..>`
@@ -44,18 +56,37 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
+        self.push_clause_with_priority(consequence, conditions, ClausePriority::High)
+    }
+
+    /// Pushes a clause `forall<..> { consequence :- conditions }`
+    /// into the set of program clauses, meaning that `consequence`
+    /// can be proven if `conditions` are all true.  The `forall<..>`
+    /// binders will be whichever binders have been pushed (see `push_binders`).
+    pub fn push_clause_with_priority(
+        &mut self,
+        consequence: impl CastTo<DomainGoal<I>>,
+        conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
+        priority: ClausePriority,
+    ) {
+        let interner = self.db.interner();
         let clause = ProgramClauseImplication {
-            consequence: consequence.cast(self.db.interner()),
-            conditions: Goals::from(self.db.interner(), conditions),
+            consequence: consequence.cast(interner),
+            conditions: Goals::from(interner, conditions),
+            priority,
         };
 
         if self.binders.len() == 0 {
-            self.clauses.push(ProgramClause::Implies(clause));
+            self.clauses
+                .push(ProgramClauseData::Implies(clause).intern(interner));
         } else {
-            self.clauses.push(ProgramClause::ForAll(Binders {
-                binders: self.binders.clone(),
-                value: clause,
-            }));
+            self.clauses.push(
+                ProgramClauseData::ForAll(Binders::new(
+                    ParameterKinds::from(interner, self.binders.clone()),
+                    clause,
+                ))
+                .intern(interner),
+            );
         }
 
         debug!("pushed clause {:?}", self.clauses.last());
@@ -91,11 +122,11 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
 
         let old_len = self.binders.len();
         let interner = self.interner();
-        self.binders.extend(binders.binders.clone());
+        self.binders.extend(binders.binders.iter(interner).cloned());
         self.parameters.extend(
             binders
                 .binders
-                .iter()
+                .iter(interner)
                 .zip(old_len..)
                 .map(|p| p.to_parameter(interner)),
         );
@@ -116,10 +147,10 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     #[allow(dead_code)]
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
-        let binders = Binders {
-            binders: vec![ParameterKind::Ty(())],
-            value: PhantomData::<I>,
-        };
+        let binders = Binders::new(
+            ParameterKinds::from(interner, vec![ParameterKind::Ty(())]),
+            PhantomData::<I>,
+        );
         self.push_binders(&binders, |this, PhantomData| {
             let ty = this
                 .placeholders_in_scope()

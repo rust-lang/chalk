@@ -31,7 +31,7 @@ pub trait Zipper<'i, I: Interner> {
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, I, Result = T>;
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>;
 
     /// Retreives the interner from the underlying zipper object
     fn interner(&self) -> &'i I;
@@ -52,7 +52,7 @@ where
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>,
     {
         (**self).zip_binders(a, b)
     }
@@ -166,7 +166,9 @@ impl<I: Interner> Zip<I> for Lifetime<I> {
     }
 }
 
-impl<I: Interner, T: Zip<I> + Fold<I, I, Result = T>> Zip<I> for Binders<T> {
+impl<I: Interner, T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>> Zip<I>
+    for Binders<T>
+{
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
@@ -196,10 +198,12 @@ macro_rules! eq_zip {
 eq_zip!(I => StructId<I>);
 eq_zip!(I => TraitId<I>);
 eq_zip!(I => AssocTypeId<I>);
+eq_zip!(I => OpaqueTyId<I>);
 eq_zip!(I => TypeName<I>);
 eq_zip!(I => QuantifierKind);
 eq_zip!(I => PhantomData<I>);
 eq_zip!(I => PlaceholderIndex);
+eq_zip!(I => ClausePriority);
 
 /// Generates a Zip impl that zips each field of the struct in turn.
 macro_rules! struct_zip {
@@ -233,16 +237,21 @@ struct_zip!(impl[
 });
 struct_zip!(impl[I: Interner] Zip<I> for ApplicationTy<I> { name, substitution });
 struct_zip!(impl[I: Interner] Zip<I> for DynTy<I> { bounds });
-struct_zip!(impl[I: Interner] Zip<I> for AliasTy<I> {
-    associated_ty_id,
-    substitution,
-});
 struct_zip!(impl[I: Interner] Zip<I> for Normalize<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for AliasEq<I> { alias, ty });
 struct_zip!(impl[I: Interner] Zip<I> for EqGoal<I> { a, b });
 struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
     consequence,
-    conditions
+    conditions,
+    priority,
+});
+struct_zip!(impl[I: Interner] Zip<I> for ProjectionTy<I> {
+    associated_ty_id,
+    substitution
+});
+struct_zip!(impl[I: Interner] Zip<I> for OpaqueTy<I> {
+    opaque_ty_id,
+    substitution
 });
 
 impl<I: Interner> Zip<I> for Environment<I> {
@@ -250,13 +259,40 @@ impl<I: Interner> Zip<I> for Environment<I> {
     where
         I: 'i,
     {
-        assert_eq!(a.clauses.len(), b.clauses.len()); // or different numbers of clauses
-        Zip::zip_with(zipper, &a.clauses, &b.clauses)?;
+        let interner = zipper.interner();
+        assert_eq!(a.clauses.len(interner), b.clauses.len(interner)); // or different numbers of clauses
+        Zip::zip_with(
+            zipper,
+            a.clauses.as_slice(interner),
+            b.clauses.as_slice(interner),
+        )?;
         Ok(())
     }
 }
 
 impl<I: Interner> Zip<I> for Goals<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.as_slice(interner), b.as_slice(interner))?;
+        Ok(())
+    }
+}
+
+impl<I: Interner> Zip<I> for ProgramClauses<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.as_slice(interner), b.as_slice(interner))?;
+        Ok(())
+    }
+}
+
+impl<I: Interner> Zip<I> for QuantifiedWhereClauses<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
@@ -307,9 +343,11 @@ enum_zip!(impl<I> for DomainGoal<I> {
     IsFullyVisible,
     LocalImplAllowed,
     Compatible,
-    DownstreamType
+    DownstreamType,
+    Reveal,
 });
-enum_zip!(impl<I> for ProgramClause<I> { Implies, ForAll });
+enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
+enum_zip!(impl<I> for AliasTy<I> { Projection, Opaque });
 
 impl<I: Interner> Zip<I> for Substitution<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
@@ -388,6 +426,16 @@ impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
 
 #[allow(unreachable_code, unused_variables)]
 impl<I: Interner> Zip<I> for Parameter<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.data(interner), b.data(interner))
+    }
+}
+
+impl<I: Interner> Zip<I> for ProgramClause<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,

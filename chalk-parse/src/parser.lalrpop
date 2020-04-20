@@ -15,6 +15,7 @@ Item: Option<Item> = {
     Comment => None,
     StructDefn => Some(Item::StructDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
+    OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
 };
@@ -45,6 +46,9 @@ CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 
 WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::SizedTrait,
+     "#" "[" "lang" "(" "copy" ")" "]" => WellKnownTrait::CopyTrait,
+     "#" "[" "lang" "(" "clone" ")" "]" => WellKnownTrait::CloneTrait,
+     "#" "[" "lang" "(" "drop" ")" "]" => WellKnownTrait::DropTrait,
 };
 
 StructDefn: StructDefn = {
@@ -91,6 +95,17 @@ AssocTyDefn: AssocTyDefn = {
             parameter_kinds: p,
             where_clauses: w,
             bounds: b.unwrap_or(vec![]),
+        }
+    }
+};
+
+OpaqueTyDefn: OpaqueTyDefn = {
+    "opaque" "type" <identifier:Id> <p:Angle<ParameterKind>> ":" <b:Plus<QuantifiedInlineBound>> "=" <ty:Ty> ";" => {
+        OpaqueTyDefn {
+            ty,
+            parameter_kinds: p,
+            identifier,
+            bounds: b,
         }
     }
 };
@@ -188,7 +203,7 @@ TyWithoutFor: Ty = {
         bounds: b,
     },
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
-    <a:AliasTy> => Ty::Alias { alias: a },
+    <p:ProjectionTy> => Ty::Projection { proj: p },
     "(" <t:TupleOrParensInner> ")" => t,
 };
 
@@ -231,8 +246,8 @@ Parameter: Parameter = {
     Lifetime => Parameter::Lifetime(<>),
 };
 
-AliasTy: AliasTy = {
-    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => AliasTy {
+ProjectionTy: ProjectionTy = {
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
         trait_ref: t, name: n, args: a
     },
 };
@@ -289,15 +304,15 @@ InlineClause: Clause = {
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
-    // `T: Foo<U = Bar>` -- alias equality
+    // `T: Foo<U = Bar>` -- projection equality
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
         "=" <ty:Ty> ">" =>
     {
         let mut args = vec![Parameter::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
-        let alias = AliasTy { trait_ref, name, args: a2 };
-        WhereClause::AliasEq { alias, ty }
+        let projection = ProjectionTy { trait_ref, name, args: a2 };
+        WhereClause::ProjectionEq { projection, ty }
     },
 };
 
@@ -330,7 +345,7 @@ DomainGoal: DomainGoal = {
     "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
 
     // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <a:AliasTy> "->" <t:Ty> ")" => DomainGoal::Normalize { alias: a, ty: t },
+    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },
@@ -340,6 +355,8 @@ DomainGoal: DomainGoal = {
 
     "Compatible" => DomainGoal::Compatible,
     "DownstreamType" "(" <ty:Ty> ")" => DomainGoal::DownstreamType { ty },
+
+    "Reveal" => DomainGoal::Reveal,
 };
 
 LeafGoal: LeafGoal = {

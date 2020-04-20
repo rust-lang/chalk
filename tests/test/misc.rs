@@ -130,6 +130,8 @@ fn only_draw_so_many() {
             exists<T> { T: Sized }
         } yields[SolverChoice::slg(10, Some(2))] {
             "Ambiguous; no inference guidance"
+        } yields[SolverChoice::recursive()] {
+            "Ambiguous; no inference guidance"
         }
     }
 }
@@ -155,6 +157,8 @@ fn only_draw_so_many_blow_up() {
         goal {
             exists<T> { T: Foo }
         } yields[SolverChoice::slg(10, Some(2))] {
+            "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0.0>] }"
+        } yields[SolverChoice::recursive()] {
             "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0.0>] }"
         }
     }

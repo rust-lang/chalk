@@ -3,7 +3,7 @@ use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
-use crate::solve::truncate::{self, Truncated};
+use crate::solve::truncate;
 use crate::solve::Solution;
 use crate::RustIrDatabase;
 use chalk_derive::HasInterner;
@@ -14,8 +14,6 @@ use chalk_engine::hh::HhGoal;
 use chalk_engine::{CompleteAnswer, ExClause, Literal};
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
-use chalk_ir::could_match::CouldMatch;
-use chalk_ir::interner::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
@@ -81,7 +79,7 @@ impl<I: Interner> context::Context for SlgContext<I> {
     type BindersGoal = Binders<Goal<I>>;
     type Parameter = Parameter<I>;
     type ProgramClause = ProgramClause<I>;
-    type ProgramClauses = Vec<ProgramClause<I>>;
+    type ProgramClauses = ProgramClauses<I>;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<I>>;
     type CanonicalAnswerSubst = Canonical<AnswerSubst<I>>;
     type GoalInEnvironment = InEnvironment<Goal<I>>;
@@ -138,11 +136,6 @@ impl<I: Interner> context::Context for SlgContext<I> {
         &goal.goal
     }
 
-    // Used by: simplify
-    fn add_clauses(env: &Environment<I>, clauses: Vec<ProgramClause<I>>) -> Environment<I> {
-        Environment::add_clauses(env, clauses)
-    }
-
     // Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<SlgContext<I>>) -> usize {
         // For now, we always pick the last subgoal in the
@@ -181,47 +174,17 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         &self,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        _infer: &mut TruncatingInferenceTable<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        // Look for floundering goals:
-        let interner = self.interner();
-        match goal {
-            // Check for a goal like `?T: Foo` where `Foo` is not enumerable.
-            DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-                let trait_datum = self.program.trait_datum(trait_ref.trait_id);
-                if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                    let self_ty = trait_ref.self_type_parameter(interner);
-                    if let Some(v) = self_ty.inference_var(interner) {
-                        if !infer.infer.var_is_bound(v) {
-                            return Err(Floundered);
-                        }
-                    }
-                }
-            }
-
-            DomainGoal::WellFormed(WellFormed::Ty(ty))
-            | DomainGoal::IsUpstream(ty)
-            | DomainGoal::DownstreamType(ty)
-            | DomainGoal::IsFullyVisible(ty)
-            | DomainGoal::IsLocal(ty) => match ty.data(interner) {
-                TyData::InferenceVar(_) => return Err(Floundered),
-                _ => {}
-            },
-
-            _ => {}
-        }
-
-        let mut clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal);
-
-        clauses.extend(
-            environment
-                .clauses
-                .iter()
-                .filter(|&env_clause| env_clause.could_match(interner, goal))
-                .cloned(),
-        );
+        let clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal)?;
 
         Ok(clauses)
+    }
+
+    // Used by: simplify
+    fn add_clauses(&self, env: &Environment<I>, clauses: ProgramClauses<I>) -> Environment<I> {
+        let interner = self.interner();
+        env.add_clauses(interner, clauses.iter(interner).cloned())
     }
 
     fn instantiate_ucanonical_goal(
@@ -347,38 +310,12 @@ impl<I: Interner> TruncatingInferenceTable<I> {
 }
 
 impl<I: Interner> context::TruncateOps<SlgContext<I>> for TruncatingInferenceTable<I> {
-    fn truncate_goal(
-        &mut self,
-        interner: &I,
-        subgoal: &InEnvironment<Goal<I>>,
-    ) -> Option<InEnvironment<Goal<I>>> {
-        // We only want to truncate the goal itself. We keep the environment intact.
-        // See rust-lang/chalk#280
-        let InEnvironment { environment, goal } = subgoal;
-        let Truncated { overflow, value } =
-            truncate::truncate(interner, &mut self.infer, self.max_size, goal);
-        if overflow {
-            Some(InEnvironment {
-                environment: environment.clone(),
-                goal: value,
-            })
-        } else {
-            None
-        }
+    fn goal_needs_truncation(&mut self, interner: &I, subgoal: &InEnvironment<Goal<I>>) -> bool {
+        truncate::needs_truncation(interner, &mut self.infer, self.max_size, &subgoal)
     }
 
-    fn truncate_answer(
-        &mut self,
-        interner: &I,
-        subst: &Substitution<I>,
-    ) -> Option<Substitution<I>> {
-        let Truncated { overflow, value } =
-            truncate::truncate(interner, &mut self.infer, self.max_size, subst);
-        if overflow {
-            Some(value)
-        } else {
-            None
-        }
+    fn answer_needs_truncation(&mut self, interner: &I, subst: &Substitution<I>) -> bool {
+        truncate::needs_truncation(interner, &mut self.infer, self.max_size, subst)
     }
 }
 
@@ -571,9 +508,15 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 self.aggregate_placeholder_tys(p1, p2)
             }
 
-            (TyData::Alias(alias1), TyData::Alias(alias2)) => {
-                self.aggregate_alias_tys(alias1, alias2)
-            }
+            (
+                TyData::Alias(AliasTy::Projection(proj1)),
+                TyData::Alias(AliasTy::Projection(proj2)),
+            ) => self.aggregate_projection_tys(proj1, proj2),
+
+            (
+                TyData::Alias(AliasTy::Opaque(opaque_ty1)),
+                TyData::Alias(AliasTy::Opaque(opaque_ty2)),
+            ) => self.aggregate_opaque_ty_tys(opaque_ty1, opaque_ty2),
 
             // For everything else, be conservative here and just say we may invalidate.
             (TyData::Function(_), _)
@@ -618,13 +561,35 @@ impl<I: Interner> MayInvalidate<'_, I> {
         new != current
     }
 
-    fn aggregate_alias_tys(&mut self, new: &AliasTy<I>, current: &AliasTy<I>) -> bool {
-        let AliasTy {
+    fn aggregate_projection_tys(
+        &mut self,
+        new: &ProjectionTy<I>,
+        current: &ProjectionTy<I>,
+    ) -> bool {
+        let ProjectionTy {
             associated_ty_id: new_name,
             substitution: new_substitution,
         } = new;
-        let AliasTy {
+        let ProjectionTy {
             associated_ty_id: current_name,
+            substitution: current_substitution,
+        } = current;
+
+        self.aggregate_name_and_substs(
+            new_name,
+            new_substitution,
+            current_name,
+            current_substitution,
+        )
+    }
+
+    fn aggregate_opaque_ty_tys(&mut self, new: &OpaqueTy<I>, current: &OpaqueTy<I>) -> bool {
+        let OpaqueTy {
+            opaque_ty_id: new_name,
+            substitution: new_substitution,
+        } = new;
+        let OpaqueTy {
+            opaque_ty_id: current_name,
             substitution: current_substitution,
         } = current;
 

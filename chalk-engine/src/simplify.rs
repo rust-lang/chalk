@@ -41,7 +41,7 @@ impl<C: Context> Forest<C> {
                     pending_goals.push((environment, context.into_hh_goal(subgoal)))
                 }
                 HhGoal::Implies(wc, subgoal) => {
-                    let new_environment = C::add_clauses(&environment, wc);
+                    let new_environment = context.add_clauses(&environment, wc);
                     pending_goals.push((new_environment, context.into_hh_goal(subgoal)));
                 }
                 HhGoal::All(subgoals) => {

@@ -55,3 +55,21 @@ fn recursive_where_clause_on_type() {
         }
     }
 }
+
+#[test]
+fn drop_compatible() {
+    test! {
+        program {
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T> { }
+        }
+
+        goal {
+            compatible { not { exists<T> { S<T>: Drop } } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}

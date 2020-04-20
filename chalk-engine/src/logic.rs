@@ -328,9 +328,10 @@ impl<C: Context> Forest<C> {
         infer: &mut dyn InferenceTable<C>,
         subgoal: &C::GoalInEnvironment,
     ) -> Option<(C::UCanonicalGoalInEnvironment, C::UniverseMap)> {
-        match infer.truncate_goal(context.interner(), subgoal) {
-            Some(_) => None,
-            None => Some(infer.fully_canonicalize_goal(context.interner(), subgoal)),
+        if infer.goal_needs_truncation(context.interner(), subgoal) {
+            None
+        } else {
+            Some(infer.fully_canonicalize_goal(context.interner(), subgoal))
         }
     }
 
@@ -385,9 +386,10 @@ impl<C: Context> Forest<C> {
         // affect completeness when it comes to subgoal abstraction.
         let inverted_subgoal = infer.invert_goal(context.interner(), subgoal)?;
 
-        match infer.truncate_goal(context.interner(), &inverted_subgoal) {
-            Some(_) => None,
-            None => Some(infer.fully_canonicalize_goal(context.interner(), &inverted_subgoal)),
+        if infer.goal_needs_truncation(context.interner(), &inverted_subgoal) {
+            None
+        } else {
+            Some(infer.fully_canonicalize_goal(context.interner(), &inverted_subgoal))
         }
     }
 }
@@ -1331,10 +1333,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         // Ultimately, the current decision to flounder the entire table mostly boils
         // down to "it works as we expect for the current tests". And, we likely don't
         // even *need* the added complexity just for potentially more answers.
-        if infer
-            .truncate_answer(self.context.interner(), &subst)
-            .is_some()
-        {
+        if infer.answer_needs_truncation(self.context.interner(), &subst) {
             self.forest.tables[table].mark_floundered();
             return None;
         }

@@ -3,7 +3,7 @@ use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
 use chalk_engine::fallible::Fallible;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
 
@@ -83,9 +83,10 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
         let ProgramClauseImplication {
             consequence,
             conditions,
-        } = match clause {
-            ProgramClause::Implies(implication) => implication.clone(),
-            ProgramClause::ForAll(implication) => self
+            priority: _,
+        } = match clause.data(interner) {
+            ProgramClauseData::Implies(implication) => implication.clone(),
+            ProgramClauseData::ForAll(implication) => self
                 .infer
                 .instantiate_binders_existentially(interner, implication),
         };
@@ -418,7 +419,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
             (TyData::Function(answer), TyData::Function(pending)) => {
                 self.outer_binder.shift_in();
-                Zip::zip_with(self, &answer.parameters, &pending.parameters)?;
+                Zip::zip_with(self, &answer.substitution, &pending.substitution)?;
                 self.outer_binder.shift_out();
                 Ok(())
             }
@@ -482,10 +483,10 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
     fn zip_binders<T>(&mut self, answer: &Binders<T>, pending: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         self.outer_binder.shift_in();
-        Zip::zip_with(self, &answer.value, &pending.value)?;
+        Zip::zip_with(self, answer.skip_binders(), pending.skip_binders())?;
         self.outer_binder.shift_out();
         Ok(())
     }

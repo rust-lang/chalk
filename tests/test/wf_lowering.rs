@@ -636,3 +636,187 @@ fn assoc_type_recursive_bound() {
         }
     }
 }
+
+#[test]
+fn struct_sized_constraints() {
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct S<T> {
+                t1: T,
+                t2: T
+            }
+        } error_msg {
+            "type declaration `S` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo { }
+
+            struct S<T> {
+                t1: Foo,
+                t2: T
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct S<T> where T: Sized {
+                t1: T,
+                t2: T
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo {}
+
+            struct G<T> {
+                foo: S<S<Foo>>,
+                s: S<S<S<T>>>
+            }
+
+            struct S<T> {
+                t1: T
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo {}
+
+            impl Sized for Foo {}
+        } error_msg {
+            "trait impl for `Sized` does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn copy_constraints() {
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T> { t: T }
+
+            impl<T> Copy for S<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            trait MyTrait where Self: Copy { }
+
+            struct S<T> where T: MyTrait { t: T }
+
+            impl<T> Copy for S<T> { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T> where T: Copy { t: T }
+
+            impl<T> Copy for S<T> { }
+
+            impl<T> Drop for S<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn drop_constraints() {
+    lowering_error! {
+        program {
+            #[lang(drop)]
+            trait Drop { }
+
+            struct Foo { }
+            struct S<T> { }
+
+            impl Drop for S<Foo> { }
+        } error_msg {
+           "trait impl for `Drop` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Trait where Self: SuperTrait { }
+            trait SuperTrait {}
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T> where T: Trait { }
+
+            impl<T> Drop for S<T> where T: SuperTrait { }
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T1, T2> { }
+
+            impl<T1, T2> Drop for S<T2, T1> { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait MyTrait { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            struct S<T>{ }
+
+            impl<T> Drop for S<T> where T: MyTrait { }
+        } error_msg {
+           "trait impl for `Drop` does not meet well-formedness requirements"
+        }
+    }
+}

@@ -4,7 +4,7 @@ use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_engine::fallible::*;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use std::fmt::Debug;
 
@@ -164,8 +164,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying two dyn is possible if they have the same bounds.
             (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
 
-            // Unifying an associated type projection `<T as
-            // Trait>::Item` with some other type `U`.
+            // Unifying an alias type with some other type `U`.
             (&TyData::Apply(_), &TyData::Alias(ref alias))
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
@@ -186,14 +185,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    fn unify_binders<T, R>(
+    fn unify_binders<'a, T, R>(
         &mut self,
-        a: impl IntoBindersAndValue<Value = T> + Copy + Debug,
-        b: impl IntoBindersAndValue<Value = T> + Copy + Debug,
+        a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
+        b: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
     ) -> Fallible<()>
     where
         T: Fold<I, Result = R>,
         R: Zip<I> + Fold<I, Result = R>,
+        't: 'a,
     {
         // for<'a...> T == for<'b...> U
         //
@@ -218,11 +218,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    /// Unify an associated type projection `proj` like `<T as Trait>::Item` with some other
-    /// type `ty` (which might also be a projection). Creates a goal like
+    /// Unify an alias like `<T as Trait>::Item` or `impl Trait` with some other
+    /// type `ty` (which might also be an alias). Creates a goal like
     ///
     /// ```notrust
-    /// AliasEq(<T as Trait>::Item = U)
+    /// AliasEq(<T as Trait>::Item = U) // associated type projection
+    /// AliasEq(impl Trait = U) // impl trait
     /// ```
     fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
@@ -352,7 +353,7 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Zip<I> + Fold<I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.

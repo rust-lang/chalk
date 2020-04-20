@@ -100,7 +100,6 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let solver = wf::WfSolver::new(db, db.solver_choice());
-
         for &id in program.struct_data.keys() {
             solver.verify_struct_decl(id)?;
         }

@@ -2,6 +2,10 @@ use super::builder::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::TyData;
 
+mod clone;
+mod copy;
+mod sized;
+
 /// For well known traits we have special hard-coded impls, either as an
 /// optimization or to enforce special rules for correctness.
 pub fn add_builtin_program_clauses<I: Interner>(
@@ -11,13 +15,18 @@ pub fn add_builtin_program_clauses<I: Interner>(
     trait_ref: &TraitRef<I>,
     ty: &TyData<I>,
 ) {
-    if db.force_impl_for(well_known, ty) {
-        builder.push_fact(trait_ref.clone());
+    if let Some(force_impl) = db.force_impl_for(well_known, ty) {
+        if force_impl {
+            builder.push_fact(trait_ref.clone());
+        }
+        return;
     }
 
     match well_known {
-        WellKnownTrait::SizedTrait => { /* TODO */ }
-        WellKnownTrait::CopyTrait => { /* TODO */ }
-        WellKnownTrait::CloneTrait => { /* TODO */ }
+        WellKnownTrait::SizedTrait => sized::add_sized_program_clauses(db, builder, trait_ref, ty),
+        WellKnownTrait::CopyTrait => copy::add_copy_program_clauses(db, builder, trait_ref, ty),
+        WellKnownTrait::CloneTrait => clone::add_clone_program_clauses(db, builder, trait_ref, ty),
+        // Drop impls are provided explicitly
+        WellKnownTrait::DropTrait => (),
     }
 }

@@ -35,7 +35,7 @@ impl<I: Interner> Debug for Lifetime<I> {
 
 impl<I: Interner> Debug for Parameter<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.0))
+        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
@@ -47,7 +47,7 @@ impl<I: Interner> Debug for Goal<I> {
 
 impl<I: Interner> Debug for Goals<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.goals))
+        I::debug_goals(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
@@ -55,6 +55,18 @@ impl<I: Interner> Debug for ProgramClauseImplication<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_program_clause_implication(self, fmt)
             .unwrap_or_else(|| write!(fmt, "ProgramClauseImplication(?)"))
+    }
+}
+
+impl<I: Interner> Debug for ProgramClause<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_program_clause(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
+impl<I: Interner> Debug for ProgramClauses<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_program_clauses(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
@@ -77,9 +89,38 @@ impl<I: Interner> Debug for AliasTy<I> {
     }
 }
 
+impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_quantified_where_clauses(self, fmt)
+            .unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
+impl<I: Interner> Debug for ProjectionTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format ProjectionTy without setting Program in tls")
+        })
+    }
+}
+
+impl<I: Interner> Debug for OpaqueTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_opaque_ty(self, fmt).unwrap_or_else(|| {
+            unimplemented!("cannot format OpaqueTy without setting Program in tls")
+        })
+    }
+}
+
 impl<I: Interner> Display for Substitution<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.parameters))
+        I::debug_substitution(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
+impl<I: Interner> Debug for OpaqueTyId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_opaque_ty_id(*self, fmt).unwrap_or_else(|| write!(fmt, "OpaqueTyId({:?})", self.0))
     }
 }
 
@@ -102,6 +143,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Scalar(scalar) => write!(fmt, "{:?}", scalar),
             TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
+            TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
@@ -153,9 +195,9 @@ impl<I: Interner> Debug for Fn<I> {
         // FIXME -- we should introduce some names or something here
         let Fn {
             num_binders,
-            parameters,
+            substitution,
         } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, parameters)
+        write!(fmt, "for<{}> {:?}", num_binders, substitution)
     }
 }
 
@@ -170,22 +212,63 @@ impl<I: Interner> Debug for LifetimeData<I> {
     }
 }
 
+impl<I: Interner> ParameterKinds<I> {
+    fn debug(&self) -> ParameterKindsDebug<'_, I> {
+        ParameterKindsDebug(self)
+    }
+
+    pub fn inner_debug<'a>(&'a self, interner: &'a I) -> ParameterKindsInnerDebug<'a, I> {
+        ParameterKindsInnerDebug {
+            parameter_kinds: self,
+            interner,
+        }
+    }
+}
+
+struct ParameterKindsDebug<'a, I: Interner>(&'a ParameterKinds<I>);
+
+impl<'a, I: Interner> Debug for ParameterKindsDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_parameter_kinds_with_angles(self.0, fmt)
+            .unwrap_or_else(|| write!(fmt, "{:?}", self.0.interned))
+    }
+}
+
+pub struct ParameterKindsInnerDebug<'a, I: Interner> {
+    parameter_kinds: &'a ParameterKinds<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ParameterKindsInnerDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        // NB: We print parameter kinds as a list delimited by `<>`,
+        // like `<K1, K2, ..>`. This is because parameter kind lists
+        // are always associated with binders like `forall<type> {
+        // ... }`.
+        write!(fmt, "<")?;
+        for (index, binder) in self.parameter_kinds.iter(self.interner).enumerate() {
+            if index > 0 {
+                write!(fmt, ", ")?;
+            }
+            match *binder {
+                ParameterKind::Ty(()) => write!(fmt, "type")?,
+                ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+            }
+        }
+        write!(fmt, ">")
+    }
+}
+
 impl<I: Interner> Debug for GoalData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            GoalData::Quantified(qkind, ref subgoal) => {
-                write!(fmt, "{:?}<", qkind)?;
-                for (index, binder) in subgoal.binders.iter().enumerate() {
-                    if index > 0 {
-                        write!(fmt, ", ")?;
-                    }
-                    match *binder {
-                        ParameterKind::Ty(()) => write!(fmt, "type")?,
-                        ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-                    }
-                }
-                write!(fmt, "> {{ {:?} }}", subgoal.value)
-            }
+            GoalData::Quantified(qkind, ref subgoal) => write!(
+                fmt,
+                "{:?}{:?} {{ {:?} }}",
+                qkind,
+                subgoal.binders.debug(),
+                subgoal.value
+            ),
             GoalData::Implies(ref wc, ref g) => write!(fmt, "if ({:?}) {{ {:?} }}", wc, g),
             GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
@@ -411,6 +494,64 @@ impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
     }
 }
 
+pub struct ProjectionTyDebug<'a, I: Interner> {
+    projection_ty: &'a ProjectionTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let ProjectionTyDebug {
+            projection_ty,
+            interner,
+        } = self;
+        write!(
+            fmt,
+            "({:?}){:?}",
+            projection_ty.associated_ty_id,
+            projection_ty.substitution.with_angle(interner)
+        )
+    }
+}
+
+impl<I: Interner> ProjectionTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> ProjectionTyDebug<'a, I> {
+        ProjectionTyDebug {
+            projection_ty: self,
+            interner,
+        }
+    }
+}
+
+pub struct OpaqueTyDebug<'a, I: Interner> {
+    opaque_ty: &'a OpaqueTy<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let OpaqueTyDebug {
+            opaque_ty,
+            interner,
+        } = self;
+        write!(
+            fmt,
+            "{:?}{:?}",
+            opaque_ty.opaque_ty_id,
+            opaque_ty.substitution.with_angle(interner)
+        )
+    }
+}
+
+impl<I: Interner> OpaqueTy<I> {
+    pub fn debug<'a>(&'a self, interner: &'a I) -> OpaqueTyDebug<'a, I> {
+        OpaqueTyDebug {
+            opaque_ty: self,
+            interner,
+        }
+    }
+}
+
 pub struct Angle<'a, T>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
@@ -484,6 +625,7 @@ impl<I: Interner> Debug for DomainGoal<I> {
             }
             DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
+            DomainGoal::Reveal(_) => write!(fmt, "Reveal"),
         }
     }
 }
@@ -494,39 +636,22 @@ impl<I: Interner> Debug for EqGoal<I> {
     }
 }
 
-impl<T: Debug> Debug for Binders<T> {
+impl<T: HasInterner + Debug> Debug for Binders<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let Binders {
             ref binders,
             ref value,
         } = *self;
-
-        // NB: We always print the `for<>`, even if it is empty,
-        // because it may affect the debruijn indices of things
-        // contained within. For example, `for<> { ^1.0 }` is very
-        // different from `^1.0` in terms of what variable is being
-        // referenced.
-
-        write!(fmt, "for<")?;
-        for (index, binder) in binders.iter().enumerate() {
-            if index > 0 {
-                write!(fmt, ", ")?;
-            }
-            match *binder {
-                ParameterKind::Ty(()) => write!(fmt, "type")?,
-                ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
-            }
-        }
-        write!(fmt, "> ")?;
+        write!(fmt, "for{:?} ", binders.debug())?;
         Debug::fmt(value, fmt)
     }
 }
 
-impl<I: Interner> Debug for ProgramClause<I> {
+impl<I: Interner> Debug for ProgramClauseData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            ProgramClause::Implies(pc) => write!(fmt, "{:?}", pc),
-            ProgramClause::ForAll(pc) => write!(fmt, "{:?}", pc),
+            ProgramClauseData::Implies(pc) => write!(fmt, "{:?}", pc),
+            ProgramClauseData::ForAll(pc) => write!(fmt, "{:?}", pc),
         }
     }
 }
@@ -537,10 +662,32 @@ impl<I: Interner> Debug for Environment<I> {
     }
 }
 
-impl<T: Display> Display for Canonical<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        let Canonical { binders, value } = self;
+impl<I: Interner> Debug for CanonicalVarKinds<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_canonical_var_kinds(self, fmt)
+            .unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
 
+impl<T: HasInterner + Display> Canonical<T> {
+    pub fn display<'a>(&'a self, interner: &'a T::Interner) -> CanonicalDisplay<'a, T> {
+        CanonicalDisplay {
+            canonical: self,
+            interner,
+        }
+    }
+}
+
+pub struct CanonicalDisplay<'a, T: HasInterner> {
+    canonical: &'a Canonical<T>,
+    interner: &'a T::Interner,
+}
+
+impl<'a, T: HasInterner + Display> Display for CanonicalDisplay<'a, T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        let Canonical { binders, value } = self.canonical;
+        let interner = self.interner;
+        let binders = binders.as_slice(interner);
         if binders.is_empty() {
             // Ordinarily, we try to print all binder levels, if they
             // are empty, but we can skip in this *particular* case

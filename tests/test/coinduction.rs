@@ -210,7 +210,15 @@ fn coinductive_unsound1() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields_all[SolverChoice::slg(3, None)] {
+        } yields[SolverChoice::slg(3, None)] {
+            "No possible solution"
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields[SolverChoice::recursive()] {
+            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -251,7 +259,8 @@ fn coinductive_unsound2() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields_all[SolverChoice::slg(3, None)] {
+        } yields {
+            "No possible solution"
         }
     }
 }
@@ -298,8 +307,8 @@ fn coinductive_multicycle1() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [], lifetime constraints []"
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -338,8 +347,8 @@ fn coinductive_multicycle2() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [], lifetime constraints []"
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -388,7 +397,8 @@ fn coinductive_multicycle3() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::slg(3, None)] {
+        } yields {
+            "No possible solution"
         }
     }
 }
@@ -438,6 +448,13 @@ fn coinductive_multicycle4() {
         goal {
             forall<X> { X: Any }
         } yields_all[SolverChoice::slg(3, None)] {
+        }
+
+        goal {
+            forall<X> { X: Any }
+        } yields[SolverChoice::recursive()] {
+            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }

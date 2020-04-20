@@ -109,11 +109,73 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
             // ```
             builder.push_clause(
                 Normalize {
-                    alias: projection.clone(),
+                    alias: AliasTy::Projection(projection.clone()),
                     ty: assoc_ty_value.ty,
                 },
                 impl_where_clauses.chain(assoc_ty_where_clauses),
             );
+        });
+    }
+}
+
+impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
+    /// Given `opaque type T<..>: A + B = HiddenTy;`, we generate:
+    ///
+    /// ```notrust
+    /// AliasEq(T<..> = HiddenTy) :- Reveal.
+    /// AliasEq(T<..> = !T<..>).
+    /// Implemented(!T<..>: A).
+    /// Implemented(!T<..>: B).
+    /// Implemented(!T<..>: Send) :- Implemented(HiddenTy: Send). // For all auto traits
+    /// ```
+    /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+        debug_heading!("to_program_clauses({:?})", self);
+        builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
+            let interner = builder.interner();
+            let substitution = builder.substitution_in_scope();
+            let alias = AliasTy::Opaque(OpaqueTy {
+                opaque_ty_id: self.opaque_ty_id,
+                substitution: substitution.clone(),
+            });
+
+            let alias_placeholder_ty = Ty::new(
+                interner,
+                ApplicationTy {
+                    name: TypeName::OpaqueType(self.opaque_ty_id),
+                    substitution,
+                },
+            );
+
+            // AliasEq(T<..> = HiddenTy) :- Reveal.
+            builder.push_clause(
+                DomainGoal::Holds(
+                    AliasEq {
+                        alias: alias.clone(),
+                        ty: opaque_ty_bound.hidden_ty.clone(),
+                    }
+                    .cast(interner),
+                ),
+                iter::once(DomainGoal::Reveal(())),
+            );
+
+            // AliasEq(T<..> = !T<..>).
+            builder.push_fact(DomainGoal::Holds(
+                AliasEq {
+                    alias: alias.clone(),
+                    ty: alias_placeholder_ty.clone(),
+                }
+                .cast(interner),
+            ));
+
+            let substitution = Substitution::from1(interner, alias_placeholder_ty.clone());
+            for bound in &opaque_ty_bound.bounds {
+                // Implemented(!T<..>: Bound).
+                let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
+                builder.push_binders(&bound_with_placeholder_ty, |builder, bound| {
+                    builder.push_fact(bound);
+                });
+            }
         });
     }
 }
@@ -415,23 +477,32 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // conditions.
             let type_parameters: Vec<_> = trait_ref.type_parameters(interner).collect();
 
-            // Add all cases for potential downstream impls that could exist
-            for i in 0..type_parameters.len() {
-                builder.push_clause(
-                    trait_ref.clone(),
-                    where_clauses
-                        .iter()
-                        .cloned()
-                        .casted(interner)
-                        .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
-                        .chain((0..i).map(|j| {
-                            DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast(interner)
-                        }))
-                        .chain(iter::once(
-                            DomainGoal::DownstreamType(type_parameters[i].clone()).cast(interner),
-                        ))
-                        .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
-                );
+            // Drop trait can't have downstream implementation because it can only
+            // be implemented with the same genericity as the struct definition,
+            // i.e. Drop implementation for `struct S<T: Eq> {}` is forced to be
+            // `impl Drop<T: Eq> for S<T> { ... }`. That means that orphan rules
+            // prevent Drop from being implemented in downstream crates.
+            if self.well_known != Some(WellKnownTrait::DropTrait) {
+                // Add all cases for potential downstream impls that could exist
+                for i in 0..type_parameters.len() {
+                    builder.push_clause(
+                        trait_ref.clone(),
+                        where_clauses
+                            .iter()
+                            .cloned()
+                            .casted(interner)
+                            .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
+                            .chain((0..i).map(|j| {
+                                DomainGoal::IsFullyVisible(type_parameters[j].clone())
+                                    .cast(interner)
+                            }))
+                            .chain(iter::once(
+                                DomainGoal::DownstreamType(type_parameters[i].clone())
+                                    .cast(interner),
+                            ))
+                            .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
+                    );
+                }
             }
 
             // Orphan rules:
@@ -575,14 +646,14 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
             let substitution = builder.substitution_in_scope();
 
-            let alias = AliasTy {
+            let projection = ProjectionTy {
                 associated_ty_id: self.id,
                 substitution: substitution.clone(),
             };
-            let projection_ty = alias.clone().intern(interner);
+            let projection_ty = AliasTy::Projection(projection.clone()).intern(interner);
 
             // Retrieve the trait ref embedding the associated type
-            let trait_ref = builder.db.trait_ref_from_projection(&alias);
+            let trait_ref = builder.db.trait_ref_from_projection(&projection);
 
             // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
             // we would produce `(Iterator::Item)<T>`.
@@ -592,8 +663,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             }
             .intern(interner);
 
-            let alias_eq = AliasEq {
-                alias: alias.clone(),
+            let projection_eq = AliasEq {
+                alias: AliasTy::Projection(projection.clone()),
                 ty: app_ty.clone(),
             };
 
@@ -603,7 +674,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             //    forall<Self> {
             //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
             //    }
-            builder.push_fact(alias_eq);
+            builder.push_fact_with_priority(projection_eq, ClausePriority::Low);
 
             // Well-formedness of projection type.
             //
@@ -666,12 +737,15 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             builder.push_bound_ty(|builder, ty| {
                 // `Normalize(<T as Foo>::Assoc -> U)`
                 let normalize = Normalize {
-                    alias: alias.clone(),
+                    alias: AliasTy::Projection(projection.clone()),
                     ty: ty.clone(),
                 };
 
                 // `AliasEq(<T as Foo>::Assoc = U)`
-                let alias_eq = AliasEq { alias, ty };
+                let projection_eq = AliasEq {
+                    alias: AliasTy::Projection(projection),
+                    ty,
+                };
 
                 // Projection equality rule from above.
                 //
@@ -679,7 +753,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 //        AliasEq(<T as Foo>::Assoc = U) :-
                 //            Normalize(<T as Foo>::Assoc -> U).
                 //    }
-                builder.push_clause(alias_eq, Some(normalize));
+                builder.push_clause(projection_eq, Some(normalize));
             });
         });
     }

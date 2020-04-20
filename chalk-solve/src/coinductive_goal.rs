@@ -26,7 +26,9 @@ impl<I: Interner> IsCoinductive<I> for Goal<I> {
                 WhereClause::AliasEq(..) => false,
             },
             GoalData::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..))) => true,
-            GoalData::Quantified(QuantifierKind::ForAll, goal) => goal.value.is_coinductive(db),
+            GoalData::Quantified(QuantifierKind::ForAll, goal) => {
+                goal.skip_binders().is_coinductive(db)
+            }
             _ => false,
         }
     }

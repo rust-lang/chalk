@@ -172,6 +172,49 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goals<I> {
     }
 }
 
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ProgramClauses<I> {
+    type Result = ProgramClauses<TI>;
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+        let folded = self
+            .iter(interner)
+            .map(|p| p.fold_with(folder, outer_binder));
+        Ok(ProgramClauses::from_fallible(target_interner, folded)?)
+    }
+}
+
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for QuantifiedWhereClauses<I> {
+    type Result = QuantifiedWhereClauses<TI>;
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+        let folded = self
+            .iter(interner)
+            .map(|p| p.fold_with(folder, outer_binder));
+        Ok(QuantifiedWhereClauses::from_fallible(
+            target_interner,
+            folded,
+        )?)
+    }
+}
+
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {
@@ -204,6 +247,7 @@ copy_fold!(UintTy);
 copy_fold!(IntTy);
 copy_fold!(FloatTy);
 copy_fold!(Scalar);
+copy_fold!(ClausePriority);
 
 #[macro_export]
 macro_rules! id_fold {
@@ -231,6 +275,28 @@ id_fold!(ImplId);
 id_fold!(StructId);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
+id_fold!(OpaqueTyId);
+
+impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<I> {
+    fn super_fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        match self {
+            ProgramClauseData::Implies(pci) => Ok(ProgramClauseData::Implies(
+                pci.fold_with(folder, outer_binder)?,
+            )),
+            ProgramClauseData::ForAll(pci) => Ok(ProgramClauseData::ForAll(
+                pci.fold_with(folder, outer_binder)?,
+            )),
+        }
+    }
+}
 
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
     fn super_fold_with<'i>(
@@ -242,14 +308,10 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
         I: 'i,
         TI: 'i,
     {
-        match self {
-            ProgramClause::Implies(pci) => {
-                Ok(ProgramClause::Implies(pci.fold_with(folder, outer_binder)?))
-            }
-            ProgramClause::ForAll(pci) => {
-                Ok(ProgramClause::ForAll(pci.fold_with(folder, outer_binder)?))
-            }
-        }
+        let clause = self.data(folder.interner());
+        Ok(clause
+            .super_fold_with(folder, outer_binder)?
+            .intern(folder.target_interner()))
     }
 }
 

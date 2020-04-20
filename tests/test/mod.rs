@@ -14,9 +14,19 @@ mod bench;
 mod coherence;
 mod wf_lowering;
 
-fn assert_result(result: &Option<Solution<ChalkIr>>, expected: &str) {
+fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str) {
+    // sort constraints, since the different solvers may output them in different order
+    match &mut result {
+        Some(Solution::Unique(solution)) => {
+            solution
+                .value
+                .constraints
+                .sort_by_key(|c| format!("{:?}", c));
+        }
+        _ => {}
+    }
     let result = match result {
-        Some(v) => format!("{}", v),
+        Some(v) => format!("{}", v.display(&ChalkIr)),
         None => format!("No possible solution"),
     };
 
@@ -61,13 +71,15 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::default(), TestGoal::Aggregated($expected))
+                      (stringify!($goal), SolverChoice::slg_default(), TestGoal::Aggregated($expected))
+                      (stringify!($goal), SolverChoice::recursive(), TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
-    // goal { G } yields_all { "Y1", "Y2", ... , "YN" } -- test both solvers gets exactly N same answers in
-    // the same order
+    // goal { G } yields_all { "Y1", "Y2", ... , "YN" } -- test that the SLG
+    // solver gets exactly N answers in this order (the recursive solver can't
+    // return multiple answers)
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
         goal $goal:tt yields_all { $($expected:expr),* }
         $($unparsed_goals:tt)*
@@ -75,12 +87,13 @@ macro_rules! test {
         test!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::default(), TestGoal::All(vec![$($expected),*]))
+                      (stringify!($goal), SolverChoice::slg_default(), TestGoal::All(vec![$($expected),*]))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
 
-    // goal { G } yields_first { "Y1", "Y2", ... , "YN" } -- test both solvers gets at least N same first answers
+    // goal { G } yields_first { "Y1", "Y2", ... , "YN" } -- test that the SLG
+    // solver gets at least N same first answers
     (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
         goal $goal:tt yields_first { $($expected:expr),* }
         $($unparsed_goals:tt)*
@@ -110,6 +123,20 @@ macro_rules! test {
                       (stringify!($goal), $C, TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[goal $($unparsed_goals)*])
+    };
+
+    // same as above, but there are multiple yields clauses => duplicate the goal
+    (@program[$program:tt] @parsed_goals[$($parsed_goals:tt)*] @unparsed_goals[
+        goal $goal:tt
+            yields[$C:expr] { $expected:expr }
+        yields $($unparsed_tail:tt)*
+    ]) => {
+        test!(@program[$program]
+              @parsed_goals[
+                  $($parsed_goals)*
+                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+              ]
+              @unparsed_goals[goal $goal yields $($unparsed_tail)*])
     };
 
     // same as above, but for the final goal in the list.
@@ -200,6 +227,14 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
     let program = db.checked_program().unwrap();
 
     for (goal_text, solver_choice, expected) in goals {
+        match (&solver_choice, &expected) {
+            (SolverChoice::Recursive { .. }, TestGoal::All(_))
+            | (SolverChoice::Recursive { .. }, TestGoal::First(_)) => {
+                panic!("cannot test the recursive solver with yields_first or yields_all");
+            }
+            _ => {}
+        };
+
         if db.solver_choice() != solver_choice {
             db.set_solver_choice(solver_choice);
         }
@@ -219,7 +254,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
             match expected {
                 TestGoal::Aggregated(expected) => {
                     let result = db.solve(&peeled_goal);
-                    assert_result(&result, expected);
+                    assert_result(result, expected);
                 }
                 TestGoal::All(expected) => {
                     let mut expected = expected.into_iter();
@@ -227,7 +262,13 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                         db.solve_multiple(&peeled_goal, |result, next_result| {
                             match expected.next() {
                                 Some(expected) => {
-                                    assert_same(&format!("{}", &result), expected);
+                                    assert_same(
+                                        &format!(
+                                            "{}",
+                                            result.as_ref().map(|v| v.display(&ChalkIr))
+                                        ),
+                                        expected,
+                                    );
                                 }
                                 None => {
                                     assert!(!next_result, "Unexpected next solution");
@@ -245,7 +286,10 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                     let mut expected = expected.into_iter();
                     db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
                         Some(solution) => {
-                            assert_same(&format!("{}", &result), solution);
+                            assert_same(
+                                &format!("{}", result.as_ref().map(|v| v.display(&ChalkIr))),
+                                solution,
+                            );
                             if !next_result {
                                 assert!(expected.next().is_none(), "Not enough solutions found");
                             }

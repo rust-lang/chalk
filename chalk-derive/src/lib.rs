@@ -1,313 +1,10 @@
 extern crate proc_macro;
 
-use proc_macro::TokenStream;
-use quote::{format_ident, quote};
-use syn::{parse_macro_input, Data, DeriveInput, GenericParam, Ident, TypeParamBound};
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{parse_quote, DeriveInput, GenericParam, Ident, TypeParamBound};
 
-/// Derives Fold for structs and enums for which one of the following is true:
-/// - It has a `#[has_interner(TheInterner)]` attribute
-/// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
-/// - There is a single parameter `I: Interner` (does not have to be named `I`)
-#[proc_macro_derive(Fold, attributes(has_interner))]
-pub fn derive_fold(item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as DeriveInput);
-    let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
-
-    let type_name = input.ident;
-    let body = derive_fold_body(&type_name, input.data);
-
-    if let Some(attr) = input.attrs.iter().find(|a| a.path.is_ident("has_interner")) {
-        // Hardcoded interner:
-        //
-        // impl Fold<ChalkIr, ChalkIr> for Type {
-        //     type Result = Self;
-        // }
-        let arg = attr
-            .parse_args::<proc_macro2::TokenStream>()
-            .expect("Expected has_interner argument");
-
-        return TokenStream::from(quote! {
-            impl #impl_generics Fold < #arg, #arg > for #type_name #ty_generics #where_clause_ref {
-                type Result = Self;
-
-                fn fold_with<'i>(
-                    &self,
-                    folder: &mut dyn Folder < 'i, #arg, #arg >,
-                    outer_binder: DebruijnIndex,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result> {
-                    #body
-                }
-            }
-        });
-    }
-
-    match input.generics.params.len() {
-        1 => {}
-
-        0 => {
-            panic!("Fold derive requires a single type parameter or a `#[has_interner]` attr");
-        }
-
-        _ => {
-            panic!("Fold derive only works with a single type parameter");
-        }
-    };
-
-    let generic_param0 = &input.generics.params[0];
-
-    if let Some(param) = has_interner(&generic_param0) {
-        // HasInterner bound:
-        //
-        // Example:
-        //
-        // impl<T, _I, _TI, _U> Fold<_I, _TI> for Binders<T>
-        // where
-        //     T: HasInterner<Interner = _I>,
-        //     T: Fold<_I, _TI, Result = _U>,
-        //     U: HasInterner<Interner = _TI>,
-        // {
-        //     type Result = Binders<_U>;
-        // }
-
-        let mut impl_generics = input.generics.clone();
-        impl_generics.params.extend(vec![
-            GenericParam::Type(syn::parse(quote! { _I: Interner }.into()).unwrap()),
-            GenericParam::Type(syn::parse(quote! { _TI: TargetInterner<_I> }.into()).unwrap()),
-            GenericParam::Type(
-                syn::parse(quote! { _U: HasInterner<Interner = _TI> }.into()).unwrap(),
-            ),
-        ]);
-
-        let mut where_clause = where_clause_ref
-            .cloned()
-            .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
-        where_clause
-            .predicates
-            .push(syn::parse2(quote! { #param: HasInterner<Interner = _I> }).unwrap());
-        where_clause
-            .predicates
-            .push(syn::parse2(quote! { #param: Fold<_I, _TI, Result = _U> }).unwrap());
-
-        return TokenStream::from(quote! {
-            impl #impl_generics Fold < _I, _TI > for #type_name < #param >
-                #where_clause
-            {
-                type Result = #type_name < _U >;
-
-                fn fold_with<'i>(
-                    &self,
-                    folder: &mut dyn Folder < 'i, _I, _TI >,
-                    outer_binder: DebruijnIndex,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result>
-                where
-                    _I: 'i,
-                    _TI: 'i,
-                {
-                    #body
-                }
-            }
-        });
-    }
-
-    // Interner bound:
-    //
-    // Example:
-    //
-    // impl<I, _TI> Fold<I, _TI> for Foo<I>
-    // where
-    //     I: HasInterner,
-    //     _TI: HasInterner,
-    // {
-    //     type Result = Foo<_TI>;
-    // }
-
-    if let Some(i) = is_interner(&generic_param0) {
-        let mut impl_generics = input.generics.clone();
-        impl_generics.params.extend(vec![GenericParam::Type(
-            syn::parse(quote! { _TI: TargetInterner<#i> }.into()).unwrap(),
-        )]);
-
-        return TokenStream::from(quote! {
-            impl #impl_generics Fold < #i, _TI > for #type_name < #i >
-                #where_clause_ref
-            {
-                type Result = #type_name < _TI >;
-
-                fn fold_with<'i>(
-                    &self,
-                    folder: &mut dyn Folder < 'i, #i, _TI >,
-                    outer_binder: DebruijnIndex,
-                ) -> ::chalk_engine::fallible::Fallible<Self::Result>
-                where
-                    #i: 'i,
-                    _TI: 'i,
-                {
-                    #body
-                }
-            }
-        });
-    }
-
-    panic!("derive(Fold) requires a parameter that implements HasInterner or Interner");
-}
-
-/// Generates the body of the Fold impl
-fn derive_fold_body(type_name: &Ident, data: Data) -> proc_macro2::TokenStream {
-    match data {
-        Data::Struct(s) => {
-            let fields = s.fields.into_iter().map(|f| {
-                let name = f.ident.as_ref().expect("Unnamed field in Foldable struct");
-                quote! { #name: self.#name.fold_with(folder, outer_binder)? }
-            });
-            quote! {
-                Ok(#type_name {
-                    #(#fields),*
-                })
-            }
-        }
-        Data::Enum(e) => {
-            let matches = e.variants.into_iter().map(|v| {
-                let variant = v.ident;
-                match &v.fields {
-                    syn::Fields::Named(fields) => {
-                        let fnames: &Vec<_> = &fields.named.iter().map(|f| &f.ident).collect();
-                        let fnames1: &Vec<_> = fnames;
-                        quote! {
-                            #type_name :: #variant { #(#fnames),* } => {
-                                Ok(#type_name :: #variant {
-                                    #(#fnames: #fnames1),*
-                                })
-                            }
-                        }
-                    }
-
-                    syn::Fields::Unnamed(_fields) => {
-                        let names: Vec<_> = (0..v.fields.iter().count())
-                            .map(|index| format_ident!("a{}", index))
-                            .collect();
-                        quote! {
-                            #type_name::#variant( #(ref #names),* ) => {
-                                Ok(#type_name::#variant( #(#names.fold_with(folder, outer_binder)?),* ))
-                            }
-                        }
-                    }
-
-                    syn::Fields::Unit => {
-                        quote! {
-                            #type_name::#variant => {
-                                Ok(#type_name::#variant)
-                            }
-                        }
-                    }
-                }
-            });
-            quote! {
-                match *self {
-                    #(#matches)*
-                }
-            }
-        }
-        Data::Union(..) => panic!("Fold can not be derived for unions"),
-    }
-}
-
-#[proc_macro_derive(HasInterner, attributes(has_interner))]
-pub fn derive_has_interner(item: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(item as DeriveInput);
-    let (impl_generics, ty_generics, where_clause_ref) = input.generics.split_for_impl();
-
-    let type_name = input.ident;
-
-    if let Some(attr) = input.attrs.iter().find(|a| a.path.is_ident("has_interner")) {
-        // Hardcoded interner:
-        //
-        // impl HasInterner for Type {
-        //     type Result = XXX;
-        // }
-        let arg = attr
-            .parse_args::<proc_macro2::TokenStream>()
-            .expect("Expected has_interner argument");
-
-        return TokenStream::from(quote! {
-            impl #impl_generics HasInterner for #type_name #ty_generics #where_clause_ref {
-                type Interner = #arg;
-            }
-        });
-    }
-
-    match input.generics.params.len() {
-        1 => {}
-
-        0 => {
-            panic!("Interner derive requires a single type parameter or a `#[has_interner]` attr");
-        }
-
-        _ => {
-            panic!("Interner derive only works with a single type parameter");
-        }
-    };
-
-    let generic_param0 = &input.generics.params[0];
-
-    if let Some(param) = has_interner(&generic_param0) {
-        // HasInterner bound:
-        //
-        // Example:
-        //
-        // impl<T, _I> HasInterner for Binders<T>
-        // where
-        //     T: HasInterner<Interner = _I>,
-        //     _I: Interner,
-        // {
-        //     type Result = _I;
-        // }
-
-        let mut impl_generics = input.generics.clone();
-        impl_generics.params.extend(vec![GenericParam::Type(
-            syn::parse(quote! { _I: Interner }.into()).unwrap(),
-        )]);
-
-        let mut where_clause = where_clause_ref
-            .cloned()
-            .unwrap_or_else(|| syn::parse2(quote![where]).unwrap());
-        where_clause
-            .predicates
-            .push(syn::parse2(quote! { #param: HasInterner<Interner = _I> }).unwrap());
-
-        return TokenStream::from(quote! {
-            impl #impl_generics HasInterner for #type_name < #param >
-                #where_clause
-            {
-                type Interner = _I;
-            }
-        });
-    }
-
-    // Interner bound:
-    //
-    // Example:
-    //
-    // impl<I> HasInterner for Foo<I>
-    // where
-    //     I: Interner,
-    // {
-    //     type Interner = I;
-    // }
-
-    if let Some(i) = is_interner(&generic_param0) {
-        let impl_generics = &input.generics;
-
-        return TokenStream::from(quote! {
-            impl #impl_generics HasInterner for #type_name < #i >
-                #where_clause_ref
-            {
-                type Interner = #i;
-            }
-        });
-    }
-
-    panic!("derive(Interner) requires a parameter that implements HasInterner or Interner");
-}
+use synstructure::decl_derive;
 
 /// Checks whether a generic parameter has a `: HasInterner` bound
 fn has_interner(param: &GenericParam) -> Option<&Ident> {
@@ -317,6 +14,17 @@ fn has_interner(param: &GenericParam) -> Option<&Ident> {
 /// Checks whether a generic parameter has a `: Interner` bound
 fn is_interner(param: &GenericParam) -> Option<&Ident> {
     bounded_by_trait(param, "Interner")
+}
+
+fn has_interner_attr(input: &DeriveInput) -> Option<TokenStream> {
+    Some(
+        input
+            .attrs
+            .iter()
+            .find(|a| a.path.is_ident("has_interner"))?
+            .parse_args::<TokenStream>()
+            .expect("Expected has_interner argument"),
+    )
 }
 
 fn bounded_by_trait<'p>(param: &'p GenericParam, name: &str) -> Option<&'p Ident> {
@@ -338,4 +46,221 @@ fn bounded_by_trait<'p>(param: &'p GenericParam, name: &str) -> Option<&'p Ident
         }),
         _ => None,
     }
+}
+
+fn get_generic_param(input: &DeriveInput) -> &GenericParam {
+    match input.generics.params.len() {
+        1 => {}
+
+        0 => panic!(
+            "deriving this trait requires a single type parameter or a `#[has_interner]` attr"
+        ),
+
+        _ => panic!("deriving this trait only works with a single type parameter"),
+    };
+    &input.generics.params[0]
+}
+
+fn get_generic_param_name(input: &DeriveInput) -> Option<&Ident> {
+    match get_generic_param(input) {
+        GenericParam::Type(t) => Some(&t.ident),
+        _ => None,
+    }
+}
+
+fn find_interner(s: &mut synstructure::Structure) -> (TokenStream, DeriveKind) {
+    let input = s.ast();
+
+    if let Some(arg) = has_interner_attr(input) {
+        // Hardcoded interner:
+        //
+        // #[has_interner(ChalkIr)]
+        // struct S {
+        //
+        // }
+        return (arg, DeriveKind::FromHasInternerAttr);
+    }
+
+    let generic_param0 = get_generic_param(input);
+
+    if let Some(param) = has_interner(&generic_param0) {
+        // HasInterner bound:
+        //
+        // Example:
+        //
+        // struct Binders<T: HasInterner> { }
+        s.add_impl_generic(parse_quote! { _I });
+
+        s.add_where_predicate(parse_quote! { _I: ::chalk_ir::interner::Interner });
+        s.add_where_predicate(
+            parse_quote! { #param: ::chalk_ir::interner::HasInterner<Interner = _I> },
+        );
+
+        (quote! { _I }, DeriveKind::FromHasInterner)
+    } else if let Some(i) = is_interner(&generic_param0) {
+        // Interner bound:
+        //
+        // Example:
+        //
+        // struct Foo<I: Interner> { }
+        (quote! { #i }, DeriveKind::FromInterner)
+    } else {
+        panic!("deriving this trait requires a parameter that implements HasInterner or Interner",);
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+enum DeriveKind {
+    FromHasInternerAttr,
+    FromHasInterner,
+    FromInterner,
+}
+
+decl_derive!([HasInterner, attributes(has_interner)] => derive_has_interner);
+decl_derive!([Visit, attributes(has_interner)] => derive_visit);
+decl_derive!([SuperVisit, attributes(has_interner)] => derive_super_visit);
+decl_derive!([Fold, attributes(has_interner)] => derive_fold);
+
+fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
+    let (interner, _) = find_interner(&mut s);
+
+    s.add_bounds(synstructure::AddBounds::None);
+    s.bound_impl(
+        quote!(::chalk_ir::interner::HasInterner),
+        quote! {
+            type Interner = #interner;
+        },
+    )
+}
+
+/// Derives Visit for structs and enums for which one of the following is true:
+/// - It has a `#[has_interner(TheInterner)]` attribute
+/// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
+/// - There is a single parameter `I: Interner` (does not have to be named `I`)
+fn derive_visit(s: synstructure::Structure) -> TokenStream {
+    derive_any_visit(s, parse_quote! { Visit }, parse_quote! { visit_with })
+}
+
+/// Same as Visit, but derives SuperVisit instead
+fn derive_super_visit(s: synstructure::Structure) -> TokenStream {
+    derive_any_visit(
+        s,
+        parse_quote! { SuperVisit },
+        parse_quote! { super_visit_with },
+    )
+}
+
+fn derive_any_visit(
+    mut s: synstructure::Structure,
+    trait_name: Ident,
+    method_name: Ident,
+) -> TokenStream {
+    let input = s.ast();
+    let (interner, kind) = find_interner(&mut s);
+
+    let body = s.each(|bi| {
+        quote! {
+            result = result.combine(::chalk_ir::visit::Visit::visit_with(#bi, visitor, outer_binder));
+            if result.return_early() {
+                return result;
+            }
+        }
+    });
+
+    if kind == DeriveKind::FromHasInterner {
+        let param = get_generic_param_name(input).unwrap();
+        s.add_where_predicate(parse_quote! { #param: ::chalk_ir::visit::Visit<#interner> });
+    }
+
+    s.add_bounds(synstructure::AddBounds::None);
+    s.bound_impl(
+        quote!(::chalk_ir::visit:: #trait_name <#interner>),
+        quote! {
+            fn #method_name <'i, R: ::chalk_ir::visit::VisitResult>(
+                &self,
+                visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner, Result = R >,
+                outer_binder: ::chalk_ir::DebruijnIndex,
+            ) -> R
+            where
+                #interner: 'i
+            {
+                let mut result = R::new();
+                match *self {
+                    #body
+                }
+                return result;
+            }
+        },
+    )
+}
+
+/// Derives Fold for structs and enums for which one of the following is true:
+/// - It has a `#[has_interner(TheInterner)]` attribute
+/// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
+/// - There is a single parameter `I: Interner` (does not have to be named `I`)
+fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
+    let input = s.ast();
+
+    let (interner, kind) = find_interner(&mut s);
+
+    let body = s.each_variant(|vi| {
+        let bindings = vi.bindings();
+        vi.construct(|_, index| {
+            let bind = &bindings[index];
+            quote! {
+                ::chalk_ir::fold::Fold::fold_with(#bind, folder, outer_binder)?
+            }
+        })
+    });
+
+    let type_name = &input.ident;
+
+    let (target_interner, result) = match kind {
+        DeriveKind::FromHasInternerAttr => (interner.clone(), quote! { #type_name }),
+        DeriveKind::FromHasInterner => {
+            let param = get_generic_param_name(input).unwrap();
+
+            s.add_impl_generic(parse_quote! { _U })
+                .add_impl_generic(parse_quote! { _TI })
+                .add_where_predicate(
+                    parse_quote! { #param: ::chalk_ir::fold::Fold<#interner, _TI, Result = _U> },
+                )
+                .add_where_predicate(
+                    parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = _TI> },
+                )
+                .add_where_predicate(
+                    parse_quote! { _TI: ::chalk_ir::interner::TargetInterner<#interner> },
+                );
+
+            (quote! { _TI }, quote! { #type_name<_U> })
+        }
+        DeriveKind::FromInterner => {
+            s.add_impl_generic(parse_quote! { _TI })
+                .add_where_predicate(
+                    parse_quote! { _TI: ::chalk_ir::interner::TargetInterner<#interner> },
+                );
+
+            (quote! { _TI }, quote! { #type_name<_TI> })
+        }
+    };
+
+    s.add_bounds(synstructure::AddBounds::None);
+    s.bound_impl(
+        quote!(::chalk_ir::fold::Fold<#interner, #target_interner>),
+        quote! {
+            type Result = #result;
+
+            fn fold_with<'i>(
+                &self,
+                folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner, #target_interner >,
+                outer_binder: ::chalk_ir::DebruijnIndex,
+            ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+            where
+                #interner: 'i,
+                #target_interner: 'i,
+            {
+                Ok(match *self { #body })
+            }
+        },
+    )
 }

@@ -1,4 +1,4 @@
-use chalk_ir::interner::Interner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 
@@ -52,7 +52,7 @@ impl<I: Interner> InferenceTable<I> {
         canonical: &Canonical<T>,
     ) -> (Self, Substitution<I>, T)
     where
-        T: Fold<I, Result = T> + Clone,
+        T: HasInterner<Interner = I> + Fold<I, Result = T> + Clone,
     {
         let mut table = InferenceTable::new();
 
@@ -61,7 +61,7 @@ impl<I: Interner> InferenceTable<I> {
             table.new_universe();
         }
 
-        let subst = table.fresh_subst(interner, &canonical.binders);
+        let subst = table.fresh_subst(interner, canonical.binders.as_slice(interner));
         let value = subst.apply(&canonical.value, interner);
         // let value = canonical.value.fold_with(&mut &subst, 0).unwrap();
 
@@ -77,11 +77,6 @@ impl<I: Interner> InferenceTable<I> {
         self.max_universe = u;
         debug!("new_universe: {:?}", u);
         u
-    }
-
-    /// Current maximum universe -- one that can see all existing names.
-    pub(crate) fn max_universe(&self) -> UniverseIndex {
-        self.max_universe
     }
 
     /// Creates a new inference variable and returns its index. The
@@ -203,6 +198,36 @@ impl<I: Interner> InferenceTable<I> {
             InferenceValue::Unbound(ui) => ui,
             InferenceValue::Bound(_) => panic!("var_universe invoked on bound variable"),
         }
+    }
+
+    /// Check whether the given substitution is the identity substitution in this
+    /// inference context.
+    pub(crate) fn is_trivial_substitution(
+        &mut self,
+        interner: &I,
+        subst: &Substitution<I>,
+    ) -> bool {
+        for value in subst.as_parameters(interner) {
+            match value.data(interner) {
+                ParameterKind::Ty(ty) => {
+                    if let Some(var) = ty.inference_var(interner) {
+                        if self.var_is_bound(var) {
+                            return false;
+                        }
+                    }
+                }
+
+                ParameterKind::Lifetime(lifetime) => {
+                    if let Some(var) = lifetime.inference_var(interner) {
+                        if self.var_is_bound(var) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        true
     }
 }
 

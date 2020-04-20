@@ -4,19 +4,16 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-use chalk_derive::{Fold, HasInterner};
+use chalk_derive::{Fold, HasInterner, Visit};
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{shift::Shift, Fold, Folder};
-use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
+use chalk_ir::fold::shift::Shift;
+use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
     AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
-    Parameter, ParameterKind, QuantifiedWhereClause, StructId, Substitution, TraitId, TraitRef, Ty,
-    TyData, TypeName, WhereClause,
+    OpaqueTyId, Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId,
+    Substitution, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LangItem {}
 
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,7 +35,23 @@ impl<I: Interner> ImplDatum<I> {
     }
 
     pub fn trait_id(&self) -> TraitId<I> {
-        self.binders.value.trait_ref.trait_id
+        self.binders.skip_binders().trait_ref.trait_id
+    }
+
+    pub fn self_type_struct_id(&self, interner: &I) -> Option<StructId<I>> {
+        match self
+            .binders
+            .skip_binders()
+            .trait_ref
+            .self_type_parameter(interner)
+            .data(interner)
+        {
+            TyData::Apply(apply) => match apply.name {
+                TypeName::Struct(id) => Some(id),
+                _ => None,
+            },
+            _ => None,
+        }
     }
 }
 
@@ -59,7 +72,7 @@ pub struct DefaultImplDatum<I: Interner> {
     pub binders: Binders<DefaultImplDatumBound<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner)]
 pub struct DefaultImplDatumBound<I: Interner> {
     pub trait_ref: TraitRef<I>,
     pub accessible_tys: Vec<Ty<I>>,
@@ -78,7 +91,7 @@ impl<I: Interner> StructDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub struct StructDatumBound<I: Interner> {
     pub fields: Vec<Ty<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
@@ -134,11 +147,12 @@ pub struct TraitDatum<I: Interner> {
 
 /// A list of the traits that are "well known" to chalk, which means that
 /// the chalk-solve crate has special, hard-coded impls for them.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum WellKnownTrait {
     SizedTrait,
     CopyTrait,
     CloneTrait,
+    DropTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {
@@ -155,7 +169,7 @@ impl<I: Interner> TraitDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner)]
 pub struct TraitDatumBound<I: Interner> {
     /// Where clauses defined on the trait:
     ///
@@ -200,7 +214,7 @@ pub struct TraitFlags {
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub enum InlineBound<I: Interner> {
     TraitBound(TraitBound<I>),
     AliasEqBound(AliasEqBound<I>),
@@ -236,20 +250,15 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
 
     fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
         let self_ty = self_ty.shifted_in(interner);
-        self.value
-            .into_where_clauses(interner, self_ty)
+        self.map_ref(|b| b.into_where_clauses(interner, self_ty))
             .into_iter()
-            .map(|wc| Binders {
-                binders: self.binders.clone(),
-                value: wc,
-            })
             .collect()
     }
 }
 
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct TraitBound<I: Interner> {
     pub trait_id: TraitId<I>,
     pub args_no_self: Vec<Parameter<I>>,
@@ -274,7 +283,7 @@ impl<I: Interner> TraitBound<I> {
 
 /// Represents an alias equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct AliasEqBound<I: Interner> {
     pub trait_bound: TraitBound<I>,
     pub associated_ty_id: AssocTypeId<I>,
@@ -298,10 +307,10 @@ impl<I: Interner> AliasEqBound<I> {
         vec![
             WhereClause::Implemented(trait_ref),
             WhereClause::AliasEq(AliasEq {
-                alias: AliasTy {
+                alias: AliasTy::Projection(ProjectionTy {
                     associated_ty_id: self.associated_ty_id,
                     substitution,
-                },
+                }),
                 ty: self.value.clone(),
             }),
         ]
@@ -393,7 +402,7 @@ pub struct AssociatedTyDatum<I: Interner> {
 
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct AssociatedTyDatumBound<I: Interner> {
     /// Bounds on the associated type itself.
     ///
@@ -415,20 +424,22 @@ impl<I: Interner> AssociatedTyDatum<I> {
     /// these quantified where clauses are in the scope of the
     /// `binders` field.
     pub fn bounds_on_self(&self, interner: &I) -> Vec<QuantifiedWhereClause<I>> {
-        let Binders { binders, value } = &self.binders;
-
+        let (binders, assoc_ty_datum) = self.binders.as_ref().into();
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
         let substitution = Substitution::from(
             interner,
-            binders.iter().zip(0..).map(|p| p.to_parameter(interner)),
+            binders
+                .iter(interner)
+                .zip(0..)
+                .map(|p| p.to_parameter(interner)),
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = TyData::Alias(AliasTy {
+        let self_ty = TyData::Alias(AliasTy::Projection(ProjectionTy {
             associated_ty_id: self.id,
             substitution,
-        })
+        }))
         .intern(interner);
 
         // Now use that as the self type for the bounds, transforming
@@ -437,7 +448,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
         // ```
         // <P0 as Foo<P1..Pn>>::Item<Pn..Pm>: Debug
         // ```
-        value
+        assoc_ty_datum
             .bounds
             .iter()
             .flat_map(|b| b.into_where_clauses(interner, self_ty.clone()))
@@ -453,7 +464,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
 ///     type Item = XXX; // <-- represents this line!
 /// }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct AssociatedTyValue<I: Interner> {
     /// Impl in which this associated type value is found.  You might
     /// need to look at this to find the generic parameters defined on
@@ -492,10 +503,33 @@ pub struct AssociatedTyValue<I: Interner> {
     pub value: Binders<AssociatedTyValueBound<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct AssociatedTyValueBound<I: Interner> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<I>,
+}
+
+/// Represents the bounds for an `impl Trait` type.
+///
+/// ```ignore
+/// opaque type T: A + B = HiddenTy;
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold)]
+pub struct OpaqueTyDatum<I: Interner> {
+    /// The placeholder `!T` that corresponds to the opaque type `T`.
+    pub opaque_ty_id: OpaqueTyId<I>,
+
+    /// The type bound to when revealed.
+    pub bound: Binders<OpaqueTyDatumBound<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct OpaqueTyDatumBound<I: Interner> {
+    /// The value for the "hidden type" for `opaque type Foo = ...`
+    pub hidden_ty: Ty<I>,
+
+    /// Trait bounds for the opaque type.
+    pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

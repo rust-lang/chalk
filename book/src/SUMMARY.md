@@ -14,9 +14,21 @@
         - [Fold and the Folder trait](./types/operations/fold.md)
 - [Representing traits, impls, and other parts of Rust programs](./rust_ir.md)
 - [Lowering Rust IR to logic](./clauses.md)
-    - [Unification and type equality](./clauses/type_equality.md)
+    - [Goals and clauses](./clauses/goals_and_clauses.md)
+    - [Type equality and unification](./clauses/type_equality.md)
+    - [Implied bounds](./clauses/implied_bounds.md)
+    - [Lowering rules](./clauses/lowering_rules.md)
+    - [Well-formedness checking](./clauses/wf.md)
+- [Canonical queries](./canonical_queries.md)
+    - [Canonicalization](./canonical_queries/canonicalization.md)
 - [How does the engine work](./engine.md)
     - [Major concepts](./engine/major_concepts.md)
     - [Logic](./engine/logic.md)
         - [Coinduction](./engine/logic/coinduction.md)
-- [Glossary and terminology](./glossary.md)
+    - [SLG Solver](./engine/slg.md)
+
+---
+
+[Appendix A: Glossary and terminology](./glossary.md)
+[Appendix B: Bibliography](./bibliography.md)
+[Appendix C: Incomplete chapters](./todo.md)

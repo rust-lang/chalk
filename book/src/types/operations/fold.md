@@ -45,6 +45,8 @@ The overall flow of folding is like this.
    as [`Folder::fold_free_var_ty`], which makes it easier to write
    folders that just intercept *certain* types.
 
+[`Folder::fold_free_var_ty`]: https://rust-lang.github.io/chalk/chalk_ir/fold/trait.Folder.html#method.fold_free_var_ty
+
 Thus, as a user, you can customize folding by:
 
 * Defining your own `Folder` type
