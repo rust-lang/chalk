@@ -120,7 +120,7 @@ fn tuples_are_copy() {
             #[lang(copy)]
             trait Copy { }
 
-            trait Foo {}
+            struct S {}
 
             impl Copy for u8 {}
         }
@@ -183,7 +183,7 @@ fn tuples_are_clone() {
             #[lang(clone)]
             trait Clone { }
 
-            trait Foo {}
+            struct S {}
 
             impl Clone for u8 {}
         }
