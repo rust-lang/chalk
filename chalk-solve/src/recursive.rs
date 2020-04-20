@@ -362,6 +362,11 @@ impl<'me, I: Interner> Solver<'me, I> {
         for program_clause in clauses {
             debug_heading!("clause={:?}", program_clause);
 
+            // If we have a completely ambiguous answer, it's not going to get better, so stop
+            if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
+                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
+            }
+
             match program_clause.data(self.program.interner()) {
                 ProgramClauseData::Implies(implication) => {
                     let res = self.solve_via_implication(
@@ -515,6 +520,12 @@ fn combine_with_priorities<I: Interner>(
     match (prio_a, prio_b, a, b) {
         (ClausePriority::High, ClausePriority::Low, higher, lower)
         | (ClausePriority::Low, ClausePriority::High, lower, higher) => {
+            // if we have a high-priority solution and a low-priority solution,
+            // the high-priority solution overrides *if* they are both for the
+            // same inputs -- we don't want a more specific high-priority
+            // solution overriding a general low-priority one. Currently inputs
+            // only matter for projections; in a goal like `AliasEq(<?0 as
+            // Trait>::Type = ?1)`, ?0 is the input.
             let inputs_higher = calculate_inputs(interner, domain_goal, &higher);
             let inputs_lower = calculate_inputs(interner, domain_goal, &lower);
             if inputs_higher == inputs_lower {
