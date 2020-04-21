@@ -35,6 +35,13 @@ jobs:
       - name: Install mdbook
         run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.5/mdbook-v0.3.5-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
+      - name: Install mdbook-linkcheck
+        run: |
+          cd book
+          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.5.0/mdbook-linkcheck-v0.5.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          # Add the book directory to the $PATH
+          echo "::add-path::$GITHUB_WORKSPACE/book"
+
       - name: Execute tests for Chalk book
         run: cd book && ./mdbook test
 
