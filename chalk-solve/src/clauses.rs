@@ -416,13 +416,7 @@ fn match_ty<I: Interner>(
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
     Ok(match ty.data(interner) {
-        TyData::Apply(ApplicationTy {
-            name: TypeName::Scalar(_),
-            ..
-        }) => {
-            builder.push_fact(WellFormed::Ty(ty.clone()));
-        }
-        TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
+        TyData::Apply(application_ty) => match_type_name(builder, interner, application_ty),
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
         }
@@ -448,8 +442,12 @@ fn match_ty<I: Interner>(
     })
 }
 
-fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
-    match name {
+fn match_type_name<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    interner: &I,
+    application: &ApplicationTy<I>,
+) {
+    match application.name {
         TypeName::Struct(struct_id) => match_struct(builder, struct_id),
         TypeName::OpaqueType(opaque_ty_id) => builder
             .db
@@ -460,7 +458,9 @@ fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeNa
             .db
             .associated_ty_data(type_id)
             .to_program_clauses(builder),
-        TypeName::Scalar(_) => (),
+        TypeName::Scalar(_) => {
+            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
+        }
         TypeName::Tuple(_) => (),
     }
 }
