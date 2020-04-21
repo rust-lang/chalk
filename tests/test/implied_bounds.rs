@@ -8,12 +8,12 @@ fn implied_bounds() {
         program {
             trait Clone { }
             trait Iterator where Self: Clone { type Item; }
-            struct u32 { }
+            struct Struct { }
         }
 
         goal {
             forall<T> {
-                if (T: Iterator<Item = u32>) {
+                if (T: Iterator<Item = Struct>) {
                     T: Clone
                 }
             }
@@ -29,7 +29,7 @@ fn gat_implied_bounds() {
         program {
             trait Clone { }
             trait Foo { type Item<T>: Clone; }
-            struct u32 { }
+            struct Struct { }
         }
 
         goal {
@@ -47,7 +47,7 @@ fn gat_implied_bounds() {
         program {
             trait Clone { }
             trait Foo { type Item<T>; }
-            struct u32 { }
+            struct Struct { }
         }
 
         goal {

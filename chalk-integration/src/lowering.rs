@@ -1188,6 +1188,20 @@ impl LowerTy for Ty {
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
+            Ty::Tuple { ref types } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Tuple(types.len()),
+                substitution: chalk_ir::Substitution::from_fallible(
+                    interner,
+                    types.iter().map(|t| Ok(t.lower(env)?)),
+                )?,
+            })
+            .intern(interner)),
+
+            Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(ty)),
+                substitution: chalk_ir::Substitution::empty(interner),
+            })
+            .intern(interner)),
         }
     }
 }
@@ -1540,5 +1554,32 @@ impl Kinded for chalk_ir::Parameter<ChalkIr> {
     fn kind(&self) -> Kind {
         let interner = &ChalkIr;
         self.data(interner).kind()
+    }
+}
+
+fn ast_scalar_to_chalk_scalar(scalar: ScalarType) -> chalk_ir::Scalar {
+    match scalar {
+        ScalarType::Int(int) => chalk_ir::Scalar::Int(match int {
+            IntTy::I8 => chalk_ir::IntTy::I8,
+            IntTy::I16 => chalk_ir::IntTy::I16,
+            IntTy::I32 => chalk_ir::IntTy::I32,
+            IntTy::I64 => chalk_ir::IntTy::I64,
+            IntTy::I128 => chalk_ir::IntTy::I128,
+            IntTy::Isize => chalk_ir::IntTy::Isize,
+        }),
+        ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(match uint {
+            UintTy::U8 => chalk_ir::UintTy::U8,
+            UintTy::U16 => chalk_ir::UintTy::U16,
+            UintTy::U32 => chalk_ir::UintTy::U32,
+            UintTy::U64 => chalk_ir::UintTy::U64,
+            UintTy::U128 => chalk_ir::UintTy::U128,
+            UintTy::Usize => chalk_ir::UintTy::Usize,
+        }),
+        ScalarType::Float(float) => chalk_ir::Scalar::Float(match float {
+            FloatTy::F32 => chalk_ir::FloatTy::F32,
+            FloatTy::F64 => chalk_ir::FloatTy::F64,
+        }),
+        ScalarType::Bool => chalk_ir::Scalar::Bool,
+        ScalarType::Char => chalk_ir::Scalar::Char,
     }
 }

@@ -193,6 +193,7 @@ pub Ty: Ty = {
 };
 
 TyWithoutFor: Ty = {
+    <ScalarType> => Ty::Scalar { ty: <> },
     <n:Id> => Ty::Id { name: n},
     "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: vec![],
@@ -203,7 +204,37 @@ TyWithoutFor: Ty = {
     },
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
-    "(" <Ty> ")",
+    "(" <t:TupleOrParensInner> ")" => t,
+};
+
+ScalarType: ScalarType = {
+   "u8" => ScalarType::Uint(UintTy::U8),
+   "u16" => ScalarType::Uint(UintTy::U16),
+   "u32" => ScalarType::Uint(UintTy::U32),
+   "u64" => ScalarType::Uint(UintTy::U64),
+   "u128" => ScalarType::Uint(UintTy::U128),
+   "usize" => ScalarType::Uint(UintTy::Usize),
+   "i8" => ScalarType::Int(IntTy::I8),
+   "i16" => ScalarType::Int(IntTy::I16),
+   "i32" => ScalarType::Int(IntTy::I32),
+   "i64" => ScalarType::Int(IntTy::I64),
+   "i128" => ScalarType::Int(IntTy::I128),
+   "isize" => ScalarType::Int(IntTy::Isize),
+   "f32" => ScalarType::Float(FloatTy::F32),
+   "f64" => ScalarType::Float(FloatTy::F64),
+   "bool" => ScalarType::Bool,
+   "char" => ScalarType::Char,
+};
+
+TupleOrParensInner: Ty = {
+    <Ty>,
+    <first:Ty> "," <rest:Comma<Ty>> => {
+        let mut types = Vec::with_capacity(rest.len() + 1);
+        types.push(Box::new(first));
+        types.extend(rest.into_iter().map(Box::new));
+        Ty::Tuple { types }
+    },
+    () => Ty::Tuple { types: vec![] },
 };
 
 Lifetime: Lifetime = {

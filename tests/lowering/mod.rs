@@ -74,8 +74,6 @@ fn negative_impl() {
                 type Item;
             }
 
-            struct i32 { }
-
             impl !Foo for i32 {
                 type Item = i32;
             }
@@ -92,8 +90,6 @@ fn negative_impl() {
             trait Iterator {
                 type Item;
             }
-
-            struct i32 { }
 
             impl<T> !Foo for T where T: Iterator<Item = i32> { }
         }
@@ -229,9 +225,9 @@ fn check_parameter_kinds() {
     lowering_error! {
         program {
             struct Foo<'a> { }
-            struct i32 { }
+            struct Myi32 { }
             trait Bar { }
-            impl Bar for Foo<i32> { }
+            impl Bar for Foo<Myi32> { }
         }
         error_msg {
             "incorrect parameter kind for `Foo`: expected lifetime, found type"
@@ -422,6 +418,60 @@ fn fundamental_multiple_type_parameters() {
 
         error_msg {
             "only a single parameter supported for fundamental type `Boxes`"
+        }
+    }
+}
+
+#[test]
+fn tuples() {
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            // `()` is an empty tuple
+            impl Foo for () { }
+            // `(i32,)` is a tuple
+            impl Foo for (i32,) { }
+            // `(i32)` is `i32` is a scalar
+            impl Foo for (i32) { }
+            impl Foo for (i32, u32) { }
+            impl Foo for (i32, u32, f32) { }
+        }
+    }
+}
+
+#[test]
+fn scalars() {
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            impl Foo for i8 { }
+            impl Foo for i16 { }
+            impl Foo for i32 { }
+            impl Foo for i64 { }
+            impl Foo for i128 { }
+            impl Foo for isize { }
+            impl Foo for u8 { }
+            impl Foo for u16 { }
+            impl Foo for u32 { }
+            impl Foo for u64 { }
+            impl Foo for u128 { }
+            impl Foo for usize { }
+            impl Foo for f32 { }
+            impl Foo for f64 { }
+            impl Foo for bool { }
+            impl Foo for char { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct i32 { }
+        }
+
+        error_msg {
+            "parse error: UnrecognizedToken { token: (8, Token(49, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
 }

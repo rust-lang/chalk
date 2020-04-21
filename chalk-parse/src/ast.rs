@@ -187,6 +187,47 @@ pub enum Ty {
         lifetime_names: Vec<Identifier>,
         ty: Box<Ty>,
     },
+    Tuple {
+        types: Vec<Box<Ty>>,
+    },
+    Scalar {
+        ty: ScalarType,
+    },
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum IntTy {
+    Isize,
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum UintTy {
+    Usize,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum FloatTy {
+    F32,
+    F64,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum ScalarType {
+    Bool,
+    Char,
+    Int(IntTy),
+    Uint(UintTy),
+    Float(FloatTy),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

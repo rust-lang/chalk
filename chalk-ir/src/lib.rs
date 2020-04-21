@@ -106,6 +106,41 @@ impl<G: HasInterner> HasInterner for InEnvironment<G> {
     type Interner = G::Interner;
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum IntTy {
+    Isize,
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum UintTy {
+    Usize,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FloatTy {
+    F32,
+    F64,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Scalar {
+    Bool,
+    Char,
+    Int(IntTy),
+    Uint(UintTy),
+    Float(FloatTy),
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, Visit)]
 pub enum TypeName<I: Interner> {
     /// a type like `Vec<T>`
@@ -113,6 +148,12 @@ pub enum TypeName<I: Interner> {
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(AssocTypeId<I>),
+
+    /// a scalar type like `bool` or `u32`
+    Scalar(Scalar),
+
+    /// a tuple of the given arity
+    Tuple(usize),
 
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>),
