@@ -8,6 +8,8 @@ use chalk_ir::interner::ChalkIr;
 use chalk_solve::ext::*;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
+use std::env;
+use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::FmtSubscriber;
 
 #[cfg(feature = "bench")]
@@ -215,8 +217,23 @@ macro_rules! test {
     };
 }
 
+fn log_level() -> LevelFilter {
+    env::var("CHALK_DEBUG")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .and_then(|level| match level {
+            0 => None,
+            1 => Some(LevelFilter::INFO),
+            2 => Some(LevelFilter::DEBUG),
+            _ => Some(LevelFilter::TRACE),
+        })
+        .unwrap_or(LevelFilter::OFF)
+}
+
 fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
-    let subscriber = FmtSubscriber::default();
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(log_level())
+        .finish();
     tracing::subscriber::with_default(subscriber, || {
         println!("program {}", program_text);
         assert!(program_text.starts_with("{"));
