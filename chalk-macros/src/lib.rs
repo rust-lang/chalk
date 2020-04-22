@@ -6,7 +6,8 @@ extern crate lazy_static;
 #[macro_use]
 mod index;
 
-pub use tracing::{debug, info};
+#[doc(hidden)]
+pub use tracing::{info as __info, debug as __debug};
 
 lazy_static! {
     pub static ref DEBUG_ENABLED: bool = {
@@ -36,14 +37,14 @@ thread_local! {
 // away.
 const OVERFLOW_DEPTH: usize = 100;
 
-// #[macro_export]
-// macro_rules! debug {
-//     ($($t:tt)*) => {
-//         if *$crate::DEBUG_ENABLED {
-//             $crate::dump(&format!($($t)*), "");
-//         }
-//     }
-// }
+#[macro_export]
+macro_rules! debug {
+    ($($t:tt)*) => {
+        if *$crate::DEBUG_ENABLED {
+            $crate::__debug!($($t)*)
+        }
+    }
+}
 
 #[macro_export]
 macro_rules! debug_heading {
@@ -58,14 +59,14 @@ macro_rules! debug_heading {
     }
 }
 
-// #[macro_export]
-// macro_rules! info {
-//     ($($t:tt)*) => {
-//         if *$crate::INFO_ENABLED {
-//             $crate::dump(&format!($($t)*), "");
-//         }
-//     }
-// }
+#[macro_export]
+macro_rules! info {
+    ($($t:tt)*) => {
+        if *$crate::INFO_ENABLED {
+            $crate::__info!($($t)*)
+        }
+    }
+}
 
 #[macro_export]
 macro_rules! info_heading {
