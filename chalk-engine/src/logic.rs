@@ -215,8 +215,8 @@ impl<C: Context> Forest<C> {
         }
 
         let _ = info_span!(
-            "create new table and goal", 
-            table_index = ?self.tables.next_index(), 
+            "create new table and goal",
+            table_index = ?self.tables.next_index(),
             ?goal
         );
 

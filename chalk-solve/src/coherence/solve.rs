@@ -197,11 +197,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let less_special = &self.db.impl_datum(less_special_id);
         let interner = self.db.interner();
 
-        let _ = debug_span!(
-            "specializes",
-            ?less_special,
-            ?more_special
-        );
+        let _ = debug_span!("specializes", ?less_special, ?more_special);
 
         let gb = &mut GoalBuilder::new(self.db);
 
