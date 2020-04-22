@@ -192,11 +192,16 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     //  }
     // }
     // ```
-    #[instrument(level = "debug", skip(self))]
     fn specializes(&self, less_special_id: ImplId<I>, more_special_id: ImplId<I>) -> bool {
         let more_special = &self.db.impl_datum(more_special_id);
         let less_special = &self.db.impl_datum(less_special_id);
         let interner = self.db.interner();
+
+        let _ = debug_span!(
+            "specializes",
+            ?less_special,
+            ?more_special
+        );
 
         let gb = &mut GoalBuilder::new(self.db);
 

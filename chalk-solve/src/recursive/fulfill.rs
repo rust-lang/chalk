@@ -319,7 +319,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     }
 
     fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome> {
-        debug_heading!("fulfill(obligations={:#?})", self.obligations);
+        let _ = debug_span!("fulfill", ?self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
         // iteration. We try to solve each obligation in turn. Anything which is
@@ -331,7 +331,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
 
         while progress {
             progress = false;
-            debug_heading!("start of round, {} obligations", self.obligations.len());
+            let _ = debug_span!("start of round", obligation_count = %self.obligations.len());
 
             // Take the list of `obligations` to solve this round and replace it
             // with an empty vector. Iterate through each obligation to solve

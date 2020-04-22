@@ -113,13 +113,12 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// The new binders are always pushed onto the end of the internal
     /// list of binders; this means that any extant values where were
     /// created referencing the *old* list of binders are still valid.
+    #[instrument(level = "debug", skip(self, op))]
     pub fn push_binders<V>(&mut self, binders: &Binders<V>, op: impl FnOnce(&mut Self, V::Result))
     where
         V: Fold<I> + HasInterner<Interner = I>,
         V::Result: std::fmt::Debug,
     {
-        debug_heading!("push_binders({:?})", binders);
-
         let old_len = self.binders.len();
         let interner = self.interner();
         self.binders.extend(binders.binders.iter(interner).cloned());

@@ -111,13 +111,12 @@ impl<'me, I: Interner> Solver<'me, I> {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
+    #[instrument(level = "debug", skip(self, minimums))]
     fn solve_goal(
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
-        info_heading!("solve_goal({:?})", goal);
-
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
             debug!("solve_reduced_goal: cache hit, value={:?}", value);
@@ -196,19 +195,13 @@ impl<'me, I: Interner> Solver<'me, I> {
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn solve_new_subgoal(
         &mut self,
         canonical_goal: UCanonicalGoal<I>,
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
-        debug_heading!(
-            "solve_new_subgoal(canonical_goal={:?}, depth={:?}, dfn={:?})",
-            canonical_goal,
-            depth,
-            dfn,
-        );
-
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
         // during the solving process, we cache `answer` and try to solve the goal again. We repeat
@@ -251,7 +244,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
 
                     let (prog_solution, prog_prio) = {
-                        debug_heading!("prog_clauses");
+                        let _ = debug_span!("prog_clauses");
 
                         let prog_clauses = self.program_clauses_for_goal(environment, &goal);
                         match prog_clauses {
@@ -333,12 +326,12 @@ impl<'me, I: Interner> Solver<'me, I> {
         }
     }
 
+    #[instrument(level = "debug", skip(self, minimums))]
     fn solve_via_simplification(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
-        debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
         if let Err(e) = fulfill.push_goal(&goal.environment, goal.goal) {
             return (Err(e), ClausePriority::High);
@@ -349,6 +342,7 @@ impl<'me, I: Interner> Solver<'me, I> {
     /// See whether we can solve a goal by implication on any of the given
     /// clauses. If multiple such solutions are possible, we attempt to combine
     /// them.
+    #[instrument(level = "debug", skip(self, clauses, minimums))]
     fn solve_from_clauses<C>(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
@@ -360,7 +354,7 @@ impl<'me, I: Interner> Solver<'me, I> {
     {
         let mut cur_solution = None;
         for program_clause in clauses {
-            debug_heading!("clause={:?}", program_clause);
+            let _ = debug_span!("clause", ?program_clause);
 
             // If we have a completely ambiguous answer, it's not going to get better, so stop
             if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
@@ -419,19 +413,13 @@ impl<'me, I: Interner> Solver<'me, I> {
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.
+    #[instrument(skip(self, minimums))]
     fn solve_via_implication(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: &Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
-        info_heading!(
-            "solve_via_implication(\
-             \n    canonical_goal={:?},\
-             \n    clause={:?})",
-            canonical_goal,
-            clause
-        );
         let interner = self.program.interner();
         let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
         let ProgramClauseImplication {

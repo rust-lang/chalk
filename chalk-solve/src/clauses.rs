@@ -136,6 +136,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
 /// `goal`. This can be any superset of the correct set, but the
 /// more precise you can make it, the more efficient solving will
 /// be.
+#[instrument(level = "debug", skip(db, environment, clauses))]
 fn program_clauses_that_could_match<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     environment: &Environment<I>,
@@ -144,8 +145,6 @@ fn program_clauses_that_could_match<I: Interner>(
 ) -> Result<(), Floundered> {
     let interner = db.interner();
     let builder = &mut ClauseBuilder::new(db, clauses);
-
-    debug_heading!("program_clauses_that_could_match(goal={:?})", goal);
 
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
