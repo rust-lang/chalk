@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 #[macro_use]
-extern crate chalk_macros;
+extern crate tracing;
 
 pub mod clauses;
 pub mod coherence;

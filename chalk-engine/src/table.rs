@@ -117,10 +117,10 @@ impl<C: Context> Table<C> {
     /// tests trigger this case, and assumptions upstream assume that when
     /// `true` is returned here, that a *new* answer was added (instead of an)
     /// existing answer replaced.
+    #[instrument(level = "debug", skip(self))]
     pub(super) fn push_answer(&mut self, answer: Answer<C>) -> Option<AnswerIndex> {
         assert!(!self.floundered);
 
-        debug_heading!("push_answer(answer={:?})", answer);
         debug!(
             "pre-existing entry: {:?}",
             self.answers_hash.get(&answer.subst)

@@ -55,6 +55,8 @@
 
 #[macro_use]
 extern crate chalk_macros;
+#[macro_use]
+extern crate tracing;
 
 use crate::context::Context;
 use std::cmp::min;

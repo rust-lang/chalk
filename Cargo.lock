@@ -196,6 +196,7 @@ version = "0.9.0"
 dependencies = [
  "chalk-macros 0.1.1",
  "rustc-hash 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -204,12 +205,12 @@ version = "0.1.0"
 dependencies = [
  "chalk-engine 0.9.0",
  "chalk-ir 0.1.0",
- "chalk-macros 0.1.1",
  "chalk-parse 0.1.0",
  "chalk-rust-ir 0.1.0",
  "chalk-solve 0.1.0",
  "lalrpop-intern 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -226,7 +227,6 @@ dependencies = [
 name = "chalk-macros"
 version = "0.1.1"
 dependencies = [
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -257,12 +257,12 @@ dependencies = [
  "chalk-derive 0.1.0",
  "chalk-engine 0.9.0",
  "chalk-ir 0.1.0",
- "chalk-macros 0.1.1",
  "chalk-rust-ir 0.1.0",
  "ena 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hash 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tracing 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

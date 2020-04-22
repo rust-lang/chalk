@@ -9,6 +9,7 @@ use chalk_ir::zip::{Zip, Zipper};
 use std::fmt::Debug;
 
 impl<I: Interner> InferenceTable<I> {
+    #[instrument(level = "debug", skip(self, interner, environment))]
     pub(crate) fn unify<T>(
         &mut self,
         interner: &I,
@@ -19,12 +20,6 @@ impl<I: Interner> InferenceTable<I> {
     where
         T: ?Sized + Zip<I>,
     {
-        debug_heading!(
-            "unify(a={:?}\
-             ,\n      b={:?})",
-            a,
-            b
-        );
         let snapshot = self.snapshot();
         match Unifier::new(interner, self, environment).unify(a, b) {
             Ok(r) => {
@@ -83,20 +78,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
         })
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty<I>, b: &'a Ty<I>) -> Fallible<()> {
-        //         ^^                 ^^         ^^ FIXME rustc bug
+        //         ^^                 ^^            ^^ FIXME rustc bug
         if let Some(n_a) = self.table.normalize_shallow(self.interner, a) {
             return self.unify_ty_ty(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_shallow(self.interner, b) {
             return self.unify_ty_ty(a, &n_b);
         }
-
-        debug_heading!(
-            "unify_ty_ty(a={:?}\
-             ,\n            b={:?})",
-            a,
-            b
-        );
 
         match (a.data(), b.data()) {
             // Unifying two inference variables: unify them in the underlying
@@ -267,14 +256,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         if let Some(n_a) = self.table.normalize_lifetime(a) {
             return self.unify_lifetime_lifetime(&n_a, b);
         } else if let Some(n_b) = self.table.normalize_lifetime(b) {
             return self.unify_lifetime_lifetime(a, &n_b);
         }
-
-        debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
         match (a.data(), b.data()) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {

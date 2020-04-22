@@ -8,6 +8,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt::Debug;
 
+#[instrument(level = "debug", skip(interner, infer))]
 pub(crate) fn truncate<T, I>(
     interner: &I,
     infer: &mut InferenceTable<I>,
@@ -19,8 +20,6 @@ where
     T: Fold<I>,
     T::Result: Debug,
 {
-    debug_heading!("truncate(max_size={}, value={:?})", max_size, value);
-
     let mut truncater = Truncater::new(interner, infer, max_size);
     let value = value
         .fold_with(&mut truncater, 0)

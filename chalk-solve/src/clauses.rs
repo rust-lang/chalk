@@ -43,17 +43,12 @@ pub mod program_clauses;
 ///         Implemented(Box<Option<MyList<T>>>: Send).
 /// }
 /// ```
+#[instrument(level = "debug", skip(builder))]
 pub fn push_auto_trait_impls<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
     struct_id: StructId<I>,
 ) {
-    debug_heading!(
-        "push_auto_trait_impls({:?}, {:?})",
-        auto_trait_id,
-        struct_id
-    );
-
     let struct_datum = &builder.db.struct_datum(struct_id);
 
     // Must be an auto trait.
@@ -106,17 +101,12 @@ pub fn push_auto_trait_impls<I: Interner>(
 /// to this goal from the Rust program. So for example if the goal
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
+#[instrument(level = "debug", skip(db))]
 pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
 ) -> Vec<ProgramClause<I>> {
-    debug_heading!(
-        "program_clauses_for_goal(goal={:?}, environment={:?})",
-        goal,
-        environment
-    );
-
     let mut vec = vec![];
     vec.extend(db.custom_clauses());
     program_clauses_that_could_match(db, environment, goal, &mut vec);
@@ -293,19 +283,12 @@ fn program_clauses_that_could_match<I: Interner>(
 ///     type Item = Bar; // <-- associated type value
 /// }
 /// ```
+#[instrument(level = "debug", skip(builder))]
 fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
     trait_parameters: &[Parameter<I>],
 ) {
-    debug_heading!(
-        "push_program_clauses_for_associated_type_values_in_impls_of(\
-         trait_id={:?}, \
-         trait_parameters={:?})",
-        trait_id,
-        trait_parameters,
-    );
-
     for impl_id in builder.db.impls_for_trait(trait_id, trait_parameters) {
         let impl_datum = builder.db.impl_datum(impl_id);
         if !impl_datum.is_positive() {

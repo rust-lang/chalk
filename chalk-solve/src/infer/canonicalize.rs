@@ -126,8 +126,8 @@ where
         true
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn fold_inference_ty(&mut self, var: InferenceVar, binders: usize) -> Fallible<Ty<I>> {
-        debug_heading!("fold_inference_ty(depth={:?}, binders={:?})", var, binders);
         let var = EnaVariable::from(var);
         match self.table.probe_ty_var(var) {
             Some(ty) => {
@@ -147,16 +147,12 @@ where
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         binders: usize,
     ) -> Fallible<Lifetime<I>> {
-        debug_heading!(
-            "fold_inference_lifetime(depth={:?}, binders={:?})",
-            var,
-            binders
-        );
         let var = EnaVariable::from(var);
         match self.table.probe_lifetime_var(var) {
             Some(l) => {

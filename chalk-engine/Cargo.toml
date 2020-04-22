@@ -14,6 +14,7 @@ default = []
 
 [dependencies]
 rustc-hash = { version = "1.0.0" }
+tracing = "0.1"
 
 [dependencies.chalk-macros]
 version = "0.1.0"

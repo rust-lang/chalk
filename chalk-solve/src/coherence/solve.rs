@@ -80,9 +80,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     //  Generates:
     //      not { compatible { exists<T, U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } }
     //
+    #[instrument(level = "debug", skip(self))]
     fn disjoint(&self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
-        debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
-
         let interner = self.db.interner();
         let lhs_len = lhs.binders.len();
 
@@ -157,13 +156,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     //    }
     //  }
     // }
+    #[instrument(level = "debug", skip(self))]
     fn specializes(&self, less_special: &ImplDatum<I>, more_special: &ImplDatum<I>) -> bool {
-        debug_heading!(
-            "specializes(less_special={:#?}, more_special={:#?})",
-            less_special,
-            more_special
-        );
-
         let interner = self.db.interner();
 
         // Negative impls cannot specialize.
