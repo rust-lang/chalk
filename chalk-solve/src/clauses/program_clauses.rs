@@ -229,9 +229,8 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
+    #[instrument(level = "debug", skip(builder))]
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
-        debug_heading!("StructDatum::to_program_clauses(self={:?})", self);
-
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {

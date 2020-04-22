@@ -171,14 +171,13 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
+    #[instrument(level = "debug", skip(self, context, infer))]
     fn get_or_create_table_for_subgoal(
         &mut self,
         context: &impl ContextOps<C>,
         infer: &mut dyn InferenceTable<C>,
         subgoal: &Literal<C>,
     ) -> Option<(TableIndex, C::UniverseMap)> {
-        debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
-
         // Subgoal abstraction:
         let (ucanonical_subgoal, universe_map) = match subgoal {
             Literal::Positive(subgoal) => {
@@ -204,23 +203,23 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, creating a new table corresponds
     /// to the *New Subgoal* step as well as the *Program Clause
     /// Resolution* steps.
+    #[instrument(level = "debug", skip(self))]
     pub(crate) fn get_or_create_table_for_ucanonical_goal(
         &mut self,
         context: &impl ContextOps<C>,
         goal: C::UCanonicalGoalInEnvironment,
     ) -> TableIndex {
-        debug_heading!("get_or_create_table_for_ucanonical_goal({:?})", goal);
-
         if let Some(table) = self.tables.index_of(&goal) {
             debug!("found existing table {:?}", table);
             return table;
         }
 
-        info_heading!(
-            "creating new table {:?} and goal {:#?}",
-            self.tables.next_index(),
-            goal
+        let _ = info_span!(
+            "create new table and goal", 
+            table_index = ?self.tables.next_index(), 
+            ?goal
         );
+
         let coinductive_goal = context.is_coinductive(&goal);
         let table = self.tables.insert(goal, coinductive_goal);
         self.push_initial_strands(context, table);
@@ -423,16 +422,12 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
     /// This function first attempts to fetch answer that is cached in
     /// the table. If none is found, then it will recursively search
     /// to find an answer.
+    #[instrument(level = "debug", skip(self))]
     fn ensure_root_answer(
         &mut self,
         initial_table: TableIndex,
         initial_answer: AnswerIndex,
     ) -> RootSearchResult<()> {
-        info_heading!(
-            "ensure_answer(table={:?}, answer={:?})",
-            initial_table,
-            initial_answer
-        );
         let goal = &self.forest.tables[initial_table].table_goal;
         info!(?goal, "table goal");
         // Check if this table has floundered.
@@ -1424,8 +1419,8 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         }
     }
 
+    #[instrument(skip(self))]
     fn reconsider_floundered_subgoals(&mut self, ex_clause: &mut ExClause<impl Context>) {
-        info!(?ex_clause, "reconsider_floundered_subgoals(ex_clause=)");
         let ExClause {
             answer_time,
             subgoals,
@@ -1443,12 +1438,8 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
     /// Removes the subgoal at `subgoal_index` from the strand's
     /// subgoal list and adds it to the strand's floundered subgoal
     /// list.
+    #[instrument(level = "debug", skip(self))]
     fn flounder_subgoal(&self, ex_clause: &mut ExClause<impl Context>, subgoal_index: usize) {
-        info_heading!(
-            "flounder_subgoal(answer_time={:?}, subgoal={:?})",
-            ex_clause.answer_time,
-            ex_clause.subgoals[subgoal_index],
-        );
         let floundered_time = ex_clause.answer_time;
         let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
         ex_clause.floundered_subgoals.push(FlounderedSubgoal {
