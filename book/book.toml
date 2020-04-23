@@ -3,3 +3,8 @@ authors = []
 language = "en"
 multilingual = false
 src = "src"
+
+[output.html]
+
+[output.linkcheck]
+follow-web-links = true
