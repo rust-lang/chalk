@@ -4,7 +4,16 @@ language = "en"
 multilingual = false
 src = "src"
 
+[preprocessor.mermaid]
+command = "mdbook-mermaid"
+renderer = ["html"]
+
 [output.html]
+additional-css = ["mermaid.css"]
+additional-js = ["mermaid.min.js", "mermaid-init.js"]
 
 [output.linkcheck]
 follow-web-links = true
+
+[preprocessor.toc]
+command = "mdbook-toc"

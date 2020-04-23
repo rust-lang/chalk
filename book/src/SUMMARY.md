@@ -1,6 +1,7 @@
 # Summary
 
 - [What is Chalk?](./what_is_chalk.md)
+    - [Walkthrough](./what_is_chalk/walkthrough.md)
     - [Crates](./what_is_chalk/crates.md)
     - [REPL](./what_is_chalk/repl.md)
 - [Contribution guide](./contribution_guide.md)

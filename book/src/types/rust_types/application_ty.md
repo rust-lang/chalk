@@ -12,7 +12,7 @@ same.
 An [`ApplicationTy`] contains two fields:
 
 * a "type name" (of type [`TypeName`]); and,
-* a list of generic arguments (of type [`GenericArguments`]).
+* a list of generic arguments (of type [`Substitution`]).
 
 The [`TypeName`] itself is largely opaque to chalk. We discuss it in
 more detail elsewhere. The point is that it represents, semantically,
@@ -23,4 +23,4 @@ these built-in types is defined by the `Interner` and is unknown to
 chalk-ir.
 
 [`TypeName`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TypeName.html
-[`GenericArguments`]: XXX
+[`Substitution`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Substitution.html
