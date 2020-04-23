@@ -33,7 +33,13 @@ jobs:
         run: cargo test --all
 
       - name: Install mdbook
-        run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.5/mdbook-v0.3.5-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
+
+      - name: Install mdbook-toc
+        run: cd book && curl -L https://github.com/badboy/mdbook-toc/releases/download/0.2.4/mdbook-toc-0.2.4-x86_64-unknown-linux-gnu.tar.gz | tar xz
+
+      - name: Install mdbook-mermaid
+        run: cd book && curl -L https://github.com/badboy/mdbook-mermaid/releases/download/0.2.2/mdbook-mermaid-0.2.2-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
       - name: Install mdbook-linkcheck
         run: |
