@@ -13,11 +13,11 @@ use chalk_ir::{
     Binders, BoundVar, DebruijnIndex, Lifetime, LifetimeData, ParameterKind, ParameterKinds, Ty,
     TyData,
 };
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 pub struct Generalize<'i, I: Interner> {
     binders: Vec<ParameterKind<()>>,
-    mapping: HashMap<BoundVar, usize>,
+    mapping: FxHashMap<BoundVar, usize>,
     interner: &'i I,
 }
 
@@ -29,7 +29,7 @@ impl<I: Interner> Generalize<'_, I> {
     {
         let mut generalize = Generalize {
             binders: Vec::new(),
-            mapping: HashMap::new(),
+            mapping: FxHashMap::default(),
             interner,
         };
         let value = value

@@ -461,7 +461,9 @@ fn match_type_name<I: Interner>(
         TypeName::Scalar(_) => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
-        TypeName::Tuple(_) => (),
+        TypeName::Tuple(_) => {
+            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
+        }
     }
 }
 

@@ -11,7 +11,7 @@ use infer::{
     InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
 };
 use interner::HasInterner;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::fmt::Debug;
 use zip::Zip;
 
@@ -77,7 +77,7 @@ pub(crate) struct Fulfill<'s, 'db, I: Interner> {
 
     /// Lifetime constraints that must be fulfilled for a solution to be fully
     /// validated.
-    constraints: HashSet<InEnvironment<Constraint<I>>>,
+    constraints: FxHashSet<InEnvironment<Constraint<I>>>,
 
     /// Record that a goal has been processed that can neither be proved nor
     /// refuted. In such a case the solution will be either `CannotProve`, or `Err`
@@ -99,7 +99,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             solver,
             infer,
             obligations: vec![],
-            constraints: HashSet::new(),
+            constraints: FxHashSet::default(),
             cannot_prove: false,
         };
         (fulfill, subst, canonical_goal)

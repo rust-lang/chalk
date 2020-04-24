@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ops::Add;
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -12,7 +11,7 @@ use chalk_ir::{interner::Interner, ClausePriority};
 use rustc_hash::FxHashMap;
 
 pub(super) struct SearchGraph<I: Interner> {
-    indices: HashMap<UCanonicalGoal<I>, DepthFirstNumber>,
+    indices: FxHashMap<UCanonicalGoal<I>, DepthFirstNumber>,
     nodes: Vec<Node<I>>,
 }
 
@@ -41,7 +40,7 @@ pub(super) struct Node<I: Interner> {
 impl<I: Interner> SearchGraph<I> {
     pub(crate) fn new() -> Self {
         SearchGraph {
-            indices: HashMap::new(),
+            indices: FxHashMap::default(),
             nodes: vec![],
         }
     }
