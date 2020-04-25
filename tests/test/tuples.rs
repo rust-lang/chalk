@@ -84,3 +84,53 @@ fn tuples_are_sized() {
         }
     }
 }
+
+#[test]
+fn tuples_are_copy() {
+    test! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            trait Foo {}
+
+            impl Copy for u8 {}
+        }
+
+        goal {
+            (dyn Foo,): Copy
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            (u8, dyn Foo): Copy
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            (dyn Foo, u8): Copy
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            (): Copy
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            (u8,): Copy
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            (u8, u8): Copy
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
