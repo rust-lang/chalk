@@ -309,6 +309,7 @@ mod coherence_goals;
 mod coinduction;
 mod cycle;
 mod existential_types;
+mod functions;
 mod implied_bounds;
 mod impls;
 mod misc;

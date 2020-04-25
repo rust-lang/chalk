@@ -77,6 +77,7 @@ pub fn add_sized_program_clauses<I: Interner>(
             }
             _ => return,
         },
+        TyData::Function(_) => builder.push_fact(trait_ref.clone()),
         // TODO(areredify)
         // when #368 lands, extend this to handle everything accordingly
         _ => return,
