@@ -203,6 +203,7 @@ dependencies = [
  "chalk-ir 0.16.0-dev.0",
  "chalk-parse 0.16.0-dev.0",
  "chalk-solve 0.16.0-dev.0",
+ "diff 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "string_cache 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -4,9 +4,9 @@ use std::{
 };
 
 use chalk_ir::{
-    interner::Interner, AliasEq, AliasTy, ApplicationTy, Binders, BoundVar, Fn as ChalkFn,
-    LifetimeData, Parameter, ParameterData, ParameterKind, QuantifiedWhereClause, TraitId,
-    TraitRef, Ty, TyData, TypeName, WhereClause,
+    interner::Interner, AliasEq, AliasTy, ApplicationTy, BoundVar, Fn as ChalkFn, LifetimeData,
+    Parameter, ParameterData, ParameterKind, QuantifiedWhereClause, TraitId, TraitRef, Ty, TyData,
+    TypeName, WhereClause,
 };
 
 use chalk_rust_ir::{
@@ -55,8 +55,7 @@ pub trait RenderAsRust<I: Interner> {
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
     fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
-        dbg!(&self);
-        let binders: Vec<_> = s.binder_struct_var_names(&self.binders).collect();
+        let binders: Vec<_> = s.binder_var_names(&self.binders.binders).collect();
 
         let trait_ref = &self.binders.value.trait_ref;
 
@@ -73,7 +72,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         );
         write!(
             f,
-            "impl{} {} for {}",
+            "impl{} {} for {} {{}}",
             binders_name,
             full_trait_name,
             trait_ref
@@ -81,6 +80,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
                 .data(interner)
                 .display(s)
         )?;
+        // TODO: print associated types, self.associated_ty_value_ids
 
         Ok(())
     }
@@ -99,7 +99,6 @@ impl<I: Interner> RenderAsRust<I> for InlineBound<I> {
 
 impl<I: Interner> RenderAsRust<I> for TraitBound<I> {
     fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         display_trait_with_generics(s, self.trait_id, &self.args_no_self).fmt(f)
     }
 }
@@ -121,44 +120,66 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
     fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         match self {
-            TyData::Dyn(dyn_ty) => write!(
-                f,
-                "dyn {}",
-                dyn_ty
-                    .bounds
-                    .value
-                    .iter()
-                    .map(|bound| {
-                        match &bound.value {
-                            WhereClause::Implemented(trait_ref) => display_trait_with_generics(
-                                s,
-                                trait_ref.trait_id,
-                                &trait_ref.substitution.parameters(interner)[1..],
-                            )
-                            .to_string(),
-                            WhereClause::AliasEq(alias_eq) => {
-                                let (assoc_ty_datum, trait_params, assoc_type_params) =
-                                    s.db.split_projection(&alias_eq.alias);
-                                display_trait_with_assoc_ty_value(
-                                    s,
-                                    assoc_ty_datum,
-                                    &trait_params[1..],
-                                    assoc_type_params,
-                                    &alias_eq.ty,
-                                )
-                                .to_string()
-                            }
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" + ")
-            ),
+            TyData::Dyn(dyn_ty) => {
+                let s = s.add_debrujin_index();
+                write!(f, "dyn ")?;
+                // dyn_ty.bounds.binders creates a Self binding for the trait
+                write!(
+                    f,
+                    "{}",
+                    dyn_ty
+                        .bounds
+                        .value
+                        .iter()
+                        .map(|bound| {
+                            as_display(|f| {
+                                // each individual trait within the 'dyn' can have a
+                                // forall clause.
+                                let s = s.add_debrujin_index();
+                                if !bound.binders.is_empty() {
+                                    write!(
+                                        f,
+                                        "forall<{}> ",
+                                        s.binder_var_names(&bound.binders)
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
+                                    )?;
+                                }
+                                match &bound.value {
+                                    WhereClause::Implemented(trait_ref) => {
+                                        display_trait_with_generics(
+                                            s,
+                                            trait_ref.trait_id,
+                                            &trait_ref.substitution.parameters(interner)[1..],
+                                        )
+                                        .fmt(f)
+                                    }
+                                    WhereClause::AliasEq(alias_eq) => {
+                                        let (assoc_ty_datum, trait_params, assoc_type_params) =
+                                            s.db.split_projection(&alias_eq.alias);
+                                        display_trait_with_assoc_ty_value(
+                                            s,
+                                            assoc_ty_datum,
+                                            &trait_params[1..],
+                                            assoc_type_params,
+                                            &alias_eq.ty,
+                                        )
+                                        .fmt(f)
+                                    }
+                                }
+                            })
+                            .to_string()
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" + ")
+                )
+            }
             TyData::BoundVar(bound_var) => write!(f, "{}", s.name_for_bound_var(bound_var)),
             TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
             TyData::Apply(apply_ty) => apply_ty.fmt(s, f),
-            TyData::Placeholder(_) => write!(f, "{}", "todo-placeholder"),
             TyData::Function(func) => func.fmt(s, f),
-            TyData::InferenceVar(_) => write!(f, "{}", "todo-inferenceVar"),
+            TyData::Placeholder(_) => unreachable!("cannot print placeholder variables"),
+            _ => unimplemented!(),
         }
     }
 }
@@ -197,7 +218,10 @@ impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
             write!(
                 f,
                 "for<{}> ",
-                (0..self.num_binders).map(|n| format!("'{}", s.name_for_introduced_bound_var(n))).collect::<Vec<_>>().join(", ")
+                (0..self.num_binders)
+                    .map(|n| format!("'{}", s.name_for_introduced_bound_var(n)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )?;
         }
         write!(
@@ -216,17 +240,21 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
     fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         match self.name {
-            TypeName::Struct(sid) => write!(
-                f,
-                "{}<{}>",
-                s.db.struct_name(sid),
-                self.substitution
-                    .parameters(interner)
-                    .iter()
-                    .map(|param| param.data(interner).display(s).to_string())
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            ),
+            TypeName::Struct(sid) => {
+                write!(f, "{}", s.db.struct_name(sid))?;
+                let parameters = self.substitution.parameters(interner);
+                if parameters.len() > 0 {
+                    write!(
+                        f,
+                        "<{}>",
+                        parameters
+                            .iter()
+                            .map(|param| param.data(interner).display(s).to_string())
+                            .collect::<Vec<_>>()
+                            .join(", "),
+                    )?;
+                }
+            }
             TypeName::AssociatedType(assoc_type_id) => {
                 // (Iterator::Item)(x)
                 // should be written in Rust as <X as Iterator>::Item
@@ -237,22 +265,30 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                 );
                 write!(
                     f,
-                    "<{} as {}>::{}<{}>",
+                    "<{} as {}>::{}",
                     self.first_type_parameter(interner)
                         .unwrap()
                         .data(interner)
                         .display(s),
                     s.db.trait_name(datum.trait_id),
                     s.db.identifier_name(&datum.name),
-                    self.substitution.parameters(interner)[1..]
-                        .iter()
-                        .map(|ty| ty.data(interner).display(s).to_string())
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                )
+                )?;
+                let params = self.substitution.parameters(interner);
+                if params.len() > 1 {
+                    write!(
+                        f,
+                        "<{}>",
+                        params[1..]
+                            .iter()
+                            .map(|ty| ty.data(interner).display(s).to_string())
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )?;
+                }
             }
-            TypeName::Error => write!(f, "{{error}}"),
+            TypeName::Error => write!(f, "{{error}}")?,
         }
+        Ok(())
     }
 }
 
@@ -261,7 +297,10 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
         match self {
             LifetimeData::BoundVar(v) => write!(f, "'{}", s.name_for_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
-            _ => write!(f, "liftimeother-todo3"),
+            LifetimeData::Placeholder(_) => unreachable!("cannot print placeholder variables"),
+            // Matching the void ensues at compile time that this code is
+            // unreachable
+            LifetimeData::Phantom(void, _) => match *void {},
         }
     }
 }
@@ -278,20 +317,32 @@ impl<I: Interner> RenderAsRust<I> for ParameterData<I> {
 
 impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
     fn fmt(&self, mut s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        // if we have any binders, then we're a "for<'a> X: Y" "quantified"
-        // where clause. Otherwise, we're just a regular where clause.
-        // TODO: do we actually want to exclude the added index if there is no for<>?
-        //if !self.binders.is_empty() {
-        //}
         s = s.add_debrujin_index();
+        if !self.binders.is_empty() {
+            write!(
+                f,
+                "forall<{}> ",
+                s.binder_var_names(&self.binders)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )?;
+        }
         self.value.fmt(s, f)
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
     fn fmt(&self, mut s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        // TODO: do we want to do something similar to QuantifiedWhereClause here?
         s = s.add_debrujin_index();
+        if !self.binders.is_empty() {
+            write!(
+                f,
+                "forall<{}> ",
+                s.binder_var_names(&self.binders)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )?;
+        }
         self.value.fmt(s, f)
     }
 }
@@ -420,11 +471,11 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
 
 impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
     fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let binders: Vec<_> = s.binder_var_names(&self.binders).collect();
+        let binders: Vec<_> = s.binder_var_names(&self.binders.binders[1..]).collect();
 
         write!(
             f,
-            "{}<{}>",
+            "type {}<{}>",
             s.db.identifier_name(&self.name),
             binders.join(", ")
         )?;
@@ -462,23 +513,31 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
     fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let trait_name = s.db.trait_name(self.id);
+        let s = s.add_debrujin_index();
         if self.binders.len() == 0 {
             write!(f, "trait {} {{}}", trait_name)
         } else {
-            let binders: Vec<_> = s.binder_var_names(&self.binders).collect();
-            let assoc_types = self
-                .associated_ty_ids
-                .iter()
-                .map(|assoc_ty_id| {
-                    let assoc_ty_data = s.db.associated_ty_data(*assoc_ty_id);
-                    assoc_ty_data.display(s).to_string()
-                })
-                .collect::<String>();
+            let binders: Vec<_> = s.binder_var_names(&self.binders.binders[1..]).collect();
             write!(
                 f,
-                "trait {}<{}> {{{}}}",
+                "trait {}<{}> ",
                 trait_name,
-                binders.join(", "),
+                binders.join(", ")
+            )?;
+            if !self.binders.value.where_clauses.is_empty() {
+                write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
+            }
+            let assoc_types = self
+            .associated_ty_ids
+            .iter()
+            .map(|assoc_ty_id| {
+                let assoc_ty_data = s.db.associated_ty_data(*assoc_ty_id);
+                assoc_ty_data.display(s).to_string()
+            })
+            .collect::<String>();
+            write!(
+                f,
+                "{{{}}}",
                 assoc_types
             )
         }
@@ -493,7 +552,7 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
             f,
             "struct {}<{}> ",
             s.db.struct_name(self.id),
-            s.binder_struct_var_names(&self.binders)
+            s.binder_var_names(&self.binders.binders)
                 .collect::<Vec<_>>()
                 .join(", ")
         )?;
@@ -507,7 +566,14 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
                 .value
                 .fields
                 .iter()
-                .map(|field| { field.data(interner).display(s).to_string() })
+                .enumerate()
+                .map(|(idx, field)| {
+                    format!(
+                        "field_{}: {}",
+                        idx,
+                        field.data(interner).display(s).to_string()
+                    )
+                })
                 .collect::<Vec<_>>()
                 .join(", ")
         )?;
@@ -560,27 +626,11 @@ impl<'a, I: Interner> WriterState<'a, I> {
         as_display(move |f| write!(f, "_{}_{}", debrujin_index_name, within_debrujin))
     }
 
-    fn binder_var_names<'b, T: 'b>(
+    fn binder_var_names<'b>(
         &'b self,
-        binders: &'b Binders<T>,
-    ) -> impl Iterator<Item = String> + 'b {
-        binders.binders[1..]
-            .iter()
-            .enumerate()
-            .map(move |(idx, parameter)| match parameter {
-                ParameterKind::Ty(_) => format!("{}", self.name_for_introduced_bound_var(idx)),
-                ParameterKind::Lifetime(_) => {
-                    format!("'{}", self.name_for_introduced_bound_var(idx))
-                }
-            })
-    }
-
-    fn binder_struct_var_names<'b, T: 'b>(
-        &'b self,
-        binders: &'b Binders<T>,
+        binders: &'b [ParameterKind<()>],
     ) -> impl Iterator<Item = String> + 'b {
         binders
-            .binders
             .iter()
             .enumerate()
             .map(move |(idx, parameter)| match parameter {
