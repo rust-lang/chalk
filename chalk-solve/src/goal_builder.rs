@@ -3,7 +3,6 @@ use cast::CastTo;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::*;
-use chalk_rust_ir::ToParameter;
 use fold::shift::Shift;
 use fold::Fold;
 use interner::{HasInterner, Interner};

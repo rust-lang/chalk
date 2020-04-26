@@ -2,13 +2,12 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{ChalkIr, HasInterner};
 use chalk_ir::{
     self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId, ParameterKinds,
-    QuantifiedWhereClauses, StructId, Substitution, TraitId,
+    QuantifiedWhereClauses, StructId, Substitution, ToParameter, TraitId,
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{
     Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,
-    ToParameter,
 };
 use lalrpop_intern::intern;
 use std::collections::BTreeMap;

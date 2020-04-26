@@ -1250,6 +1250,14 @@ impl<T: HasInterner> Binders<T> {
         Self { binders, value }
     }
 
+    /// Wraps the given value in a binder without variables, i.e. `for<>
+    /// (value)`. Since our deBruijn indices count binders, not variables, this
+    /// is sometimes useful.
+    pub fn empty(interner: &T::Interner, value: T) -> Self {
+        let binders = ParameterKinds::new(interner);
+        Self { binders, value }
+    }
+
     /// Skips the binder and returns the "bound" value. This is a
     /// risky thing to do because it's easy to get confused about
     /// De Bruijn indices and the like. `skip_binder` is only valid
@@ -1287,12 +1295,39 @@ impl<T: HasInterner> Binders<T> {
         }
     }
 
+    /// Transforms the inner value according to the given function; returns
+    /// `None` if the function returns `None`.
+    pub fn filter_map<U, OP>(self, op: OP) -> Option<Binders<U>>
+    where
+        OP: FnOnce(T) -> Option<U>,
+        U: HasInterner<Interner = T::Interner>,
+    {
+        let value = op(self.value)?;
+        Some(Binders {
+            binders: self.binders,
+            value,
+        })
+    }
+
     pub fn map_ref<'a, U, OP>(&'a self, op: OP) -> Binders<U>
     where
         OP: FnOnce(&'a T) -> U,
         U: HasInterner<Interner = T::Interner>,
     {
         self.as_ref().map(op)
+    }
+
+    /// Creates a `Substitution` containing bound vars such that applying this
+    /// substitution will not change the value, i.e. `^0.0, ^0.1, ^0.2` and so
+    /// on.
+    pub fn identity_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
+        Substitution::from(
+            interner,
+            self.binders
+                .iter(interner)
+                .enumerate()
+                .map(|(i, pk)| (pk, i).to_parameter(interner)),
+        )
     }
 
     /// Creates a fresh binders that contains a single type
@@ -1314,6 +1349,36 @@ impl<T: HasInterner> Binders<T> {
 
     pub fn len(&self, interner: &T::Interner) -> usize {
         self.binders.len(interner)
+    }
+}
+
+impl<T, I> Binders<Binders<T>>
+where
+    T: Fold<I, I> + HasInterner<Interner = I>,
+    T::Result: HasInterner<Interner = I>,
+    I: Interner,
+{
+    /// This turns two levels of binders (`for<A> for<B>`) into one level (`for<A, B>`).
+    pub fn fuse_binders(self, interner: &T::Interner) -> Binders<T::Result> {
+        let num_binders = self.len(interner);
+        // generate a substitution to shift the indexes of the inner binder:
+        let subst = Substitution::from(
+            interner,
+            self.value
+                .binders
+                .iter(interner)
+                .enumerate()
+                .map(|(i, pk)| (pk, i + num_binders).to_parameter(interner)),
+        );
+        let value = self.value.substitute(interner, &subst);
+        let binders = ParameterKinds::from(
+            interner,
+            self.binders
+                .iter(interner)
+                .chain(self.value.binders.iter(interner))
+                .cloned(),
+        );
+        Binders { binders, value }
     }
 }
 
@@ -2070,6 +2135,40 @@ where
 {
     fn as_parameters(&self, interner: &I) -> &[Parameter<I>] {
         T::as_parameters(self, interner)
+    }
+}
+
+pub trait ToParameter {
+    /// Utility for converting a list of all the binders into scope
+    /// into references to those binders. Simply pair the binders with
+    /// the indices, and invoke `to_parameter()` on the `(binder,
+    /// index)` pair. The result will be a reference to a bound
+    /// variable of appropriate kind at the corresponding index.
+    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
+        self.to_parameter_at_depth(interner, DebruijnIndex::INNERMOST)
+    }
+
+    fn to_parameter_at_depth<I: Interner>(
+        &self,
+        interner: &I,
+        debruijn: DebruijnIndex,
+    ) -> Parameter<I>;
+}
+
+impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
+    fn to_parameter_at_depth<I: Interner>(
+        &self,
+        interner: &I,
+        debruijn: DebruijnIndex,
+    ) -> Parameter<I> {
+        let &(binder, index) = self;
+        let bound_var = BoundVar::new(debruijn, index);
+        match *binder {
+            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(bound_var)
+                .intern(interner)
+                .cast(interner),
+            ParameterKind::Ty(_) => TyData::BoundVar(bound_var).intern(interner).cast(interner),
+        }
     }
 }
 

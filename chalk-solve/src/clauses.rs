@@ -12,6 +12,7 @@ use rustc_hash::FxHashSet;
 
 pub mod builder;
 mod builtin_traits;
+mod dyn_ty;
 mod env_elaborator;
 mod generalize;
 pub mod program_clauses;
@@ -198,76 +199,20 @@ fn program_clauses_that_could_match<I: Interner>(
                 }
             }
 
-            // If the self type `S` is a `dyn trait` type, we wish to generate program-clauses
-            // that indicates that it implements its own traits. For example, a `dyn Write` type
-            // implements `Write` and so on.
+            // If the self type is a `dyn trait` type, generate program-clauses
+            // that indicates that it implements its own traits.
+            // FIXME: This is presently rather wasteful, in that we don't check that the
+            // these program clauses we are generating are actually relevant to the goal
+            // `goal` that we are actually *trying* to prove (though there is some later
+            // code that will screen out irrelevant stuff).
             //
-            // To see how this works, consider as an example the type `dyn Fn(&u8)`. This is
-            // really shorthand for `dyn for<'a> Fn<(&'a u8), Output = ()>`, and we represent
-            // that type as something like this:
-            //
-            // ```
-            // dyn(exists<T> {
-            //     forall<'a> { Implemented(T: Fn<'a>) },
-            //     forall<'a> { AliasEq(<T as Fn<'a>>::Output, ()) },
-            // })
-            // ```
-            //
-            // so what we will do is to generate one program clause
-            // for each of the conditions. Thus we get two program
-            // clauses:
-            //
-            // ```
-            // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
-            // ```
-            //
-            // and
-            //
-            // ```
-            // forall<'a> { AliasEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
-            // ```
-            //
-            // FIXME. This is presently rather wasteful, in that we
-            // don't check that the these program clauses we are
-            // generating are actually relevant to the goal `goal`
-            // that we are actually *trying* to prove (though there is
-            // some later code that will screen out irrelevant
-            // stuff).
-            //
-            // In other words, in our example, if we were trying to
-            // prove `Implemented(dyn Fn(&u8): Clone)`, we would have
-            // generated two clauses that are totally irrelevant to
-            // that goal, because they let us prove other things but
-            // not `Clone`.
+            // In other words, if we were trying to prove `Implemented(dyn
+            // Fn(&u8): Clone)`, we would still generate two clauses that are
+            // totally irrelevant to that goal, because they let us prove other
+            // things but not `Clone`.
             let self_ty = trait_ref.self_type_parameter(interner);
-            if let TyData::Dyn(dyn_ty) = self_ty.data(interner) {
-                // In this arm, `self_ty` is the `dyn Fn(&u8)`,
-                // and `bounded_ty` is the `exists<T> { .. }`
-                // clauses shown above.
-
-                // Turn free BoundVars in the type into new existentials. E.g.
-                // we might get some `dyn Foo<?X>`, and we don't want to return
-                // a clause with a free variable. We can instead return a
-                // slightly more general clause by basically turning this into
-                // `exists<A> dyn Foo<A>`.
-                let generalized_dyn_ty = generalize::Generalize::apply(db.interner(), dyn_ty);
-
-                builder.push_binders(&generalized_dyn_ty, |builder, dyn_ty| {
-                    for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
-                        // Replace the `T` from `exists<T> { .. }` with `self_ty`,
-                        // yielding clases like
-                        //
-                        // ```
-                        // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
-                        // ```
-                        let qwc =
-                            exists_qwc.substitute(interner, &[self_ty.clone().cast(interner)]);
-
-                        builder.push_binders(&qwc, |builder, wc| {
-                            builder.push_fact(wc);
-                        });
-                    }
-                });
+            if let TyData::Dyn(_) = self_ty.data(interner) {
+                dyn_ty::build_dyn_self_ty_clauses(db, builder, self_ty.clone())
             }
 
             match self_ty.data(interner) {
