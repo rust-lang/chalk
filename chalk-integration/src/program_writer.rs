@@ -9,7 +9,7 @@ pub trait WriteProgram {
 impl WriteProgram for Program {
     fn write(&self) -> String {
         let mut lines = vec![];
-        let ws = WriterState::new(self);
+        let ws = &WriterState::new(self);
         self.struct_data.values().for_each(|datum| {
             lines.push(datum.display(ws).to_string());
         });
@@ -82,6 +82,7 @@ mod test {
                 new_text
             );
         }
+        eprintln!("{}",new_text);
     }
 
     #[test]
@@ -212,7 +213,7 @@ mod test {
         reparse_test(
             "
             struct Foo {
-                field: dyn Bax,
+                field: dyn Bax
             }
             trait Bax {}
             ",
@@ -220,7 +221,7 @@ mod test {
         reparse_test(
             "
             struct Foo<'a> {
-                field: dyn Bix<'a>,
+                field: dyn Bix<'a>
             }
             trait Bix<'a> {}
             ",

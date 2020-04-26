@@ -1,5 +1,7 @@
 use std::{
+    collections::BTreeMap,
     fmt::{Display, Formatter, Result},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -20,7 +22,7 @@ use crate::{split::Split, RustIrDatabase};
 ///
 /// This is a utility struct for making `RenderAsRust` nice to use with rust format macros.
 pub struct DisplayRenderAsRust<'a, I: Interner, T> {
-    s: WriterState<'a, I>,
+    s: &'a WriterState<'a, I>,
     rar: &'a T,
 }
 
@@ -43,8 +45,8 @@ fn as_display<F: Fn(&mut Formatter<'_>) -> Result>(f: F) -> impl Display {
 }
 
 pub trait RenderAsRust<I: Interner> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &mut Formatter<'_>) -> Result;
-    fn display<'a>(&'a self, s: WriterState<'a, I>) -> DisplayRenderAsRust<'a, I, Self>
+    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result;
+    fn display<'a>(&'a self, s: &'a WriterState<'a, I>) -> DisplayRenderAsRust<'a, I, Self>
     where
         Self: Sized,
     {
@@ -53,7 +55,7 @@ pub trait RenderAsRust<I: Interner> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         let binders: Vec<_> = s.binder_var_names(&self.binders.binders).collect();
 
@@ -87,7 +89,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for InlineBound<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
             // Foo: Vec<T>
             InlineBound::TraitBound(trait_bound) => trait_bound.fmt(s, f),
@@ -98,13 +100,13 @@ impl<I: Interner> RenderAsRust<I> for InlineBound<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for TraitBound<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         display_trait_with_generics(s, self.trait_id, &self.args_no_self).fmt(f)
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for AliasEqBound<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         display_trait_with_assoc_ty_value(
             s,
             s.db.associated_ty_data(self.associated_ty_id),
@@ -117,11 +119,11 @@ impl<I: Interner> RenderAsRust<I> for AliasEqBound<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for TyData<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         match self {
             TyData::Dyn(dyn_ty) => {
-                let s = s.add_debrujin_index();
+                let s = &s.add_debrujin_index();
                 write!(f, "dyn ")?;
                 // dyn_ty.bounds.binders creates a Self binding for the trait
                 write!(
@@ -135,7 +137,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                             as_display(|f| {
                                 // each individual trait within the 'dyn' can have a
                                 // forall clause.
-                                let s = s.add_debrujin_index();
+                                let s = &s.add_debrujin_index();
                                 if !bound.binders.is_empty() {
                                     write!(
                                         f,
@@ -185,7 +187,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         // <X as Y<A1, A2, A3>>::Z<B1, B2, B3>
 
@@ -211,9 +213,9 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
-        let s = s.add_debrujin_index();
+        let s = &s.add_debrujin_index();
         if self.num_binders > 0 {
             write!(
                 f,
@@ -237,7 +239,7 @@ impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         match self.name {
             TypeName::Struct(sid) => {
@@ -293,7 +295,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
             LifetimeData::BoundVar(v) => write!(f, "'{}", s.name_for_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
@@ -306,7 +308,7 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ParameterData<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         match self {
             ParameterKind::Ty(ty) => write!(f, "{}", ty.data(interner).display(s)),
@@ -316,8 +318,8 @@ impl<I: Interner> RenderAsRust<I> for ParameterData<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
-    fn fmt(&self, mut s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        s = s.add_debrujin_index();
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let s = &s.add_debrujin_index();
         if !self.binders.is_empty() {
             write!(
                 f,
@@ -332,8 +334,8 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
-    fn fmt(&self, mut s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        s = s.add_debrujin_index();
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let s = &s.add_debrujin_index();
         if !self.binders.is_empty() {
             write!(
                 f,
@@ -348,7 +350,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for Vec<QuantifiedWhereClause<I>> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         write!(
             f,
             "{}",
@@ -362,7 +364,7 @@ impl<I: Interner> RenderAsRust<I> for Vec<QuantifiedWhereClause<I>> {
 }
 
 impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
             WhereClause::Implemented(trait_ref) => trait_ref.fmt(s, f),
             WhereClause::AliasEq(alias_eq) => alias_eq.fmt(s, f),
@@ -374,7 +376,7 @@ impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
 ///
 /// This is shared between where bounds & dyn Trait.
 fn display_trait_with_generics<'a, I: Interner>(
-    s: WriterState<'a, I>,
+    s: &'a WriterState<'a, I>,
     trait_id: TraitId<I>,
     trait_params: impl IntoIterator<Item = &'a Parameter<I>> + 'a,
 ) -> impl Display + 'a {
@@ -389,7 +391,7 @@ fn display_trait_with_generics<'a, I: Interner>(
 
 /// This implementation correct inside where clauses.
 impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         write!(
             f,
@@ -409,7 +411,7 @@ impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
 ///
 /// This is shared between where bounds & dyn Trait.
 fn display_trait_with_assoc_ty_value<'a, I: Interner>(
-    s: WriterState<'a, I>,
+    s: &'a WriterState<'a, I>,
     assoc_ty_datum: Arc<AssociatedTyDatum<I>>,
     trait_params: &'a [Parameter<I>],
     assoc_ty_params: &'a [Parameter<I>],
@@ -439,7 +441,7 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
 
 /// This implementation correct inside where clauses.
 impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         // we have: X: Y<A1, A2, A3, Z<B1, B2, B3>=D>
         // B1, B2, B3, X, A1, A2, A3 are put into alias_eq.alias.substitution
@@ -470,14 +472,38 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let binders: Vec<_> = s.binder_var_names(&self.binders.binders[1..]).collect();
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // In lowering, a completely new empty environment is created for each
+        // AssociatedTyDatum, and it's given generic parameters for each generic
+        // parameter that its trait had. We want to map the new binders for
+        // those generic parameters back into their original names. To do that,
+        // first find their original names (trait_binder_names), then the names
+        // they have inside the AssociatedTyDatum (my_names_for_trait_params),
+        // and then add that mapping to the WriterState when writing bounds and
+        // where clauses.
+        let trait_datum = s.db.trait_datum(self.trait_id);
+        let trait_binder_names = s.binder_var_indices(&trait_datum.binders.binders);
+        let s = &s.add_debrujin_index();
+        let my_binder_names = s
+            .binder_var_indices(&self.binders.binders)
+            .collect::<Vec<_>>();
+        let my_binder_display = s
+            .binder_var_names(&self.binders.binders)
+            .collect::<Vec<_>>();
+        let (my_names_for_trait_params, _) =
+            s.db.split_associated_ty_parameters(&my_binder_names, self);
+        let s = &s.add_parameter_mapping(
+            my_names_for_trait_params.iter().copied(),
+            trait_binder_names,
+        );
 
+        let (_, my_params) =
+            s.db.split_associated_ty_parameters(&my_binder_display, self);
         write!(
             f,
             "type {}<{}>",
             s.db.identifier_name(&self.name),
-            binders.join(", ")
+            my_params.join(", ")
         )?;
 
         let datum_bounds = &self.binders.value;
@@ -511,43 +537,34 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let trait_name = s.db.trait_name(self.id);
-        let s = s.add_debrujin_index();
+        let s = &s.add_debrujin_index();
         if self.binders.len() == 0 {
             write!(f, "trait {} {{}}", trait_name)
         } else {
-            let binders: Vec<_> = s.binder_var_names(&self.binders.binders[1..]).collect();
-            write!(
-                f,
-                "trait {}<{}> ",
-                trait_name,
-                binders.join(", ")
-            )?;
+            let binders: Vec<_> = s.binder_var_names(&self.binders.binders).skip(1).collect();
+            write!(f, "trait {}<{}> ", trait_name, binders.join(", "))?;
             if !self.binders.value.where_clauses.is_empty() {
                 write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
             }
             let assoc_types = self
-            .associated_ty_ids
-            .iter()
-            .map(|assoc_ty_id| {
-                let assoc_ty_data = s.db.associated_ty_data(*assoc_ty_id);
-                assoc_ty_data.display(s).to_string()
-            })
-            .collect::<String>();
-            write!(
-                f,
-                "{{{}}}",
-                assoc_types
-            )
+                .associated_ty_ids
+                .iter()
+                .map(|assoc_ty_id| {
+                    let assoc_ty_data = s.db.associated_ty_data(*assoc_ty_id);
+                    assoc_ty_data.display(s).to_string()
+                })
+                .collect::<String>();
+            write!(f, "{{{}}}", assoc_types)
         }
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
-    fn fmt(&self, s: WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
-        let s = s.add_debrujin_index();
+        let s = &s.add_debrujin_index();
         write!(
             f,
             "struct {}<{}> ",
@@ -581,10 +598,34 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+/// Like a BoundVar, but with the debrujin index inverted so as to create a
+/// canonical name we can use anywhere for each bound variable.
+///
+/// In BoundVar, the innermost bound variables have debrujin index `0`, and
+/// each further out BoundVar has a debrujin index `1` higher.
+///
+/// In InvertedBoundVar, the outermost variables have inverted_debrujin_idx `0`,
+/// and the innermost have their depth, not the other way around.
+#[derive(Debug, Copy, Clone, PartialOrd, Ord, PartialEq, Eq)]
+struct InvertedBoundVar {
+    /// The inverted debrujin index. Corresponds roughly to an inverted `DebrujinIndex::depth`.
+    inverted_debrujin_idx: i64,
+    /// The index within the debrujin index. Corresponds to `BoundVar::index`.
+    within_idx: usize,
+}
+
+impl Display for InvertedBoundVar {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "_{}_{}", self.inverted_debrujin_idx, self.within_idx)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct WriterState<'a, I: Interner> {
     db: &'a dyn RustIrDatabase<I>,
     debrujin_indices_deep: u32,
+    // lowered_(inverted_debrujin_idx, index) -> src_correct_(inverted_debrujin_idx, index)
+    remapping: Rc<BTreeMap<InvertedBoundVar, InvertedBoundVar>>,
 }
 
 impl<'a, I: Interner> WriterState<'a, I> {
@@ -592,6 +633,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
         WriterState {
             db,
             debrujin_indices_deep: 0,
+            remapping: Rc::new(BTreeMap::new()),
         }
     }
 
@@ -601,29 +643,74 @@ impl<'a, I: Interner> WriterState<'a, I> {
         new_state
     }
 
-    fn name_for_bound_var(&self, b: &BoundVar) -> impl Display + '_ {
-        // invert debrujin indexes so that we have a canonical name in rust
-        // source. After this, the outermost thing is '0', and the innermost is
-        // labeled by its depth, not the other way around.
-        // let debrujin_index_name = self
-        //     .debrujin_indices_deep
-        //     .checked_sub(b.debruijn.depth())
-        //     .expect("found debrujin index deeper than we thought possible");
-        let debrujin_index_name = (self.debrujin_indices_deep as i64) - (b.debruijn.depth() as i64);
-        let within_debrujin = b.index;
-        as_display(move |f| write!(f, "_{}_{}", debrujin_index_name, within_debrujin))
+    /// Adds parameter remapping.
+    ///
+    /// Each of the parameters in `lowered_vars` will be mapped to its
+    /// corresponding variable in `original_vars` when printed through the
+    /// `WriterState` returned from this method.
+    ///
+    /// `lowered_vars` and `original_vars` must have the same length.
+    fn add_parameter_mapping(
+        &self,
+        lowered_vars: impl Iterator<Item = InvertedBoundVar>,
+        original_vars: impl Iterator<Item = InvertedBoundVar>,
+    ) -> Self {
+        let remapping = self
+            .remapping
+            .iter()
+            .map(|(a, b)| (*a, *b))
+            .chain(lowered_vars.zip(original_vars))
+            .collect::<BTreeMap<_, _>>();
+
+        WriterState {
+            db: self.db,
+            debrujin_indices_deep: self.debrujin_indices_deep,
+            remapping: Rc::new(remapping),
+        }
     }
 
-    fn name_for_introduced_bound_var(&self, idx: usize) -> impl Display + '_ {
-        // invert debrujin indexes so that we have a canonical name in rust
-        // source. After this, the outermost thing is '0', and the innermost is
-        // labeled by its depth, not the other way around.
+    /// Inverts the debrujin index so as to create a canonical name we can
+    /// anywhere for each bound variable.
+    ///
+    /// See [`InvertedBoundVar`][InvertedBoundVar].
+    fn invert_debrujin_idx(&self, debrujin_idx: u32, index: usize) -> InvertedBoundVar {
+        InvertedBoundVar {
+            inverted_debrujin_idx: (self.debrujin_indices_deep as i64) - (debrujin_idx as i64),
+            within_idx: index,
+        }
+    }
 
+    fn apply_substitutions(&self, b: InvertedBoundVar) -> impl Display {
+        // TODO: sometimes produce "Self"
+        self.remapping.get(&b).copied().unwrap_or(b)
+    }
+
+    fn indices_for_bound_var(&self, b: &BoundVar) -> InvertedBoundVar {
+        self.invert_debrujin_idx(b.debruijn.depth(), b.index)
+    }
+
+    fn indices_for_introduced_bound_var(&self, idx: usize) -> InvertedBoundVar {
         // freshly introduced bound vars will always have debrujin index of 0,
         // they're always "innermost".
-        let debrujin_index_name = self.debrujin_indices_deep;
-        let within_debrujin = idx;
-        as_display(move |f| write!(f, "_{}_{}", debrujin_index_name, within_debrujin))
+        self.invert_debrujin_idx(0, idx)
+    }
+
+    fn name_for_bound_var(&self, b: &BoundVar) -> impl Display {
+        self.apply_substitutions(self.indices_for_bound_var(b))
+    }
+
+    fn name_for_introduced_bound_var(&self, idx: usize) -> impl Display {
+        self.apply_substitutions(self.indices_for_introduced_bound_var(idx))
+    }
+
+    fn binder_var_indices<'b>(
+        &'b self,
+        binders: &'b [ParameterKind<()>],
+    ) -> impl Iterator<Item = InvertedBoundVar> + 'b {
+        binders
+            .iter()
+            .enumerate()
+            .map(move |(idx, _param)| self.indices_for_introduced_bound_var(idx))
     }
 
     fn binder_var_names<'b>(
@@ -632,12 +719,10 @@ impl<'a, I: Interner> WriterState<'a, I> {
     ) -> impl Iterator<Item = String> + 'b {
         binders
             .iter()
-            .enumerate()
-            .map(move |(idx, parameter)| match parameter {
-                ParameterKind::Ty(_) => format!("{}", self.name_for_introduced_bound_var(idx)),
-                ParameterKind::Lifetime(_) => {
-                    format!("'{}", self.name_for_introduced_bound_var(idx))
-                }
+            .zip(self.binder_var_indices(binders))
+            .map(move |(parameter, var)| match parameter {
+                ParameterKind::Ty(_) => format!("{}", self.apply_substitutions(var)),
+                ParameterKind::Lifetime(_) => format!("'{}", self.apply_substitutions(var)),
             })
     }
 }
