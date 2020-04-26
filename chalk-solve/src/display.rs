@@ -6,14 +6,14 @@ use std::{
 };
 
 use chalk_ir::{
-    interner::Interner, AliasEq, AliasTy, ApplicationTy, BoundVar, Fn as ChalkFn, LifetimeData,
-    Parameter, ParameterData, ParameterKind, QuantifiedWhereClause, TraitId, TraitRef, Ty, TyData,
-    TypeName, WhereClause,
+    interner::Interner, AliasEq, AliasTy, ApplicationTy, BoundVar, Fn as ChalkFn, Lifetime,
+    LifetimeData, Parameter, ParameterData, ParameterKind, QuantifiedWhereClause, StructId,
+    TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 
 use chalk_rust_ir::{
-    AliasEqBound, AssociatedTyDatum, ImplDatum, InlineBound, QuantifiedInlineBound, StructDatum,
-    TraitBound, TraitDatum,
+    AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound,
+    QuantifiedInlineBound, StructDatum, TraitBound, TraitDatum,
 };
 
 use crate::{split::Split, RustIrDatabase};
@@ -54,6 +54,50 @@ pub trait RenderAsRust<I: Interner> {
     }
 }
 
+impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // see comments for a similar empty env operation in AssociatedTyDatum's
+        // impl of RenderAsRust.
+        let assoc_ty_data = s.db.associated_ty_data(self.associated_ty_id);
+        let impl_datum = s.db.impl_datum(self.impl_id);
+
+        let impl_param_names_in_impl_env = s.binder_var_indices(&impl_datum.binders.binders);
+
+        let s = &s.add_debrujin_index();
+
+        let param_names_in_assoc_ty_value_env = s
+            .binder_var_indices(&self.value.binders)
+            .collect::<Vec<_>>();
+
+        let (impl_params_in_assoc_ty_value_env, _assoc_ty_value_params) =
+            s.db.split_associated_ty_value_parameters(&param_names_in_assoc_ty_value_env, self);
+
+        let s = &s.add_parameter_mapping(
+            impl_params_in_assoc_ty_value_env.iter().cloned(),
+            impl_param_names_in_impl_env,
+        );
+
+        // let params = s
+        //     .binder_var_display(&self.value.binders)
+        //     .collect::<Vec<_>>();
+        let display_params = s
+            .binder_var_display(&self.value.binders)
+            .collect::<Vec<_>>();
+
+        let (_impl_display, assoc_ty_value_display) =
+            s.db.split_associated_ty_value_parameters(&display_params, self);
+
+        write!(
+            f,
+            "type {}<{}> = {};",
+            s.db.identifier_name(&assoc_ty_data.name),
+            assoc_ty_value_display.join(", "),
+            self.value.value.ty.display(s)
+        )?;
+        Ok(())
+    }
+}
+
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
@@ -72,17 +116,31 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             trait_ref.trait_id,
             &trait_ref.substitution.parameters(interner)[1..],
         );
+
+        let assoc_ty_values = self
+            .associated_ty_value_ids
+            .iter()
+            .map(|assoc_ty_value| {
+                s.db.associated_ty_value(*assoc_ty_value)
+                    .display(s)
+                    .to_string()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
         write!(
             f,
-            "impl{} {} for {} {{}}",
+            "impl{} {} for {} ",
             binders_name,
             full_trait_name,
-            trait_ref
-                .self_type_parameter(interner)
-                .data(interner)
-                .display(s)
+            trait_ref.self_type_parameter(interner).display(s)
         )?;
-        // TODO: print associated types, self.associated_ty_value_ids
+
+        if !self.binders.value.where_clauses.is_empty() {
+            write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
+        }
+
+        write!(f, "{{{}}}", assoc_ty_values)?;
 
         Ok(())
     }

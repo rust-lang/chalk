@@ -344,16 +344,102 @@ mod test {
             }
             ",
         );
+    }
+
+    #[test]
+    fn test_simple_impl() {
         reparse_test(
             "
-            trait Bix<_0> {}
-            trait Foo<_0_1> {
-                type Assoc<_1_1, _1_2> where _1_1: Bix<_1_2>;
+            struct Foo {}
+            trait Bar<T> {}
+            impl<T> Bar<T> for Foo {}
+        ",
+        );
+    }
+
+    #[test]
+    fn test_impl_assoc_ty() {
+        reparse_test(
+            "
+            struct Fuu {}
+            trait Bhz {
+                type Assoc;
+            }
+            impl Bhz for Fuu {
+                type Assoc = Fuu;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Fou {}
+            trait Bax<T> {
+                type Assoc;
+            }
+            impl<T> Bax<T> for Fou {
+                type Assoc = Fou;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Fuu {}
+            trait Bmx<T> {
+                type Assoc;
+            }
+            impl<T> Bmx<T> for Fuu {
+                type Assoc = T;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Fuu {}
+            struct Guu<T> {}
+            trait Bmx<T> {
+                type Assoc;
+            }
+            impl<T> Bmx<T> for Fuu {
+                type Assoc = Guu<T>;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Fuu {}
+            struct Guu<T, U> {}
+            trait Bmx<T> {
+                type Assoc<U>;
+            }
+            impl<T> Bmx<T> for Fuu {
+                type Assoc<U> = Guu<T, U>;
             }
             ",
         );
     }
 
+    #[test]
+    fn test_impl_assoc_ty_alias() {
+        reparse_test(
+            "
+            struct Fow {}
+            struct Qac {}
+            trait Bow<T> {}
+            trait Baq<T> {
+                type Assoc<G>: Boo<G, Item=Fow>;
+            }
+            trait Boo<T> {
+                type Item;
+            }
+            impl<T> Boo<T> for Qac {
+                type Item = Fow;
+            }
+            impl<T> Baq<T> for Fow {
+                type Assoc<U> = Qac;
+            }
+        ",
+        );
+    }
 
     #[test]
     fn test_struct_fields() {
