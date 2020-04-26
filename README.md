@@ -58,4 +58,4 @@ See [the contributing chapter][contributing] in the chalk book for more info.
 [working-group]: https://rust-lang.github.io/compiler-team/working-groups/traits/
 [rust-lang-zulip]:https://rust-lang.zulipchat.com
 [wg-traits-stream]: https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits
-[contributing]: https://rust-lang.github.io/chalk/book/contributing.html
+[contributing]: https://rust-lang.github.io/chalk/book/contribution_guide.html
