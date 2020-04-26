@@ -57,7 +57,7 @@ pub trait RenderAsRust<I: Interner> {
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
-        let binders: Vec<_> = s.binder_var_names(&self.binders.binders).collect();
+        let binders: Vec<_> = s.binder_var_display(&self.binders.binders).collect();
 
         let trait_ref = &self.binders.value.trait_ref;
 
@@ -142,7 +142,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                                     write!(
                                         f,
                                         "forall<{}> ",
-                                        s.binder_var_names(&bound.binders)
+                                        s.binder_var_display(&bound.binders)
                                             .collect::<Vec<_>>()
                                             .join(", ")
                                     )?;
@@ -176,7 +176,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                         .join(" + ")
                 )
             }
-            TyData::BoundVar(bound_var) => write!(f, "{}", s.name_for_bound_var(bound_var)),
+            TyData::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
             TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
             TyData::Apply(apply_ty) => apply_ty.fmt(s, f),
             TyData::Function(func) => func.fmt(s, f),
@@ -297,10 +297,10 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
 impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
-            LifetimeData::BoundVar(v) => write!(f, "'{}", s.name_for_bound_var(v)),
+            LifetimeData::BoundVar(v) => write!(f, "'{}", s.display_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
             LifetimeData::Placeholder(_) => unreachable!("cannot print placeholder variables"),
-            // Matching the void ensues at compile time that this code is
+            // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},
         }
@@ -324,7 +324,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
             write!(
                 f,
                 "forall<{}> ",
-                s.binder_var_names(&self.binders)
+                s.binder_var_display(&self.binders)
                     .collect::<Vec<_>>()
                     .join(", ")
             )?;
@@ -340,7 +340,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
             write!(
                 f,
                 "forall<{}> ",
-                s.binder_var_names(&self.binders)
+                s.binder_var_display(&self.binders)
                     .collect::<Vec<_>>()
                     .join(", ")
             )?;
@@ -478,32 +478,43 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
         // parameter that its trait had. We want to map the new binders for
         // those generic parameters back into their original names. To do that,
         // first find their original names (trait_binder_names), then the names
-        // they have inside the AssociatedTyDatum (my_names_for_trait_params),
+        // they have inside the AssociatedTyDatum (assoc_ty_names_for_trait_params),
         // and then add that mapping to the WriterState when writing bounds and
         // where clauses.
+
         let trait_datum = s.db.trait_datum(self.trait_id);
-        let trait_binder_names = s.binder_var_indices(&trait_datum.binders.binders);
+        // inverted Debrujin indices for the trait's parameters in the trait
+        // environment
+        let trait_param_names_in_trait_env = s.binder_var_indices(&trait_datum.binders.binders);
         let s = &s.add_debrujin_index();
-        let my_binder_names = s
+        // inverted Debrujin indices for the trait's parameters in the
+        // associated type environment
+        let param_names_in_assoc_ty_env = s
             .binder_var_indices(&self.binders.binders)
             .collect::<Vec<_>>();
-        let my_binder_display = s
-            .binder_var_names(&self.binders.binders)
-            .collect::<Vec<_>>();
-        let (my_names_for_trait_params, _) =
-            s.db.split_associated_ty_parameters(&my_binder_names, self);
+        // inverted Debrujin indices to render the trait's parameters in the
+        // associated type environment
+        let (trait_param_names_in_assoc_ty_env, _) =
+            s.db.split_associated_ty_parameters(&param_names_in_assoc_ty_env, self);
+
         let s = &s.add_parameter_mapping(
-            my_names_for_trait_params.iter().copied(),
-            trait_binder_names,
+            trait_param_names_in_assoc_ty_env.iter().copied(),
+            trait_param_names_in_trait_env,
         );
 
-        let (_, my_params) =
-            s.db.split_associated_ty_parameters(&my_binder_display, self);
+        // rendered names for the associated type's generics in the associated
+        // type environment
+        let binder_display_in_assoc_ty = s
+            .binder_var_display(&self.binders.binders)
+            .collect::<Vec<_>>();
+
+        let (_, assoc_ty_params) =
+            s.db.split_associated_ty_parameters(&binder_display_in_assoc_ty, self);
         write!(
             f,
             "type {}<{}>",
             s.db.identifier_name(&self.name),
-            my_params.join(", ")
+            assoc_ty_params.join(", ")
         )?;
 
         let datum_bounds = &self.binders.value;
@@ -543,7 +554,10 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         if self.binders.len() == 0 {
             write!(f, "trait {} {{}}", trait_name)
         } else {
-            let binders: Vec<_> = s.binder_var_names(&self.binders.binders).skip(1).collect();
+            let binders: Vec<_> = s
+                .binder_var_display(&self.binders.binders)
+                .skip(1)
+                .collect();
             write!(f, "trait {}<{}> ", trait_name, binders.join(", "))?;
             if !self.binders.value.where_clauses.is_empty() {
                 write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
@@ -569,7 +583,7 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
             f,
             "struct {}<{}> ",
             s.db.struct_name(self.id),
-            s.binder_var_names(&self.binders.binders)
+            s.binder_var_display(&self.binders.binders)
                 .collect::<Vec<_>>()
                 .join(", ")
         )?;
@@ -680,7 +694,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
         }
     }
 
-    fn apply_substitutions(&self, b: InvertedBoundVar) -> impl Display {
+    fn apply_mappings(&self, b: InvertedBoundVar) -> impl Display {
         // TODO: sometimes produce "Self"
         self.remapping.get(&b).copied().unwrap_or(b)
     }
@@ -695,12 +709,12 @@ impl<'a, I: Interner> WriterState<'a, I> {
         self.invert_debrujin_idx(0, idx)
     }
 
-    fn name_for_bound_var(&self, b: &BoundVar) -> impl Display {
-        self.apply_substitutions(self.indices_for_bound_var(b))
+    fn display_bound_var(&self, b: &BoundVar) -> impl Display {
+        self.apply_mappings(self.indices_for_bound_var(b))
     }
 
     fn name_for_introduced_bound_var(&self, idx: usize) -> impl Display {
-        self.apply_substitutions(self.indices_for_introduced_bound_var(idx))
+        self.apply_mappings(self.indices_for_introduced_bound_var(idx))
     }
 
     fn binder_var_indices<'b>(
@@ -713,7 +727,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .map(move |(idx, _param)| self.indices_for_introduced_bound_var(idx))
     }
 
-    fn binder_var_names<'b>(
+    fn binder_var_display<'b>(
         &'b self,
         binders: &'b [ParameterKind<()>],
     ) -> impl Iterator<Item = String> + 'b {
@@ -721,8 +735,8 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .iter()
             .zip(self.binder_var_indices(binders))
             .map(move |(parameter, var)| match parameter {
-                ParameterKind::Ty(_) => format!("{}", self.apply_substitutions(var)),
-                ParameterKind::Lifetime(_) => format!("'{}", self.apply_substitutions(var)),
+                ParameterKind::Ty(_) => format!("{}", self.apply_mappings(var)),
+                ParameterKind::Lifetime(_) => format!("'{}", self.apply_mappings(var)),
             })
     }
 }

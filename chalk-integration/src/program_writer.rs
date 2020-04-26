@@ -47,6 +47,13 @@ mod test {
         out
     }
 
+    /// Parses the input, lowers it, prints it, then re-parses and re-lowers,
+    /// failing if the two lowered programs don't match.
+    ///
+    /// Note: the comparison here does include IDs, so input order matters. In
+    /// particular, ProgramWriter always writes traits, then structs, then
+    /// impls. So all traits must come first, then structs, then all impls, or
+    /// the reparse will fail.
     fn reparse_test(program_text: &str) {
         let original_program = match chalk_parse::parse_program(program_text) {
             Ok(v) => v,
@@ -55,7 +62,11 @@ mod test {
                 e, program_text
             ),
         };
-        let original_program = Arc::new(original_program.lower().unwrap());
+        let original_program = Arc::new(
+            original_program
+                .lower()
+                .expect("unable to lower test program"),
+        );
         let new_text = tls::set_current_program(&original_program, || original_program.write());
         let new_program = match chalk_parse::parse_program(&new_text) {
             Ok(v) => v,
@@ -82,14 +93,13 @@ mod test {
                 new_text
             );
         }
-        eprintln!("{}",new_text);
+        eprintln!("{}", new_text);
     }
 
     #[test]
     fn test_simple_structs_and_bounds() {
         reparse_test("struct Foo {}");
         reparse_test("struct Foo<T> {}");
-        // note: the order here matters! Traits must be after structs.
         reparse_test(
             "
             struct Foo<T> where T: Trait {}
@@ -111,8 +121,34 @@ mod test {
     }
 
     #[test]
-    #[ignore]
-    fn test_self_in_where() {
+    fn test_self() {
+        reparse_test(
+            "
+            trait Bkz {}
+            trait Foo where Self: Bkz {}
+            ",
+        );
+        reparse_test(
+            "
+            trait Bez {}
+            trait Foo {
+                type Assoc where Self: Bez;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            trait Baz {}
+            struct Foo where Self: Baz {}
+            ",
+        );
+        reparse_test(
+            "
+            trait Blz {}
+            struct Fzk {}
+            struct Foo<T> where Self<Fzk>: Blz {}
+            ",
+        );
         reparse_test(
             "
             trait Baz<'a> {}
@@ -381,8 +417,9 @@ mod test {
     }
 
     #[test]
-    fn complicated_bounds() {
-        let original_program_text = "
+    fn test_complicated_bounds() {
+        reparse_test(
+            "
             struct Foo { }
             trait Bar { }
             trait Baz<T> { }
@@ -394,50 +431,61 @@ mod test {
                         Foo: Bar,
                         dyn Bar: Baz<Foo>;
             }
-        ";
-
-        let p = Arc::new(
-            chalk_parse::parse_program(&original_program_text)
-                .unwrap()
-                .lower()
-                .unwrap(),
+            ",
         );
-        tls::set_current_program(&p, || {
-            let written = p.write();
-            eprintln!("complicated_bounds:\n{}", written);
-        })
     }
+
     #[test]
-    fn function_type() {
+    fn test_assoc_ty_alias_bound() {
+        reparse_test(
+            "
+            struct Foo { }
+            trait Bax { type BaxT; }
+            trait Test {
+                type Assoc<T>
+                    where
+                        Foo: Bax<BaxT=T>;
+            }
+            ",
+        );
+    }
+
+    #[test]
+    fn test_function_type() {
         reparse_test(
             "
             struct Foo { }
             trait Baz<T> { }
             impl Baz<fn(Foo)> for Foo { }
-        ",
+            ",
         );
     }
+
     #[test]
-    fn where_clauses_galore() {
-        let original_program_text = "
+    fn test_struct_where_clauses() {
+        reparse_test(
+            "
             struct Foo<T, U> where T: Baz, U: Bez { }
             trait Baz { }
             trait Bez { }
-        ";
-
-        let p = Arc::new(
-            chalk_parse::parse_program(&original_program_text)
-                .unwrap()
-                .lower()
-                .unwrap(),
+            ",
         );
-        tls::set_current_program(&p, || {
-            let written = p.write();
-            eprintln!("complicated_bounds:\n{}", written);
-        })
     }
     #[test]
-    fn use_as_clause() {
+    fn test_impl_where_clauses() {
+        reparse_test(
+            "
+            struct Foo<T, U> where T: Baz, U: Bez { }
+            trait Baz { }
+            trait Bez { }
+            impl<T, U> Bez for Foo<T, U> where T: Baz, U: Bez { }
+            ",
+        );
+        // TODO: more of these
+    }
+
+    #[test]
+    fn test_trait_projection() {
         reparse_test(
             "
             struct Foo<T, U> where <U as Bez<T>>::Assoc<dyn Baz>: Baz { }
@@ -445,11 +493,12 @@ mod test {
             trait Bez<T> {
                 type Assoc<U>;
             }
-        ",
+            ",
         );
     }
+
     #[test]
-    fn placeholder_in_different_situations() {
+    fn test_various_forall() {
         reparse_test(
             "
             struct Foo<'b> where forall<'a> Foo<'a>: Baz<'a> { }
@@ -461,17 +510,17 @@ mod test {
             impl<'a> Baz<'a> for for<'b> fn(Foo<'b>) { }
             impl<'a> Bax<'a> for fn(Foo<'a>) { }
             impl<'a> Bax<'a> for dyn forall<'b> Baz<'b> { }
-        ",
+            ",
         );
     }
     #[test]
-    fn lifetimes_in_structs() {
+    fn test_lifetimes_in_structs() {
         reparse_test(
             "
             struct Foo<'b> { }
             trait Baz<'a> {}
             impl<'a> Baz<'a> for Foo<'a> { }
-        ",
+            ",
         );
     }
 }
