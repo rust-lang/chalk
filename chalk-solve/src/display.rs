@@ -176,6 +176,37 @@ impl<I: Interner> RenderAsRust<I> for AliasEqBound<I> {
     }
 }
 
+impl<I: Interner> RenderAsRust<I> for Ty<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // delegate to TyData
+        self.data(s.db.interner()).fmt(s, f)
+    }
+}
+impl<I: Interner> RenderAsRust<I> for Lifetime<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // delegate to LifetimeData
+        self.data(s.db.interner()).fmt(s, f)
+    }
+}
+impl<I: Interner> RenderAsRust<I> for Parameter<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // delegate to ParameterData
+        self.data(s.db.interner()).fmt(s, f)
+    }
+}
+impl<I: Interner> RenderAsRust<I> for StructId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        f.write_str(&s.db.struct_name(*self))
+    }
+}
+impl<I: Interner> RenderAsRust<I> for TraitId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        f.write_str(&s.db.trait_name(*self))
+    }
+}
+
 impl<I: Interner> RenderAsRust<I> for TyData<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
@@ -246,7 +277,6 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
 
 impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         // <X as Y<A1, A2, A3>>::Z<B1, B2, B3>
 
         // Now, we split out A*, Y/Z and B*:
@@ -258,12 +288,12 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
         write!(
             f,
             "<{} as {}>::{}<{}>",
-            trait_params[0].data(interner).display(s),
+            trait_params[0].display(s),
             display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
             s.db.identifier_name(&assoc_ty_datum.name),
             assoc_type_params
                 .iter()
-                .map(|param| param.data(interner).display(s).to_string())
+                .map(|param| param.display(s).to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -272,7 +302,6 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
 
 impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         let s = &s.add_debrujin_index();
         if self.num_binders > 0 {
             write!(
@@ -289,7 +318,7 @@ impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
             "fn({})",
             self.parameters
                 .iter()
-                .map(|param| param.data(interner).display(s).to_string())
+                .map(|param| param.display(s).to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
         )
@@ -301,7 +330,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
         let interner = s.db.interner();
         match self.name {
             TypeName::Struct(sid) => {
-                write!(f, "{}", s.db.struct_name(sid))?;
+                write!(f, "{}", sid.display(s))?;
                 let parameters = self.substitution.parameters(interner);
                 if parameters.len() > 0 {
                     write!(
@@ -309,7 +338,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                         "<{}>",
                         parameters
                             .iter()
-                            .map(|param| param.data(interner).display(s).to_string())
+                            .map(|param| param.display(s).to_string())
                             .collect::<Vec<_>>()
                             .join(", "),
                     )?;
@@ -326,11 +355,8 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                 write!(
                     f,
                     "<{} as {}>::{}",
-                    self.first_type_parameter(interner)
-                        .unwrap()
-                        .data(interner)
-                        .display(s),
-                    s.db.trait_name(datum.trait_id),
+                    self.first_type_parameter(interner).unwrap().display(s),
+                    datum.trait_id.display(s),
                     s.db.identifier_name(&datum.name),
                 )?;
                 let params = self.substitution.parameters(interner);
@@ -340,7 +366,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                         "<{}>",
                         params[1..]
                             .iter()
-                            .map(|ty| ty.data(interner).display(s).to_string())
+                            .map(|ty| ty.display(s).to_string())
                             .collect::<Vec<_>>()
                             .join(", ")
                     )?;
@@ -367,10 +393,9 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
 
 impl<I: Interner> RenderAsRust<I> for ParameterData<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         match self {
-            ParameterKind::Ty(ty) => write!(f, "{}", ty.data(interner).display(s)),
-            ParameterKind::Lifetime(lt) => write!(f, "{}", lt.data(interner).display(s)),
+            ParameterKind::Ty(ty) => write!(f, "{}", ty.display(s)),
+            ParameterKind::Lifetime(lt) => write!(f, "{}", lt.display(s)),
         }
     }
 }
@@ -438,13 +463,12 @@ fn display_trait_with_generics<'a, I: Interner>(
     trait_id: TraitId<I>,
     trait_params: impl IntoIterator<Item = &'a Parameter<I>> + 'a,
 ) -> impl Display + 'a {
-    let interner = s.db.interner();
     let trait_params = trait_params
         .into_iter()
-        .map(|param| param.data(interner).display(s).to_string())
+        .map(|param| param.display(s).to_string())
         .collect::<Vec<_>>()
         .join(", ");
-    as_display(move |f| write!(f, "{}<{}>", s.db.trait_name(trait_id), trait_params,))
+    as_display(move |f| write!(f, "{}<{}>", trait_id.display(s), trait_params,))
 }
 
 /// This implementation correct inside where clauses.
@@ -454,7 +478,7 @@ impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
         write!(
             f,
             "{}: {}",
-            self.self_type_parameter(interner).data(interner).display(s),
+            self.self_type_parameter(interner).display(s),
             display_trait_with_generics(
                 s,
                 self.trait_id,
@@ -475,24 +499,23 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
     assoc_ty_params: &'a [Parameter<I>],
     assoc_ty_value: &'a Ty<I>,
 ) -> impl Display + 'a {
-    let interner = s.db.interner();
     as_display(move |f| {
         write!(
             f,
             "{}<{}, {}<{}>={}>",
-            s.db.trait_name(assoc_ty_datum.trait_id),
+            assoc_ty_datum.trait_id.display(s),
             trait_params
                 .iter()
-                .map(|param| param.data(interner).display(s).to_string())
+                .map(|param| param.display(s).to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
             s.db.identifier_name(&assoc_ty_datum.name),
             assoc_ty_params
                 .iter()
-                .map(|param| param.data(interner).display(s).to_string())
+                .map(|param| param.display(s).to_string())
                 .collect::<Vec<_>>()
                 .join(", "),
-            assoc_ty_value.data(interner).display(s)
+            assoc_ty_value.display(s)
         )
     })
 }
@@ -500,7 +523,6 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
 /// This implementation correct inside where clauses.
 impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         // we have: X: Y<A1, A2, A3, Z<B1, B2, B3>=D>
         // B1, B2, B3, X, A1, A2, A3 are put into alias_eq.alias.substitution
         // D is alias_eq.ty
@@ -517,7 +539,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
         write!(
             f,
             "{}: {}",
-            trait_params[0].data(interner).display(s),
+            trait_params[0].display(s),
             display_trait_with_assoc_ty_value(
                 s,
                 assoc_ty_datum,
@@ -607,16 +629,15 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 
 impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let trait_name = s.db.trait_name(self.id);
         let s = &s.add_debrujin_index();
         if self.binders.len() == 0 {
-            write!(f, "trait {} {{}}", trait_name)
+            write!(f, "trait {} {{}}", self.id.display(s))
         } else {
             let binders: Vec<_> = s
                 .binder_var_display(&self.binders.binders)
                 .skip(1)
                 .collect();
-            write!(f, "trait {}<{}> ", trait_name, binders.join(", "))?;
+            write!(f, "trait {}<{}> ", self.id.display(s), binders.join(", "))?;
             if !self.binders.value.where_clauses.is_empty() {
                 write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
             }
@@ -635,12 +656,11 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
 
 impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         let s = &s.add_debrujin_index();
         write!(
             f,
             "struct {}<{}> ",
-            s.db.struct_name(self.id),
+            self.id.display(s),
             s.binder_var_display(&self.binders.binders)
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -656,13 +676,7 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
                 .fields
                 .iter()
                 .enumerate()
-                .map(|(idx, field)| {
-                    format!(
-                        "field_{}: {}",
-                        idx,
-                        field.data(interner).display(s).to_string()
-                    )
-                })
+                .map(|(idx, field)| { format!("field_{}: {}", idx, field.display(s).to_string()) })
                 .collect::<Vec<_>>()
                 .join(", ")
         )?;
