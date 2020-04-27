@@ -185,11 +185,12 @@ fn program_clauses_that_could_match<I: Interner>(
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
                 match trait_ref.self_type_parameter(interner).data(interner) {
-                    TyData::Apply(apply) => {
-                        if let Some(struct_id) = db.as_struct_id(&apply.name) {
-                            push_auto_trait_impls(builder, trait_id, struct_id);
+                    TyData::Apply(apply) => match &apply.name {
+                        TypeName::Struct(struct_id) => {
+                            push_auto_trait_impls(builder, trait_id, *struct_id);
                         }
-                    }
+                        _ => {}
+                    },
                     TyData::InferenceVar(_) | TyData::BoundVar(_) => {
                         return Err(Floundered);
                     }

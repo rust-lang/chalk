@@ -17,7 +17,6 @@ use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
-use chalk_ir::TypeName;
 use chalk_ir::{ProgramClauses, UCanonical};
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
@@ -113,10 +112,6 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
         self.program_ir().unwrap().struct_datum(id)
-    }
-
-    fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
-        self.program_ir().unwrap().as_struct_id(type_name)
     }
 
     fn impls_for_trait(
