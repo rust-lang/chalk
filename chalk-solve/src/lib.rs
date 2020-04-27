@@ -43,9 +43,6 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the `OpaqueTyDatum` with the given id.
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>>;
 
-    /// If `id` is a struct id, returns `Some(id)` (but cast to `StructId`).
-    fn as_struct_id(&self, id: &TypeName<I>) -> Option<StructId<I>>;
-
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
     /// trying to match (if known: these parameters may contain

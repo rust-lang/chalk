@@ -201,10 +201,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_opaque_ty_id(
         opaque_ty_id: OpaqueTyId<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an alias. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -225,10 +228,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_projection_ty(
         projection_ty: &ProjectionTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an OpaqueTy. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -237,10 +243,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_opaque_ty(
         opaque_ty: &OpaqueTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an type. To get good
     /// results, this requires inspecting TLS, and is difficult to

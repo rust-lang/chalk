@@ -6,7 +6,7 @@ use chalk_ir::tls;
 use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
     OpaqueTy, OpaqueTyId, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
-    ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
+    ProjectionTy, StructId, Substitution, TraitId, Ty,
 };
 use chalk_rust_ir::{
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, OpaqueTyDatum,
@@ -330,13 +330,6 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
         self.struct_data[&id].clone()
-    }
-
-    fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
-        match type_name {
-            TypeName::Struct(struct_id) => Some(*struct_id),
-            _ => None,
-        }
     }
 
     fn impls_for_trait(
