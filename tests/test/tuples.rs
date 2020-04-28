@@ -134,3 +134,53 @@ fn tuples_are_copy() {
         }
     }
 }
+
+#[test]
+fn tuples_are_clone() {
+    test! {
+        program {
+            #[lang(clone)]
+            trait Clone { }
+
+            trait Foo {}
+
+            impl Clone for u8 {}
+        }
+
+        goal {
+            (dyn Foo,): Clone
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            (u8, dyn Foo): Clone
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            (dyn Foo, u8): Clone
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            (): Clone
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            (u8,): Clone
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            (u8, u8): Clone
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
