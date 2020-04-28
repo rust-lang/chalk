@@ -1,6 +1,6 @@
 use super::builder::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::TyData;
+use chalk_ir::{Substitution, Ty, TyData};
 
 mod clone;
 mod copy;
@@ -29,4 +29,28 @@ pub fn add_builtin_program_clauses<I: Interner>(
         // Drop impls are provided explicitly
         WellKnownTrait::DropTrait => (),
     }
+}
+
+/// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form
+/// `Implemented(T0: Trait) :- Implemented(U0: Trait) .. Implemented(Un: Trait)`
+pub fn needs_impl_for_tys<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    builder: &mut ClauseBuilder<'_, I>,
+    trait_ref: &TraitRef<I>,
+    tys: impl Iterator<Item = Ty<I>>,
+) {
+    // The trait must take one parameter (a type)
+    debug_assert_eq!(
+        db.trait_datum(trait_ref.trait_id)
+            .binders
+            .len(db.interner()),
+        1,
+    );
+    builder.push_clause(
+        trait_ref.clone(),
+        tys.map(|ty| TraitRef {
+            trait_id: trait_ref.trait_id,
+            substitution: Substitution::from1(db.interner(), ty),
+        }),
+    );
 }
