@@ -506,7 +506,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `GoalsData::intern` (which will ultimately call this
     /// method).
-    fn intern_goals(&self, data: impl IntoIterator<Item = Goal<Self>>) -> Self::InternedGoals;
+    fn intern_goals<E>(
+        &self,
+        data: impl IntoIterator<Item = Result<Goal<Self>, E>>,
+    ) -> Result<Self::InternedGoals, E>;
 
     /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
     fn goals_data<'a>(&self, goals: &'a Self::InternedGoals) -> &'a [Goal<Self>];
@@ -542,10 +545,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `ProgramClauses::from` (which will ultimately call this
     /// method).
-    fn intern_program_clauses(
+    fn intern_program_clauses<E>(
         &self,
-        data: impl IntoIterator<Item = ProgramClause<Self>>,
-    ) -> Self::InternedProgramClauses;
+        data: impl IntoIterator<Item = Result<ProgramClause<Self>, E>>,
+    ) -> Result<Self::InternedProgramClauses, E>;
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
     fn program_clauses_data<'a>(
@@ -557,10 +560,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `QuantifiedWhereClauses::from` (which will ultimately call this
     /// method).
-    fn intern_quantified_where_clauses(
+    fn intern_quantified_where_clauses<E>(
         &self,
-        data: impl IntoIterator<Item = QuantifiedWhereClause<Self>>,
-    ) -> Self::InternedQuantifiedWhereClauses;
+        data: impl IntoIterator<Item = Result<QuantifiedWhereClause<Self>, E>>,
+    ) -> Result<Self::InternedQuantifiedWhereClauses, E>;
 
     /// Lookup the slice of `QuantifiedWhereClause` that was interned to
     /// create a `QuantifiedWhereClauses`.
@@ -573,10 +576,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `ParameterKinds::from` (which will ultimately call this
     /// method).
-    fn intern_parameter_kinds(
+    fn intern_parameter_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = ParameterKind<()>>,
-    ) -> Self::InternedParameterKinds;
+        data: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
+    ) -> Result<Self::InternedParameterKinds, E>;
 
     /// Lookup the slice of `ParameterKind` that was interned to
     /// create a `ParameterKinds`.
@@ -589,10 +592,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `CanonicalVarKinds::from` (which will ultimately call this
     /// method).
-    fn intern_canonical_var_kinds(
+    fn intern_canonical_var_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
-    ) -> Self::InternedCanonicalVarKinds;
+        data: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+    ) -> Result<Self::InternedCanonicalVarKinds, E>;
 
     /// Lookup the slice of `ParameterKind` that was interned to
     /// create a `ParameterKinds`.
@@ -879,10 +882,10 @@ mod default {
             goal
         }
 
-        fn intern_goals(
+        fn intern_goals<E>(
             &self,
-            data: impl IntoIterator<Item = Goal<ChalkIr>>,
-        ) -> Vec<Goal<ChalkIr>> {
+            data: impl IntoIterator<Item = Result<Goal<ChalkIr>, E>>,
+        ) -> Result<Vec<Goal<ChalkIr>>, E> {
             data.into_iter().collect()
         }
 
@@ -915,10 +918,10 @@ mod default {
             clause
         }
 
-        fn intern_program_clauses(
+        fn intern_program_clauses<E>(
             &self,
-            data: impl IntoIterator<Item = ProgramClause<Self>>,
-        ) -> Vec<ProgramClause<Self>> {
+            data: impl IntoIterator<Item = Result<ProgramClause<Self>, E>>,
+        ) -> Result<Vec<ProgramClause<Self>>, E> {
             data.into_iter().collect()
         }
 
@@ -929,10 +932,10 @@ mod default {
             clauses
         }
 
-        fn intern_quantified_where_clauses(
+        fn intern_quantified_where_clauses<E>(
             &self,
-            data: impl IntoIterator<Item = QuantifiedWhereClause<Self>>,
-        ) -> Self::InternedQuantifiedWhereClauses {
+            data: impl IntoIterator<Item = Result<QuantifiedWhereClause<Self>, E>>,
+        ) -> Result<Self::InternedQuantifiedWhereClauses, E> {
             data.into_iter().collect()
         }
 
@@ -942,24 +945,27 @@ mod default {
         ) -> &'a [QuantifiedWhereClause<Self>] {
             clauses
         }
-        fn intern_parameter_kinds(
+        fn intern_parameter_kinds<E>(
             &self,
-            data: impl IntoIterator<Item = ParameterKind<()>>,
-        ) -> Self::InternedParameterKinds {
+            data: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
+        ) -> Result<Self::InternedParameterKinds, E> {
             data.into_iter().collect()
         }
+
         fn parameter_kinds_data<'a>(
             &self,
             parameter_kinds: &'a Self::InternedParameterKinds,
         ) -> &'a [ParameterKind<()>] {
             parameter_kinds
         }
-        fn intern_canonical_var_kinds(
+
+        fn intern_canonical_var_kinds<E>(
             &self,
-            data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
-        ) -> Self::InternedCanonicalVarKinds {
+            data: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+        ) -> Result<Self::InternedCanonicalVarKinds, E> {
             data.into_iter().collect()
         }
+
         fn canonical_var_kinds_data<'a>(
             &self,
             canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,

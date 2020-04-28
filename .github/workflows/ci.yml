@@ -41,13 +41,6 @@ jobs:
       - name: Install mdbook-mermaid
         run: cd book && curl -L https://github.com/badboy/mdbook-mermaid/releases/download/0.2.2/mdbook-mermaid-0.2.2-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
-      - name: Install mdbook-linkcheck
-        run: |
-          cd book
-          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.5.0/mdbook-linkcheck-v0.5.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
-          # Add the book directory to the $PATH
-          echo "::add-path::$GITHUB_WORKSPACE/book"
-
       - name: Execute tests for Chalk book
         run: cd book && ./mdbook test
 
@@ -85,3 +78,26 @@ jobs:
 
       - name: Check formatting of all crates in the workspace
         run: cargo fmt --all -- --check
+  
+  mdbook-linkcheck:
+    name: Book link check
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/master'
+    steps:
+      - name: Checkout the source code
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+      - name: Install mdbook
+        run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
+
+      - name: Install mdbook-linkcheck
+        run: |
+          cd book
+          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.5.0/mdbook-linkcheck-v0.5.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          # Add the book directory to the $PATH
+          echo "::add-path::$GITHUB_WORKSPACE/book"
+
+      - name: Build Chalk book
+        run: cd book && ./mdbook build
