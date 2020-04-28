@@ -337,7 +337,10 @@ fn program_clauses_that_could_match<I: Interner>(
                     trait_parameters,
                 );
             }
-            AliasTy::Opaque(_) => (),
+            AliasTy::Opaque(opaque_ty) => {
+                db.opaque_ty_data(opaque_ty.opaque_ty_id)
+                    .to_program_clauses(builder);
+            }
         },
         DomainGoal::LocalImplAllowed(trait_ref) => db
             .trait_datum(trait_ref.trait_id)
