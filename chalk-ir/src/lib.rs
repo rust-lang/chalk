@@ -225,7 +225,7 @@ pub struct OpaqueTyId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
@@ -819,7 +819,7 @@ impl<T, L> ParameterKind<T, L> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Parameter<I: Interner> {
     interned: I::InternedParameter,
 }
@@ -1124,7 +1124,7 @@ impl<I: Interner> QuantifiedWhereClause<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct QuantifiedWhereClauses<I: Interner> {
     interned: I::InternedQuantifiedWhereClauses,
 }
@@ -1142,13 +1142,13 @@ impl<I: Interner> QuantifiedWhereClauses<I> {
         interner: &I,
         clauses: impl IntoIterator<Item = impl CastTo<QuantifiedWhereClause<I>>>,
     ) -> Self {
-        use crate::cast::Caster;
-        QuantifiedWhereClauses {
-            interned: I::intern_quantified_where_clauses(
-                interner,
-                clauses.into_iter().casted(interner),
-            ),
-        }
+        Self::from_fallible(
+            interner,
+            clauses
+                .into_iter()
+                .map(|p| -> Result<QuantifiedWhereClause<I>, ()> { Ok(p.cast(interner)) }),
+        )
+        .unwrap()
     }
 
     pub fn from_fallible<E>(
@@ -1156,11 +1156,12 @@ impl<I: Interner> QuantifiedWhereClauses<I> {
         clauses: impl IntoIterator<Item = Result<impl CastTo<QuantifiedWhereClause<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
-        let clauses = clauses
-            .into_iter()
-            .casted(interner)
-            .collect::<Result<Vec<QuantifiedWhereClause<I>>, _>>()?;
-        Ok(Self::from(interner, clauses))
+        Ok(QuantifiedWhereClauses {
+            interned: I::intern_quantified_where_clauses(
+                interner,
+                clauses.into_iter().casted(interner),
+            )?,
+        })
     }
 
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, QuantifiedWhereClause<I>> {
@@ -1459,7 +1460,7 @@ impl<I: Interner> ProgramClauseData<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClause<I: Interner> {
     interned: I::InternedProgramClause,
 }
@@ -1485,7 +1486,7 @@ impl<I: Interner> ProgramClause<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClauses<I: Interner> {
     interned: I::InternedProgramClauses,
 }
@@ -1503,10 +1504,13 @@ impl<I: Interner> ProgramClauses<I> {
         interner: &I,
         clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>,
     ) -> Self {
-        use crate::cast::Caster;
-        ProgramClauses {
-            interned: I::intern_program_clauses(interner, clauses.into_iter().casted(interner)),
-        }
+        Self::from_fallible(
+            interner,
+            clauses
+                .into_iter()
+                .map(|p| -> Result<ProgramClause<I>, ()> { Ok(p.cast(interner)) }),
+        )
+        .unwrap()
     }
 
     pub fn from_fallible<E>(
@@ -1514,11 +1518,9 @@ impl<I: Interner> ProgramClauses<I> {
         clauses: impl IntoIterator<Item = Result<impl CastTo<ProgramClause<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
-        let clauses = clauses
-            .into_iter()
-            .casted(interner)
-            .collect::<Result<Vec<ProgramClause<I>>, _>>()?;
-        Ok(Self::from(interner, clauses))
+        Ok(ProgramClauses {
+            interned: I::intern_program_clauses(interner, clauses.into_iter().casted(interner))?,
+        })
     }
 
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ProgramClause<I>> {
@@ -1538,7 +1540,7 @@ impl<I: Interner> ProgramClauses<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ParameterKinds<I: Interner> {
     interned: I::InternedParameterKinds,
 }
@@ -1556,19 +1558,22 @@ impl<I: Interner> ParameterKinds<I> {
         interner: &I,
         parameter_kinds: impl IntoIterator<Item = ParameterKind<()>>,
     ) -> Self {
-        ParameterKinds {
-            interned: I::intern_parameter_kinds(interner, parameter_kinds.into_iter()),
-        }
+        Self::from_fallible(
+            interner,
+            parameter_kinds
+                .into_iter()
+                .map(|p| -> Result<ParameterKind<()>, ()> { Ok(p) }),
+        )
+        .unwrap()
     }
 
     pub fn from_fallible<E>(
         interner: &I,
         parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
     ) -> Result<Self, E> {
-        let parameter_kinds = parameter_kinds
-            .into_iter()
-            .collect::<Result<Vec<ParameterKind<()>>, _>>()?;
-        Ok(Self::from(interner, parameter_kinds))
+        Ok(ParameterKinds {
+            interned: I::intern_parameter_kinds(interner, parameter_kinds.into_iter())?,
+        })
     }
 
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<()>> {
@@ -1588,7 +1593,7 @@ impl<I: Interner> ParameterKinds<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct CanonicalVarKinds<I: Interner> {
     interned: I::InternedCanonicalVarKinds,
 }
@@ -1606,19 +1611,22 @@ impl<I: Interner> CanonicalVarKinds<I> {
         interner: &I,
         parameter_kinds: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
     ) -> Self {
-        CanonicalVarKinds {
-            interned: I::intern_canonical_var_kinds(interner, parameter_kinds.into_iter()),
-        }
+        Self::from_fallible(
+            interner,
+            parameter_kinds
+                .into_iter()
+                .map(|p| -> Result<ParameterKind<UniverseIndex>, ()> { Ok(p) }),
+        )
+        .unwrap()
     }
 
     pub fn from_fallible<E>(
         interner: &I,
         parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
     ) -> Result<Self, E> {
-        let parameter_kinds = parameter_kinds
-            .into_iter()
-            .collect::<Result<Vec<ParameterKind<UniverseIndex>>, _>>()?;
-        Ok(Self::from(interner, parameter_kinds))
+        Ok(CanonicalVarKinds {
+            interned: I::intern_canonical_var_kinds(interner, parameter_kinds.into_iter())?,
+        })
     }
 
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<UniverseIndex>> {
@@ -1704,7 +1712,7 @@ impl<T: HasInterner> UCanonical<T> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
 /// A list of goals.
 pub struct Goals<I: Interner> {
     interned: I::InternedGoals,
@@ -1720,10 +1728,13 @@ impl<I: Interner> Goals<I> {
     }
 
     pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
-        use crate::cast::Caster;
-        Goals {
-            interned: I::intern_goals(interner, goals.into_iter().casted(interner)),
-        }
+        Self::from_fallible(
+            interner,
+            goals
+                .into_iter()
+                .map(|p| -> Result<Goal<I>, ()> { Ok(p.cast(interner)) }),
+        )
+        .unwrap()
     }
 
     pub fn from_fallible<E>(
@@ -1731,11 +1742,9 @@ impl<I: Interner> Goals<I> {
         goals: impl IntoIterator<Item = Result<impl CastTo<Goal<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
-        let goals = goals
-            .into_iter()
-            .casted(interner)
-            .collect::<Result<Vec<Goal<I>>, _>>()?;
-        Ok(Goals::from(interner, goals))
+        Ok(Goals {
+            interned: I::intern_goals(interner, goals.into_iter().casted(interner))?,
+        })
     }
 
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Goal<I>> {
@@ -1755,7 +1764,7 @@ impl<I: Interner> Goals<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub struct Goal<I: Interner> {
     interned: I::InternedGoal,
@@ -1904,7 +1913,7 @@ pub enum Constraint<I: Interner> {
 }
 
 /// A mapping of inference variables to instantiations thereof.
-#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
 pub struct Substitution<I: Interner> {
     /// Map free variable with given index to the value with the same
     /// index. Naturally, the kind of the variable must agree with
