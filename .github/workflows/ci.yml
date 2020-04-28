@@ -82,6 +82,7 @@ jobs:
   mdbook-linkcheck:
     name: Book link check
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/master'
     steps:
       - name: Checkout the source code
         uses: actions/checkout@master
@@ -90,7 +91,7 @@ jobs:
 
       - name: Install mdbook
         run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
-      
+
       - name: Install mdbook-linkcheck
         run: |
           cd book
