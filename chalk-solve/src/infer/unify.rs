@@ -273,11 +273,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         let interner = self.interner;
 
-        if let Some(n_a) = self.table.normalize_lifetime_shallow(interner, a) {
-            return self.unify_lifetime_lifetime(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_lifetime_shallow(interner, b) {
-            return self.unify_lifetime_lifetime(a, &n_b);
-        }
+        let n_a = self.table.normalize_lifetime_shallow(interner, a);
+        let n_b = self.table.normalize_lifetime_shallow(interner, b);
+        let a = n_a.as_ref().unwrap_or(a);
+        let b = n_b.as_ref().unwrap_or(b);
 
         debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
@@ -337,11 +336,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_const_const<'a>(&mut self, a: &'a Const<I>, b: &'a Const<I>) -> Fallible<()> {
         let interner = self.interner;
 
-        if let Some(n_a) = self.table.normalize_const_shallow(interner, a) {
-            return self.unify_const_const(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_const_shallow(interner, b) {
-            return self.unify_const_const(a, &n_b);
-        }
+        let n_a = self.table.normalize_const_shallow(interner, a);
+        let n_b = self.table.normalize_const_shallow(interner, b);
+        let a = n_a.as_ref().unwrap_or(a);
+        let b = n_b.as_ref().unwrap_or(b);
 
         debug_heading!(
             "unify_const_const(a={:?}\
