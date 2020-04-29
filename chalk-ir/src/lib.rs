@@ -7,7 +7,7 @@ use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
-use chalk_derive::{Fold, HasInterner, SuperVisit, Visit};
+use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
 use chalk_engine::fallible::*;
 use std::iter;
 use std::marker::PhantomData;
@@ -602,7 +602,7 @@ impl DebruijnIndex {
 /// known. It is referenced within the type using `^1`, indicating
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct DynTy<I: Interner> {
     pub bounds: Binders<QuantifiedWhereClauses<I>>,
 }
@@ -719,7 +719,7 @@ impl PlaceholderIndex {
 }
 
 // Fold derive intentionally omitted, folded through Ty
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct ApplicationTy<I: Interner> {
     pub name: TypeName<I>,
     pub substitution: Substitution<I>,
@@ -884,7 +884,7 @@ impl<I: Interner> ParameterData<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum AliasTy<I: Interner> {
     Projection(ProjectionTy<I>),
     Opaque(OpaqueTy<I>),
@@ -908,19 +908,19 @@ impl<I: Interner> AliasTy<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct ProjectionTy<I: Interner> {
     pub associated_ty_id: AssocTypeId<I>,
     pub substitution: Substitution<I>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct OpaqueTy<I: Interner> {
     pub opaque_ty_id: OpaqueTyId<I>,
     pub substitution: Substitution<I>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct TraitRef<I: Interner> {
     pub trait_id: TraitId<I>,
     pub substitution: Substitution<I>,
@@ -948,13 +948,13 @@ impl<I: Interner> TraitRef<I> {
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
     Implemented(TraitRef<I>),
     AliasEq(AliasEq<I>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum WellFormed<I: Interner> {
     /// A predicate which is true is some trait ref is well-formed.
     /// For example, given the following trait definitions:
@@ -984,7 +984,7 @@ pub enum WellFormed<I: Interner> {
     Ty(Ty<I>),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum FromEnv<I: Interner> {
     /// A predicate which enables deriving everything which should be true if we *know* that
     /// some trait ref is well-formed. For example given the above trait definitions, we can use
@@ -1016,7 +1016,7 @@ pub enum FromEnv<I: Interner> {
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum DomainGoal<I: Interner> {
     Holds(WhereClause<I>),
 
@@ -1201,7 +1201,7 @@ impl<I: Interner> DomainGoal<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 pub struct EqGoal<I: Interner> {
     pub a: Parameter<I>,
     pub b: Parameter<I>,
@@ -1211,14 +1211,14 @@ pub struct EqGoal<I: Interner> {
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 pub struct Normalize<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,
 }
 
 /// Proves **equality** between an alias and a type.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,
@@ -1398,7 +1398,7 @@ where
 /// Represents one clause of the form `consequence :- conditions` where
 /// `conditions = cond_1 && cond_2 && ...` is the conjunction of the individual
 /// conditions.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct ProgramClauseImplication<I: Interner> {
     pub consequence: DomainGoal<I>,
     pub conditions: Goals<I>,
@@ -1421,7 +1421,7 @@ impl std::ops::BitAnd for ClausePriority {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner, Zip)]
 pub enum ProgramClauseData<I: Interner> {
     Implies(ProgramClauseImplication<I>),
     ForAll(Binders<ProgramClauseImplication<I>>),
@@ -1860,7 +1860,7 @@ where
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum GoalData<I: Interner> {
     /// Introduces a binding at depth 0, shifting other bindings up
