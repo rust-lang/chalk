@@ -29,8 +29,7 @@ type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), Associa
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
 
-type NamedGenericArg = chalk_ir::WithKind<ChalkIr, Ident>;
-type ParameterMap = BTreeMap<NamedGenericArg, BoundVar>;
+type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
@@ -74,79 +73,122 @@ struct AssociatedTyLookup {
     addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 
-enum TypeLookup {
-    Adt(chalk_ir::AdtId<ChalkIr>),
-    GenericArg(BoundVar),
-    FnDef(chalk_ir::FnDefId<ChalkIr>),
-    Opaque(chalk_ir::OpaqueTyId<ChalkIr>),
-}
-
-enum LifetimeLookup {
-    GenericArg(BoundVar),
-}
-
-enum ConstLookup {
-    Parameter(BoundVar),
+enum ApplyTypeLookup {
+    Adt(AdtId<ChalkIr>),
+    FnDef(FnDefId<ChalkIr>),
 }
 
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
 impl<'k> Env<'k> {
-    fn lookup_type(&self, name: &Identifier) -> LowerResult<TypeLookup> {
-        if let Some(k) = self.parameter_map.get(&NamedGenericArg::new(
-            chalk_ir::VariableKind::Ty,
-            name.str.clone(),
-        )) {
-            return Ok(TypeLookup::GenericArg(*k));
+    fn lookup_generic_arg(&self, name: Identifier) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
+        let interner = self.interner();
+
+        if let Some(p) = self.parameter_map.get(&name.str) {
+            return match *p {
+                chalk_ir::GenericArgData::Ty(b) => Ok(chalk_ir::TyData::BoundVar(b)
+                    .intern(interner)
+                    .cast(interner)),
+                chalk_ir::GenericArgData::Lifetime(b) => Ok(chalk_ir::LifetimeData::BoundVar(b)
+                    .intern(interner)
+                    .cast(interner)),
+                chalk_ir::GenericArgData::Const(b) => Ok(chalk_ir::ConstData::BoundVar(b)
+                    .intern(interner)
+                    .cast(interner)),
+            };
         }
 
         if let Some(id) = self.adt_ids.get(&name.str) {
-            return Ok(TypeLookup::Adt(*id));
+            let k = self.adt_kind(*id);
+            if k.binders.len(interner) > 0 {
+                return Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name,
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                });
+            } else {
+                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: chalk_ir::TypeName::Adt(*id),
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner)
+                .cast(interner));
+            };
         }
 
         if let Some(id) = self.fn_def_ids.get(&name.str) {
-            return Ok(TypeLookup::FnDef(*id));
+            let k = env.fn_def_kind(id);
+            if k.binders.len(interner) > 0 {
+                Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name.clone(),
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                })
+            } else {
+                Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
+                    num_binders: k.binders.len(interner),
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner).cast(interner))
+            }
         }
 
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {
-            return Ok(TypeLookup::Opaque(*id));
+            return Ok(
+                chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+                    opaque_ty_id: *id,
+                    substitution: chalk_ir::Substitution::empty(interner),
+                }))
+                .intern(interner)
+                .cast(interner),
+            );
         }
         if let Some(_) = self.trait_ids.get(&name.str) {
             return Err(RustIrError::NotStruct(name.clone()));
         }
 
-        Err(RustIrError::InvalidTypeName(name.clone()))
+        Err(RustIrError::InvalidParameterName(name))
     }
 
-    fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
-        if let Some(_) = self.parameter_map.get(&NamedGenericArg::new(
-            chalk_ir::VariableKind::Ty,
-            name.str.clone(),
-        )) {
-            return Err(RustIrError::NotTrait(name.clone()));
+    fn lookup_apply_type(&self, name: Identifier) -> LowerResult<ApplyTypeLookup> {
+        if let Some(_) = self.parameter_map.get(&name.str) {
+            return Err(RustIrError::CannotApplyTypeParameter(name));
+        }
+
+        if let Some(_) = self.opaque_ty_ids.get(&name.str) {
+            return Err(RustIrError::CannotApplyTypeParameter(name));
+        }
+
+        if let Some(id) = self.adt_ids.get(&name.str) {
+            return Ok(ApplyTypeLookup::Adt(*id));
+        }
+
+        if let Some(id) = self.adt_ids.get(&name.str) {
+            return Ok(ApplyTypeLookup::FnDef(*id));
+        }
+
+        Err(RustIrError::NotStruct(name))
+    }
+
+    fn lookup_trait(&self, name: Identifier) -> LowerResult<TraitId<ChalkIr>> {
+        if let Some(_) = self.parameter_map.get(&name.str) {
+            return Err(RustIrError::NotTrait(name));
         }
 
         if let Some(_) = self.adt_ids.get(&name.str) {
-            return Err(RustIrError::NotTrait(name.clone()));
+            return Err(RustIrError::NotTrait(name));
         }
 
         if let Some(id) = self.trait_ids.get(&name.str) {
             return Ok(*id);
         }
 
-        Err(RustIrError::InvalidTypeName(name.clone()))
+        Err(RustIrError::InvalidTraitName(name))
     }
-
-    fn lookup_lifetime(&self, name: &Identifier) -> LowerResult<LifetimeLookup> {
-        if let Some(k) = self.parameter_map.get(&NamedGenericArg::new(
-            chalk_ir::VariableKind::Lifetime,
-            name.str.clone(),
-        )) {
-            return Ok(LifetimeLookup::GenericArg(*k));
-        }
-
-        Err(RustIrError::InvalidLifetimeName(name.clone()))
+    
+    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
+        &self.trait_kinds[&id]
     }
 
     fn adt_kind(&self, id: chalk_ir::AdtId<ChalkIr>) -> &TypeKind {
@@ -157,21 +199,6 @@ impl<'k> Env<'k> {
         &self.fn_def_kinds[&id]
     }
 
-    fn lookup_const(&self, name: Identifier) -> LowerResult<ConstLookup> {
-        if let Some(k) = self
-            .parameter_map
-            .get(&chalk_ir::ParameterKind::Const(name.str))
-        {
-            return Ok(ConstLookup::Parameter(*k));
-        }
-
-        Err(RustIrError::InvalidConstName(name))
-    }
-    
-    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
-        &self.trait_kinds[&id]
-    }
-
     /// Introduces new parameters, shifting the indices of existing
     /// parameters to accommodate them. The indices of the new binders
     /// will be assigned in order as they are iterated.
@@ -180,15 +207,23 @@ impl<'k> Env<'k> {
         I: IntoIterator<Item = NamedGenericArg>,
         I::IntoIter: ExactSizeIterator,
     {
+        // As binders to introduce we recieve `ParameterKind<Ident>`,
+        // which we need to transform into `(Ident, ParameterKind<BoundVar>)`,
+        // because that is the key-value pair for ParameterMap.
+        // `swap_inner` lets us do precisely that, replacing `Ident` inside
+        // `ParameterKind<Ident>` with a `BoundVar` and returning both.
         let binders = binders
             .into_iter()
             .enumerate()
-            .map(|(i, k)| (k, BoundVar::new(DebruijnIndex::INNERMOST, i)));
+            .map(|(i, k)| k.swap_inner(BoundVar::new(DebruijnIndex::INNERMOST, i)));
         let len = binders.len();
+
+        // For things already in the parameter map, we take each existing key-value pair
+        // `(Ident, ParameterKind<BoundVar>)` and shift in the inner `BoundVar`.
         let parameter_map: ParameterMap = self
             .parameter_map
             .iter()
-            .map(|(k, v)| (k.clone(), v.shifted_in()))
+            .map(|(&k, &v)| (k, v.map(|b| b.shifted_in())))
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
@@ -569,6 +604,7 @@ trait LowerParameterMap {
         self.all_parameters()
             .into_iter()
             .zip((0..).map(|i| BoundVar::new(DebruijnIndex::INNERMOST, i)))
+            .map(|(k, v)| k.swap_inner(v))
             .collect()
     }
 
@@ -872,17 +908,7 @@ impl LowerLeafGoal for LeafGoal {
             LeafGoal::DomainGoal { goal } => {
                 chalk_ir::Goal::all(interner, goal.lower(env)?.into_iter().casted(interner))
             }
-            LeafGoal::UnifyTys { a, b } => chalk_ir::EqGoal {
-                a: a.lower(env)?.cast(interner),
-                b: b.lower(env)?.cast(interner),
-            }
-            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
-            LeafGoal::UnifyLifetimes { ref a, ref b } => chalk_ir::EqGoal {
-                a: a.lower(env)?.cast(interner),
-                b: b.lower(env)?.cast(interner),
-            }
-            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
-            LeafGoal::UnifyConsts { ref a, ref b } => chalk_ir::EqGoal {
+            LeafGoal::UnifyGenericArgs { a, b } => chalk_ir::EqGoal {
                 a: a.lower(env)?.cast(interner),
                 b: b.lower(env)?.cast(interner),
             }
@@ -1219,50 +1245,17 @@ trait LowerTy {
 impl LowerTy for Ty {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
         let interner = env.interner();
-        match self {
-            Ty::Id { name } => match env.lookup_type(name)? {
-                TypeLookup::Adt(id) => {
-                    let k = env.adt_kind(id);
-                    if k.binders.len(interner) > 0 {
-                        Err(RustIrError::IncorrectNumberOfTypeParameters {
-                            identifier: name.clone(),
-                            expected: k.binders.len(interner),
-                            actual: 0,
-                        })
-                    } else {
-                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::Adt(id),
-                            substitution: chalk_ir::Substitution::empty(interner),
-                        })
-                        .intern(interner))
+        match *self {
+            Ty::Id { name } => {
+                let parameter = env.lookup_parameter(name)?;
+                parameter.ty(interner).map(|ty| ty.clone()).ok_or_else(|| {
+                    RustIrError::IncorrectParameterKind {
+                        identifier: name,
+                        expected: Kind::Ty,
+                        actual: parameter.kind(),
                     }
-                }
-                TypeLookup::GenericArg(d) => Ok(chalk_ir::TyData::BoundVar(d).intern(interner)),
-                TypeLookup::FnDef(id) => {
-                    let k = env.fn_def_kind(id);
-                    if k.binders.len(interner) > 0 {
-                        Err(RustIrError::IncorrectNumberOfTypeParameters {
-                            identifier: name.clone(),
-                            expected: k.binders.len(interner),
-                            actual: 0,
-                        })
-                    } else {
-                        Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
-                            num_binders: k.binders.len(interner),
-                            substitution: chalk_ir::Substitution::empty(interner),
-                        })
-                        .intern(interner))
-                    }
-                }
-                TypeLookup::Opaque(id) => Ok(chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(
-                    chalk_ir::OpaqueTy {
-                        opaque_ty_id: id,
-                        substitution: chalk_ir::Substitution::empty(interner),
-                    },
-                ))
-                .intern(interner)),
-            },
-
+                })
+            }
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
@@ -1290,12 +1283,9 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Apply { name, ref args } => {
-                let (id, k) = match env.lookup_type(name)? {
-                    TypeLookup::Adt(id) => (id.0, env.adt_kind(id)),
-                    TypeLookup::GenericArg(_) | TypeLookup::Opaque(_) => {
-                        Err(RustIrError::CannotApplyTypeParameter(name.clone()))?
-                    }
-                    TypeLookup::FnDef(id) => (id.0, env.fn_def_kind(id)),
+                let name = match env.lookup_apply_type(name)? {
+                    ApplyTypeLookup::Adt(id) => chalk_ir::TypeName::Adt(id),
+                    ApplyTypeLookup::FnDef(id) => chalk_ir::TypeName::FnDef(id),
                 };
 
                 if k.binders.len(interner) != args.len() {
@@ -1311,7 +1301,12 @@ impl LowerTy for Ty {
                     args.iter().map(|t| Ok(t.lower(env)?)),
                 )?;
 
-                for (param, arg) in k.binders.binders.iter(interner).zip(args.iter()) {
+                for (param, arg) in k
+                    .binders
+                    .binders
+                    .iter(interner)
+                    .zip(substitution.iter(interner))
+                {
                     if param.kind() != arg.kind() {
                         Err(RustIrError::IncorrectParameterKind {
                             identifier: name.clone(),
@@ -1320,19 +1315,11 @@ impl LowerTy for Ty {
                         })?;
                     }
                 }
-
-                match k.sort {
-                    TypeSort::FnDef => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                        name: chalk_ir::TypeName::FnDef(FnDefId(id)),
-                        substitution,
-                    })
-                    .intern(interner)),
-                    _ => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                        name: chalk_ir::TypeName::Adt(AdtId(id)),
-                        substitution,
-                    })
-                    .intern(interner)),
-                }
+                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name,
+                    substitution,
+                })
+                .intern(interner))
             }
 
             Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Alias(
@@ -1427,30 +1414,14 @@ impl LowerGenericArg for GenericArg {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
         let interner = env.interner();
         match *self {
-            GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
-            GenericArg::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
-            GenericArg::Const(ref c) => Ok(c.lower(env)?.cast(interner)),
-        }
-    }
-}
-
-trait LowerConst {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>>;
-}
-
-impl LowerConst for Const {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>> {
-        let interner = env.interner();
-        match *self {
-            Const::Id { name } => match env.lookup_const(name)? {
-                ConstLookup::Parameter(d) => Ok(chalk_ir::ConstData::BoundVar(d).intern(interner)),
-            },
-            Const::Value { value } => {
-                Ok(
-                    chalk_ir::ConstData::Concrete(chalk_ir::ConcreteConst { interned: value })
-                        .intern(interner),
-                )
-            }
+            Parameter::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
+            Parameter::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
+            Parameter::Id(name) => env.lookup_parameter(name),
+            Parameter::ConstValue(value) => Ok(chalk_ir::ConstData::Concrete(
+                chalk_ir::ConcreteConst { interned: value },
+            )
+            .intern(interner)
+            .cast(interner)),
         }
     }
 }
@@ -1462,12 +1433,18 @@ trait LowerLifetime {
 impl LowerLifetime for Lifetime {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
         let interner = env.interner();
-        match self {
-            Lifetime::Id { name } => match env.lookup_lifetime(name)? {
-                LifetimeLookup::GenericArg(d) => {
-                    Ok(chalk_ir::LifetimeData::BoundVar(d).intern(interner))
-                }
-            },
+        match *self {
+            Lifetime::Id { name } => {
+                let parameter = env.lookup_parameter(name)?;
+                parameter
+                    .lifetime(interner)
+                    .map(|l| l.clone())
+                    .ok_or_else(|| RustIrError::IncorrectParameterKind {
+                        identifier: name,
+                        expected: Kind::Lifetime,
+                        actual: parameter.kind(),
+                    })
+            }
         }
     }
 }

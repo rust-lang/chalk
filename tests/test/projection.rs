@@ -461,18 +461,18 @@ fn normalize_gat2() {
 fn normalize_gat_const() {
     test! {
         program {
-            trait StreamingIterator<T> { type Item<$N>; }
-            struct Span<$N, T> { }
+            trait StreamingIterator<T> { type Item<const N>; }
+            struct Span<const N, T> { }
             struct StreamIterMut<T> { }
             impl<T> StreamingIterator<T> for StreamIterMut<T> {
-                type Item<$N> = Span<$N, T>;
+                type Item<const N> = Span<N, T>;
             }
         }
 
         goal {
-            forall<$N, T> {
+            forall<const N, T> {
                 exists<U> {
-                    Normalize(<StreamIterMut<T> as StreamingIterator<T>>::Item<$N> -> U)
+                    Normalize(<StreamIterMut<T> as StreamingIterator<T>>::Item<N> -> U)
                 }
             }
         } yields {
@@ -480,17 +480,17 @@ fn normalize_gat_const() {
         }
 
         goal {
-            forall<$N, T> {
-                <StreamIterMut<T> as StreamingIterator<T>>::Item<$N> = Span<$N, T>
+            forall<const N, T> {
+                <StreamIterMut<T> as StreamingIterator<T>>::Item<N> = Span<N, T>
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
 
         goal {
-            forall<$N, T, U> {
-                if (T: StreamingIterator<U, Item<$N> = Span<$N, U>>) {
-                    <T as StreamingIterator<U>>::Item<$N> = Span<$N, U>
+            forall<const N, T, U> {
+                if (T: StreamingIterator<U, Item<N> = Span<N, U>>) {
+                    <T as StreamingIterator<U>>::Item<N> = Span<N, U>
                 }
             }
         } yields {

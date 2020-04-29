@@ -303,7 +303,7 @@ impl<I: Interner> Zip<I> for Goal<I> {
 
 // I'm too lazy to make `enum_zip` support type parameters.
 impl<I: Interner> Zip<I> for VariableKind<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
     {
@@ -311,8 +311,8 @@ impl<I: Interner> Zip<I> for VariableKind<I> {
             (VariableKind::Ty, VariableKind::Ty) => Ok(()),
             (VariableKind::Lifetime, VariableKind::Lifetime) => Ok(()),
             (VariableKind::Const(ty_a), VariableKind::Const(ty_b)) => Zip::zip_with(zipper, a, b),
-            (VariableKind::Ty(_), _)
-            | (VariableKind::Lifetime(_), _)
+            (VariableKind::Ty, _)
+            | (VariableKind::Lifetime, _)
             | (VariableKind::Const(_), _) => panic!("zipping things of mixed kind"),
         }
     }

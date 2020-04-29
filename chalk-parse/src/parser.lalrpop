@@ -213,17 +213,17 @@ AssocTyValue: AssocTyValue = {
 };
 
 pub Ty: Ty = {
+    <n:Id> => Ty::Id { name: n },
+    TyWithoutId,
+};
+
+TyWithoutId: Ty = {
     "for" "<" <l:Comma<LifetimeId>> ">" "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: l,
         ty: Box::new(t)
     },
-    TyWithoutFor,
-};
-
-TyWithoutFor: Ty = {
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,
-    <n:Id> => Ty::Id { name: n},
     "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: vec![],
         ty: Box::new(t)
@@ -280,15 +280,11 @@ Lifetime: Lifetime = {
 };
 
 GenericArg: GenericArg = {
-    Ty => GenericArg::Ty(<>),
+    TyWithoutId => GenericArg::Ty(<>),
     Lifetime => GenericArg::Lifetime(<>),
-    Const => Parameter::Const(<>),
-}
-
-Const: Const = {
-    <n:ConstId> => Const::Id { name: n },
-    <v:ConstVal> => Const::Value { value: v }
-}
+    Id => GenericArg::Id(<>),
+    ConstValue => GenericArg::ConstValue(<>),
+};
 
 ProjectionTy: ProjectionTy = {
     "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => ProjectionTy {
@@ -408,11 +404,7 @@ DomainGoal: DomainGoal = {
 LeafGoal: LeafGoal = {
     <dg: DomainGoal> => LeafGoal::DomainGoal { goal: dg },
 
-    <a:Ty> "=" <b:Ty> => LeafGoal::UnifyTys { a, b },
-
-    <a:Lifetime> "=" <b:Lifetime> => LeafGoal::UnifyLifetimes { a, b },
-
-    <a:Const> "=" <b:Const> => LeafGoal::UnifyConsts { a, b },
+    <a:GenericArg> "=" <b:GenericArg> => LeafGoal::UnifyGenericArgs { a, b },
 };
 
 TraitRef<S>: TraitRef = {
@@ -474,10 +466,10 @@ LifetimeId: Identifier = {
 };
 
 ConstId: Identifier = {
-    <l:@L> "$" <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
+    <l:@L> "const" <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
         str: intern(s),
         span: Span::new(l, r),
     }
 }
 
-ConstVal: u32 = <s:r"[0-9]+"> => u32::from_str_radix(s, 10).unwrap();
+ConstValue: u32 = <s:r"[0-9]+"> => u32::from_str_radix(s, 10).unwrap();

@@ -108,7 +108,8 @@ pub enum VariableKind {
 pub enum GenericArg {
     Ty(Ty),
     Lifetime(Lifetime),
-    Const(Const),
+    Id(Identifier),
+    ConstValue(u32),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -269,12 +270,6 @@ pub enum Lifetime {
     Id { name: Identifier },
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum Const {
-    Id { name: Identifier },
-    Value { value: u32 },
-}
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
@@ -346,9 +341,7 @@ pub enum DomainGoal {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum LeafGoal {
     DomainGoal { goal: DomainGoal },
-    UnifyTys { a: Ty, b: Ty },
-    UnifyLifetimes { a: Lifetime, b: Lifetime },
-    UnifyConsts { a: Const, b: Const },
+    UnifyGenericArgs { a: GenericArg, b: GenericArg },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

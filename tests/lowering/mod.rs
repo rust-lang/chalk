@@ -105,7 +105,7 @@ fn invalid_name() {
             impl Bar for X { }
         }
         error_msg {
-            "invalid type name `X`"
+            "invalid parameter name `X`"
         }
     }
 }
@@ -329,7 +329,7 @@ fn gat_parse() {
         }
 
         error_msg {
-            "invalid type name `K`"
+            "invalid parameter name `K`"
         }
     }
 }

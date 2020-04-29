@@ -54,9 +54,8 @@ impl std::error::Error for ChalkError {}
 
 #[derive(Debug)]
 pub enum RustIrError {
-    InvalidTypeName(Identifier),
-    InvalidLifetimeName(Identifier),
-    InvalidConstName(Identifier),
+    InvalidParameterName(Identifier),
+    InvalidTraitName(Identifier),
     NotTrait(Identifier),
     NotStruct(Identifier),
     DuplicateOrShadowedParameters,
@@ -97,9 +96,10 @@ pub enum RustIrError {
 impl std::fmt::Display for RustIrError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RustIrError::InvalidTypeName(name) => write!(f, "invalid type name `{}`", name),
-            RustIrError::InvalidLifetimeName(name) => write!(f, "invalid lifetime name `{}`", name),
-            RustIrError::InvalidConstName(name) => write!(f, "invalid const name `{}`", name),
+            RustIrError::InvalidParameterName(name) => {
+                write!(f, "invalid parameter name `{}`", name)
+            }
+            RustIrError::InvalidTraitName(name) => write!(f, "invalid trait name `{}`", name),
             RustIrError::NotTrait(name) => write!(
                 f,
                 "expected a trait, found `{}`, which is not a trait",

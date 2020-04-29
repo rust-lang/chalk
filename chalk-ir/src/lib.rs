@@ -863,7 +863,7 @@ impl<I: Interner> ApplicationTy<I> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum VariableKind<I: Interner> {
     Ty,
     Lifetime,
@@ -880,7 +880,7 @@ impl<I: Interner> VariableKind<I> {
                 GenericArgData::Lifetime(LifetimeData::BoundVar(bound_var).intern(interner))
                     .intern(interner)
             }
-            VariableKind::Phantom(..) => unreachable!(),
+            VariableKind::Const(_) => unreachable!(),
         }
     }
 }
@@ -2185,7 +2185,7 @@ impl<I: Interner> Substitution<I> {
                     LifetimeData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
-                ParameterKind::Const(constant) => match &constant.data(interner) {
+                GenericArgData::Const(constant) => match &constant.data(interner) {
                     ConstData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },

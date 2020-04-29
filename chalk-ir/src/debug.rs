@@ -276,7 +276,7 @@ impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
             match *binder {
                 VariableKind::Ty => write!(fmt, "type")?,
                 VariableKind::Lifetime => write!(fmt, "lifetime")?,
-                VariableKind::Const(()) => write!(fmt, "const")?,
+                VariableKind::Const(_) => write!(fmt, "const")?,
             }
         }
         write!(fmt, ">")
@@ -776,7 +776,7 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
         match &self.kind {
             VariableKind::Ty => write!(fmt, "{:?} with kind type", value),
             VariableKind::Lifetime => write!(fmt, "{:?} with kind lifetime", value),
-            VariableKind::Const(ty) => write!(fmt, "{:?} with kind {:?}", ty),
+            VariableKind::Const(ty) => write!(fmt, "{:?} with kind {:?}", value, ty),
         }
     }
 }

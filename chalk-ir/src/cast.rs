@@ -175,9 +175,9 @@ impl<I: Interner> CastTo<GenericArg<I>> for Lifetime<I> {
     }
 }
 
-impl<I: Interner> CastTo<Parameter<I>> for Const<I> {
-    fn cast_to(self, interner: &I) -> Parameter<I> {
-        Parameter::new(interner, ParameterKind::Const(self))
+impl<I: Interner> CastTo<GenericArg<I>> for Const<I> {
+    fn cast_to(self, interner: &I) -> GenericArg<I> {
+        GenericArg::new(interner, GenericArgData::Const(self))
     }
 }
 

@@ -98,7 +98,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     ) -> Fallible<Const<I>> {
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                ParameterKind::Const(c) => Ok(c.shifted_in_from(self.interner(), outer_binder)),
+                GenericArgData::Const(c) => Ok(c.shifted_in_from(self.interner(), outer_binder)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
