@@ -31,3 +31,4 @@
 [Appendix A: Glossary and terminology](./glossary.md)
 [Appendix B: Bibliography](./bibliography.md)
 [Appendix C: Incomplete chapters](./todo.md)
+[Appendix D: Publishing Chalk](./publishing.md)
