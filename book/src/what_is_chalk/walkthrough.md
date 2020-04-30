@@ -183,12 +183,12 @@ Likewise, lowering tests use the [`lowering_success!` and
 [goals-and-clauses]: /clauses/goals_and_clauses.html
 [HIR]: https://rustc-dev-guide.rust-lang.org/hir.html
 [lowering-forall]: /clauses.html#type-checking-generic-functions-beyond-horn-clauses
+[lowering-rules]: /clauses/lowering_rules.html
 [slg]: /engine/slg.html
 [wf-checking]: /clauses/wf.html
 
 [ast]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
 [chalk]: https://github.com/rust-lang/chalk
-[rustc-issues]: https://github.com/rust-lang/rustc-dev-guide/issues
 [universal quantification]: https://en.wikipedia.org/wiki/Universal_quantification
 
 [`ProgramClause`]: https://rust-lang.github.io/chalk/chalk_ir/struct.ProgramClause.html

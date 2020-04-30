@@ -11,6 +11,8 @@ full specification. It is also meant to be an independent library that can be
 integrated both into the main rustc compiler and also other programs and
 contexts.
 
+[rustc-issues]: https://github.com/rust-lang/rustc-dev-guide/issues
+
 ## High-level view of how chalk works
 
 ```mermaid
