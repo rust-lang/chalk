@@ -33,7 +33,11 @@ jobs:
         run: cargo test --all
 
       - name: Install mdbook
-        run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        run: |
+          cd book
+          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          # Add the book directory to the $PATH
+          echo "::add-path::$GITHUB_WORKSPACE/book"
 
       - name: Install mdbook-toc
         run: cd book && curl -L https://github.com/badboy/mdbook-toc/releases/download/0.2.4/mdbook-toc-0.2.4-x86_64-unknown-linux-gnu.tar.gz | tar xz
@@ -90,14 +94,14 @@ jobs:
           fetch-depth: 1
 
       - name: Install mdbook
-        run: cd book && curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
-
-      - name: Install mdbook-linkcheck
         run: |
           cd book
-          curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.5.0/mdbook-linkcheck-v0.5.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
           # Add the book directory to the $PATH
           echo "::add-path::$GITHUB_WORKSPACE/book"
+
+      - name: Install mdbook-linkcheck
+        run: cd book && curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.5.0/mdbook-linkcheck-v0.5.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
       - name: Build Chalk book
         run: cd book && ./mdbook build
