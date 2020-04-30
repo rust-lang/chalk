@@ -1,6 +1,6 @@
 [package]
 name = "chalk-parse"
-version = "0.1.0"
+version = "0.10.0"
 description = "Parser for the Chalk project"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -9,14 +9,12 @@ readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 build = "build.rs" # LALRPOP preprocessing
 edition = "2018"
-
-# Add a dependency on the LALRPOP runtime library:
-[dependencies.lalrpop-util]
-version = "0.17"
+publish = false
 
 [build-dependencies.lalrpop]
 version = "0.17"
 
 [dependencies]
 lalrpop-intern = "0.15.1"
+lalrpop-util = "0.17"
 regex = "1.0.5"

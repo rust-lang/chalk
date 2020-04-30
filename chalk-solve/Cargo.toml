@@ -1,8 +1,8 @@
 [package]
 name = "chalk-solve"
-version = "0.1.0"
-license = "Apache-2.0/MIT"
+version = "0.10.0"
 description = "Combines the chalk-engine with chalk-ir"
+license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"
@@ -15,22 +15,8 @@ itertools = "0.9.0"
 petgraph = "0.4.13"
 rustc-hash = { version = "1.0.0" }
 
-[dependencies.chalk-macros]
-version = "0.1.0"
-path = "../chalk-macros"
-
-[dependencies.chalk-derive]
-version = "0.1.0"
-path = "../chalk-derive"
-
-[dependencies.chalk-engine]
-version = "0.9.0"
-path = "../chalk-engine"
-
-[dependencies.chalk-ir]
-version = "0.1.0"
-path = "../chalk-ir"
-
-[dependencies.chalk-rust-ir]
-version = "0.1.0"
-path = "../chalk-rust-ir"
+chalk-macros = { version = "0.10.0", path = "../chalk-macros" }
+chalk-derive = { version = "0.10.0", path = "../chalk-derive" }
+chalk-engine = { version = "0.10.0", path = "../chalk-engine" }
+chalk-ir = { version = "0.10.0", path = "../chalk-ir" }
+chalk-rust-ir = { version = "0.10.0", path = "../chalk-rust-ir" }

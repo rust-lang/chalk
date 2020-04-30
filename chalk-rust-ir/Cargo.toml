@@ -1,23 +1,14 @@
 [package]
 name = "chalk-rust-ir"
-version = "0.1.0"
+version = "0.10.0"
+description = "A library that defines the IR for Rust concepts like traits and impls."
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 edition = "2018"
 
-[dependencies.chalk-ir]
-version = "0.1.0"
-path = "../chalk-ir"
-
-[dependencies.chalk-macros]
-version = "0.1.0"
-path = "../chalk-macros"
-
-[dependencies.chalk-engine]
-version = "0.9.0"
-path = "../chalk-engine"
-
-[dependencies.chalk-derive]
-version = "0.1.0"
-path = "../chalk-derive"
+[dependencies]
+chalk-macros = { version = "0.10.0", path = "../chalk-macros" }
+chalk-derive = { version = "0.10.0", path = "../chalk-derive" }
+chalk-engine = { version = "0.10.0", path = "../chalk-engine" }
+chalk-ir = { version = "0.10.0", path = "../chalk-ir" }

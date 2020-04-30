@@ -1,7 +1,6 @@
-The `chalk-engine` and `chalk-macros` crates are published to
-crates.io periodically for use by the compiler. The rest of chalk is
-not yet published, though it might be nice to publish the interpreter
-at some point.
+# Release 0.10.0
+
+- Too many changes to list
 
 # Release 0.9.0
 
