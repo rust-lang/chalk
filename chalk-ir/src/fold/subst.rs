@@ -93,6 +93,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     /// see `fold_free_var_ty`
     fn fold_free_var_const(
         &mut self,
+        ty: &Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -106,7 +107,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
                 .shifted_out()
                 .unwrap()
                 .shifted_in_from(outer_binder)
-                .to_const(self.interner()))
+                .to_const(self.interner(), ty.clone()))
         }
     }
 

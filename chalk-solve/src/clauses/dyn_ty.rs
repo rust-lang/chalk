@@ -152,7 +152,7 @@ pub fn super_traits<I: Interner>(
                                 // We're looking for where clauses
                                 // of the form `Self: Trait`. That's
                                 // ^1.0 because we're one binder in.
-                                if self_ty.bound(db.interner())
+                                if self_ty.bound_var(db.interner())
                                     != Some(BoundVar::new(DebruijnIndex::ONE, 0))
                                 {
                                     return None;

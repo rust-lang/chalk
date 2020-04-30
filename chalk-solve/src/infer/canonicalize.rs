@@ -92,9 +92,7 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     fn add(&mut self, free_var: ParameterEnaVariable<I>) -> usize {
         self.free_vars
             .iter()
-            // FIXME(areredify) With addition of constants this one is questionable,
-            // since you won't be able to `==` `VariableKind` anymore
-            .position(|v| v == &free_var)
+            .position(|v| v.skip_kind() == free_var.skip_kind())
             .unwrap_or_else(|| {
                 let next_index = self.free_vars.len();
                 self.free_vars.push(free_var);
@@ -133,12 +131,13 @@ where
 
     fn fold_free_placeholder_const(
         &mut self,
+        ty: &Ty<I>,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_const(interner))
+        Ok(universe.to_const(interner, ty.clone()))
     }
 
     fn forbid_free_vars(&self) -> bool {
@@ -212,6 +211,7 @@ where
 
     fn fold_inference_const(
         &mut self,
+        ty: &Ty<I>,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -229,10 +229,15 @@ where
                     .shifted_in_from(interner, outer_binder))
             }
             None => {
-                let free_var = ParameterKind::Const(self.table.unify.find(var));
+                let free_var = ParameterEnaVariable::new(
+                    VariableKind::Const(ty.clone()),
+                    self.table.unify.find(var),
+                );
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
-                Ok(ConstData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
+                Ok(bound_var
+                    .shifted_in_from(outer_binder)
+                    .to_const(interner, ty.clone()))
             }
         }
     }

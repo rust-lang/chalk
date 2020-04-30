@@ -348,10 +348,21 @@ impl<'t, I: Interner> Unifier<'t, I> {
             b
         );
 
-        match (a.data(interner), b.data(interner)) {
+        let ConstData {
+            ty: a_ty,
+            value: a_val,
+        } = a.data(interner);
+        let ConstData {
+            ty: b_ty,
+            value: b_val,
+        } = b.data(interner);
+
+        self.unify_ty_ty(a_ty, b_ty)?;
+
+        match (a_val, b_val) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
-            (&ConstData::InferenceVar(var1), &ConstData::InferenceVar(var2)) => {
+            (&ConstValue::InferenceVar(var1), &ConstValue::InferenceVar(var2)) => {
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
@@ -363,35 +374,35 @@ impl<'t, I: Interner> Unifier<'t, I> {
             }
 
             // Unifying an inference variables with a non-inference variable.
-            (&ConstData::InferenceVar(var), &ConstData::Concrete(_))
-            | (&ConstData::InferenceVar(var), &ConstData::Placeholder(_)) => {
+            (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
+            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
                 debug!("unify_var_ty(var={:?}, ty={:?})", var, b);
                 self.unify_var_const(var, b)
             }
 
-            (&ConstData::Concrete(_), &ConstData::InferenceVar(var))
-            | (&ConstData::Placeholder(_), &ConstData::InferenceVar(var)) => {
+            (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
+            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
                 debug!("unify_var_ty(var={:?}, ty={:?})", var, a);
 
                 self.unify_var_const(var, a)
             }
 
-            (&ConstData::Placeholder(p1), &ConstData::Placeholder(p2)) => {
+            (&ConstValue::Placeholder(p1), &ConstValue::Placeholder(p2)) => {
                 Zip::zip_with(self, &p1, &p2)
             }
 
-            (&ConstData::Concrete(ref ev1), &ConstData::Concrete(ref ev2)) => {
-                if ev1.const_eq(ev2, interner) {
+            (&ConstValue::Concrete(ref ev1), &ConstValue::Concrete(ref ev2)) => {
+                if ev1.const_eq(a_ty, ev2, interner) {
                     Ok(())
                 } else {
                     Err(NoSolution)
                 }
             }
 
-            (&ConstData::Concrete(_), &ConstData::Placeholder(_))
-            | (&ConstData::Placeholder(_), &ConstData::Concrete(_)) => Err(NoSolution),
+            (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
+            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),
 
-            (ConstData::BoundVar(_), _) | (_, ConstData::BoundVar(_)) => panic!(
+            (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
                 a, b
             ),

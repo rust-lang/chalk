@@ -200,7 +200,7 @@ Impl: Impl = {
 VariableKind: VariableKind = {
     Id => VariableKind::Ty(<>),
     LifetimeId => VariableKind::Lifetime(<>),
-    ConstId => VariableKind::Const(<>),
+    "const" <id:Id> => VariableKind::Const(id),
 };
 
 AssocTyValue: AssocTyValue = {
@@ -464,12 +464,5 @@ LifetimeId: Identifier = {
         span: Span::new(l, r),
     }
 };
-
-ConstId: Identifier = {
-    <l:@L> "const" <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
-        str: intern(s),
-        span: Span::new(l, r),
-    }
-}
 
 ConstValue: u32 = <s:r"[0-9]+"> => u32::from_str_radix(s, 10).unwrap();

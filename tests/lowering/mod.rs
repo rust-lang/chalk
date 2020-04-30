@@ -580,7 +580,7 @@ fn fn_defs() {
         }
 
         error_msg {
-            "invalid type name `TT`"
+            "invalid parameter name `TT`"
         }
     }
 }

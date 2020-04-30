@@ -148,8 +148,8 @@ fn merge_into_guidance<I: Interner>(
             // of X.
             let universe = *root_goal.binders.as_slice(interner)[index].skip_kind();
 
-            let ty = match value.data(interner) {
-                GenericArgData::Ty(ty) => ty,
+            match p1.data(interner) {
+                GenericArgData::Ty(_) => (),
                 GenericArgData::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
                     // creating guidance here anyway.
@@ -167,7 +167,7 @@ fn merge_into_guidance<I: Interner>(
                 universe,
                 interner,
             };
-            aggr.aggregate_parameters(p1, p2)
+            aggr.aggregate_generic_args(p1, p2)
         })
         .collect();
 
@@ -436,30 +436,47 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 
     fn aggregate_consts(&mut self, c1: &Const<I>, c2: &Const<I>) -> Const<I> {
         let interner = self.interner;
-        match (c1.data(interner), c2.data(interner)) {
-            (ConstData::InferenceVar(_), _) | (_, ConstData::InferenceVar(_)) => {
-                self.new_const_variable()
+
+        // It would be nice to check that c1 and c2 have the same type, even though
+        // on this stage of solving they should already have the same type.
+
+        let ConstData {
+            ty: c1_ty,
+            value: c1_value,
+        } = c1.data(interner);
+        let ConstData {
+            ty: _c2_ty,
+            value: c2_value,
+        } = c2.data(interner);
+
+        let ty = c1_ty.clone();
+
+        match (c1_value, c2_value) {
+            (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => {
+                self.new_const_variable(ty)
             }
 
-            (ConstData::BoundVar(_), _) | (_, ConstData::BoundVar(_)) => self.new_const_variable(),
+            (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => {
+                self.new_const_variable(ty.clone())
+            }
 
-            (ConstData::Placeholder(_), ConstData::Placeholder(_)) => {
+            (ConstValue::Placeholder(_), ConstValue::Placeholder(_)) => {
                 if c1 == c2 {
                     c1.clone()
                 } else {
-                    self.new_const_variable()
+                    self.new_const_variable(ty)
                 }
             }
-            (ConstData::Concrete(e1), ConstData::Concrete(e2)) => {
-                if e1.const_eq(e2, interner) {
+            (ConstValue::Concrete(e1), ConstValue::Concrete(e2)) => {
+                if e1.const_eq(&ty, e2, interner) {
                     c1.clone()
                 } else {
-                    self.new_const_variable()
+                    self.new_const_variable(ty)
                 }
             }
 
-            (ConstData::Placeholder(_), _) | (_, ConstData::Placeholder(_)) => {
-                self.new_const_variable()
+            (ConstValue::Placeholder(_), _) | (_, ConstValue::Placeholder(_)) => {
+                self.new_const_variable(ty)
             }
         }
     }
@@ -474,9 +491,11 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         self.infer.new_variable(self.universe).to_lifetime(interner)
     }
 
-    fn new_const_variable(&mut self) -> Const<I> {
+    fn new_const_variable(&mut self, ty: Ty<I>) -> Const<I> {
         let interner = self.interner;
-        self.infer.new_variable(self.universe).to_const(interner)
+        self.infer
+            .new_variable(self.universe)
+            .to_const(interner, ty)
     }
 }
 

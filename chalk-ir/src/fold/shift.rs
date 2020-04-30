@@ -95,10 +95,14 @@ impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
 
     fn fold_free_var_const(
         &mut self,
+        ty: &Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
-        Ok(ConstData::<I>::BoundVar(self.adjust(bound_var, outer_binder)).intern(self.interner()))
+        // const types don't have free variables, so we can skip folding `ty`
+        Ok(self
+            .adjust(bound_var, outer_binder)
+            .to_const(self.interner(), ty.clone()))
     }
 
     fn interner(&self) -> &'i I {
@@ -163,10 +167,14 @@ impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
 
     fn fold_free_var_const(
         &mut self,
+        ty: &Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
-        Ok(ConstData::<I>::BoundVar(self.adjust(bound_var, outer_binder)?).intern(self.interner()))
+        // const types don't have free variables, so we can skip folding `ty`
+        Ok(self
+            .adjust(bound_var, outer_binder)?
+            .to_const(self.interner(), ty.clone()))
     }
 
     fn interner(&self) -> &'i I {

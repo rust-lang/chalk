@@ -310,10 +310,12 @@ impl<I: Interner> Zip<I> for VariableKind<I> {
         match (a, b) {
             (VariableKind::Ty, VariableKind::Ty) => Ok(()),
             (VariableKind::Lifetime, VariableKind::Lifetime) => Ok(()),
-            (VariableKind::Const(ty_a), VariableKind::Const(ty_b)) => Zip::zip_with(zipper, a, b),
-            (VariableKind::Ty, _)
-            | (VariableKind::Lifetime, _)
-            | (VariableKind::Const(_), _) => panic!("zipping things of mixed kind"),
+            (VariableKind::Const(ty_a), VariableKind::Const(ty_b)) => {
+                Zip::zip_with(zipper, ty_a, ty_b)
+            }
+            (VariableKind::Ty, _) | (VariableKind::Lifetime, _) | (VariableKind::Const(_), _) => {
+                panic!("zipping things of mixed kind")
+            }
         }
     }
 }

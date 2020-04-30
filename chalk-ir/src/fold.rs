@@ -173,6 +173,7 @@ where
 
     fn fold_free_var_const(
         &mut self,
+        ty: &Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<TI>> {
@@ -183,7 +184,11 @@ where
             )
         } else {
             let bound_var = bound_var.shifted_in_from(outer_binder);
-            Ok(ConstData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
+            Ok(ConstData {
+                ty: ty.fold_with(self.as_dyn(), outer_binder)?,
+                value: ConstValue::<TI>::BoundVar(bound_var),
+            }
+            .intern(self.target_interner()))
         }
     }
 
@@ -230,13 +235,17 @@ where
     #[allow(unused_variables)]
     fn fold_free_placeholder_const(
         &mut self,
+        ty: &Ty<I>,
         universe: PlaceholderIndex,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<TI>> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder const `{:?}`", universe)
         } else {
-            Ok(universe.to_const(self.target_interner()))
+            Ok(universe.to_const(
+                self.target_interner(),
+                ty.fold_with(self.as_dyn(), outer_binder)?,
+            ))
         }
     }
 
@@ -284,13 +293,17 @@ where
     #[allow(unused_variables)]
     fn fold_inference_const(
         &mut self,
+        ty: &Ty<I>,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<TI>> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference const `{:?}`", var)
         } else {
-            Ok(var.to_const(self.target_interner()))
+            Ok(var.to_const(
+                self.target_interner(),
+                ty.fold_with(self.as_dyn(), outer_binder)?,
+            ))
         }
     }
 
@@ -507,21 +520,27 @@ where
         TI: 'i,
     {
         let interner = folder.interner();
-        match self.data(interner) {
-            ConstData::BoundVar(bound_var) => {
+        let target_interner = folder.target_interner();
+        let ConstData { ref ty, ref value } = self.data(interner);
+        let mut fold_ty = || ty.fold_with(folder, outer_binder);
+        match value {
+            ConstValue::BoundVar(bound_var) => {
                 if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
-                    folder.fold_free_var_const(bound_var1, outer_binder)
+                    folder.fold_free_var_const(ty, bound_var1, outer_binder)
                 } else {
-                    Ok(ConstData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
+                    Ok(bound_var.to_const(target_interner, fold_ty()?))
                 }
             }
-            ConstData::InferenceVar(var) => folder.fold_inference_const(*var, outer_binder),
-            ConstData::Placeholder(universe) => {
-                folder.fold_free_placeholder_const(*universe, outer_binder)
+            ConstValue::InferenceVar(var) => folder.fold_inference_const(ty, *var, outer_binder),
+            ConstValue::Placeholder(universe) => {
+                folder.fold_free_placeholder_const(ty, *universe, outer_binder)
             }
-            ConstData::Concrete(ev) => Ok(ConstData::Concrete(ConcreteConst {
-                interned: folder.target_interner().transfer_const(&ev.interned),
-            })
+            ConstValue::Concrete(ev) => Ok(ConstData {
+                ty: fold_ty()?,
+                value: ConstValue::Concrete(ConcreteConst {
+                    interned: folder.target_interner().transfer_const(&ev.interned),
+                }),
+            }
             .intern(folder.target_interner())),
         }
     }

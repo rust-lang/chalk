@@ -2,7 +2,7 @@
 use std::fmt::Debug;
 
 use crate::{
-    BoundVar, Const, ConstData, DebruijnIndex, DomainGoal, Goal, InferenceVar, Interner, Lifetime,
+    BoundVar, Const, ConstValue, DebruijnIndex, DomainGoal, Goal, InferenceVar, Interner, Lifetime,
     LifetimeData, PlaceholderIndex, ProgramClause, Ty, TyData, WhereClause,
 };
 
@@ -160,7 +160,7 @@ where
 
     /// Invoked for each occurrence of a placeholder type; these are
     /// used when we instantiate binders universally.
-    fn visit_free_placeholder_ty(
+    fn visit_free_placeholder(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -180,31 +180,6 @@ where
         where_clause.super_visit_with(self.as_dyn(), outer_binder)
     }
 
-    /// As with `visit_free_placeholder_ty`, but for lifetimes.
-    fn visit_free_placeholder_lifetime(
-        &mut self,
-        universe: PlaceholderIndex,
-        _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
-        if self.forbid_free_placeholders() {
-            panic!("unexpected placeholder lifetime `{:?}`", universe)
-        } else {
-            Self::Result::new()
-        }
-    }
-
-    fn visit_free_placeholder_const(
-        &mut self,
-        universe: PlaceholderIndex,
-        _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
-        if self.forbid_free_placeholders() {
-            panic!("unexpected placeholder const `{:?}`", universe)
-        } else {
-            Self::Result::new()
-        }
-    }
-
     /// If overridden to return true, inference variables will trigger
     /// panics when visited. Used when inference variables are
     /// unexpected.
@@ -214,38 +189,13 @@ where
 
     /// Invoked for each occurrence of a inference type; these are
     /// used when we instantiate binders universally.
-    fn visit_inference_ty(
+    fn visit_inference_var(
         &mut self,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
     ) -> Self::Result {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
-        } else {
-            Self::Result::new()
-        }
-    }
-
-    /// As with `visit_free_inference_ty`, but for lifetimes.
-    fn visit_inference_lifetime(
-        &mut self,
-        var: InferenceVar,
-        _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
-        if self.forbid_inference_vars() {
-            panic!("unexpected inference lifetime `'{:?}`", var)
-        } else {
-            Self::Result::new()
-        }
-    }
-
-    fn visit_inference_const(
-        &mut self,
-        var: InferenceVar,
-        _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
-        if self.forbid_inference_vars() {
-            panic!("unexpected inference lifetime `'{:?}`", var)
         } else {
             Self::Result::new()
         }
@@ -323,9 +273,9 @@ where
                 }
             }
             TyData::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
-            TyData::InferenceVar(var) => visitor.visit_inference_ty(*var, outer_binder),
+            TyData::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
             TyData::Apply(apply) => apply.visit_with(visitor, outer_binder),
-            TyData::Placeholder(ui) => visitor.visit_free_placeholder_ty(*ui, outer_binder),
+            TyData::Placeholder(ui) => visitor.visit_free_placeholder(*ui, outer_binder),
             TyData::Alias(proj) => proj.visit_with(visitor, outer_binder),
             TyData::Function(fun) => fun.visit_with(visitor, outer_binder),
         }
@@ -363,9 +313,9 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
                     R::new()
                 }
             }
-            LifetimeData::InferenceVar(var) => visitor.visit_inference_lifetime(*var, outer_binder),
+            LifetimeData::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
             LifetimeData::Placeholder(universe) => {
-                visitor.visit_free_placeholder_lifetime(*universe, outer_binder)
+                visitor.visit_free_placeholder(*universe, outer_binder)
             }
             LifetimeData::Phantom(..) => unreachable!(),
         }
@@ -395,19 +345,19 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
         I: 'i,
     {
         let interner = visitor.interner();
-        match self.data(interner) {
-            ConstData::BoundVar(bound_var) => {
+        match &self.data(interner).value {
+            ConstValue::BoundVar(bound_var) => {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
                     R::new()
                 }
             }
-            ConstData::InferenceVar(var) => visitor.visit_inference_const(*var, outer_binder),
-            ConstData::Placeholder(universe) => {
-                visitor.visit_free_placeholder_const(*universe, outer_binder)
+            ConstValue::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
+            ConstValue::Placeholder(universe) => {
+                visitor.visit_free_placeholder(*universe, outer_binder)
             }
-            ConstData::Concrete(_) => R::new(),
+            ConstValue::Concrete(_) => R::new(),
         }
     }
 }

@@ -76,6 +76,7 @@ where
 
     fn fold_inference_const(
         &mut self,
+        ty: &Ty<I>,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -85,7 +86,7 @@ where
                 .assert_const_ref(interner)
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)),
-            None => Ok(var.to_const(interner)), // FIXME shift
+            None => Ok(var.to_const(interner, ty.clone())), // FIXME shift
         }
     }
 

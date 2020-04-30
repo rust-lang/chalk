@@ -9,8 +9,8 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, ConstData, DebruijnIndex, GenericArg, ImplId, OpaqueTyId,
-    ProjectionTy, QuantifiedWhereClause, AdtId, Substitution, ToGenericArg, TraitId, TraitRef,
+    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
     Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
@@ -380,7 +380,7 @@ pub trait Anonymize<I: Interner> {
 
 impl<I: Interner, T> Anonymize<I> for [WithKind<I, T>] {
     fn anonymize(&self) -> Vec<VariableKind<I>> {
-        self.iter().map(|pk| pk.kind).collect()
+        self.iter().map(|pk| pk.kind.clone()).collect()
     }
 }
 

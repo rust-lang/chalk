@@ -491,35 +491,50 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             return Zip::zip_with(self, answer, &pending);
         }
 
-        if let ConstData::BoundVar(answer_depth) = answer.data(interner) {
-            if self.unify_free_answer_var(interner, *answer_depth, ParameterKind::Const(pending))? {
+        let ConstData {
+            ty: answer_ty,
+            value: answer_value,
+        } = answer.data(interner);
+        let ConstData {
+            ty: pending_ty,
+            value: pending_value,
+        } = pending.data(interner);
+
+        self.zip_tys(answer_ty, pending_ty)?;
+
+        if let ConstValue::BoundVar(answer_depth) = answer_value {
+            if self.unify_free_answer_var(
+                interner,
+                *answer_depth,
+                GenericArgData::Const(pending.clone()),
+            )? {
                 return Ok(());
             }
         }
 
-        match (answer.data(interner), pending.data(interner)) {
-            (ConstData::BoundVar(answer_depth), ConstData::BoundVar(pending_depth)) => {
+        match (answer_value, pending_value) {
+            (ConstValue::BoundVar(answer_depth), ConstValue::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (ConstData::Placeholder(_), ConstData::Placeholder(_)) => {
+            (ConstValue::Placeholder(_), ConstValue::Placeholder(_)) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
 
-            (ConstData::Concrete(c1), ConstData::Concrete(c2)) => {
-                assert!(c1.const_eq(c2, interner));
+            (ConstValue::Concrete(c1), ConstValue::Concrete(c2)) => {
+                assert!(c1.const_eq(answer_ty, c2, interner));
                 Ok(())
             }
 
-            (ConstData::InferenceVar(_), _) | (_, ConstData::InferenceVar(_)) => panic!(
+            (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (ConstData::BoundVar(_), _)
-            | (ConstData::Placeholder(_), _)
-            | (ConstData::Concrete(_), _) => panic!(
+            (ConstValue::BoundVar(_), _)
+            | (ConstValue::Placeholder(_), _)
+            | (ConstValue::Concrete(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

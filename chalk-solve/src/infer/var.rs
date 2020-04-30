@@ -68,8 +68,8 @@ impl<I: Interner> EnaVariable<I> {
     /// Convert this inference variable into a const. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a const (we can't check it).
-    pub(crate) fn to_const(self, interner: &I) -> Const<I> {
-        self.var.to_const(interner)
+    pub(crate) fn to_const(self, interner: &I, ty: Ty<I>) -> Const<I> {
+        self.var.to_const(interner, ty)
     }
 }
 

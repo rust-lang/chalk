@@ -143,7 +143,7 @@ impl<I: Interner> InferenceTable<I> {
 
     /// If type `leaf` is a free inference variable, and that variable has been
     /// bound, returns `Some(P)` where `P` is the parameter to which it has been bound.
-    pub(crate) fn probe_var(&mut self, leaf: InferenceVar) -> Option<Parameter<I>> {
+    pub(crate) fn probe_var(&mut self, leaf: InferenceVar) -> Option<GenericArg<I>> {
         match self.unify.probe_value(EnaVariable::from(leaf)) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(val) => Some(val),
@@ -195,7 +195,7 @@ impl<I: Interner> InferenceTable<I> {
                     }
                 }
 
-                ParameterKind::Const(constant) => {
+                GenericArgData::Const(constant) => {
                     if let Some(var) = constant.inference_var(interner) {
                         if self.var_is_bound(var) {
                             return false;
@@ -217,10 +217,10 @@ impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
     fn to_generic_arg(&self, interner: &I) -> GenericArg<I> {
         // we are matching on kind, so skipping it is fine
         let ena_variable = self.skip_kind();
-        match self.kind {
+        match &self.kind {
             VariableKind::Ty => ena_variable.to_ty(interner).cast(interner),
             VariableKind::Lifetime => ena_variable.to_lifetime(interner).cast(interner),
-            VariableKind::Const(v) => ena_variable.to_const(interner).cast(interner),
+            VariableKind::Const(ty) => ena_variable.to_const(interner, ty.clone()).cast(interner),
         }
     }
 }

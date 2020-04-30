@@ -530,7 +530,12 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
     fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
-    fn const_eq(&self, c1: &Self::InternedConcreteConst, c2: &Self::InternedConcreteConst) -> bool;
+    fn const_eq(
+        &self,
+        ty: &Self::InternedType,
+        c1: &Self::InternedConcreteConst,
+        c2: &Self::InternedConcreteConst,
+    ) -> bool;
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke

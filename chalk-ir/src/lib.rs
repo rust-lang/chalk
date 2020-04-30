@@ -411,8 +411,12 @@ impl BoundVar {
         LifetimeData::<I>::BoundVar(self).intern(interner)
     }
 
-    pub fn to_const<I: Interner>(self, interner: &I) -> Const<I> {
-        ConstData::<I>::BoundVar(self).intern(interner)
+    pub fn to_const<I: Interner>(self, interner: &I, ty: Ty<I>) -> Const<I> {
+        ConstData {
+            ty,
+            value: ConstValue::<I>::BoundVar(self),
+        }
+        .intern(interner)
     }
 
     /// True if this variable is bound within the `amount` innermost binders.
@@ -655,8 +659,12 @@ impl InferenceVar {
         LifetimeData::<I>::InferenceVar(self).intern(interner)
     }
 
-    pub fn to_const<I: Interner>(self, interner: &I) -> Const<I> {
-        ConstData::<I>::InferenceVar(self).intern(interner)
+    pub fn to_const<I: Interner>(self, interner: &I, ty: Ty<I>) -> Const<I> {
+        ConstData {
+            ty,
+            value: ConstValue::<I>::InferenceVar(self),
+        }
+        .intern(interner)
     }
 }
 
@@ -690,7 +698,7 @@ impl<I: Interner> Const<I> {
 
     /// If this is a `ConstData::BoundVar(d)`, returns `Some(d)` else `None`.
     pub fn bound_var(&self, interner: &I) -> Option<BoundVar> {
-        if let ConstData::BoundVar(bv) = self.data(interner) {
+        if let ConstValue::BoundVar(bv) = &self.data(interner).value {
             Some(*bv)
         } else {
             None
@@ -699,7 +707,7 @@ impl<I: Interner> Const<I> {
 
     /// If this is a `ConstData::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self, interner: &I) -> Option<InferenceVar> {
-        if let ConstData::InferenceVar(iv) = self.data(interner) {
+        if let ConstValue::InferenceVar(iv) = &self.data(interner).value {
             Some(*iv)
         } else {
             None
@@ -709,17 +717,23 @@ impl<I: Interner> Const<I> {
     /// True if this const is a "bound" const, and hence
     /// needs to be shifted across binders. Meant for debug assertions.
     pub fn needs_shift(&self, interner: &I) -> bool {
-        match self.data(interner) {
-            ConstData::BoundVar(_) => true,
-            ConstData::InferenceVar(_) => false,
-            ConstData::Placeholder(_) => false,
-            ConstData::Concrete(_) => false,
+        match &self.data(interner).value {
+            ConstValue::BoundVar(_) => true,
+            ConstValue::InferenceVar(_) => false,
+            ConstValue::Placeholder(_) => false,
+            ConstValue::Concrete(_) => false,
         }
     }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
-pub enum ConstData<I: Interner> {
+pub struct ConstData<I: Interner> {
+    pub ty: Ty<I>,
+    pub value: ConstValue<I>,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
+pub enum ConstValue<I: Interner> {
     BoundVar(BoundVar),
     InferenceVar(InferenceVar),
     Placeholder(PlaceholderIndex),
@@ -738,8 +752,8 @@ pub struct ConcreteConst<I: Interner> {
 }
 
 impl<I: Interner> ConcreteConst<I> {
-    pub fn const_eq(&self, other: &ConcreteConst<I>, interner: &I) -> bool {
-        interner.const_eq(&self.interned, &other.interned)
+    pub fn const_eq(&self, ty: &Ty<I>, other: &ConcreteConst<I>, interner: &I) -> bool {
+        interner.const_eq(&ty.interned, &self.interned, &other.interned)
     }
 }
 
@@ -825,13 +839,15 @@ impl PlaceholderIndex {
     }
 
     pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
-        let data: TyData<I> = TyData::Placeholder(self);
-        data.intern(interner)
+        TyData::Placeholder(self).intern(interner)
     }
 
-    pub fn to_const<I: Interner>(self, interner: &I) -> Const<I> {
-        let data: ConstData<I> = ConstData::Placeholder(self);
-        data.intern(interner)
+    pub fn to_const<I: Interner>(self, interner: &I, ty: Ty<I>) -> Const<I> {
+        ConstData {
+            ty,
+            value: ConstValue::Placeholder(self),
+        }
+        .intern(interner)
     }
 }
 
@@ -880,7 +896,14 @@ impl<I: Interner> VariableKind<I> {
                 GenericArgData::Lifetime(LifetimeData::BoundVar(bound_var).intern(interner))
                     .intern(interner)
             }
-            VariableKind::Const(_) => unreachable!(),
+            VariableKind::Const(ty) => GenericArgData::Const(
+                ConstData {
+                    ty: ty.clone(),
+                    value: ConstValue::BoundVar(bound_var),
+                }
+                .intern(interner),
+            )
+            .intern(interner),
         }
     }
 }
@@ -912,6 +935,10 @@ impl<I: Interner> GenericArg<I> {
         self.lifetime(interner).unwrap()
     }
 
+    pub fn assert_const_ref(&self, interner: &I) -> &Const<I> {
+        self.constant(interner).unwrap()
+    }
+
     pub fn is_ty(&self, interner: &I) -> bool {
         match self.data(interner) {
             GenericArgData::Ty(_) => true,
@@ -933,11 +960,11 @@ impl<I: Interner> GenericArg<I> {
             _ => None,
         }
     }
-    
+
     pub fn constant(&self, interner: &I) -> Option<&Const<I>> {
         match self.data(interner) {
             GenericArgData::Const(c) => Some(c),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -955,7 +982,7 @@ impl<I: Interner> GenericArgData<I> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct WithKind<I: Interner, T> {
     pub kind: VariableKind<I>,
     value: T,
@@ -963,6 +990,12 @@ pub struct WithKind<I: Interner, T> {
 
 impl<I: Interner, T> HasInterner for WithKind<I, T> {
     type Interner = I;
+}
+
+impl<I: Interner, T> From<WithKind<I, T>> for (VariableKind<I>, T) {
+    fn from(with_kind: WithKind<I, T>) -> Self {
+        (with_kind.kind, with_kind.value)
+    }
 }
 
 impl<I: Interner, T> WithKind<I, T> {
@@ -1875,7 +1908,7 @@ impl<T: HasInterner> UCanonical<T> {
                 .enumerate()
                 .map(|(index, pk)| {
                     let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);
-                    match pk.kind {
+                    match &pk.kind {
                         VariableKind::Ty => {
                             GenericArgData::Ty(TyData::BoundVar(bound_var).intern(interner))
                                 .intern(interner)
@@ -1884,10 +1917,14 @@ impl<T: HasInterner> UCanonical<T> {
                             LifetimeData::BoundVar(bound_var).intern(interner),
                         )
                         .intern(interner),
-                        VariableKind::Const(_) => {
-                            VariableKind::Const(ConstData::BoundVar(bound_var).intern(interner))
-                                .intern(interner)
-                        }
+                        VariableKind::Const(ty) => GenericArgData::Const(
+                            ConstData {
+                                ty: ty.clone(),
+                                value: ConstValue::BoundVar(bound_var),
+                            }
+                            .intern(interner),
+                        )
+                        .intern(interner),
                     }
                 })
                 .collect::<Vec<_>>(),
@@ -2185,8 +2222,8 @@ impl<I: Interner> Substitution<I> {
                     LifetimeData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
-                GenericArgData::Const(constant) => match &constant.data(interner) {
-                    ConstData::BoundVar(depth) => index_db == *depth,
+                GenericArgData::Const(constant) => match &constant.data(interner).value {
+                    ConstValue::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
             }
@@ -2310,6 +2347,7 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
 
     fn fold_free_var_const(
         &mut self,
+        _ty: &Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {

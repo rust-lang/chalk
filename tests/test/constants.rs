@@ -22,6 +22,19 @@ fn single_impl() {
         }
 
         goal {
+            S<3>: Trait
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            S<5>: Trait
+        } yields {
+            "No possible solution"
+        }
+
+
+        goal {
             forall<const N> {
                 S<N>: Trait
             }

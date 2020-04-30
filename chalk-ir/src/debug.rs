@@ -273,10 +273,10 @@ impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
             if index > 0 {
                 write!(fmt, ", ")?;
             }
-            match *binder {
+            match binder {
                 VariableKind::Ty => write!(fmt, "type")?,
                 VariableKind::Lifetime => write!(fmt, "lifetime")?,
-                VariableKind::Const(_) => write!(fmt, "const")?,
+                VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty)?,
             }
         }
         write!(fmt, ">")
@@ -285,11 +285,11 @@ impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
 
 impl<I: Interner> Debug for ConstData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self {
-            ConstData::BoundVar(db) => write!(fmt, "{:?}", db),
-            ConstData::InferenceVar(var) => write!(fmt, "{:?}", var),
-            ConstData::Placeholder(index) => write!(fmt, "{:?}", index),
-            ConstData::Concrete(evaluated) => write!(fmt, "{:?}", evaluated),
+        match &self.value {
+            ConstValue::BoundVar(db) => write!(fmt, "{:?}", db),
+            ConstValue::InferenceVar(var) => write!(fmt, "{:?}", var),
+            ConstValue::Placeholder(index) => write!(fmt, "{:?}", index),
+            ConstValue::Concrete(evaluated) => write!(fmt, "{:?}", evaluated),
         }
     }
 }
@@ -762,7 +762,7 @@ impl<I: Interner> Debug for GenericArgData<I> {
 
 impl<I: Interner> Debug for VariableKind<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match *self {
+        match self {
             VariableKind::Ty => write!(fmt, "type"),
             VariableKind::Lifetime => write!(fmt, "lifetime"),
             VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty),
