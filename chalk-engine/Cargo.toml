@@ -1,6 +1,6 @@
 [package]
 name = "chalk-engine"
-version = "0.9.0"
+version = "0.10.1-dev"
 description = "Core trait engine from Chalk project"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -15,6 +15,4 @@ default = []
 [dependencies]
 rustc-hash = { version = "1.0.0" }
 
-[dependencies.chalk-macros]
-version = "0.1.0"
-path = "../chalk-macros"
+chalk-macros = { version = "0.10.1-dev", path = "../chalk-macros" }

@@ -1,6 +1,6 @@
 [package]
 name = "chalk-macros"
-version = "0.1.1"
+version = "0.10.1-dev"
 description = "Macros for Chalk"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
