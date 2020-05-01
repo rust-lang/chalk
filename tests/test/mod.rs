@@ -298,13 +298,13 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
 
 mod arrays;
 mod auto_traits;
+mod builtin_impls;
 mod coherence_goals;
 mod coinduction;
 mod constants;
 mod cycle;
 mod existential_types;
 mod fn_def;
-mod functions;
 mod implied_bounds;
 mod impls;
 mod misc;

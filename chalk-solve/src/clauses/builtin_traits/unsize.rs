@@ -7,8 +7,9 @@ use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
     visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
-    ApplicationTy, Binders, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, QuantifiedWhereClauses,
-    Substitution, TraitId, Ty, TyData, TypeName, WhereClause,
+    ApplicationTy, Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal,
+    LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyData, TypeName,
+    WhereClause,
 };
 
 struct UnsizeParameterCollector<'a, I: Interner> {
@@ -24,19 +25,31 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
         self
     }
 
-    // FIXME(areredify) when const generics land, collect const variables too
-
     fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Self::Result {
         let interner = self.interner;
 
         match ty.data(interner) {
             TyData::BoundVar(bound_var) => {
-                // check if bound var referse to the outermost binder
+                // check if bound var refers to the outermost binder
                 if bound_var.debruijn.shifted_in() == outer_binder {
                     self.parameters.insert(bound_var.index);
                 }
             }
             _ => ty.super_visit_with(self, outer_binder),
+        }
+    }
+
+    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> Self::Result {
+        let interner = self.interner;
+
+        match constant.data(interner).value {
+            ConstValue::BoundVar(bound_var) => {
+                // check if bound var refers to the outermost binder
+                if bound_var.debruijn.shifted_in() == outer_binder {
+                    self.parameters.insert(bound_var.index);
+                }
+            }
+            _ => (),
         }
     }
 
@@ -87,6 +100,23 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
         }
     }
 
+    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> Self::Result {
+        let interner = self.interner;
+
+        match constant.data(interner).value {
+            ConstValue::BoundVar(bound_var) => {
+                if bound_var.debruijn.shifted_in() == outer_binder
+                    && self.parameters.contains(&bound_var.index)
+                {
+                    FindAny::FOUND
+                } else {
+                    FindAny::new()
+                }
+            }
+            _ => FindAny::new(),
+        }
+    }
+
     fn interner(&self) -> &'a I {
         self.interner
     }
@@ -110,36 +140,25 @@ fn principal_id<'a, I: Interner>(
 ) -> Option<TraitId<I>> {
     let interner = db.interner();
 
-    let principal_id = bounds
+    return bounds
         .skip_binders()
         .iter(interner)
-        .next()
-        .expect("Expected trait object to have at least one trait bound")
-        .trait_id()?;
-
-    if db.trait_datum(principal_id).is_auto_trait() {
-        None
-    } else {
-        Some(principal_id)
-    }
+        .filter_map(|b| b.trait_id())
+        .filter(|&id| !db.trait_datum(id).is_auto_trait())
+        .next();
 }
 
 fn auto_trait_ids<'a, I: Interner>(
-    db: &dyn RustIrDatabase<I>,
+    db: &'a dyn RustIrDatabase<I>,
     bounds: &'a Binders<QuantifiedWhereClauses<I>>,
 ) -> impl Iterator<Item = TraitId<I>> + 'a {
     let interner = db.interner();
-    // all trait ref where clauses after the principal are auto traits
-    let to_skip = if principal_id(db, bounds).is_some() {
-        1
-    } else {
-        0
-    };
+
     bounds
         .skip_binders()
         .iter(interner)
-        .skip(to_skip)
         .filter_map(|clause| clause.trait_id())
+        .filter(move |&id| db.trait_datum(id).is_auto_trait())
 }
 
 pub fn add_unsize_program_clauses<I: Interner>(
@@ -196,10 +215,11 @@ pub fn add_unsize_program_clauses<I: Interner>(
             }
 
             // COMMENT FROM RUSTC:
+            // ------------------
             // Require that the traits involved in this upcast are **equal**;
             // only the **lifetime bound** is changed.
             //
-            // FIXME: This condition is arguably too strong -- it would
+            // This condition is arguably too strong -- it would
             // suffice for the source trait to be a *subtype* of the target
             // trait. In particular, changing from something like
             // `for<'a, 'b> Foo<'a, 'b>` to `for<'a> Foo<'a, 'a>` should be
@@ -211,11 +231,13 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // with what our behavior should be there. -nikomatsakis
             // ------------------
 
-            // Filter out auto traits of source that are not present in target
-            // and change source lifetime to target lifetime
+            // Construct a new trait object type by taking the source ty,
+            // filtering out auto traits of source that are not present in target
+            // and changing source lifetime to target lifetime.
             //
-            // This new type should be equal to target type.
-            let source_ty = TyData::Dyn(DynTy {
+            // In order for the coercion to be valid, this new type
+            // should be equal to target type.
+            let new_source_ty = TyData::Dyn(DynTy {
                 bounds: bounds_a.map_ref(|bounds| {
                     QuantifiedWhereClauses::from(
                         interner,
@@ -238,16 +260,16 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
             // Check that new source is equal to target
             let eq_goal = EqGoal {
-                a: source_ty.cast(interner),
+                a: new_source_ty.cast(interner),
                 b: target_ty.clone().cast(interner),
             }
             .cast(interner);
 
-            // FIXME(areredify) change this to outlives once #419 lands
-            let lifetime_outlives_goal = EqGoal {
-                a: lifetime_a.clone().cast(interner),
-                b: lifetime_b.clone().cast(interner),
-            }
+            // Check that source lifetime outlives target lifetime
+            let lifetime_outlives_goal: Goal<I> = WhereClause::LifetimeOutlives(LifetimeOutlives {
+                a: lifetime_a.clone(),
+                b: lifetime_b.clone(),
+            })
             .cast(interner);
 
             builder.push_clause(trait_ref.clone(), [eq_goal, lifetime_outlives_goal].iter());
@@ -294,6 +316,27 @@ pub fn add_unsize_program_clauses<I: Interner>(
             );
         }
 
+        (
+            TyData::Apply(ApplicationTy {
+                name: TypeName::Array,
+                substitution: array_subst,
+            }),
+            TyData::Apply(ApplicationTy {
+                name: TypeName::Slice,
+                substitution: slice_subst,
+            }),
+        ) => {
+            let array_ty = array_subst.at(interner, 0);
+            let slice_ty = slice_subst.at(interner, 0);
+
+            let eq_goal = EqGoal {
+                a: array_ty.clone(),
+                b: slice_ty.clone(),
+            };
+
+            builder.push_clause(trait_ref.clone(), iter::once(eq_goal));
+        }
+
         // Struct<T> -> Struct<U>
         // Unsizing of enums is not allowed
         (
@@ -318,21 +361,22 @@ pub fn add_unsize_program_clauses<I: Interner>(
                 return;
             }
 
-            let struct_tail_field = struct_datum
+            let adt_tail_field = struct_datum
                 .binders
                 .map_ref(|bound| bound.fields.last().unwrap());
 
             // Collect unsize parameters that last field contains and
             // ensure there at least one of them.
             let unsize_parameter_candidates =
-                outer_binder_parameters_used(interner, &struct_tail_field);
+                outer_binder_parameters_used(interner, &adt_tail_field);
 
             if unsize_parameter_candidates.len() == 0 {
                 return;
             }
-
             // Ensure none of the other fields mention the parameters used
             // in unsizing.
+            // We specifically want variables specified by the outermost binder
+            // i.e. the struct generic arguments binder.
             if uses_outer_binder_params(
                 interner,
                 &struct_datum
@@ -345,15 +389,22 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
             let parameters_a = substitution_a.parameters(interner);
             let parameters_b = substitution_b.parameters(interner);
-            // Check that the source struct with the target's
+            // Check that the source adt with the target's
             // unsizing parameters is equal to the target.
+            // We construct a new substitution where if a parameter is used in the
+            // coercion (i.e. it's a non-lifetime struct parameter used by it's last field),
+            // then we take that parameter from target substitution, otherwise we take
+            // it from the source substitution.
+            //
+            // In order for the coercion to be valid, target struct and
+            // struct with this newly constructed substitution applied to it should be equal.
             let substitution = Substitution::from(
                 interner,
                 parameters_a.iter().enumerate().map(|(i, p)| {
                     if unsize_parameter_candidates.contains(&i) {
-                        p
-                    } else {
                         &parameters_b[i]
+                    } else {
+                        p
                     }
                 }),
             );
@@ -370,8 +421,8 @@ pub fn add_unsize_program_clauses<I: Interner>(
             .cast(interner);
 
             // Extract `TailField<T>` and `TailField<U>` from `Struct<T>` and `Struct<U>`.
-            let source_tail_field = struct_tail_field.substitute(interner, substitution_a);
-            let target_tail_field = struct_tail_field.substitute(interner, substitution_b);
+            let source_tail_field = adt_tail_field.substitute(interner, substitution_a);
+            let target_tail_field = adt_tail_field.substitute(interner, substitution_b);
 
             // Check that `TailField<T>: Unsize<TailField<U>>`
             let last_field_unsizing_goal: Goal<I> = TraitRef {
@@ -442,7 +493,6 @@ pub fn add_unsize_program_clauses<I: Interner>(
             );
         }
 
-        // FIXME(areredify) extend with array -> slice unsizing
         _ => (),
     }
 }

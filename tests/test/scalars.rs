@@ -136,29 +136,3 @@ fn scalars_are_well_formed() {
         goal { WellFormed(char) } yields { "Unique" }
     }
 }
-
-#[test]
-fn scalars_are_sized() {
-    test! {
-        program {
-            #[lang(sized)] trait Sized { }
-        }
-
-        goal { i8: Sized } yields { "Unique" }
-        goal { i16: Sized } yields { "Unique" }
-        goal { i32: Sized } yields { "Unique" }
-        goal { i64: Sized } yields { "Unique" }
-        goal { i128: Sized } yields { "Unique" }
-        goal { isize: Sized } yields { "Unique" }
-        goal { u8: Sized } yields { "Unique" }
-        goal { u16: Sized } yields { "Unique" }
-        goal { u32: Sized } yields { "Unique" }
-        goal { u64: Sized } yields { "Unique" }
-        goal { u128: Sized } yields { "Unique" }
-        goal { usize: Sized } yields { "Unique" }
-        goal { f32: Sized } yields { "Unique" }
-        goal { f64: Sized } yields { "Unique" }
-        goal { bool: Sized } yields { "Unique" }
-        goal { char: Sized } yields { "Unique" }
-    }
-}

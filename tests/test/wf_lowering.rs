@@ -819,3 +819,17 @@ fn drop_constraints() {
         }
     }
 }
+
+#[test]
+fn no_unsize_impls() {
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            impl Unsize<u32> for u32 {}
+        } error_msg {
+            "trait impl for `Unsize` does not meet well-formedness requirements"
+        }
+    }
+}
