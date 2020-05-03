@@ -7,8 +7,8 @@ use std::{
 
 use chalk_ir::{
     interner::Interner, AliasEq, AliasTy, ApplicationTy, BoundVar, Fn as ChalkFn, Lifetime,
-    LifetimeData, Parameter, ParameterData, ParameterKind, QuantifiedWhereClause, StructId,
-    TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    LifetimeData, Parameter, ParameterData, ParameterKind, ParameterKinds, QuantifiedWhereClause,
+    StructId, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use chalk_rust_ir::{
     AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, Polarity,
@@ -75,6 +75,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
         let impl_param_names_in_impl_env = s.binder_var_indices(&impl_datum.binders.binders);
 
         let s = &s.add_debrujin_index(None);
+        let value = self.value.skip_binders();
 
         let param_names_in_assoc_ty_value_env = s
             .binder_var_indices(&self.value.binders)
@@ -100,7 +101,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
 
         write!(f, "type {}", s.db.identifier_name(&assoc_ty_data.name))?;
         write_joined_non_empty_list!(f, "<{}>", &assoc_ty_value_display, ", ")?;
-        write!(f, " = {};", self.value.value.ty.display(s))?;
+        write!(f, " = {};", value.ty.display(s))?;
         Ok(())
     }
 }
@@ -117,9 +118,11 @@ impl<I: Interner> RenderAsRust<I> for Polarity {
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
+        // TODO: investigate why this isn't calling s.add_debrujin_index()
         let binders = s.binder_var_display(&self.binders.binders);
+        let value = self.binders.skip_binders();
 
-        let trait_ref = &self.binders.value.trait_ref;
+        let trait_ref = &value.trait_ref;
         // Ignore automatically added Self parameter by skipping first parameter
         let full_trait_name = display_trait_with_generics(
             s,
@@ -143,8 +146,8 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             trait_ref.self_type_parameter(interner).display(s)
         )?;
 
-        if !self.binders.value.where_clauses.is_empty() {
-            write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
+        if !value.where_clauses.is_empty() {
+            write!(f, "where {} ", value.where_clauses.display(s))?;
         }
         write!(f, "{{")?;
         write_joined_non_empty_list!(f, "\n{}\n", assoc_ty_values, "\n")?;
@@ -220,21 +223,20 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
         match self {
             TyData::Dyn(dyn_ty) => {
                 let s = &s.add_debrujin_index(None);
+                let bounds = dyn_ty.bounds.skip_binders();
                 write!(f, "dyn ")?;
                 // dyn_ty.bounds.binders creates a Self binding for the trait
                 write!(
                     f,
                     "{}",
-                    dyn_ty
-                        .bounds
-                        .value
-                        .iter()
+                    bounds
+                        .iter(interner)
                         .map(|bound| {
                             as_display(|f| {
                                 // each individual trait within the 'dyn' can have a
                                 // forall clause.
                                 let s = &s.add_debrujin_index(None);
-                                if !bound.binders.is_empty() {
+                                if !bound.binders.is_empty(interner) {
                                     write!(
                                         f,
                                         "forall<{}> ",
@@ -243,7 +245,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                                             .join(", ")
                                     )?;
                                 }
-                                match &bound.value {
+                                match &bound.skip_binders() {
                                     WhereClause::Implemented(trait_ref) => {
                                         display_trait_with_generics(
                                             s,
@@ -252,18 +254,21 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                                         )
                                         .fmt(f)
                                     }
-                                    WhereClause::AliasEq(alias_eq) => {
-                                        let (assoc_ty_datum, trait_params, assoc_type_params) =
-                                            s.db.split_projection(&alias_eq.alias);
-                                        display_trait_with_assoc_ty_value(
-                                            s,
-                                            assoc_ty_datum,
-                                            &trait_params[1..],
-                                            assoc_type_params,
-                                            &alias_eq.ty,
-                                        )
-                                        .fmt(f)
-                                    }
+                                    WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
+                                        AliasTy::Projection(projection_ty) => {
+                                            let (assoc_ty_datum, trait_params, assoc_type_params) =
+                                                s.db.split_projection(&projection_ty);
+                                            display_trait_with_assoc_ty_value(
+                                                s,
+                                                assoc_ty_datum,
+                                                &trait_params[1..],
+                                                assoc_type_params,
+                                                &alias_eq.ty,
+                                            )
+                                            .fmt(f)
+                                        }
+                                        AliasTy::Opaque(opaque) => todo!("todo impl Trait"),
+                                    },
                                 }
                             })
                             .to_string()
@@ -290,26 +295,32 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
         // trait_params is X, A1, A2, A3,
         // assoc_type_params is B1, B2, B3,
         // assoc_ty_datum stores info about Y and Z.
-
-        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db.split_projection(&self);
-        write!(
-            f,
-            "<{} as {}>::{}",
-            trait_params[0].display(s),
-            display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
-            s.db.identifier_name(&assoc_ty_datum.name),
-        )?;
-        write_joined_non_empty_list!(
-            f,
-            "<{}>",
-            assoc_type_params.iter().map(|param| param.display(s)),
-            ", "
-        )
+        match self {
+            AliasTy::Projection(projection_ty) => {
+                let (assoc_ty_datum, trait_params, assoc_type_params) =
+                    s.db.split_projection(&projection_ty);
+                write!(
+                    f,
+                    "<{} as {}>::{}",
+                    trait_params[0].display(s),
+                    display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
+                    s.db.identifier_name(&assoc_ty_datum.name),
+                )?;
+                write_joined_non_empty_list!(
+                    f,
+                    "<{}>",
+                    assoc_type_params.iter().map(|param| param.display(s)),
+                    ", "
+                )
+            }
+            AliasTy::Opaque(_) => todo!("opaque types"),
+        }
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db.interner();
         let s = &s.add_debrujin_index(None);
         if self.num_binders > 0 {
             write!(
@@ -324,7 +335,8 @@ impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
         write!(
             f,
             "fn({})",
-            self.parameters
+            self.substitution
+                .parameters(interner)
                 .iter()
                 .map(|param| param.display(s).to_string())
                 .collect::<Vec<_>>()
@@ -366,6 +378,9 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     ","
                 )?;
             }
+            TypeName::Scalar(_) => todo!("scalar types"),
+            TypeName::Tuple(_) => todo!("scalar types"),
+            TypeName::OpaqueType(_) => todo!("opaque type usage"),
             TypeName::Error => write!(f, "{{error}}")?,
         }
         Ok(())
@@ -396,8 +411,9 @@ impl<I: Interner> RenderAsRust<I> for ParameterData<I> {
 
 impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db.interner();
         let s = &s.add_debrujin_index(None);
-        if !self.binders.is_empty() {
+        if !self.binders.is_empty(interner) {
             write!(
                 f,
                 "forall<{}> ",
@@ -406,14 +422,15 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
                     .join(", ")
             )?;
         }
-        self.value.fmt(s, f)
+        self.skip_binders().fmt(s, f)
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db.interner();
         let s = &s.add_debrujin_index(None);
-        if !self.binders.is_empty() {
+        if !self.binders.is_empty(&interner) {
             write!(
                 f,
                 "forall<{}> ",
@@ -422,7 +439,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
                     .join(", ")
             )?;
         }
-        self.value.fmt(s, f)
+        self.skip_binders().fmt(s, f)
     }
 }
 
@@ -432,7 +449,7 @@ impl<I: Interner> RenderAsRust<I> for Vec<QuantifiedWhereClause<I>> {
             f,
             "{}",
             self.iter()
-                .map(|where_clause| { format!("{}{}",s.indent(),where_clause.display(s)) })
+                .map(|where_clause| { format!("{}{}", s.indent(), where_clause.display(s)) })
                 .collect::<Vec<String>>()
                 .join(",\n")
         )?;
@@ -524,22 +541,28 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
         // trait_params is X, A1, A2, A3,
         // assoc_type_params is B1, B2, B3,
         // assoc_ty_datum stores info about Y and Z.
-        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db.split_projection(&self.alias);
-        // An alternate form might be `<{} as {}<{}>>::{}<{}> = {}` (with same
-        // parameter ordering). This alternate form would be using type equality
-        // constraints (https://github.com/rust-lang/rust/issues/20041).
-        write!(
-            f,
-            "{}: {}",
-            trait_params[0].display(s),
-            display_trait_with_assoc_ty_value(
-                s,
-                assoc_ty_datum,
-                &trait_params[1..],
-                assoc_type_params,
-                &self.ty
-            ),
-        )
+        match &self.alias {
+            AliasTy::Projection(projection_ty) => {
+                let (assoc_ty_datum, trait_params, assoc_type_params) =
+                    s.db.split_projection(&projection_ty);
+                // An alternate form might be `<{} as {}<{}>>::{}<{}> = {}` (with same
+                // parameter ordering). This alternate form would be using type equality
+                // constraints (https://github.com/rust-lang/rust/issues/20041).
+                write!(
+                    f,
+                    "{}: {}",
+                    trait_params[0].display(s),
+                    display_trait_with_assoc_ty_value(
+                        s,
+                        assoc_ty_datum,
+                        &trait_params[1..],
+                        assoc_type_params,
+                        &self.ty
+                    ),
+                )
+            }
+            AliasTy::Opaque(_) => todo!("opaque types"),
+        }
     }
 }
 
@@ -553,7 +576,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
         // they have inside the AssociatedTyDatum (assoc_ty_names_for_trait_params),
         // and then add that mapping to the WriterState when writing bounds and
         // where clauses.
-
+        let interner = s.db.interner();
         let trait_datum = s.db.trait_datum(self.trait_id);
         // inverted Debrujin indices for the trait's parameters in the trait
         // environment
@@ -585,7 +608,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
         write!(f, "type {}", s.db.identifier_name(&self.name),)?;
         write_joined_non_empty_list!(f, "<{}>", assoc_ty_params, ", ")?;
 
-        let datum_bounds = &self.binders.value;
+        let datum_bounds = &self.binders.skip_binders();
 
         if !(datum_bounds.bounds.is_empty() && datum_bounds.where_clauses.is_empty()) {
             write!(f, ": ")?;
@@ -618,7 +641,9 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 
 impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db.interner();
         let s = &s.add_debrujin_index(Some(0));
+        let value = self.binders.skip_binders();
 
         macro_rules! trait_flags {
             ($($n:ident),*) => {
@@ -640,8 +665,8 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         write!(f, "trait {}", self.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
         write!(f, " ")?;
-        if !self.binders.value.where_clauses.is_empty() {
-            write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
+        if !value.where_clauses.is_empty() {
+            write!(f, "where {} ", value.where_clauses.display(s))?;
         }
         write!(f, "{{")?;
         let s = &s.add_indent();
@@ -664,6 +689,7 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
         // When support for Self in structs is added, self_binding should be
         // changed to Some(0)
         let s = &s.add_debrujin_index(None);
+        let value = self.binders.skip_binders();
         write!(f, "struct {}", self.id.display(s),)?;
         write_joined_non_empty_list!(
             f,
@@ -672,22 +698,17 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
             ", "
         )?;
         write!(f, " ")?;
-        if !self.binders.value.where_clauses.is_empty() {
-            write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
+        if !value.where_clauses.is_empty() {
+            write!(f, "where {} ", value.where_clauses.display(s))?;
         }
         write!(f, "{{")?;
         let s = &s.add_indent();
         write_joined_non_empty_list!(
             f,
             "\n{}\n",
-            self.binders
-                .value
-                .fields
-                .iter()
-                .enumerate()
-                .map(|(idx, field)| {
-                    format!("{}field_{}: {}", s.indent(), idx, field.display(s))
-                }),
+            value.fields.iter().enumerate().map(|(idx, field)| {
+                format!("{}field_{}: {}", s.indent(), idx, field.display(s))
+            }),
             ",\n"
         )?;
         write!(f, "}}")?;
@@ -837,20 +858,20 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
     fn binder_var_indices<'b>(
         &'b self,
-        binders: &'b [ParameterKind<()>],
+        binders: &'b ParameterKinds<I>,
     ) -> impl Iterator<Item = InvertedBoundVar> + 'b {
         binders
-            .iter()
+            .iter(self.db.interner())
             .enumerate()
             .map(move |(idx, _param)| self.indices_for_introduced_bound_var(idx))
     }
 
     fn binder_var_display<'b>(
         &'b self,
-        binders: &'b [ParameterKind<()>],
+        binders: &'b ParameterKinds<I>,
     ) -> impl Iterator<Item = String> + 'b {
         binders
-            .iter()
+            .iter(self.db.interner())
             .zip(self.binder_var_indices(binders))
             .map(move |(parameter, var)| match parameter {
                 ParameterKind::Ty(_) => format!("{}", self.apply_mappings(var)),

@@ -193,7 +193,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         associated_ty_datum: &AssociatedTyDatum<I>,
     ) -> (&'p [P], &'p [P]) {
         let trait_datum = &self.trait_datum(associated_ty_datum.trait_id);
-        let trait_num_params = trait_datum.binders.len();
+        let trait_num_params = trait_datum.binders.len(self.interner());
         let split_point = parameters.len() - trait_num_params;
         let (other_params, trait_params) = parameters.split_at(split_point);
         (trait_params, other_params)
