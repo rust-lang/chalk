@@ -47,6 +47,26 @@ mod test {
         out
     }
 
+    /// Data from performing a reparse test which can be used to make additional
+    /// assertions.
+    ///
+    /// Not necessary for use unless additional assertions are necessary.
+    #[allow(unused)]
+    struct ReparseTestResult<'a> {
+        /// The program text for the original test code
+        original_text: &'a str,
+        /// The program text for the code the test says should be output
+        target_text: &'a str,
+        /// The actual reparsed output text
+        output_text: String,
+        /// Lowered version of `original_text`
+        original_program: Arc<Program>,
+        /// Lowered version of `target_text`
+        target_program: Arc<Program>,
+        /// Lowered version of `output_text`
+        output_program: Program,
+    }
+
     /// Parses the input, lowers it, prints it, then re-parses and re-lowers,
     /// failing if the two lowered programs don't match.
     ///
@@ -54,7 +74,16 @@ mod test {
     /// particular, ProgramWriter always writes traits, then structs, then
     /// impls. So all traits must come first, then structs, then all impls, or
     /// the reparse will fail.
-    fn reparse_test(program_text: &str) {
+    fn reparse_test(program_text: &str) -> ReparseTestResult<'_> {
+        reparse_into_different_test(program_text, program_text)
+    }
+
+    /// [`reparse_test`], but allows a non-convergent test program to be tested
+    /// a different target.
+    fn reparse_into_different_test<'a>(
+        program_text: &'a str,
+        target_text: &'a str,
+    ) -> ReparseTestResult<'a> {
         let original_program = match chalk_parse::parse_program(program_text) {
             Ok(v) => v,
             Err(e) => panic!(
@@ -62,38 +91,66 @@ mod test {
                 e, program_text
             ),
         };
-        let original_program = Arc::new(
-            original_program
-                .lower()
-                .expect("unable to lower test program"),
-        );
-        let new_text = tls::set_current_program(&original_program, || original_program.write());
-        let new_program = match chalk_parse::parse_program(&new_text) {
+        let original_program = Arc::new(original_program.lower().unwrap_or_else(|e| {
+            panic!(
+                "unable to lower test program:\n{}\nSource:\n{}\n",
+                e, program_text
+            )
+        }));
+        let target_program = match chalk_parse::parse_program(target_text) {
             Ok(v) => v,
             Err(e) => panic!(
+                "unable to parse test program:\n{}\nSource:\n{}\n",
+                e, program_text
+            ),
+        };
+        let target_program = Arc::new(target_program.lower().unwrap_or_else(|e| {
+            panic!(
+                "unable to lower test program:\n{}\nSource:\n{}\n",
+                e, program_text
+            )
+        }));
+        let output_text = tls::set_current_program(&original_program, || original_program.write());
+        let output_program = chalk_parse::parse_program(&output_text).unwrap_or_else(|e| {
+            panic!(
                 "unable to reparse writer output:\n{}\nNew source:\n{}\n",
-                e, new_text
-            ),
-        };
-        let new_program = match new_program.lower() {
-            Ok(v) => v,
-            Err(e) => panic!(
+                e, output_text
+            )
+        });
+        let output_program = output_program.lower().unwrap_or_else(|e| {
+            panic!(
                 "error lowering writer output:\n{}\nNew source:\n{}\n",
-                e, new_text
-            ),
-        };
-        if new_program != *original_program {
+                e, output_text
+            )
+        });
+        if output_program != *target_program {
             panic!(
                 "WriteProgram produced different program.\n\
                  Diff:\n{}\n\
-                 Source:\n{}\n
+                 Source:\n{}\n{}\
                  New Source:\n{}\n",
-                program_diff(&original_program, &new_program),
+                program_diff(&target_program, &output_program),
                 program_text,
-                new_text
+                if target_text != program_text {
+                    format!(
+                        "Test Should Output (different from original):\n{}\n",
+                        target_text
+                    )
+                } else {
+                    String::new()
+                },
+                output_text
             );
         }
-        eprintln!("{}", new_text);
+        eprintln!("\nTest Succeeded:\n\n{}\n---", output_text);
+        ReparseTestResult {
+            original_text: program_text,
+            output_text,
+            target_text,
+            original_program,
+            output_program,
+            target_program,
+        }
     }
 
     #[test]
@@ -121,7 +178,7 @@ mod test {
     }
 
     #[test]
-    fn test_self() {
+    fn test_self_in_trait_where() {
         reparse_test(
             "
             trait Bkz {}
@@ -130,10 +187,72 @@ mod test {
         );
         reparse_test(
             "
+            trait Baz<'a> {}
+            trait Foo where forall<'a> Self: Baz<'a> {}
+            ",
+        );
+    }
+
+    #[test]
+    fn test_self_in_assoc_type() {
+        reparse_test(
+            "
+            trait Extra<T> {}
+            trait Bez {}
+            trait Foo {
+                type Assoc: Extra<Self>;
+            }
+            ",
+        );
+
+        reparse_test(
+            "
             trait Bez {}
             trait Foo {
                 type Assoc where Self: Bez;
             }
+            ",
+        );
+        reparse_test(
+            "
+            trait Biz<T, U, V> {}
+            trait Foo<A> {
+                type Assoc<B> where Self: Biz<Self, A, B>;
+            }
+            ",
+        );
+    }
+
+    #[test]
+    fn test_self_in_dyn() {
+        reparse_test(
+            "
+            trait Bun<T> {}
+            trait Foo<T> {
+                type Assoc<U> where dyn Bun<Self>: Bun<U>;
+            }
+        ",
+        );
+        reparse_test(
+            "
+            trait Has<T> {}
+            trait Bun<T, U> {}
+            trait Fiz<T> {
+                type Assoc1<U>: Has<dyn Bun<Self, U>>;
+                type Assoc2<N>: Has<dyn Bun<T, Self>>;
+            }
+        ",
+        );
+    }
+
+    // Self doesn't work in these circumstances yet (test programs fail to lower)
+    #[ignore]
+    #[test]
+    fn test_self_in_struct_bounds() {
+        reparse_test(
+            "
+            trait Bax<T> {}
+            struct Foo<T> where T: Bax<Self> {}
             ",
         );
         reparse_test(
@@ -145,15 +264,47 @@ mod test {
         reparse_test(
             "
             trait Blz {}
-            struct Fzk {}
-            struct Foo<T> where Self<Fzk>: Blz {}
+            struct Foo<T> where Self: Blz {}
             ",
+        );
+    }
+
+    // Self doesn't work in these circumstances yet (test programs fail to lower)
+    #[ignore]
+    #[test]
+    fn test_self_in_impl_blocks() {
+        reparse_test(
+            "
+            trait Foo {
+                type Assoc;
+            }
+            struct Bix {}
+            impl Foo for Bix {
+                type Assoc = Self;
+            }
+        ",
         );
         reparse_test(
             "
-            trait Baz<'a> {}
-            trait Foo where forall<'a> Self: Baz<'a> {}
-            ",
+            trait Foo {}
+            trait Fin {}
+            struct Bux {}
+            impl Foo for Bux where Self: Fin {}
+        ",
+        );
+        reparse_test(
+            "
+            trait Faux<T, U> {}
+            trait Paw<T> {
+                type Assoc1<U>;
+                type Assoc2<N>;
+            }
+            struct Buzz {}
+            impl<T> Paw<T> for Buzz {
+                type Assoc1<U> = dyn Faux<Self, U>;
+                type Assoc2<N> = dyn Faux<T, Self>;
+            }
+        ",
         );
     }
 
@@ -456,6 +607,33 @@ mod test {
     }
 
     #[test]
+    fn test_against_accidental_self() {
+        // In some of the writer code, it would be really easy to introduce a
+        // outputs the first generic parameter of things as "Self".
+        let in_structs = reparse_test(
+            "
+            struct Foo<T> {
+                field: T
+            }
+            ",
+        );
+        dbg!(in_structs.output_program);
+        assert!(!in_structs.output_text.contains("Self"));
+        let in_impl = reparse_test(
+            "
+            struct Foo<T> {}
+            trait Bux<U> {
+                type Assoc;
+            }
+            impl<T> Bux<T> for Foo<T> {
+                type Assoc = T;
+            }
+            ",
+        );
+        assert!(!in_impl.output_text.contains("Self"));
+    }
+
+    #[test]
     fn test_program_writer() {
         reparse_test(
             "
@@ -503,8 +681,61 @@ mod test {
     }
 
     #[test]
+    fn test_assoc_ty_alias_bound() {
+        // Foo: Bax<BaxT=T> is lowered into two bounds, Bax and Bax<BaxT=T>, and
+        // the formatter does not coalesce those bounds.
+        reparse_into_different_test(
+            "
+            struct Foo { }
+            trait Bax { type BaxT; }
+            trait Test {
+                type Assoc<T>
+                    where
+                        Foo: Bax<BaxT=T>;
+            }
+            ",
+            "
+            struct Foo { }
+            trait Bax { type BaxT; }
+            trait Test {
+                type Assoc<T>
+                    where
+                        Foo: Bax<BaxT=T>,
+                        Foo: Bax;
+            }
+            ",
+        );
+        reparse_into_different_test(
+            "
+            struct Foo<T> where T: Baux<Assoc=T> { }
+            trait Baux { type Assoc; }
+            ",
+            "
+            struct Foo<T> where T: Baux<Assoc=T>, T: Baux { }
+            trait Baux { type Assoc; }
+            ",
+        );
+        reparse_into_different_test(
+            "
+            struct Foo<T> {}
+            trait Boz { type Assoc; }
+            impl<T> Boz for Foo<T> where T: Boz<Assoc=Foo<T>> {
+                type Assoc = Foo<T>;
+            }
+            ",
+            "
+            struct Foo<T> {}
+            trait Boz { type Assoc; }
+            impl<T> Boz for Foo<T> where T: Boz<Assoc=Foo<T>>, T: Boz {
+                type Assoc = Foo<T>;
+            }
+            ",
+        );
+    }
+
+    #[test]
     fn test_complicated_bounds() {
-        reparse_test(
+        reparse_into_different_test(
             "
             struct Foo { }
             trait Bar { }
@@ -518,21 +749,19 @@ mod test {
                         dyn Bar: Baz<Foo>;
             }
             ",
-        );
-    }
-
-    #[test]
-    fn test_assoc_ty_alias_bound() {
-        reparse_test(
             "
             struct Foo { }
-            trait Bax { type BaxT; }
+            trait Bar { }
+            trait Baz<T> { }
+            trait Bax<T> { type BaxT; }
             trait Test {
-                type Assoc<T>
+                type Assoc<T>: Bar + Baz<Foo> + Bax<T, BaxT=T>
                     where
-                        Foo: Bax<BaxT=T>;
-            }
-            ",
+                        Foo: Bax<T, BaxT=T>,
+                        Foo: Bax<T>,
+                        Foo: Bar,
+                        dyn Bar: Baz<Foo>;
+            }",
         );
     }
 
@@ -557,6 +786,7 @@ mod test {
             ",
         );
     }
+
     #[test]
     fn test_impl_where_clauses() {
         reparse_test(
@@ -606,6 +836,144 @@ mod test {
             struct Foo<'b> { }
             trait Baz<'a> {}
             impl<'a> Baz<'a> for Foo<'a> { }
+            ",
+        );
+    }
+
+    #[test]
+    fn test_basic_trait_impl() {
+        reparse_test(
+            "
+            struct Foo { }
+            trait Bar {}
+            impl Bar for Foo { }
+            ",
+        );
+    }
+
+    #[test]
+    fn test_negative_auto_trait_impl() {
+        reparse_test(
+            "
+            struct Foo { }
+            #[auto]
+            trait Baz {}
+            impl !Baz for Foo { }
+            ",
+        );
+    }
+
+    #[test]
+    fn test_trait_flags() {
+        let flags = vec![
+            "auto",
+            "marker",
+            "upstream",
+            "fundamental",
+            "non_enumerable",
+            "coinductive",
+        ];
+        reparse_test(&format!(
+            "{}trait Hello {{}}",
+            flags
+                .iter()
+                .map(|f| format!("#[{}]", f))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ));
+        for flag in flags {
+            reparse_test(&format!(
+                "
+                #[{0}]
+                trait Hello_{0} {{}}
+                ",
+                flag
+            ));
+        }
+    }
+
+    #[test]
+    fn test_trait_impl_associated_type() {
+        reparse_test(
+            "
+            struct Foo { }
+            struct Floo { }
+            trait Bar {
+                type Assoc;
+            }
+            impl Bar for Foo {
+                type Assoc = Floo;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo { }
+            struct Floo { }
+            trait Bax {
+                type Assoc1;
+                type Assoc2;
+            }
+            impl Bax for Foo {
+                type Assoc1 = Floo;
+                type Assoc2 = Foo;
+            }
+            ",
+        );
+    }
+
+    #[test]
+    fn test_trait_impl_associated_type_with_generics() {
+        reparse_test(
+            "
+            struct Foo { }
+            struct Floo<T> { }
+            trait Baz<T> {
+                type Assoc;
+            }
+            impl<T> Baz<T> for Foo {
+                type Assoc = Floo<T>;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo { }
+            struct Floo<T> { }
+            trait Bur {
+                type Assoc<A>;
+            }
+            impl Bur for Foo {
+                type Assoc<A> = Floo<A>;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo { }
+            struct Floo<T, U> { }
+            trait Bun<T> {
+                type Assoc<A>;
+            }
+            impl<T, U> Bun<T> for Foo {
+                type Assoc<A> = Floo<T, A>;
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo { }
+            struct Floo<T, U> { }
+            trait Bun<T, U> {
+                type Assoc1<A, N>;
+                type Assoc2<B>;
+                type Assoc3<C, D>;
+            }
+            impl<T, U> Bun<T, U> for Foo {
+                type Assoc1<A, N> = Floo<N, T>;
+                type Assoc2<B> = Floo<U, B>;
+                type Assoc3<C, D> = Floo<Floo<T, D>, Floo<U, C>>;
+            }
             ",
         );
     }
