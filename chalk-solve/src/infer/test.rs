@@ -303,9 +303,13 @@ fn lifetime_constraint_indirect() {
     let UnificationResult { goals, constraints } =
         table.unify(interner, &environment0, &t_c, &t_b).unwrap();
     assert!(goals.is_empty());
-    assert_eq!(constraints.len(), 1);
+    assert_eq!(constraints.len(), 2);
     assert_eq!(
         format!("{:?}", constraints[0]),
-        "InEnvironment { environment: Env([]), goal: \'?2 == \'!1_0 }",
+        "InEnvironment { environment: Env([]), goal: \'?2: \'!1_0 }",
+    );
+    assert_eq!(
+        format!("{:?}", constraints[1]),
+        "InEnvironment { environment: Env([]), goal: \'!1_0: \'?2 }",
     );
 }

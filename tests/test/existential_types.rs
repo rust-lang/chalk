@@ -161,7 +161,10 @@ fn dyn_higher_ranked_type_arguments() {
             }
         } yields {
             // Note that this requires 'a == 'static, so it would be resolveable later on.
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0 == '!1_0 }]"
+            "Unique; substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, \
+            InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }\
+            ]"
         }
     }
 }
@@ -186,7 +189,12 @@ fn dyn_binders_reverse() {
                 dyn forall<'c> Fn<Refs<'c, 'c>>
             >
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!3_0 == '!3_1 }, InEnvironment { environment: Env([]), goal: '!6_0 == '!6_1 }]"
+            "Unique; substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '!3_0: '!3_1 }, \
+            InEnvironment { environment: Env([]), goal: '!3_1: '!3_0 }, \
+            InEnvironment { environment: Env([]), goal: '!6_0: '!6_1 }, \
+            InEnvironment { environment: Env([]), goal: '!6_1: '!6_0 }\
+            ]"
         }
 
         // Note: these constraints are ultimately unresolveable (we
@@ -196,7 +204,12 @@ fn dyn_binders_reverse() {
                 dyn forall<'a, 'b> Fn<Refs<'a, 'b>>
             >
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_1 == '!2_0 }, InEnvironment { environment: Env([]), goal: '!5_1 == '!5_0 }]"
+            "Unique; substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
+            InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }, \
+            InEnvironment { environment: Env([]), goal: '!5_0: '!5_1 }, \
+            InEnvironment { environment: Env([]), goal: '!5_1: '!5_0 }\
+            ]"
         }
 
         // Note: ordering of parameters is reversed here, but that's no problem

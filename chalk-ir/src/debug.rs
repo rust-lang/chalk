@@ -725,7 +725,7 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
 impl<I: Interner> Debug for Constraint<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            Constraint::LifetimeEq(a, b) => write!(fmt, "{:?} == {:?}", a, b),
+            Constraint::Outlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
         }
     }
 }

@@ -256,7 +256,10 @@ fn basic_region_constraint_from_positive_impl() {
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
         } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
+            "substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }\
+            ]"
         }
     }
 }

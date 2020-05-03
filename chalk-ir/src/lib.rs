@@ -1909,7 +1909,7 @@ pub enum QuantifierKind {
 /// checking in the compiler.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub enum Constraint<I: Interner> {
-    LifetimeEq(Lifetime<I>, Lifetime<I>),
+    Outlives(Lifetime<I>, Lifetime<I>),
 }
 
 /// A mapping of inference variables to instantiations thereof.
