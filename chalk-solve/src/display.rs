@@ -14,6 +14,7 @@ use chalk_rust_ir::{
     AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, Polarity,
     QuantifiedInlineBound, StructDatum, TraitBound, TraitDatum,
 };
+use itertools::Itertools;
 
 use crate::{split::Split, RustIrDatabase};
 
@@ -53,6 +54,17 @@ pub trait RenderAsRust<I: Interner> {
     }
 }
 
+macro_rules! write_joined_non_empty_list {
+    ($f:expr,$template:tt,$list:expr,$sep:expr) => {{
+        let mut x = $list.into_iter().peekable();
+        if x.peek().is_some() {
+            write!($f, $template, x.format($sep))
+        } else {
+            Ok(())
+        }
+    }};
+}
+
 impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // see comments for a similar empty env operation in AssociatedTyDatum's
@@ -86,13 +98,9 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
         let (_impl_display, assoc_ty_value_display) =
             s.db.split_associated_ty_value_parameters(&display_params, self);
 
-        write!(
-            f,
-            "type {}<{}> = {};",
-            s.db.identifier_name(&assoc_ty_data.name),
-            assoc_ty_value_display.join(", "),
-            self.value.value.ty.display(s)
-        )?;
+        write!(f, "type {}", s.db.identifier_name(&assoc_ty_data.name))?;
+        write_joined_non_empty_list!(f, "<{}>", &assoc_ty_value_display, ", ")?;
+        write!(f, " = {};", self.value.value.ty.display(s))?;
         Ok(())
     }
 }
@@ -109,15 +117,9 @@ impl<I: Interner> RenderAsRust<I> for Polarity {
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
-        let binders: Vec<_> = s.binder_var_display(&self.binders.binders).collect();
+        let binders = s.binder_var_display(&self.binders.binders);
 
         let trait_ref = &self.binders.value.trait_ref;
-
-        let binders_name = if binders.len() == 0 {
-            "".to_string()
-        } else {
-            format!("<{}>", binders.join(", "))
-        };
         // Ignore automatically added Self parameter by skipping first parameter
         let full_trait_name = display_trait_with_generics(
             s,
@@ -125,21 +127,17 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             &trait_ref.substitution.parameters(interner)[1..],
         );
 
-        let assoc_ty_values = self
-            .associated_ty_value_ids
-            .iter()
-            .map(|assoc_ty_value| {
-                s.db.associated_ty_value(*assoc_ty_value)
-                    .display(s)
-                    .to_string()
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
+        let assoc_ty_values = self.associated_ty_value_ids.iter().map(|assoc_ty_value| {
+            s.db.associated_ty_value(*assoc_ty_value)
+                .display(s)
+                .to_string()
+        });
 
+        write!(f, "impl")?;
+        write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
         write!(
             f,
-            "impl{} {}{} for {} ",
-            binders_name,
+            " {}{} for {} ",
             self.polarity.display(s),
             full_trait_name,
             trait_ref.self_type_parameter(interner).display(s)
@@ -148,9 +146,9 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         if !self.binders.value.where_clauses.is_empty() {
             write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
         }
-
-        write!(f, "{{{}}}", assoc_ty_values)?;
-
+        write!(f, "{{")?;
+        write_joined_non_empty_list!(f, "\n{}\n", assoc_ty_values, "\n")?;
+        write!(f, "}}")?;
         Ok(())
     }
 }
@@ -296,15 +294,16 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
         let (assoc_ty_datum, trait_params, assoc_type_params) = s.db.split_projection(&self);
         write!(
             f,
-            "<{} as {}>::{}<{}>",
+            "<{} as {}>::{}",
             trait_params[0].display(s),
             display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
             s.db.identifier_name(&assoc_ty_datum.name),
-            assoc_type_params
-                .iter()
-                .map(|param| param.display(s).to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+        )?;
+        write_joined_non_empty_list!(
+            f,
+            "<{}>",
+            assoc_type_params.iter().map(|param| param.display(s)),
+            ", "
         )
     }
 }
@@ -341,17 +340,8 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             TypeName::Struct(sid) => {
                 write!(f, "{}", sid.display(s))?;
                 let parameters = self.substitution.parameters(interner);
-                if parameters.len() > 0 {
-                    write!(
-                        f,
-                        "<{}>",
-                        parameters
-                            .iter()
-                            .map(|param| param.display(s).to_string())
-                            .collect::<Vec<_>>()
-                            .join(", "),
-                    )?;
-                }
+                let parameters = parameters.iter().map(|param| param.display(s));
+                write_joined_non_empty_list!(f, "<{}>", parameters, ", ")?;
             }
             TypeName::AssociatedType(assoc_type_id) => {
                 // (Iterator::Item)(x)
@@ -369,17 +359,12 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     s.db.identifier_name(&datum.name),
                 )?;
                 let params = self.substitution.parameters(interner);
-                if params.len() > 1 {
-                    write!(
-                        f,
-                        "<{}>",
-                        params[1..]
-                            .iter()
-                            .map(|ty| ty.display(s).to_string())
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )?;
-                }
+                write_joined_non_empty_list!(
+                    f,
+                    "<{}>",
+                    params[1..].iter().map(|ty| ty.display(s)),
+                    ","
+                )?;
             }
             TypeName::Error => write!(f, "{{error}}")?,
         }
@@ -447,9 +432,9 @@ impl<I: Interner> RenderAsRust<I> for Vec<QuantifiedWhereClause<I>> {
             f,
             "{}",
             self.iter()
-                .map(|where_clause| { where_clause.display(s).to_string() })
+                .map(|where_clause| { format!("{}{}",s.indent(),where_clause.display(s)) })
                 .collect::<Vec<String>>()
-                .join(", ")
+                .join(",\n")
         )?;
         Ok(())
     }
@@ -472,12 +457,11 @@ fn display_trait_with_generics<'a, I: Interner>(
     trait_id: TraitId<I>,
     trait_params: impl IntoIterator<Item = &'a Parameter<I>> + 'a,
 ) -> impl Display + 'a {
-    let trait_params = trait_params
-        .into_iter()
-        .map(|param| param.display(s).to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
-    as_display(move |f| write!(f, "{}<{}>", trait_id.display(s), trait_params,))
+    use std::fmt::Write;
+    let trait_params = trait_params.into_iter().map(|param| param.display(s));
+    let mut trait_params_str = String::new();
+    write_joined_non_empty_list!(trait_params_str, "<{}>", trait_params, ", ").unwrap();
+    as_display(move |f| write!(f, "{}{}", trait_id.display(s), trait_params_str))
 }
 
 /// This implementation correct inside where clauses.
@@ -509,23 +493,22 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
     assoc_ty_value: &'a Ty<I>,
 ) -> impl Display + 'a {
     as_display(move |f| {
-        write!(
+        write!(f, "{}<", assoc_ty_datum.trait_id.display(s))?;
+        write_joined_non_empty_list!(
             f,
-            "{}<{}, {}<{}>={}>",
-            assoc_ty_datum.trait_id.display(s),
-            trait_params
-                .iter()
-                .map(|param| param.display(s).to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-            s.db.identifier_name(&assoc_ty_datum.name),
-            assoc_ty_params
-                .iter()
-                .map(|param| param.display(s).to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-            assoc_ty_value.display(s)
-        )
+            "{}, ",
+            trait_params.iter().map(|param| param.display(s)),
+            ", "
+        )?;
+        write!(f, "{}", s.db.identifier_name(&assoc_ty_datum.name))?;
+        write_joined_non_empty_list!(
+            f,
+            "<{}>",
+            assoc_ty_params.iter().map(|param| param.display(s)),
+            ", "
+        )?;
+        write!(f, "={}>", assoc_ty_value.display(s))?;
+        Ok(())
     })
 }
 
@@ -599,12 +582,8 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 
         let (_, assoc_ty_params) =
             s.db.split_associated_ty_parameters(&binder_display_in_assoc_ty, self);
-        write!(
-            f,
-            "type {}<{}>",
-            s.db.identifier_name(&self.name),
-            assoc_ty_params.join(", ")
-        )?;
+        write!(f, "type {}", s.db.identifier_name(&self.name),)?;
+        write_joined_non_empty_list!(f, "<{}>", assoc_ty_params, ", ")?;
 
         let datum_bounds = &self.binders.value;
 
@@ -628,8 +607,9 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
         // note: it's a quantified clause b/c we could have `for<'a> T: Foo<'a>`
         // within 'where'
         if !datum_bounds.where_clauses.is_empty() {
-            let where_clauses = datum_bounds.where_clauses.display(s);
-            write!(f, "\nwhere\n{}", where_clauses)?;
+            let where_s = &s.add_indent();
+            let where_clauses = datum_bounds.where_clauses.display(where_s);
+            write!(f, "\n{}where\n{}", s.indent(), where_clauses)?;
         }
         write!(f, ";")?;
         Ok(())
@@ -656,23 +636,26 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
             non_enumerable,
             coinductive
         );
-        let binders: Vec<_> = s
-            .binder_var_display(&self.binders.binders)
-            .skip(1)
-            .collect();
-        write!(f, "trait {}<{}> ", self.id.display(s), binders.join(", "))?;
+        let binders = s.binder_var_display(&self.binders.binders).skip(1);
+        write!(f, "trait {}", self.id.display(s))?;
+        write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
+        write!(f, " ")?;
         if !self.binders.value.where_clauses.is_empty() {
             write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
         }
-        let assoc_types = self
-            .associated_ty_ids
-            .iter()
-            .map(|assoc_ty_id| {
+        write!(f, "{{")?;
+        let s = &s.add_indent();
+        write_joined_non_empty_list!(
+            f,
+            "\n{}\n",
+            self.associated_ty_ids.iter().map(|assoc_ty_id| {
                 let assoc_ty_data = s.db.associated_ty_data(*assoc_ty_id);
-                assoc_ty_data.display(s).to_string()
-            })
-            .collect::<String>();
-        write!(f, "{{{}}}", assoc_types)
+                format!("{}{}", s.indent(), assoc_ty_data.display(s))
+            }),
+            "\n"
+        )?;
+        write!(f, "}}")?;
+        Ok(())
     }
 }
 
@@ -681,29 +664,33 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
         // When support for Self in structs is added, self_binding should be
         // changed to Some(0)
         let s = &s.add_debrujin_index(None);
-        write!(
+        write!(f, "struct {}", self.id.display(s),)?;
+        write_joined_non_empty_list!(
             f,
-            "struct {}<{}> ",
-            self.id.display(s),
-            s.binder_var_display(&self.binders.binders)
-                .collect::<Vec<_>>()
-                .join(", ")
+            "<{}> ",
+            s.binder_var_display(&self.binders.binders),
+            ", "
         )?;
+        write!(f, " ")?;
         if !self.binders.value.where_clauses.is_empty() {
             write!(f, "where {} ", self.binders.value.where_clauses.display(s))?;
         }
-        write!(
+        write!(f, "{{")?;
+        let s = &s.add_indent();
+        write_joined_non_empty_list!(
             f,
-            "{{{}}}",
+            "\n{}\n",
             self.binders
                 .value
                 .fields
                 .iter()
                 .enumerate()
-                .map(|(idx, field)| { format!("field_{}: {}", idx, field.display(s).to_string()) })
-                .collect::<Vec<_>>()
-                .join(", ")
+                .map(|(idx, field)| {
+                    format!("{}field_{}: {}", s.indent(), idx, field.display(s))
+                }),
+            ",\n"
         )?;
+        write!(f, "}}")?;
         Ok(())
     }
 }
@@ -733,6 +720,7 @@ impl Display for InvertedBoundVar {
 #[derive(Clone, Debug)]
 pub struct WriterState<'a, I: Interner> {
     db: &'a dyn RustIrDatabase<I>,
+    indent_level: usize,
     debrujin_indices_deep: u32,
     // lowered_(inverted_debrujin_idx, index) -> src_correct_(inverted_debrujin_idx, index)
     remapping: Rc<BTreeMap<InvertedBoundVar, InvertedBoundVar>>,
@@ -744,10 +732,22 @@ impl<'a, I: Interner> WriterState<'a, I> {
     pub fn new(db: &'a dyn RustIrDatabase<I>) -> Self {
         WriterState {
             db,
+            indent_level: 0,
             debrujin_indices_deep: 0,
             remapping: Rc::new(BTreeMap::new()),
             self_mapping: None,
         }
+    }
+
+    fn add_indent(&self) -> Self {
+        WriterState {
+            indent_level: self.indent_level + 1,
+            ..self.clone()
+        }
+    }
+
+    fn indent(&self) -> impl Display {
+        std::iter::repeat("  ").take(self.indent_level).format("")
     }
 
     /// Adds a level of debrujin index, and possibly a "Self" parameter.
