@@ -2,11 +2,11 @@
 // hello world https://github.com/salsa-rs/salsa/blob/master/examples/hello_world/main.rs
 
 use crate::error::ChalkError;
+use crate::interner::ChalkIr;
 use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
-use chalk_ir::interner::ChalkIr;
-use chalk_ir::tls;
+use crate::tls;
 use chalk_ir::TraitId;
 use chalk_solve::clauses::builder::ClauseBuilder;
 use chalk_solve::clauses::program_clauses::ToProgramClauses;

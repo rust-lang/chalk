@@ -1,5 +1,6 @@
+use crate::interner::ChalkIr;
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::interner::{ChalkIr, HasInterner};
+use chalk_ir::interner::HasInterner;
 use chalk_ir::{
     self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId, ParameterKinds,
     QuantifiedWhereClauses, StructId, Substitution, TraitId,

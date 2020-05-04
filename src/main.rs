@@ -6,9 +6,9 @@ use std::io::Read;
 use std::process::exit;
 
 use chalk_integration::db::ChalkDatabase;
+use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::*;
 use chalk_integration::query::LoweringDatabase;
-use chalk_ir::interner::ChalkIr;
 use chalk_solve::ext::*;
 use chalk_solve::{RustIrDatabase, SolverChoice};
 use docopt::Docopt;

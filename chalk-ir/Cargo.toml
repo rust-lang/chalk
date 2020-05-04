@@ -10,12 +10,6 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
-lalrpop-intern = { version = "0.15.1", optional = true }
-
 chalk-macros = { version = "0.10.1-dev", path = "../chalk-macros" }
 chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
 chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine" }
-
-[features]
-default = []
-default-interner = ["lalrpop-intern"]

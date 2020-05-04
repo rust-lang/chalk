@@ -6,14 +6,18 @@ extern crate chalk_macros;
 
 pub mod db;
 pub mod error;
+pub mod interner;
 pub mod lowering;
 pub mod program;
 pub mod program_environment;
 pub mod query;
+pub mod tls;
 
-use chalk_ir::interner::{ChalkIr, HasInterner};
-pub use chalk_ir::interner::{Identifier, RawId};
+use chalk_ir::interner::HasInterner;
 use chalk_ir::Binders;
+use interner::ChalkIr;
+
+pub use interner::{Identifier, RawId};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeSort {

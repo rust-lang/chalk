@@ -206,7 +206,6 @@ dependencies = [
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
  "chalk-macros 0.10.1-dev",
- "lalrpop-intern 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

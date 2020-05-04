@@ -1,8 +1,7 @@
-use crate::{Identifier, TypeKind};
+use crate::interner::ChalkIr;
+use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
-use chalk_ir::interner::ChalkIr;
-use chalk_ir::tls;
 use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
     OpaqueTy, OpaqueTyId, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,

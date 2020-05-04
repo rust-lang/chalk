@@ -48,8 +48,6 @@ use interner::{HasInterner, Interner};
 
 pub mod could_match;
 pub mod debug;
-#[cfg(any(test, feature = "default-interner"))]
-pub mod tls;
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 /// The set of assumptions we've made so far, and the current number of
@@ -642,7 +640,7 @@ pub struct Fn<I: Interner> {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Lifetime<I: Interner> {
-    interned: I::InternedLifetime,
+    pub interned: I::InternedLifetime,
 }
 
 impl<I: Interner> Lifetime<I> {
