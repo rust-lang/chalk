@@ -5,41 +5,41 @@ macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
         $crate::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
-            substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
-        }).intern(&chalk_ir::interner::ChalkIr)
+            substitution: $crate::Substitution::from(&chalk_integration::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
+        }).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (function $n:tt $($arg:tt)*) => {
         $crate::TyData::Function(Fn {
             num_binders: $n,
-            substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
-        }).intern(&chalk_ir::interner::ChalkIr)
+            substitution: $crate::Substitution::from(&chalk_integration::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
+        }).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (placeholder $n:expr) => {
         $crate::TyData::Placeholder(PlaceholderIndex {
             ui: UniverseIndex { counter: $n },
             idx: 0,
-        }).intern(&chalk_ir::interner::ChalkIr)
+        }).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
             chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy  {
-            associated_ty_id: AssocTypeId(chalk_ir::interner::RawId { index: $n }),
-            substitution: $crate::Substitution::from(&chalk_ir::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
-        }).intern(&chalk_ir::interner::ChalkIr)
+            associated_ty_id: AssocTypeId(chalk_integration::interner::RawId { index: $n }),
+            substitution: $crate::Substitution::from(&chalk_integration::interner::ChalkIr, vec![$(arg!($arg)),*] as Vec<$crate::Parameter<_>>),
+        }).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (infer $b:expr) => {
-        $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::TyData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (bound $d:tt $b:tt) => {
-        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::new($d), $b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::new($d), $b)).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (bound $b:expr) => {
-        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST, $b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::TyData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST, $b)).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (expr $b:expr) => {
@@ -55,14 +55,14 @@ macro_rules! ty {
 macro_rules! arg {
     ((lifetime $b:tt)) => {
         $crate::Parameter::new(
-            &chalk_ir::interner::ChalkIr,
+            &chalk_integration::interner::ChalkIr,
             $crate::ParameterKind::Lifetime(lifetime!($b)),
         )
     };
 
     ($arg:tt) => {
         $crate::Parameter::new(
-            &chalk_ir::interner::ChalkIr,
+            &chalk_integration::interner::ChalkIr,
             $crate::ParameterKind::Ty(ty!($arg)),
         )
     };
@@ -71,19 +71,19 @@ macro_rules! arg {
 #[macro_export]
 macro_rules! lifetime {
     (infer $b:expr) => {
-        $crate::LifetimeData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::LifetimeData::InferenceVar($crate::InferenceVar::from($b)).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (bound $d:tt $b:tt) => {
-        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::new($d), $b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::new($d), $b)).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (bound $b:expr) => {
-        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST, $b)).intern(&chalk_ir::interner::ChalkIr)
+        $crate::LifetimeData::BoundVar($crate::BoundVar::new($crate::DebruijnIndex::INNERMOST, $b)).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (placeholder $b:expr) => {
-        $crate::LifetimeData::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0}).intern(&chalk_ir::interner::ChalkIr)
+        $crate::LifetimeData::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0}).intern(&chalk_integration::interner::ChalkIr)
     };
 
     (expr $b:expr) => {
@@ -98,6 +98,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        $crate::TypeName::Struct(StructId(chalk_ir::interner::RawId { index: $n }))
+        $crate::TypeName::Struct(StructId(chalk_integration::interner::RawId { index: $n }))
     };
 }

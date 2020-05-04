@@ -439,7 +439,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 /// Test the equivalent of `Vec<i32>` vs `Vec<u32>`
 #[test]
 fn vec_i32_vs_vec_u32() {
-    use chalk_ir::interner::ChalkIr;
+    use chalk_integration::interner::ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
         infer: &mut infer,
@@ -457,7 +457,7 @@ fn vec_i32_vs_vec_u32() {
 /// Test the equivalent of `Vec<i32>` vs `Vec<i32>`
 #[test]
 fn vec_i32_vs_vec_i32() {
-    use chalk_ir::interner::ChalkIr;
+    use chalk_integration::interner::ChalkIr;
     let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
@@ -476,7 +476,7 @@ fn vec_i32_vs_vec_i32() {
 /// Test the equivalent of `Vec<X>` vs `Vec<Y>`
 #[test]
 fn vec_x_vs_vec_y() {
-    use chalk_ir::interner::ChalkIr;
+    use chalk_integration::interner::ChalkIr;
     let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {

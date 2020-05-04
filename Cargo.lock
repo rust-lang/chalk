@@ -240,6 +240,7 @@ version = "0.10.1-dev"
 dependencies = [
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
+ "chalk-integration 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
  "chalk-macros 0.10.1-dev",
  "chalk-rust-ir 0.10.1-dev",

@@ -2,7 +2,7 @@
 
 use super::unify::UnificationResult;
 use super::*;
-use chalk_ir::interner::ChalkIr;
+use chalk_integration::interner::ChalkIr;
 
 #[test]
 fn infer() {
