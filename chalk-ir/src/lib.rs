@@ -637,7 +637,7 @@ pub struct Fn<I: Interner> {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Lifetime<I: Interner> {
-    pub interned: I::InternedLifetime,
+    interned: I::InternedLifetime,
 }
 
 impl<I: Interner> Lifetime<I> {

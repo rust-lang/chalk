@@ -102,7 +102,7 @@ impl Interner for ChalkIr {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| Some(prog?.debug_lifetime(lifetime, fmt)))
-            .or_else(|| Some(write!(fmt, "{:?}", lifetime.interned)))
+            .or_else(|| Some(write!(fmt, "{:?}", lifetime.interned())))
     }
 
     fn debug_parameter(
