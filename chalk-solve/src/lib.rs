@@ -9,6 +9,10 @@ use std::sync::Arc;
 #[macro_use]
 extern crate chalk_macros;
 
+#[cfg(test)]
+#[macro_use]
+mod test_macros;
+
 pub mod clauses;
 pub mod coherence;
 mod coinductive_goal;

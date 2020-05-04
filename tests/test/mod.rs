@@ -1,10 +1,9 @@
 #![allow(non_snake_case)]
 
 use chalk_integration::db::ChalkDatabase;
+use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::LowerGoal;
 use chalk_integration::query::LoweringDatabase;
-use chalk_ir;
-use chalk_ir::interner::ChalkIr;
 use chalk_solve::ext::*;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
@@ -239,7 +238,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
             db.set_solver_choice(solver_choice);
         }
 
-        chalk_ir::tls::set_current_program(&program, || {
+        chalk_integration::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));

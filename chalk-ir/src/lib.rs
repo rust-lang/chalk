@@ -30,9 +30,6 @@ macro_rules! impl_debugs {
 }
 
 #[macro_use]
-mod macros;
-
-#[macro_use]
 pub mod zip;
 
 #[macro_use]
@@ -48,8 +45,6 @@ use interner::{HasInterner, Interner};
 
 pub mod could_match;
 pub mod debug;
-#[cfg(any(test, feature = "default-interner"))]
-pub mod tls;
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 /// The set of assumptions we've made so far, and the current number of

@@ -1,5 +1,5 @@
 use crate::interner::ChalkIr;
-use crate::{
+use chalk_ir::{
     debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds, Goal, Goals,
     Lifetime, OpaqueTy, OpaqueTyId, Parameter, ParameterKinds, ProgramClause,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, StructId,
