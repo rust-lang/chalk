@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
-    OpaqueTyId, Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId,
-    Substitution, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, ImplId, OpaqueTyId, Parameter,
+    ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId, Substitution, ToParameter,
+    TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use std::iter;
 
@@ -166,6 +166,16 @@ impl<I: Interner> TraitDatum<I> {
 
     pub fn is_coinductive_trait(&self) -> bool {
         self.flags.coinductive
+    }
+
+    /// Gives access to the where clauses of the trait, quantified over the type parameters of the trait:
+    ///
+    /// ```ignore
+    /// trait Foo<T> where T: Debug { }
+    ///              ^^^^^^^^^^^^^^
+    /// ```
+    pub fn where_clauses(&self) -> Binders<&Vec<QuantifiedWhereClause<I>>> {
+        self.binders.as_ref().map(|td| &td.where_clauses)
     }
 }
 
@@ -328,40 +338,6 @@ pub trait Anonymize {
 impl<T> Anonymize for [ParameterKind<T>] {
     fn anonymize(&self) -> Vec<ParameterKind<()>> {
         self.iter().map(|pk| pk.map_ref(|_| ())).collect()
-    }
-}
-
-pub trait ToParameter {
-    /// Utility for converting a list of all the binders into scope
-    /// into references to those binders. Simply pair the binders with
-    /// the indices, and invoke `to_parameter()` on the `(binder,
-    /// index)` pair. The result will be a reference to a bound
-    /// variable of appropriate kind at the corresponding index.
-    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
-        self.to_parameter_at_depth(interner, DebruijnIndex::INNERMOST)
-    }
-
-    fn to_parameter_at_depth<I: Interner>(
-        &self,
-        interner: &I,
-        debruijn: DebruijnIndex,
-    ) -> Parameter<I>;
-}
-
-impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter_at_depth<I: Interner>(
-        &self,
-        interner: &I,
-        debruijn: DebruijnIndex,
-    ) -> Parameter<I> {
-        let &(binder, index) = self;
-        let bound_var = BoundVar::new(debruijn, index);
-        match *binder {
-            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(bound_var)
-                .intern(interner)
-                .cast(interner),
-            ParameterKind::Ty(_) => TyData::BoundVar(bound_var).intern(interner).cast(interner),
-        }
     }
 }
 

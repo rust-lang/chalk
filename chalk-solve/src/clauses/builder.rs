@@ -3,7 +3,6 @@ use crate::RustIrDatabase;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
-use chalk_rust_ir::*;
 use std::marker::PhantomData;
 
 /// The "clause builder" is a useful tool for building up sets of
