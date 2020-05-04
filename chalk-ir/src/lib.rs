@@ -30,9 +30,6 @@ macro_rules! impl_debugs {
 }
 
 #[macro_use]
-mod macros;
-
-#[macro_use]
 pub mod zip;
 
 #[macro_use]
