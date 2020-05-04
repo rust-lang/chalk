@@ -1,5 +1,5 @@
-use lalrpop_intern::InternedString;
 use std::fmt;
+use string_cache::DefaultAtom as Atom;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Span {
@@ -86,7 +86,7 @@ pub struct OpaqueTyDefn {
     pub bounds: Vec<QuantifiedInlineBound>,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ParameterKind {
     Ty(Identifier),
     Lifetime(Identifier),
@@ -230,7 +230,7 @@ pub enum ScalarType {
     Float(FloatTy),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Lifetime {
     Id { name: Identifier },
 }
@@ -267,9 +267,9 @@ impl Polarity {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Identifier {
-    pub str: InternedString,
+    pub str: Atom,
     pub span: Span,
 }
 

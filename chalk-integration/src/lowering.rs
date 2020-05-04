@@ -11,9 +11,9 @@ use chalk_rust_ir::{
     Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,
     ToParameter,
 };
-use lalrpop_intern::intern;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use string_cache::DefaultAtom as Atom;
 
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
@@ -83,10 +83,10 @@ const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
 impl<'k> Env<'k> {
-    fn lookup_type(&self, name: Identifier) -> LowerResult<TypeLookup> {
+    fn lookup_type(&self, name: &Identifier) -> LowerResult<TypeLookup> {
         if let Some(k) = self
             .parameter_map
-            .get(&chalk_ir::ParameterKind::Ty(name.str))
+            .get(&chalk_ir::ParameterKind::Ty(name.str.clone()))
         {
             return Ok(TypeLookup::Parameter(*k));
         }
@@ -99,40 +99,40 @@ impl<'k> Env<'k> {
             return Ok(TypeLookup::Opaque(*id));
         }
         if let Some(_) = self.trait_ids.get(&name.str) {
-            return Err(RustIrError::NotStruct(name));
+            return Err(RustIrError::NotStruct(name.clone()));
         }
 
-        Err(RustIrError::InvalidTypeName(name))
+        Err(RustIrError::InvalidTypeName(name.clone()))
     }
 
-    fn lookup_trait(&self, name: Identifier) -> LowerResult<TraitId<ChalkIr>> {
+    fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
         if let Some(_) = self
             .parameter_map
-            .get(&chalk_ir::ParameterKind::Ty(name.str))
+            .get(&chalk_ir::ParameterKind::Ty(name.str.clone()))
         {
-            return Err(RustIrError::NotTrait(name));
+            return Err(RustIrError::NotTrait(name.clone()));
         }
 
         if let Some(_) = self.struct_ids.get(&name.str) {
-            return Err(RustIrError::NotTrait(name));
+            return Err(RustIrError::NotTrait(name.clone()));
         }
 
         if let Some(id) = self.trait_ids.get(&name.str) {
             return Ok(*id);
         }
 
-        Err(RustIrError::InvalidTypeName(name))
+        Err(RustIrError::InvalidTypeName(name.clone()))
     }
 
-    fn lookup_lifetime(&self, name: Identifier) -> LowerResult<LifetimeLookup> {
+    fn lookup_lifetime(&self, name: &Identifier) -> LowerResult<LifetimeLookup> {
         if let Some(k) = self
             .parameter_map
-            .get(&chalk_ir::ParameterKind::Lifetime(name.str))
+            .get(&chalk_ir::ParameterKind::Lifetime(name.str.clone()))
         {
             return Ok(LifetimeLookup::Parameter(*k));
         }
 
-        Err(RustIrError::InvalidLifetimeName(name))
+        Err(RustIrError::InvalidLifetimeName(name.clone()))
     }
 
     fn struct_kind(&self, id: chalk_ir::StructId<ChalkIr>) -> &TypeKind {
@@ -159,7 +159,7 @@ impl<'k> Env<'k> {
         let parameter_map: ParameterMap = self
             .parameter_map
             .iter()
-            .map(|(&k, &v)| (k, v.shifted_in()))
+            .map(|(k, v)| (k.clone(), v.shifted_in()))
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
@@ -213,7 +213,7 @@ impl LowerProgram for Program {
             match item {
                 Item::TraitDefn(d) => {
                     if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                        Err(RustIrError::AutoTraitAssociatedTypes(d.name))?;
+                        Err(RustIrError::AutoTraitAssociatedTypes(d.name.clone()))?;
                     }
                     for defn in &d.assoc_ty_defns {
                         let addl_parameter_kinds = defn.all_parameters();
@@ -221,14 +221,16 @@ impl LowerProgram for Program {
                             id: AssocTypeId(next_item_id()),
                             addl_parameter_kinds: addl_parameter_kinds.anonymize(),
                         };
-                        associated_ty_lookups.insert((TraitId(raw_id), defn.name.str), lookup);
+                        associated_ty_lookups
+                            .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                     }
                 }
 
                 Item::Impl(d) => {
                     for atv in &d.assoc_ty_values {
                         let atv_id = AssociatedTyValueId(next_item_id());
-                        associated_ty_value_ids.insert((ImplId(raw_id), atv.name.str), atv_id);
+                        associated_ty_value_ids
+                            .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
                     }
                 }
 
@@ -247,19 +249,19 @@ impl LowerProgram for Program {
                 Item::StructDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = StructId(raw_id);
-                    struct_ids.insert(type_kind.name, id);
+                    struct_ids.insert(type_kind.name.clone(), id);
                     struct_kinds.insert(id, type_kind);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = TraitId(raw_id);
-                    trait_ids.insert(type_kind.name, id);
+                    trait_ids.insert(type_kind.name.clone(), id);
                     trait_kinds.insert(id, type_kind);
                 }
                 Item::OpaqueTyDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = OpaqueTyId(raw_id);
-                    opaque_ty_ids.insert(defn.identifier.str, id);
+                    opaque_ty_ids.insert(defn.identifier.str.clone(), id);
                     opaque_ty_kinds.insert(id, type_kind);
                 }
                 Item::Impl(_) => continue,
@@ -302,7 +304,8 @@ impl LowerProgram for Program {
                     trait_data.insert(trait_id, Arc::new(trait_datum));
 
                     for assoc_ty_defn in &trait_defn.assoc_ty_defns {
-                        let lookup = &associated_ty_lookups[&(trait_id, assoc_ty_defn.name.str)];
+                        let lookup =
+                            &associated_ty_lookups[&(trait_id, assoc_ty_defn.name.str.clone())];
 
                         // The parameters in scope for the associated
                         // type definitions are *both* those from the
@@ -339,7 +342,7 @@ impl LowerProgram for Program {
                             Arc::new(rust_ir::AssociatedTyDatum {
                                 trait_id: TraitId(raw_id),
                                 id: lookup.id,
-                                name: assoc_ty_defn.name.str,
+                                name: assoc_ty_defn.name.str.clone(),
                                 binders: binders,
                             }),
                         );
@@ -356,8 +359,8 @@ impl LowerProgram for Program {
                     let trait_id = impl_datum.trait_id();
 
                     for atv in &impl_defn.assoc_ty_values {
-                        let atv_id = associated_ty_value_ids[&(impl_id, atv.name.str)];
-                        let lookup = &associated_ty_lookups[&(trait_id, atv.name.str)];
+                        let atv_id = associated_ty_value_ids[&(impl_id, atv.name.str.clone())];
+                        let lookup = &associated_ty_lookups[&(trait_id, atv.name.str.clone())];
 
                         // The parameters in scope for the associated
                         // type definitions are *both* those from the
@@ -403,7 +406,7 @@ impl LowerProgram for Program {
                             // So the `impl Trait<T1..Tn>` will be lowered to `exists<Self> { Self: Trait<T1..Tn> }`.
                             let bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
                                 .in_binders(
-                                    Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
+                                    Some(chalk_ir::ParameterKind::Ty(Atom::from(FIXME_SELF))),
                                     |env1| {
                                         let interner = env1.interner();
                                         Ok(opaque_ty
@@ -557,7 +560,7 @@ impl LowerParameterMap for AssocTyValue {
 
 impl LowerParameterMap for TraitDefn {
     fn synthetic_parameters(&self) -> Option<chalk_ir::ParameterKind<Ident>> {
-        Some(chalk_ir::ParameterKind::Ty(intern(SELF)))
+        Some(chalk_ir::ParameterKind::Ty(Atom::from(SELF)))
     }
 
     fn declared_parameters(&self) -> &[ParameterKind] {
@@ -581,9 +584,9 @@ trait LowerParameterKind {
 
 impl LowerParameterKind for ParameterKind {
     fn lower(&self) -> chalk_ir::ParameterKind<Ident> {
-        match *self {
-            ParameterKind::Ty(ref n) => chalk_ir::ParameterKind::Ty(n.str),
-            ParameterKind::Lifetime(ref n) => chalk_ir::ParameterKind::Lifetime(n.str),
+        match self {
+            ParameterKind::Ty(n) => chalk_ir::ParameterKind::Ty(n.str.clone()),
+            ParameterKind::Lifetime(n) => chalk_ir::ParameterKind::Lifetime(n.str.clone()),
         }
     }
 }
@@ -604,7 +607,7 @@ impl LowerTypeKind for StructDefn {
         let interner = &ChalkIr;
         Ok(TypeKind {
             sort: TypeSort::Struct,
-            name: self.name.str,
+            name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
                 ParameterKinds::from(interner, self.all_parameters().anonymize()),
                 crate::Unit,
@@ -625,7 +628,7 @@ impl LowerTypeKind for TraitDefn {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(TypeKind {
             sort: TypeSort::Trait,
-            name: self.name.str,
+            name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
                 // for the purposes of the *type*, ignore `Self`:
                 ParameterKinds::from(interner, binders.anonymize()),
@@ -641,7 +644,7 @@ impl LowerTypeKind for OpaqueTyDefn {
         let binders: Vec<_> = self.parameter_kinds.iter().map(|p| p.lower()).collect();
         Ok(TypeKind {
             sort: TypeSort::Opaque,
-            name: self.identifier.str,
+            name: self.identifier.str.clone(),
             binders: chalk_ir::Binders::new(
                 ParameterKinds::from(interner, binders.anonymize()),
                 crate::Unit,
@@ -801,7 +804,9 @@ impl LowerStructDefn for StructDefn {
         env: &Env,
     ) -> LowerResult<rust_ir::StructDatum<ChalkIr>> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
-            Err(RustIrError::InvalidFundamentalTypesParameters(self.name))?;
+            Err(RustIrError::InvalidFundamentalTypesParameters(
+                self.name.clone(),
+            ))?;
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
@@ -835,7 +840,7 @@ impl LowerTraitRef for TraitRef {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TraitRef<ChalkIr>> {
         let interner = env.interner();
         let without_self = TraitBound {
-            trait_name: self.trait_name,
+            trait_name: self.trait_name.clone(),
             args_no_self: self.args.iter().cloned().skip(1).collect(),
         }
         .lower(env)?;
@@ -852,11 +857,11 @@ trait LowerTraitBound {
 impl LowerTraitBound for TraitBound {
     fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound<ChalkIr>> {
         let interner = &ChalkIr;
-        let trait_id = env.lookup_trait(self.trait_name)?;
+        let trait_id = env.lookup_trait(&self.trait_name)?;
 
         let k = env.trait_kind(trait_id);
         if k.sort != TypeSort::Trait {
-            Err(RustIrError::NotTrait(self.trait_name))?;
+            Err(RustIrError::NotTrait(self.trait_name.clone()))?;
         }
 
         let parameters = self
@@ -867,7 +872,7 @@ impl LowerTraitBound for TraitBound {
 
         if parameters.len() != k.binders.len(interner) {
             Err(RustIrError::IncorrectNumberOfTypeParameters {
-                identifier: self.trait_name,
+                identifier: self.trait_name.clone(),
                 expected: k.binders.len(interner),
                 actual: parameters.len(),
             })?;
@@ -876,7 +881,7 @@ impl LowerTraitBound for TraitBound {
         for (binder, param) in k.binders.binders.iter(interner).zip(parameters.iter()) {
             if binder.kind() != param.kind() {
                 Err(RustIrError::IncorrectTraitParameterKind {
-                    identifier: self.trait_name,
+                    identifier: self.trait_name.clone(),
                     expected: binder.kind(),
                     actual: param.kind(),
                 })?;
@@ -899,10 +904,10 @@ impl LowerAliasEqBound for AliasEqBound {
         let trait_bound = self.trait_bound.lower(env)?;
         let lookup = match env
             .associated_ty_lookups
-            .get(&(trait_bound.trait_id, self.name.str))
+            .get(&(trait_bound.trait_id, self.name.str.clone()))
         {
             Some(lookup) => lookup,
-            None => Err(RustIrError::MissingAssociatedType(self.name))?,
+            None => Err(RustIrError::MissingAssociatedType(self.name.clone()))?,
         };
         let args: Vec<_> = self
             .args
@@ -912,7 +917,7 @@ impl LowerAliasEqBound for AliasEqBound {
 
         if args.len() != lookup.addl_parameter_kinds.len() {
             Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
-                identifier: self.name,
+                identifier: self.name.clone(),
                 expected: lookup.addl_parameter_kinds.len(),
                 actual: args.len(),
             })?;
@@ -921,7 +926,7 @@ impl LowerAliasEqBound for AliasEqBound {
         for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
             if param.kind() != arg.kind() {
                 Err(RustIrError::IncorrectAssociatedTypeParameterKind {
-                    identifier: self.name,
+                    identifier: self.name.clone(),
                     expected: param.kind(),
                     actual: arg.kind(),
                 })?;
@@ -1032,9 +1037,12 @@ impl LowerProjectionTy for ProjectionTy {
             trait_id,
             substitution: trait_substitution,
         } = trait_ref.lower(env)?;
-        let lookup = match env.associated_ty_lookups.get(&(trait_id.into(), name.str)) {
+        let lookup = match env
+            .associated_ty_lookups
+            .get(&(trait_id.into(), name.str.clone()))
+        {
             Some(lookup) => lookup,
-            None => Err(RustIrError::MissingAssociatedType(self.name))?,
+            None => Err(RustIrError::MissingAssociatedType(self.name.clone()))?,
         };
         let mut args: Vec<_> = args
             .iter()
@@ -1043,7 +1051,7 @@ impl LowerProjectionTy for ProjectionTy {
 
         if args.len() != lookup.addl_parameter_kinds.len() {
             Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
-                identifier: self.name,
+                identifier: self.name.clone(),
                 expected: lookup.addl_parameter_kinds.len(),
                 actual: args.len(),
             })?;
@@ -1052,7 +1060,7 @@ impl LowerProjectionTy for ProjectionTy {
         for (param, arg) in lookup.addl_parameter_kinds.iter().zip(args.iter()) {
             if param.kind() != arg.kind() {
                 Err(RustIrError::IncorrectAssociatedTypeParameterKind {
-                    identifier: self.name,
+                    identifier: self.name.clone(),
                     expected: param.kind(),
                     actual: arg.kind(),
                 })?;
@@ -1075,13 +1083,13 @@ trait LowerTy {
 impl LowerTy for Ty {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
         let interner = env.interner();
-        match *self {
+        match self {
             Ty::Id { name } => match env.lookup_type(name)? {
                 TypeLookup::Struct(id) => {
                     let k = env.struct_kind(id);
                     if k.binders.len(interner) > 0 {
                         Err(RustIrError::IncorrectNumberOfTypeParameters {
-                            identifier: name,
+                            identifier: name.clone(),
                             expected: k.binders.len(interner),
                             actual: 0,
                         })
@@ -1106,7 +1114,7 @@ impl LowerTy for Ty {
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
-                    Some(chalk_ir::ParameterKind::Ty(intern(FIXME_SELF))),
+                    Some(chalk_ir::ParameterKind::Ty(Atom::from(FIXME_SELF))),
                     |env| {
                         Ok(QuantifiedWhereClauses::from(
                             interner,
@@ -1130,14 +1138,14 @@ impl LowerTy for Ty {
                 let id = match env.lookup_type(name)? {
                     TypeLookup::Struct(id) => id,
                     TypeLookup::Parameter(_) | TypeLookup::Opaque(_) => {
-                        Err(RustIrError::CannotApplyTypeParameter(name))?
+                        Err(RustIrError::CannotApplyTypeParameter(name.clone()))?
                     }
                 };
 
                 let k = env.struct_kind(id);
                 if k.binders.len(interner) != args.len() {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
-                        identifier: name,
+                        identifier: name.clone(),
                         expected: k.binders.len(interner),
                         actual: args.len(),
                     })?;
@@ -1151,7 +1159,7 @@ impl LowerTy for Ty {
                 for (param, arg) in k.binders.binders.iter(interner).zip(args.iter()) {
                     if param.kind() != arg.kind() {
                         Err(RustIrError::IncorrectParameterKind {
-                            identifier: name,
+                            identifier: name.clone(),
                             expected: param.kind(),
                             actual: arg.kind(),
                         })?;
@@ -1160,7 +1168,7 @@ impl LowerTy for Ty {
 
                 Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                     name: chalk_ir::TypeName::Struct(id),
-                    substitution: substitution,
+                    substitution,
                 })
                 .intern(interner))
             }
@@ -1177,7 +1185,7 @@ impl LowerTy for Ty {
                 let quantified_env = env.introduce(
                     lifetime_names
                         .iter()
-                        .map(|id| chalk_ir::ParameterKind::Lifetime(id.str)),
+                        .map(|id| chalk_ir::ParameterKind::Lifetime(id.str.clone())),
                 )?;
 
                 let function = chalk_ir::Fn {
@@ -1199,7 +1207,7 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(ty)),
+                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(ty.clone())),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
@@ -1228,7 +1236,7 @@ trait LowerLifetime {
 impl LowerLifetime for Lifetime {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
         let interner = env.interner();
-        match *self {
+        match self {
             Lifetime::Id { name } => match env.lookup_lifetime(name)? {
                 LifetimeLookup::Parameter(d) => {
                     Ok(chalk_ir::LifetimeData::BoundVar(d).intern(interner))
@@ -1263,7 +1271,7 @@ impl LowerImpl for Impl {
 
             if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
                 Err(RustIrError::NegativeImplAssociatedValues(
-                    self.trait_ref.trait_name,
+                    self.trait_ref.trait_name.clone(),
                 ))?;
             }
 
@@ -1281,14 +1289,14 @@ impl LowerImpl for Impl {
         let associated_ty_value_ids = self
             .assoc_ty_values
             .iter()
-            .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str)])
+            .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str.clone())])
             .collect();
 
         debug!("associated_ty_value_ids = {:?}", associated_ty_value_ids);
 
         Ok(rust_ir::ImplDatum {
             polarity,
-            binders: binders,
+            binders,
             impl_type: self.impl_type.lower(),
             associated_ty_value_ids,
         })
@@ -1355,10 +1363,10 @@ impl LowerTrait for TraitDefn {
         let binders = env.in_binders(all_parameters, |env| {
             if self.flags.auto {
                 if all_parameters_len > 1 {
-                    Err(RustIrError::AutoTraitParameters(self.name))?;
+                    Err(RustIrError::AutoTraitParameters(self.name.clone()))?;
                 }
                 if !self.where_clauses.is_empty() {
-                    Err(RustIrError::AutoTraitWhereClauses(self.name))?;
+                    Err(RustIrError::AutoTraitWhereClauses(self.name.clone()))?;
                 }
             }
 
@@ -1370,7 +1378,7 @@ impl LowerTrait for TraitDefn {
         let associated_ty_ids: Vec<_> = self
             .assoc_ty_defns
             .iter()
-            .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str)].id)
+            .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str.clone())].id)
             .collect();
 
         let trait_datum = rust_ir::TraitDatum {
@@ -1407,7 +1415,7 @@ impl LowerGoal<LoweredProgram> for Goal {
                     id: associated_ty_id,
                     addl_parameter_kinds,
                 };
-                ((datum.trait_id, datum.name), lookup)
+                ((datum.trait_id, datum.name.clone()), lookup)
             })
             .collect();
 

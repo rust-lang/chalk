@@ -9,12 +9,12 @@ use chalk_ir::{
     Goal, GoalData, LifetimeData, Parameter, ParameterData, ParameterKind, ProgramClause,
     ProgramClauseData, QuantifiedWhereClause, StructId, TyData, UniverseIndex,
 };
-use lalrpop_intern::InternedString;
 use std::fmt;
 use std::fmt::Debug;
 use std::sync::Arc;
+use string_cache::DefaultAtom;
 
-pub type Identifier = InternedString;
+pub type Identifier = DefaultAtom;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RawId {

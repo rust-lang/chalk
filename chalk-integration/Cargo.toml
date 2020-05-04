@@ -10,7 +10,7 @@ edition = "2018"
 publish = false
 
 [dependencies]
-lalrpop-intern = "0.15.1"
+string_cache = "0.8.0"
 salsa = "0.10.0"
 
 chalk-macros = { version = "0.10.1-dev", path = "../chalk-macros" }
