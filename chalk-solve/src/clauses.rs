@@ -527,9 +527,17 @@ fn program_clauses_that_could_match<I: Interner>(
                 })
             });
         }
-        DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
-        | DomainGoal::LocalImplAllowed(trait_ref) => {
+        DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)
+                .to_program_clauses(builder, environment);
+        }
+
+        DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
+            let self_ty = trait_predicate.self_type_parameter(interner);
+            if self_ty.bound_var(interner).is_some() || self_ty.inference_var(interner).is_some() {
+                return Err(Floundered);
+            }
+            db.trait_datum(trait_predicate.trait_id)
                 .to_program_clauses(builder, environment);
         }
         DomainGoal::ObjectSafe(trait_id) => {
