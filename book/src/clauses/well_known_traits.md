@@ -1,57 +1,52 @@
 # Well known traits
 
-Not all traits can be encoded in Rust's type system: special traits
-like `Sized`, `Drop` or `Unsize` need additional compiler support in order to
-function properly. To address this, chalk introduces a notion of `WellKnownTrait`s:
-a subset of rustc's trait lang items that need special handling in trait system logic.
+For most traits, the question of whether some type T implements the trait is determined by 
+looking solely at the impls that exist for the trait. But there are some well-known traits 
+where we have "built-in" impls that are never expressly written in the compiler, they are 
+built-in to the language itself. In some cases, these impls also encode complex conditions
+that an ordinary impl cannot express. To address this, chalk has a notion of a `WellKnownTrait` 
+-- basically, a trait which is inherent to the language and where we will generate custom logic.
 
-As an example, consider the following two aspects of `Sized` logic:
-  1) In order to prove that a struct implements `Sized`, we need to prove 
-     that the last field of that struct is `Sized`.  
-  2) Structs need all of their fields, except, maybe, the last one to be `Sized`.
-    
-Neither of those aspects are expressable in Rust, so chalk generates 
-special clauses used to encode them. These examples illustrate two main 
-places that deal with well known traits: 
-1) [`chalk-solve\clauses\builtin_traits`][builtin_traits_mod], which generates 
-   requirements for proving that a given type implements a well known trait.
+As an example, consider the logic for `Sized` in regards to structs: A struct can have
+at most one `!Sized` field, and it must be the last. And the last field isn't `Sized`, 
+then neither is the struct itself. 
+
+Chalk has two main places that deal with well known trait logic:
+1) [`chalk-solve\clauses\builtin_traits`][builtin_traits_mod], which generates built-in implementations
+for well-known traits.
 2) [well-formedness](wf.md) checks, some of which need to know about well known traits.
 
 [builtin_traits_mod]: https://github.com/rust-lang/chalk/blob/master/chalk-solve/src/clauses/builtin_traits.rs
 
 # Auto traits
 
-Auto traits are another kind of well known traits.
-The idea is that the type implements an auto trait if all data owned by that type implements it,
-with an ability to opt-out via special syntax:
-```rust,ignore
-impl !AutoTrait for Foo {}
-```
-Common examples of auto trais are `Send` and `Sync`. Since this semantic is not expressable with 
-"regular" impls, it needs special support in chalk too.
+Auto traits, while not exactly well known traits, do also have special logic. 
+The idea is that the type implements an auto trait if all data owned by that type implements it, 
+with an ability to specifically opt-out or opt-in. Additionally, auto traits are [coinductive][coinductive_section]. 
+Some common examples of auto traits are `Send` and `Sync`.
+
+[coinductive_section]: ../engine/logic/coinduction.html#coinduction-and-refinement-strands
 
 # Current state 
 | Type            | Copy | Clone | Sized | Unsize | Drop | Fn  | Unpin  | Generator | auto traits |
 | ---             | ---  | ---   | ---   | ---    | ---  | --- | ---    |  ---      |  ---        |
-| tuple types     | ✅    | ✅    | ✅     | ✅     | 🗿    | 🗿  |  🗿      |  🗿       |   ❌         |
-| structs         | 🗿    | 🗿    |  ✅    | ✅     | 🗿    | 🗿  |  🗿      |  🗿       |   ✅         |
-| scalar types    | 📚    | 📚    | ✅     | 🗿     | 🗿   |  🗿  |  🗿     |  🗿       |    ❌        |
-| trait objects   | 🗿    | 🗿    | 🗿     |  ✅    | 🗿    | 🗿   | 🗿      |  🗿       |    🗿        |
-| functions       | ✅    | ✅    | ✅     | 🗿     | 🗿    | ❌   | 🗿      |  🗿       |    ❌         |
-| arrays❌         | ❌     | ❌    | ❌     | ❌      | 🗿   | 🗿   | 🗿      |  🗿       |    ❌        |
-| slices❌         | ❌     | ❌    | 🗿     | ❌      | 🗿   | 🗿   | 🗿      |  🗿       |    ❌       |
-| closures❌       | ❌     | ❌    | ❌     | 🗿      | 🗿   | ❌   | 🗿      |  🗿       |    ❌        |
-| generators❌     |  🗿    |  🗿  | ❌     |  🗿     | 🗿    | 🗿  | ❌      |   ❌       |    ❌       |
-| gen. witness❌   |  🗿    |   🗿  |  🗿   |   🗿    |  🗿   |  🗿 |  🗿    |   🗿       |    ❌       |
+| tuple types     | ✅    | ✅    | ✅     | ✅     | ⚬    | ⚬  |  ⚬      |  ⚬       |   ❌         |
+| structs         | ⚬    | ⚬    |  ✅    | ✅     | ⚬    | ⚬  |  ⚬      |  ⚬       |   ✅         |
+| scalar types    | 📚    | 📚    | ✅     | ⚬     | ⚬   |  ⚬  |  ⚬     |  ⚬       |    ❌        |
+| trait objects   | ⚬    | ⚬    | ⚬     |  ✅    | ⚬    | ⚬   | ⚬      |  ⚬       |    ⚬        |
+| functions ptrs  | ✅    | ✅    | ✅     | ⚬     | ⚬    | ❌   | ⚬      |  ⚬       |    ❌         |
+| arrays❌         | ❌     | ❌    | ❌     | ❌      | ⚬   | ⚬   | ⚬      |  ⚬       |    ❌        |
+| slices❌         | ❌     | ❌    | ⚬     | ❌      | ⚬   | ⚬   | ⚬      |  ⚬       |    ❌       |
+| closures❌       | ❌     | ❌    | ❌     | ⚬      | ⚬   | ❌   | ⚬      |  ⚬       |    ❌        |
+| generators❌     |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬    | ⚬  | ❌      |   ❌       |    ❌       |
+| gen. witness❌   |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬   |  ⚬ |  ⚬    |   ⚬       |    ❌       |
 | -----------     |       |      |       |        |      |     |        |           |             |
-| well-formedness |  ✅   |  🗿   | ✅     | 🗿     | ✅    |  🗿  | 🗿      |  🗿       |   🗿         |
+| well-formedness |  ✅   |  ⚬   | ✅     | ⚬     | ✅    |  ⚬  | ⚬      |  ⚬       |   ⚬         |
 
 legend:  
-🗿 - not applicable  
+⚬ - not applicable  
 ✅ - implemented  
 📚 - implementation provided in libcore  
 ❌ - not implemented  
-❌ in the column type means that type is not yet in chalk
 
-The list of types not yet in chalk is not full, but auto traits/`WellKnownTrait`s
-implementation for them is fairly trivial, so it is not listed here.
+❌ after a type name means that type is not yet in chalk
