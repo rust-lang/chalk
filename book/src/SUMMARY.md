@@ -17,6 +17,7 @@
     - [Type equality and unification](./clauses/type_equality.md)
     - [Implied bounds](./clauses/implied_bounds.md)
     - [Lowering rules](./clauses/lowering_rules.md)
+    - [Well known traits](./clauses/well_known_traits.md)
     - [Well-formedness checking](./clauses/wf.md)
 - [Canonical queries](./canonical_queries.md)
     - [Canonicalization](./canonical_queries/canonicalization.md)
