@@ -30,5 +30,5 @@ The following crates get versioned without publishing:
 - Bump the dependency version for each crate
 - Add an `Unreleased` section in the `RELEASES.md`
 - Run `cargo check`
-- Tag release commit on github
+- Tag release commit on github (e.g. `v0.10.0`)
 
