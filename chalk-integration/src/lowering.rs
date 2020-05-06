@@ -1085,6 +1085,7 @@ impl LowerProjectionTy for ProjectionTy {
 }
 
 trait LowerTy {
+    /// Lower from the AST to Chalk's Rust IR
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>>;
 }
 
@@ -1255,6 +1256,12 @@ impl LowerTy for Ty {
                         ty.lower(env)?.cast(interner),
                     ],
                 ),
+            })
+            .intern(interner)),
+
+            Ty::Str => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Str,
+                substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
         }

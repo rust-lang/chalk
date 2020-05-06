@@ -264,9 +264,9 @@ fn fundamental_traits() {
     lowering_error! {
         program {
             #[upstream] trait Sized { }
-            #[upstream] struct str { }
+            #[upstream] struct str2 { } // str is already known to be !Sized, so make a new str type
             trait Bar { }
-            impl Bar for str { }
+            impl Bar for str2 { }
             impl<T> Bar for T where T: Sized { }
         } error_msg {
             "overlapping impls of trait `Bar`"
@@ -279,9 +279,9 @@ fn fundamental_traits() {
     lowering_success! {
         program {
             #[upstream] #[fundamental] trait Sized { }
-            #[upstream] struct str { }
+            #[upstream] struct str2 { }
             trait Bar { }
-            impl Bar for str { }
+            impl Bar for str2 { }
             impl<T> Bar for T where T: Sized { }
         }
     }

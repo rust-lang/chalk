@@ -318,6 +318,7 @@ mod projection;
 mod refs;
 mod scalars;
 mod slices;
+mod string;
 mod tuples;
 mod unify;
 mod wf_goals;

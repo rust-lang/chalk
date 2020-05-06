@@ -206,6 +206,7 @@ pub enum Ty {
         lifetime: Lifetime,
         ty: Box<Ty>,
     },
+    Str,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
