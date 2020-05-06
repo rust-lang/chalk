@@ -2,7 +2,7 @@
 
 > Chalk is under heavy development, so if any of these links are broken or if
 > any of the information is inconsistent with the code or outdated, please
-> [open an issue][rustc-issues] so we can fix it. If you are able to fix the
+> [open an issue][issues] so we can fix it. If you are able to fix the
 > issue yourself, we would love your contribution!
 
 Chalk is a library that implements the Rust trait system. The implementation is
@@ -11,7 +11,7 @@ full specification. It is also meant to be an independent library that can be
 integrated both into the main rustc compiler and also other programs and
 contexts.
 
-[rustc-issues]: https://github.com/rust-lang/rustc-dev-guide/issues
+[issues]: https://github.com/rust-lang/chalk/issues
 
 ## High-level view of how chalk works
 

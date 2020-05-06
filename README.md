@@ -11,7 +11,12 @@ See the [Chalk book](https://rust-lang.github.io/chalk/book/) for more informati
 
 ## FAQ
 
-**How does chalk relate to rustc?** The plan is to have rustc use the `chalk-engine` crate (in this repo), which defines chalk's solver. The rest of chalk can then be considered an elaborate unit testing harness. For more details, see [the Traits chapter of the rustc-dev-guide](https://rustc-dev-guide.rust-lang.org/traits/index.html).
+**How does chalk relate to rustc?** The plan is to have rustc use the
+`chalk-solve` crate (in this repo) to answer questions about Rust programs, for
+example, "Does `Vec<u32>` implement `Debug`?". Internally, chalk converts
+Rust-specific information into logic and uses a logic engine to find the answer
+to the original query. For more details, see
+[this explanation in the chalk book][chalk-lowering-details].
 
 **Where does the name come from?** `chalk` is named after [Chalkidiki], the area where [Aristotle] was
 born. Since Prolog is a logic programming language, this seemed a
@@ -20,6 +25,7 @@ suitable reference.
 [Prolog]: https://en.wikipedia.org/wiki/Prolog
 [Chalkidiki]: https://en.wikipedia.org/wiki/Chalkidiki
 [Aristotle]: https://en.wikipedia.org/wiki/Aristotle
+[chalk-lowering-details]: http://rust-lang.github.io/chalk/book/#chalk-works-by-converting-rust-goals-into-logical-inference-rules
 
 ## Blog posts
 [blog-posts]: #blog-posts

@@ -1,8 +1,8 @@
 //! An alternative solver based around the SLG algorithm, which
 //! implements the well-formed semantics. For an overview of how the solver
-//! works, see [The On-Demand SLG Solver][guide] in the rustc-dev-guide.
+//! works, see [The On-Demand SLG Solver][guide] in the chalk book.
 //!
-//! [guide]: https://rustc-dev-guide.rust-lang.org/traits/slg.html
+//! [guide]: https://rust-lang.github.io/chalk/book/engine/slg.html
 //!
 //! This algorithm is very closed based on the description found in the
 //! following paper, which I will refer to in the comments as EWFS:
