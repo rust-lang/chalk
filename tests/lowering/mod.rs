@@ -475,3 +475,37 @@ fn scalars() {
         }
     }
 }
+
+#[test]
+fn raw_pointers() {
+    lowering_success! {
+        program {
+            trait Quux { }
+            struct Foo<T> { a: *const T }
+
+            struct Bar<T> { a: *mut T }
+
+            impl<T> Quux for Foo<*mut T> { }
+            impl<T> Quux for Bar<*const T> { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct *const i32 { }
+        }
+        error_msg {
+            "parse error: UnrecognizedToken { token: (8, Token(7, \"*\"), 9), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+        }
+    }
+    
+    lowering_error! { 
+        program {
+            trait Foo { }
+            impl Foo for *i32 { }
+        }
+        error_msg {
+            "parse error: UnrecognizedToken { token: (30, Token(51, \"i32\"), 33), expected: [\"\\\"const\\\"\", \"\\\"mut\\\"\"] }"
+        }
+    }
+}
