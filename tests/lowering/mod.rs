@@ -498,8 +498,8 @@ fn raw_pointers() {
             "parse error: UnrecognizedToken { token: (8, Token(7, \"*\"), 9), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
-    
-    lowering_error! { 
+
+    lowering_error! {
         program {
             trait Foo { }
             impl Foo for *i32 { }

@@ -196,7 +196,7 @@ pub enum Ty {
     Raw {
         mutability: Mutability,
         ty: Box<Ty>,
-    }
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
