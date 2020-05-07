@@ -36,8 +36,9 @@ Some common examples of auto traits are `Send` and `Sync`.
 | trait objects   | ⚬    | ⚬    | ⚬     |  ✅    | ⚬    | ⚬   | ⚬      |  ⚬       |    ⚬        |
 | functions ptrs  | ✅    | ✅    | ✅     | ⚬     | ⚬    | ❌   | ⚬      |  ⚬       |    ❌         |
 | raw ptrs        | ✅   |  ✅  |   ✅   |  ⚬    |   ⚬   |  ⚬  |   ⚬    |   ⚬      |      ❌      |
+| references      | ✅   |  ✅  |   ✅   |  ⚬    |   ⚬   |  ⚬  |   ⚬    |   ⚬      |      ❌      |
+| slices          | ⚬     | ⚬    | ⚬     |   ✅    | ⚬   | ⚬   | ⚬      |  ⚬       |    ❌       |
 | arrays❌         | ❌     | ❌    | ❌     | ❌      | ⚬   | ⚬   | ⚬      |  ⚬       |    ❌        |
-| slices❌         | ❌     | ❌    | ⚬     | ❌      | ⚬   | ⚬   | ⚬      |  ⚬       |    ❌       |
 | closures❌       | ❌     | ❌    | ❌     | ⚬      | ⚬   | ❌   | ⚬      |  ⚬       |    ❌        |
 | generators❌     |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬    | ⚬  | ❌      |   ❌       |    ❌       |
 | gen. witness❌   |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬   |  ⚬ |  ⚬    |   ⚬       |    ❌       |
