@@ -208,6 +208,7 @@ TyWithoutFor: Ty = {
     "*" <m: RawMutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
     "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
     "&" <l: Lifetime> <t:Ty> => Ty::Ref{ mutability: Mutability::Not, lifetime: l, ty: Box::new(t) },
+    "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) }, 
 };
 
 ScalarType: ScalarType = {

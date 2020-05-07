@@ -193,6 +193,9 @@ pub enum Ty {
     Scalar {
         ty: ScalarType,
     },
+    Slice {
+        ty: Box<Ty>,
+    },
     Raw {
         mutability: Mutability,
         ty: Box<Ty>,
