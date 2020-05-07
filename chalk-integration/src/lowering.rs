@@ -1210,6 +1210,14 @@ impl LowerTy for Ty {
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
+
+            Ty::Raw { mutability, ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Raw(ast_mutability_to_chalk_mutability(mutability.clone())),
+                substitution: chalk_ir::Substitution::from_fallible(
+                    interner, 
+                    std::iter::once(Ok(ty.lower(env)?)),
+                )?,
+            }).intern(interner)),
         }
     }
 }
@@ -1589,5 +1597,12 @@ fn ast_scalar_to_chalk_scalar(scalar: ScalarType) -> chalk_ir::Scalar {
         }),
         ScalarType::Bool => chalk_ir::Scalar::Bool,
         ScalarType::Char => chalk_ir::Scalar::Char,
+    }
+}
+
+fn ast_mutability_to_chalk_mutability(mutability: Mutability) -> chalk_ir::Mutability {
+    match mutability {
+        Mutability::Mut => chalk_ir::Mutability::Mut,
+        Mutability::Not => chalk_ir::Mutability::Not,
     }
 }
