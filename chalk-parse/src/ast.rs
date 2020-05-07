@@ -193,6 +193,10 @@ pub enum Ty {
     Scalar {
         ty: ScalarType,
     },
+    Raw {
+        mutability: Mutability,
+        ty: Box<Ty>,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -228,6 +232,12 @@ pub enum ScalarType {
     Int(IntTy),
     Uint(UintTy),
     Float(FloatTy),
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Mutability {
+    Mut,
+    Not,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

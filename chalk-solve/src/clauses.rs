@@ -410,6 +410,7 @@ fn match_type_name<I: Interner>(
         TypeName::Tuple(_) => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
+        TypeName::Raw(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
     }
 }
 

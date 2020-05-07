@@ -136,6 +136,12 @@ pub enum Scalar {
     Float(FloatTy),
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Mutability {
+    Mut,
+    Not,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, Visit)]
 pub enum TypeName<I: Interner> {
     /// a type like `Vec<T>`
@@ -149,6 +155,9 @@ pub enum TypeName<I: Interner> {
 
     /// a tuple of the given arity
     Tuple(usize),
+
+    /// a raw pointer type like `*const T` or `*mut T`
+    Raw(Mutability),
 
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>),

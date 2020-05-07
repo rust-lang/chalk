@@ -248,6 +248,7 @@ copy_fold!(IntTy);
 copy_fold!(FloatTy);
 copy_fold!(Scalar);
 copy_fold!(ClausePriority);
+copy_fold!(Mutability);
 
 #[macro_export]
 macro_rules! id_fold {

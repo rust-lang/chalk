@@ -75,6 +75,7 @@ pub fn add_sized_program_clauses<I: Interner>(
             TypeName::Tuple(arity) => {
                 push_tuple_sized_conditions(db, builder, trait_ref, *arity, substitution)
             }
+            TypeName::Raw(_) => builder.push_fact(trait_ref.clone()),
             _ => return,
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
