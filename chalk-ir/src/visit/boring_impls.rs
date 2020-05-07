@@ -5,7 +5,7 @@
 //! The more interesting impls of `Visit` remain in the `visit` module.
 
 use crate::{
-    AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, Goals, ImplId, IntTy, Interner,
+    AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, Goals, ImplId, IntTy, Interner, Mutability,
     OpaqueTyId, Parameter, ParameterKind, PlaceholderIndex, ProgramClause, ProgramClauseData,
     ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, StructId, Substitution,
     SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
@@ -211,6 +211,7 @@ const_visit!(Scalar);
 const_visit!(UintTy);
 const_visit!(IntTy);
 const_visit!(FloatTy);
+const_visit!(Mutability);
 
 #[macro_export]
 macro_rules! id_visit {

@@ -136,6 +136,12 @@ pub enum Scalar {
     Float(FloatTy),
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Mutability {
+    Mut,
+    Not,
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, Visit)]
 pub enum TypeName<I: Interner> {
     /// a type like `Vec<T>`
