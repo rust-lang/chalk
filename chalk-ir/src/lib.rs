@@ -156,6 +156,9 @@ pub enum TypeName<I: Interner> {
     /// a tuple of the given arity
     Tuple(usize),
 
+    /// a raw pointer type like `*const T` or `*mut T`
+    Raw(Mutability),
+
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>),
 
