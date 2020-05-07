@@ -471,7 +471,7 @@ fn scalars() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken { token: (8, Token(49, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken { token: (8, Token(51, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
 }
