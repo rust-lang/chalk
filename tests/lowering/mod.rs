@@ -677,3 +677,12 @@ fn arrays() {
         }
     }
 }
+
+#[test]
+fn lifetime_outlives() {
+    lowering_success! {
+        program {
+            trait Foo<'a, 'b> where 'a: 'b {}
+        }
+    }
+}

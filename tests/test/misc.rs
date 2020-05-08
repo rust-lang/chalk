@@ -612,3 +612,23 @@ fn normalize_ambiguous() {
         }
     }
 }
+
+#[test]
+fn lifetime_outlives_constraints() {
+    test! {
+        program {
+            trait Foo<'a, 'b> where 'a: 'b {}
+            struct Bar {}
+
+            impl<'a, 'b> Foo<'a, 'b> for Bar where 'a: 'b {}
+        }
+
+        goal {
+            exists<'a, 'b> {
+                Bar: Foo<'a, 'b>
+            }
+        } yields[SolverChoice::slg(10, None)] {
+            "Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := '^0.1], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '^0.1 }] }"
+        }
+    }
+}

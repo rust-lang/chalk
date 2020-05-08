@@ -630,6 +630,7 @@ impl<I: Interner> Debug for WhereClause<I> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
             WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
+            WhereClause::LifetimeOutlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
         }
     }
 }

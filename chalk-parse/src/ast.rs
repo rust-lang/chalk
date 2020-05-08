@@ -331,6 +331,7 @@ impl fmt::Display for Identifier {
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
+    LifetimeOutlives { a: Lifetime, b: Lifetime },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
