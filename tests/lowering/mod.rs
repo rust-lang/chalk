@@ -509,3 +509,27 @@ fn raw_pointers() {
         }
     }
 }
+
+#[test]
+fn refs() {
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            impl<'a, T> Foo for &'a T { }
+            impl<'b, T> Foo for &'b mut T { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo { }
+
+            impl<T> Foo for &T { }
+        }
+
+        error_msg {
+            "parse error: UnrecognizedToken { token: (36, Token(1, \"T\"), 37), expected: [\"r#\\\"\\\\\\\'([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+        }
+    }
+}
