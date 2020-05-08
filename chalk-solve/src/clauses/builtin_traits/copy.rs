@@ -41,7 +41,7 @@ pub fn add_copy_program_clauses<I: Interner>(
             TypeName::Tuple(arity) => {
                 push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
             }
-            TypeName::Raw(_) => builder.push_fact(trait_ref.clone()),
+            TypeName::Raw(_) | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),
             _ => return,
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
