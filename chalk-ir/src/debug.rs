@@ -145,6 +145,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
             TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
             TypeName::Raw(mutability) => write!(fmt, "{:?}", mutability),
+            TypeName::Ref(mutability) => write!(fmt, "{:?}", mutability),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }

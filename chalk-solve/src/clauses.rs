@@ -411,6 +411,7 @@ fn match_type_name<I: Interner>(
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
         TypeName::Raw(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
+        TypeName::Ref(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
     }
 }
 
