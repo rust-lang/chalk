@@ -16,17 +16,50 @@ use chalk_rust_ir::{
 };
 use itertools::Itertools;
 
-use crate::{split::Split, RustIrDatabase};
+use crate::{logging_db::RecordedItemId, split::Split, RustIrDatabase};
 
-pub fn write_top_level<I, Db, T, F>(f: &mut F, db: &Db, v: &T) -> Result
+pub fn write_top_level<I, DB, T, F>(f: &mut F, db: &DB, v: &T) -> Result
 where
     I: Interner,
-    Db: RustIrDatabase<I>,
+    DB: RustIrDatabase<I>,
     T: RenderAsRust<I>,
     F: std::fmt::Write,
 {
     let ws = &WriterState::new(db);
     write!(f, "{}\n", v.display(ws))
+}
+
+/// Writes out each item recorded by a [`LoggingRustIrDatabase`].
+///
+/// [`LoggingRustIrDatabase`]: crate::logging_db::LoggingRustIrDatabase
+pub fn write_program<I, DB, T>(f: &mut Formatter<'_>, db: &DB, ids: T) -> Result
+where
+    I: Interner,
+    DB: RustIrDatabase<I>,
+    T: IntoIterator<Item = RecordedItemId<I>>,
+{
+    for id in ids {
+        match id {
+            RecordedItemId::Impl(id) => {
+                let v = db.impl_datum(id);
+                write_top_level(f, db, &*v)?;
+            }
+            RecordedItemId::Struct(id) => {
+                let v = db.struct_datum(id);
+                write_top_level(f, db, &*v)?;
+            }
+            RecordedItemId::Trait(id) => {
+                let v = db.trait_datum(id);
+                write_top_level(f, db, &*v)?;
+            }
+            RecordedItemId::OpaqueTy(id) => {
+                let _v = db.opaque_ty_data(id);
+                todo!("opaque ty display")
+                // write_top_level(f, db, v)?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Displays `RenderAsRust` data.
