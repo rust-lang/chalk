@@ -540,11 +540,6 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                 );
             }
 
-            // Object safety check
-            if builder.db.is_object_safe(trait_ref.trait_id) {
-                builder.push_fact(DomainGoal::ObjectSafe(trait_ref.trait_id));
-            }
-
             // Reverse implied bound rules: given (e.g.) `trait Foo: Bar + Baz`,
             // we create rules like:
             //

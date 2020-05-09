@@ -249,7 +249,11 @@ fn program_clauses_that_could_match<I: Interner>(
             db.trait_datum(trait_ref.trait_id)
                 .to_program_clauses(builder);
         }
-        DomainGoal::ObjectSafe(trait_id) => db.trait_datum(*trait_id).to_program_clauses(builder),
+        DomainGoal::ObjectSafe(trait_id) => {
+            if builder.db.is_object_safe(*trait_id) {
+                builder.push_fact(DomainGoal::ObjectSafe(*trait_id));
+            }
+        }
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::DownstreamType(ty)
