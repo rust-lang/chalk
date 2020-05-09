@@ -18,6 +18,17 @@ use itertools::Itertools;
 
 use crate::{split::Split, RustIrDatabase};
 
+pub fn write_top_level<I, Db, T, F>(f: &mut F, db: &Db, v: &T) -> Result
+where
+    I: Interner,
+    Db: RustIrDatabase<I>,
+    T: RenderAsRust<I>,
+    F: std::fmt::Write,
+{
+    let ws = &WriterState::new(db);
+    write!(f, "{}\n", v.display(ws))
+}
+
 /// Displays `RenderAsRust` data.
 ///
 /// This is a utility struct for making `RenderAsRust` nice to use with rust format macros.

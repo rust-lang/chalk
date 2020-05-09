@@ -1,34 +1,30 @@
-use chalk_solve::display::{RenderAsRust, WriterState};
-
-use crate::program::Program;
-
-pub trait WriteProgram {
-    fn write(&self) -> String;
-}
-
-impl WriteProgram for Program {
-    fn write(&self) -> String {
-        let mut lines = vec![];
-        let ws = &WriterState::new(self);
-        self.struct_data.values().for_each(|datum| {
-            lines.push(datum.display(ws).to_string());
-        });
-        self.trait_data.values().for_each(|datum| {
-            lines.push(datum.display(ws).to_string());
-        });
-        self.impl_data.values().for_each(|datum| {
-            lines.push(datum.display(ws).to_string());
-        });
-        lines.join("\n")
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::lowering::LowerProgram;
-    use crate::tls;
     use std::{fmt::Debug, sync::Arc};
+
+    use chalk_solve::display;
+
+    use crate::lowering::LowerProgram;
+    use crate::program::Program;
+    use crate::tls;
+
+    fn write_program(program: &Program) -> String {
+        let mut out = String::new();
+        for datum in program.struct_data.values() {
+            display::write_top_level(&mut out, program, &**datum).unwrap();
+        }
+        for datum in program.trait_data.values() {
+            display::write_top_level(&mut out, program, &**datum).unwrap();
+        }
+        for datum in program.impl_data.values() {
+            display::write_top_level(&mut out, program, &**datum).unwrap();
+        }
+        for _datum in program.opaque_ty_data.values() {
+            todo!("opaque type display");
+            //display::write_top_level(&mut out, program, &**datum).unwrap();
+        }
+        out
+    }
 
     fn program_diff(original: &impl Debug, produced: &impl Debug) -> String {
         use std::fmt::Write;
@@ -110,7 +106,8 @@ mod test {
                 e, program_text
             )
         }));
-        let output_text = tls::set_current_program(&original_program, || original_program.write());
+        let output_text =
+            tls::set_current_program(&original_program, || write_program(&original_program));
         let output_program = chalk_parse::parse_program(&output_text).unwrap_or_else(|e| {
             panic!(
                 "unable to reparse writer output:\n{}\nNew source:\n{}\n",
