@@ -533,3 +533,29 @@ fn refs() {
         }
     }
 }
+
+#[test]
+fn slices() {
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            impl Foo for [i32] { }
+            impl<T> Foo for [T] { }
+
+            impl Foo for [[i32]] { }
+            impl Foo for [()] { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo { }
+            impl Foo for [] {}
+        }
+
+        error_msg {
+            "parse error: UnrecognizedToken { token: (29, Token(30, \"]\"), 30), expected: [\"\\\"&\\\"\", \"\\\"(\\\"\", \"\\\"*\\\"\", \"\\\"<\\\"\", \"\\\"[\\\"\", \"\\\"bool\\\"\", \"\\\"char\\\"\", \"\\\"dyn\\\"\", \"\\\"f32\\\"\", \"\\\"f64\\\"\", \"\\\"fn\\\"\", \"\\\"for\\\"\", \"\\\"i128\\\"\", \"\\\"i16\\\"\", \"\\\"i32\\\"\", \"\\\"i64\\\"\", \"\\\"i8\\\"\", \"\\\"isize\\\"\", \"\\\"u128\\\"\", \"\\\"u16\\\"\", \"\\\"u32\\\"\", \"\\\"u64\\\"\", \"\\\"u8\\\"\", \"\\\"usize\\\"\", \"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+        }
+    }
+}

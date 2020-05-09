@@ -1211,6 +1211,15 @@ impl LowerTy for Ty {
             })
             .intern(interner)),
 
+            Ty::Slice { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Slice,
+                substitution: chalk_ir::Substitution::from_fallible(
+                    interner,
+                    std::iter::once(ty.lower(env)),
+                )?,
+            })
+            .intern(interner)),
+
             Ty::Raw { mutability, ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Raw(ast_mutability_to_chalk_mutability(
                     mutability.clone(),
