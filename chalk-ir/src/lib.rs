@@ -159,6 +159,9 @@ pub enum TypeName<I: Interner> {
     /// a raw pointer type like `*const T` or `*mut T`
     Raw(Mutability),
 
+    /// a reference type like `&T` or `&mut T`
+    Ref(Mutability),
+
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>),
 

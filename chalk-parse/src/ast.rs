@@ -197,6 +197,11 @@ pub enum Ty {
         mutability: Mutability,
         ty: Box<Ty>,
     },
+    Ref {
+        mutability: Mutability,
+        lifetime: Lifetime,
+        ty: Box<Ty>,
+    },
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

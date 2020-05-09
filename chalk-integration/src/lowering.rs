@@ -1221,6 +1221,24 @@ impl LowerTy for Ty {
                 )?,
             })
             .intern(interner)),
+
+            Ty::Ref {
+                mutability,
+                lifetime,
+                ty,
+            } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Ref(ast_mutability_to_chalk_mutability(
+                    mutability.clone(),
+                )),
+                substitution: chalk_ir::Substitution::from(
+                    interner,
+                    &[
+                        lifetime.lower(env)?.cast(interner),
+                        ty.lower(env)?.cast(interner),
+                    ],
+                ),
+            })
+            .intern(interner)),
         }
     }
 }

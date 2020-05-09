@@ -71,11 +71,12 @@ pub fn add_sized_program_clauses<I: Interner>(
             TypeName::Struct(struct_id) => {
                 push_struct_sized_conditions(db, builder, trait_ref, *struct_id, substitution)
             }
-            TypeName::Scalar(_) => builder.push_fact(trait_ref.clone()),
             TypeName::Tuple(arity) => {
                 push_tuple_sized_conditions(db, builder, trait_ref, *arity, substitution)
             }
-            TypeName::Raw(_) => builder.push_fact(trait_ref.clone()),
+            TypeName::Scalar(_) | TypeName::Raw(_) | TypeName::Ref(_) => {
+                builder.push_fact(trait_ref.clone())
+            }
             _ => return,
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),

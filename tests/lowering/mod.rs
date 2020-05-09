@@ -471,7 +471,7 @@ fn scalars() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken { token: (8, Token(51, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken { token: (8, Token(52, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
 }
@@ -495,7 +495,7 @@ fn raw_pointers() {
             struct *const i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken { token: (8, Token(7, \"*\"), 9), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken { token: (8, Token(8, \"*\"), 9), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
 
@@ -505,7 +505,31 @@ fn raw_pointers() {
             impl Foo for *i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken { token: (30, Token(51, \"i32\"), 33), expected: [\"\\\"const\\\"\", \"\\\"mut\\\"\"] }"
+            "parse error: UnrecognizedToken { token: (30, Token(52, \"i32\"), 33), expected: [\"\\\"const\\\"\", \"\\\"mut\\\"\"] }"
+        }
+    }
+}
+
+#[test]
+fn refs() {
+    lowering_success! {
+        program {
+            trait Foo { }
+
+            impl<'a, T> Foo for &'a T { }
+            impl<'b, T> Foo for &'b mut T { }
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo { }
+
+            impl<T> Foo for &T { }
+        }
+
+        error_msg {
+            "parse error: UnrecognizedToken { token: (36, Token(1, \"T\"), 37), expected: [\"r#\\\"\\\\\\\'([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
 }

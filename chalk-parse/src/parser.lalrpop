@@ -205,7 +205,9 @@ TyWithoutFor: Ty = {
     <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
     "(" <t:TupleOrParensInner> ")" => t,
-    "*" <m: Mutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
+    "*" <m: RawMutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
+    "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
+    "&" <l: Lifetime> <t:Ty> => Ty::Ref{ mutability: Mutability::Not, lifetime: l, ty: Box::new(t) },
 };
 
 ScalarType: ScalarType = {
@@ -238,7 +240,7 @@ TupleOrParensInner: Ty = {
     () => Ty::Tuple { types: vec![] },
 };
 
-Mutability: Mutability = {
+RawMutability: Mutability = {
     "mut" => Mutability::Mut,
     "const" => Mutability::Not,
 };
