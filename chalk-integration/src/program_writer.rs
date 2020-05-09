@@ -27,7 +27,7 @@ impl WriteProgram for Program {
 mod test {
     use super::*;
     use crate::lowering::LowerProgram;
-    use chalk_ir::tls;
+    use crate::tls;
     use std::{fmt::Debug, sync::Arc};
 
     fn program_diff(original: &impl Debug, produced: &impl Debug) -> String {

@@ -381,6 +381,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             TypeName::Scalar(_) => todo!("scalar types"),
             TypeName::Tuple(_) => todo!("scalar types"),
             TypeName::OpaqueType(_) => todo!("opaque type usage"),
+            TypeName::Raw(_) => write!(f, "raw ptr type")?,
             TypeName::Error => write!(f, "{{error}}")?,
         }
         Ok(())
