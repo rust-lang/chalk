@@ -10,7 +10,7 @@ use chalk_rust_ir as rust_ir;
 use chalk_rust_ir::{
     Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
 
@@ -243,6 +243,7 @@ impl LowerProgram for Program {
         let mut struct_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
+        let mut object_safe_traits = HashSet::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             match item {
                 Item::StructDefn(defn) => {
@@ -256,6 +257,10 @@ impl LowerProgram for Program {
                     let id = TraitId(raw_id);
                     trait_ids.insert(type_kind.name.clone(), id);
                     trait_kinds.insert(id, type_kind);
+
+                    if defn.flags.object_safe {
+                        object_safe_traits.insert(id);
+                    }
                 }
                 Item::OpaqueTyDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -457,6 +462,7 @@ impl LowerProgram for Program {
             opaque_ty_kinds,
             opaque_ty_data,
             custom_clauses,
+            object_safe_traits,
         };
 
         Ok(program)
@@ -758,6 +764,9 @@ impl LowerDomainGoal for DomainGoal {
                 vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
             }
             DomainGoal::Reveal => vec![chalk_ir::DomainGoal::Reveal(())],
+            DomainGoal::ObjectSafe { id } => {
+                vec![chalk_ir::DomainGoal::ObjectSafe(env.lookup_trait(id)?)]
+            }
         };
         Ok(goals)
     }

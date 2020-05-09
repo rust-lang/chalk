@@ -313,6 +313,7 @@ mod implied_bounds;
 mod impls;
 mod misc;
 mod negation;
+mod object_safe;
 mod projection;
 mod refs;
 mod scalars;

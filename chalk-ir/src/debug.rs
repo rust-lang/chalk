@@ -629,6 +629,7 @@ impl<I: Interner> Debug for DomainGoal<I> {
             DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
             DomainGoal::Reveal(_) => write!(fmt, "Reveal"),
+            DomainGoal::ObjectSafe(n) => write!(fmt, "ObjectSafe({:?})", n),
         }
     }
 }
