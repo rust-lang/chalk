@@ -316,7 +316,7 @@ pub enum DomainGoal {
     Compatible,
     DownstreamType { ty: Ty },
     Reveal,
-    ObjectSafe { id: Identifier }
+    ObjectSafe { id: Identifier },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
