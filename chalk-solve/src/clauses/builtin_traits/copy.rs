@@ -1,7 +1,7 @@
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{ApplicationTy, Substitution, TyData, TypeName};
+use chalk_ir::{ApplicationTy, Mutability, Substitution, TyData, TypeName};
 
 fn push_tuple_copy_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
@@ -41,7 +41,9 @@ pub fn add_copy_program_clauses<I: Interner>(
             TypeName::Tuple(arity) => {
                 push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
             }
-            TypeName::Raw(_) | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),
+            TypeName::Raw(_) | TypeName::Ref(Mutability::Not) => {
+                builder.push_fact(trait_ref.clone())
+            }
             _ => return,
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
