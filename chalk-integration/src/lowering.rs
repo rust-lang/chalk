@@ -758,6 +758,9 @@ impl LowerDomainGoal for DomainGoal {
                 vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
             }
             DomainGoal::Reveal => vec![chalk_ir::DomainGoal::Reveal(())],
+            DomainGoal::ObjectSafe { id } => {
+                vec![chalk_ir::DomainGoal::ObjectSafe(env.lookup_trait(id)?)]
+            }
         };
         Ok(goals)
     }
@@ -1016,6 +1019,7 @@ impl LowerTraitFlags for TraitFlags {
             fundamental: self.fundamental,
             non_enumerable: self.non_enumerable,
             coinductive: self.coinductive,
+            object_safe: self.object_safe,
         }
     }
 }

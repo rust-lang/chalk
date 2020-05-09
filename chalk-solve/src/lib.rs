@@ -93,6 +93,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn program_clauses_for_env(&self, environment: &Environment<I>) -> ProgramClauses<I>;
 
     fn interner(&self) -> &I;
+
+    /// Check if a trait is object safe
+    fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;
 }
 
 pub use clauses::program_clauses_for_env;

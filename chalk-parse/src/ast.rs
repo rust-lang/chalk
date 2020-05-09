@@ -68,6 +68,7 @@ pub struct TraitFlags {
     pub fundamental: bool,
     pub non_enumerable: bool,
     pub coinductive: bool,
+    pub object_safe: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -315,6 +316,7 @@ pub enum DomainGoal {
     Compatible,
     DownstreamType { ty: Ty },
     Reveal,
+    ObjectSafe { id: Identifier }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

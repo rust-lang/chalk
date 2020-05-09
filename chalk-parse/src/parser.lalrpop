@@ -43,6 +43,7 @@ MarkerKeyword: () = "#" "[" "marker" "]";
 FundamentalKeyword: () = "#" "[" "fundamental" "]";
 NonEnumerableKeyword: () = "#" "[" "non_enumerable" "]";
 CoinductiveKeyword: () = "#" "[" "coinductive" "]";
+ObjectSafeKeyword: () = "#" "[" "object_safe" "]";
 
 WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::SizedTrait,
@@ -67,7 +68,7 @@ StructDefn: StructDefn = {
 };
 
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <object_safe:ObjectSafeKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<ParameterKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
@@ -82,6 +83,7 @@ TraitDefn: TraitDefn = {
             fundamental: fundamental.is_some(),
             non_enumerable: non_enumerable.is_some(),
             coinductive: coinductive.is_some(),
+            object_safe: object_safe.is_some(),
         },
     }
 };
@@ -365,6 +367,8 @@ DomainGoal: DomainGoal = {
     "DownstreamType" "(" <ty:Ty> ")" => DomainGoal::DownstreamType { ty },
 
     "Reveal" => DomainGoal::Reveal,
+
+    "ObjectSafe" "(" <id:Id> ")" => DomainGoal::ObjectSafe { id }
 };
 
 LeafGoal: LeafGoal = {

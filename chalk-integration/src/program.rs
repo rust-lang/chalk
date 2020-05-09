@@ -392,4 +392,8 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
     }
+
+    fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
+        self.trait_datum(trait_id).is_object_safe_trait()
+    }
 }

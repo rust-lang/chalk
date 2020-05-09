@@ -156,4 +156,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
     }
+
+    fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
+        self.program_ir()
+            .unwrap()
+            .is_object_safe(trait_id)
+    }
 }

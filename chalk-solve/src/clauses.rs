@@ -244,16 +244,17 @@ fn program_clauses_that_could_match<I: Interner>(
                 .opaque_ty_data(opaque_ty.opaque_ty_id)
                 .to_program_clauses(builder),
         },
-        DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
-            db.trait_datum(trait_predicate.trait_id)
+        DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
+        | DomainGoal::LocalImplAllowed(trait_ref) => {
+            db.trait_datum(trait_ref.trait_id)
                 .to_program_clauses(builder);
         }
+        DomainGoal::ObjectSafe(trait_id) => db.trait_datum(*trait_id).to_program_clauses(builder),
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsUpstream(ty)
-        | DomainGoal::DownstreamType(ty) => match_ty(builder, environment, ty)?,
-        DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => {
-            match_ty(builder, environment, ty)?
-        }
+        | DomainGoal::DownstreamType(ty)
+        | DomainGoal::IsFullyVisible(ty)
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {
@@ -291,11 +292,7 @@ fn program_clauses_that_could_match<I: Interner>(
             }
             AliasTy::Opaque(_) => (),
         },
-        DomainGoal::LocalImplAllowed(trait_ref) => db
-            .trait_datum(trait_ref.trait_id)
-            .to_program_clauses(builder),
-        DomainGoal::Compatible(()) => (),
-        DomainGoal::Reveal(()) => (),
+        DomainGoal::Compatible(()) | DomainGoal::Reveal(()) => (),
     };
 
     Ok(())

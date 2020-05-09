@@ -1088,6 +1088,9 @@ pub enum DomainGoal<I: Interner> {
     /// Used to activate the "reveal mode", in which opaque (`impl Trait`) types can be equated
     /// to their actual type.
     Reveal(()),
+
+    /// Used to indicate that a trait is object safe.
+    ObjectSafe(TraitId<I>),
 }
 
 pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;

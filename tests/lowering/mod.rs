@@ -471,7 +471,7 @@ fn scalars() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken { token: (8, Token(52, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken { token: (8, Token(53, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
         }
     }
 }
@@ -505,7 +505,7 @@ fn raw_pointers() {
             impl Foo for *i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken { token: (30, Token(52, \"i32\"), 33), expected: [\"\\\"const\\\"\", \"\\\"mut\\\"\"] }"
+            "parse error: UnrecognizedToken { token: (30, Token(53, \"i32\"), 33), expected: [\"\\\"const\\\"\", \"\\\"mut\\\"\"] }"
         }
     }
 }
