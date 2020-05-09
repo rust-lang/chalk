@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn refs_are_well_formed() {
+fn immut_refs_are_well_formed() {
     test! {
         program { }
 
@@ -14,7 +14,7 @@ fn refs_are_well_formed() {
 }
 
 #[test]
-fn refs_are_sized() {
+fn immut_refs_are_sized() {
     test! {
         program {
             #[lang(sized)]
@@ -23,6 +23,35 @@ fn refs_are_sized() {
 
         goal {
             forall<'a, T> { &'a T: Sized }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn mut_refs_are_well_formed() {
+    test! {
+        program { }
+
+        goal {
+            forall<'a, T> { WellFormed(&'a mut T) }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn mut_refs_are_sized() {
+    test! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+        }
+
+        goal {
+            forall<'a, T> { &'a mut T: Sized }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
