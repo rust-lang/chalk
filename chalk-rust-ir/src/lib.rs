@@ -168,10 +168,6 @@ impl<I: Interner> TraitDatum<I> {
         self.flags.coinductive
     }
 
-    pub fn is_object_safe_trait(&self) -> bool {
-        self.flags.object_safe
-    }
-
     /// Gives access to the where clauses of the trait, quantified over the type parameters of the trait:
     ///
     /// ```ignore
@@ -225,9 +221,6 @@ pub struct TraitFlags {
     pub non_enumerable: bool,
 
     pub coinductive: bool,
-
-    /// Indicates that a trait is object safe
-    pub object_safe: bool,
 }
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.

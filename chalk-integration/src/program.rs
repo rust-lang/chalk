@@ -13,7 +13,7 @@ use chalk_rust_ir::{
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
 
@@ -61,6 +61,9 @@ pub struct Program {
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
+
+    /// Store the traits marked with `#[object_safe]`
+    pub object_safe_traits: HashSet<TraitId<ChalkIr>>,
 }
 
 impl Program {
@@ -394,6 +397,6 @@ impl RustIrDatabase<ChalkIr> for Program {
     }
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
-        self.trait_datum(trait_id).is_object_safe_trait()
+        self.object_safe_traits.contains(&trait_id)
     }
 }
