@@ -150,7 +150,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn struct_name(&self, struct_id: StructId<I>) -> String;
 
     /// Retrieves the name of an identifier
-    fn identifier_name(&self, ident: &I::Identifier) -> String;
+    fn assoc_type_name(&self, ident: AssocTypeId<I>) -> String;
 }
 
 pub use clauses::program_clauses_for_env;

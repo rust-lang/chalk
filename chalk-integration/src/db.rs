@@ -206,7 +206,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().struct_name(struct_id)
     }
 
-    fn identifier_name(&self, ident: &<ChalkIr as Interner>::Identifier) -> String {
-        self.program_ir().unwrap().identifier_name(ident)
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<ChalkIr>) -> String {
+        self.program_ir().unwrap().assoc_type_name(assoc_ty_id)
     }
 }

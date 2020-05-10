@@ -5,7 +5,7 @@ use std::{
     sync::Mutex,
 };
 
-use chalk_ir::{interner::Interner, ImplId, OpaqueTyId, StructId, TraitId};
+use chalk_ir::{interner::Interner, AssocTypeId, ImplId, OpaqueTyId, StructId, TraitId};
 use chalk_rust_ir::{ImplDatum, OpaqueTyDatum, StructDatum, TraitDatum};
 
 use crate::{display, RustIrDatabase};
@@ -149,8 +149,8 @@ where
     fn struct_name(&self, struct_id: StructId<I>) -> String {
         self.db.struct_name(struct_id)
     }
-    fn identifier_name(&self, ident: &I::Identifier) -> String {
-        self.db.identifier_name(ident)
+    fn assoc_type_name(&self, ident: AssocTypeId<I>) -> String {
+        self.db.assoc_type_name(ident)
     }
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.record(trait_id);
@@ -284,8 +284,8 @@ where
     fn struct_name(&self, struct_id: StructId<I>) -> String {
         self.db.struct_name(struct_id)
     }
-    fn identifier_name(&self, ident: &I::Identifier) -> String {
-        self.db.identifier_name(ident)
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
+        self.db.assoc_type_name(assoc_ty_id)
     }
 
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {

@@ -6,9 +6,9 @@ use std::{
 };
 
 use chalk_ir::{
-    interner::Interner, AliasEq, AliasTy, ApplicationTy, BoundVar, Fn as ChalkFn, Lifetime,
-    LifetimeData, Parameter, ParameterData, ParameterKind, ParameterKinds, QuantifiedWhereClause,
-    StructId, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    interner::Interner, AliasEq, AliasTy, ApplicationTy, AssocTypeId, BoundVar, Fn as ChalkFn,
+    Lifetime, LifetimeData, Parameter, ParameterData, ParameterKind, ParameterKinds,
+    QuantifiedWhereClause, StructId, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use chalk_rust_ir::{
     AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, Polarity,
@@ -143,7 +143,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
         let (_impl_display, assoc_ty_value_display) =
             s.db.split_associated_ty_value_parameters(&display_params, self);
 
-        write!(f, "type {}", s.db.identifier_name(&assoc_ty_data.name))?;
+        write!(f, "type {}", assoc_ty_data.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", &assoc_ty_value_display, ", ")?;
         write!(f, " = {};", value.ty.display(s))?;
         Ok(())
@@ -260,6 +260,12 @@ impl<I: Interner> RenderAsRust<I> for TraitId<I> {
         f.write_str(&s.db.trait_name(*self))
     }
 }
+impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        f.write_str(&s.db.assoc_type_name(*self))
+    }
+}
 
 impl<I: Interner> RenderAsRust<I> for TyData<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
@@ -311,7 +317,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                                             )
                                             .fmt(f)
                                         }
-                                        AliasTy::Opaque(opaque) => todo!("todo impl Trait"),
+                                        AliasTy::Opaque(_opaque) => todo!("todo impl Trait"),
                                     },
                                 }
                             })
@@ -348,7 +354,7 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
                     "<{} as {}>::{}",
                     trait_params[0].display(s),
                     display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
-                    s.db.identifier_name(&assoc_ty_datum.name),
+                    assoc_ty_datum.id.display(s),
                 )?;
                 write_joined_non_empty_list!(
                     f,
@@ -412,7 +418,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     "<{} as {}>::{}",
                     self.first_type_parameter(interner).unwrap().display(s),
                     datum.trait_id.display(s),
-                    s.db.identifier_name(&datum.name),
+                    datum.id.display(s),
                 )?;
                 let params = self.substitution.parameters(interner);
                 write_joined_non_empty_list!(
@@ -562,7 +568,7 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
             trait_params.iter().map(|param| param.display(s)),
             ", "
         )?;
-        write!(f, "{}", s.db.identifier_name(&assoc_ty_datum.name))?;
+        write!(f, "{}", assoc_ty_datum.id.display(s))?;
         write_joined_non_empty_list!(
             f,
             "<{}>",
@@ -621,7 +627,6 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
         // they have inside the AssociatedTyDatum (assoc_ty_names_for_trait_params),
         // and then add that mapping to the WriterState when writing bounds and
         // where clauses.
-        let interner = s.db.interner();
         let trait_datum = s.db.trait_datum(self.trait_id);
         // inverted Debrujin indices for the trait's parameters in the trait
         // environment
@@ -650,7 +655,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 
         let (_, assoc_ty_params) =
             s.db.split_associated_ty_parameters(&binder_display_in_assoc_ty, self);
-        write!(f, "type {}", s.db.identifier_name(&self.name),)?;
+        write!(f, "type {}", self.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", assoc_ty_params, ", ")?;
 
         let datum_bounds = &self.binders.skip_binders();
@@ -686,7 +691,6 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 
 impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
         let s = &s.add_debrujin_index(Some(0));
         let value = self.binders.skip_binders();
 

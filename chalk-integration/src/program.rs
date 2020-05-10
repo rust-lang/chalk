@@ -2,7 +2,6 @@ use crate::interner::ChalkIr;
 use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
-use chalk_ir::interner::Interner;
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
     FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
@@ -478,7 +477,11 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.struct_kinds.get(&struct_id).unwrap().name.to_string()
     }
 
-    fn identifier_name(&self, ident: &<ChalkIr as Interner>::Identifier) -> String {
-        ident.to_string()
+    fn assoc_type_name(&self, assoc_type_id: AssocTypeId<ChalkIr>) -> String {
+        self.associated_ty_data
+            .get(&assoc_type_id)
+            .unwrap()
+            .name
+            .to_string()
     }
 }
