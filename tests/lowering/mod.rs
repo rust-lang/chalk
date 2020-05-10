@@ -471,7 +471,7 @@ fn scalars() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken { token: (8, Token(53, \"i32\"), 11), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken"
         }
     }
 }
@@ -495,7 +495,7 @@ fn raw_pointers() {
             struct *const i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken { token: (8, Token(8, \"*\"), 9), expected: [\"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken"
         }
     }
 
@@ -505,7 +505,7 @@ fn raw_pointers() {
             impl Foo for *i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken { token: (30, Token(53, \"i32\"), 33), expected: [\"\\\"const\\\"\", \"\\\"mut\\\"\"] }"
+            "parse error: UnrecognizedToken"
         }
     }
 }
@@ -529,7 +529,7 @@ fn refs() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken { token: (36, Token(1, \"T\"), 37), expected: [\"r#\\\"\\\\\\\'([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken"
         }
     }
 }
@@ -555,7 +555,7 @@ fn slices() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken { token: (29, Token(31, \"]\"), 30), expected: [\"\\\"&\\\"\", \"\\\"(\\\"\", \"\\\"*\\\"\", \"\\\"<\\\"\", \"\\\"[\\\"\", \"\\\"bool\\\"\", \"\\\"char\\\"\", \"\\\"dyn\\\"\", \"\\\"f32\\\"\", \"\\\"f64\\\"\", \"\\\"fn\\\"\", \"\\\"for\\\"\", \"\\\"i128\\\"\", \"\\\"i16\\\"\", \"\\\"i32\\\"\", \"\\\"i64\\\"\", \"\\\"i8\\\"\", \"\\\"isize\\\"\", \"\\\"str\\\"\", \"\\\"u128\\\"\", \"\\\"u16\\\"\", \"\\\"u32\\\"\", \"\\\"u64\\\"\", \"\\\"u8\\\"\", \"\\\"usize\\\"\", \"r#\\\"([A-Za-z]|_)([A-Za-z0-9]|_)*\\\"#\"] }"
+            "parse error: UnrecognizedToken"
         }
     }
 }
