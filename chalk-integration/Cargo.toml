@@ -19,7 +19,3 @@ chalk-engine = { version = "0.16.0-dev.0", path = "../chalk-engine" }
 chalk-ir = { version = "0.16.0-dev.0", path = "../chalk-ir" }
 chalk-solve = { version = "0.16.0-dev.0", path = "../chalk-solve" }
 chalk-parse = { version = "0.16.0-dev.0", path = "../chalk-parse" }
-
-[dev-dependencies]
-# used for program_writer test errors
-diff = "0.1"
