@@ -162,8 +162,10 @@ impl<I: Interner> RenderAsRust<I> for Polarity {
 impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
-        // TODO: investigate why this isn't calling s.add_debrujin_index()
+
+        let s = &s.add_debrujin_index(None);
         let binders = s.binder_var_display(&self.binders.binders);
+
         let value = self.binders.skip_binders();
 
         let trait_ref = &value.trait_ref;
