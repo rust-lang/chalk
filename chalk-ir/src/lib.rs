@@ -168,6 +168,9 @@ pub enum TypeName<I: Interner> {
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>),
 
+    /// the string primitive type
+    Str,
+
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
     Error,
@@ -966,7 +969,7 @@ pub enum WhereClause<I: Interner> {
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum WellFormed<I: Interner> {
-    /// A predicate which is true is some trait ref is well-formed.
+    /// A predicate which is true when some trait ref is well-formed.
     /// For example, given the following trait definitions:
     ///
     /// ```notrust
@@ -981,7 +984,7 @@ pub enum WellFormed<I: Interner> {
     /// ```
     Trait(TraitRef<I>),
 
-    /// A predicate which is true is some type is well-formed.
+    /// A predicate which is true when some type is well-formed.
     /// For example, given the following type definition:
     ///
     /// ```notrust

@@ -142,6 +142,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Struct(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Scalar(scalar) => write!(fmt, "{:?}", scalar),
+            TypeName::Str => write!(fmt, "Str"),
             TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
             TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
             TypeName::Slice => write!(fmt, "{{slice}}"),

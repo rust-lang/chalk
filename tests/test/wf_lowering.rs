@@ -576,7 +576,6 @@ fn assoc_type_recursive_bound() {
             }
 
             struct Number { }
-            struct str { } // not sized
 
             impl Foo for Number {
                 // Well-formedness checks require that the following

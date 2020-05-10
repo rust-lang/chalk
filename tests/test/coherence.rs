@@ -257,16 +257,15 @@ fn downstream_impl_of_fundamental_43355() {
 
 #[test]
 fn fundamental_traits() {
-    // We want to enable negative reasoning about some traits. For example, consider the str type.
-    // We know that str is never going to be Sized and we have made a decision to allow people to
-    // depend on that. The following two impls are rejected as overlapping despite the fact that we
-    // know that str will never be Sized.
+    // We want to enable negative reasoning about some traits. For example, assume we have some
+    // "Foo" type which we know is never going to be Sized (ex. str). The following two impls are
+    // rejected as overlapping despite the fact that we know that Foo will never be Sized.
     lowering_error! {
         program {
             #[upstream] trait Sized { }
-            #[upstream] struct str { }
+            #[upstream] struct Foo { }
             trait Bar { }
-            impl Bar for str { }
+            impl Bar for Foo { }
             impl<T> Bar for T where T: Sized { }
         } error_msg {
             "overlapping impls of trait `Bar`"
@@ -274,14 +273,14 @@ fn fundamental_traits() {
     }
 
     // If we make Sized fundamental, we're telling the Rust compiler that it can reason negatively
-    // about it. That means that `not { str: Sized }` is provable. With that change, these two
-    // impls are now valid.
+    // about it. That means that `not { Foo: Sized }` is provable. With that change, these two impls
+    // are now valid.
     lowering_success! {
         program {
             #[upstream] #[fundamental] trait Sized { }
-            #[upstream] struct str { }
+            #[upstream] struct Foo { }
             trait Bar { }
-            impl Bar for str { }
+            impl Bar for Foo { }
             impl<T> Bar for T where T: Sized { }
         }
     }

@@ -389,6 +389,7 @@ fn match_ty<I: Interner>(
     })
 }
 
+/// Lower a Rust IR application type to logic
 fn match_type_name<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     interner: &I,
@@ -408,6 +409,7 @@ fn match_type_name<I: Interner>(
         TypeName::Scalar(_) => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
+        TypeName::Str => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
         TypeName::Tuple(_) => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }

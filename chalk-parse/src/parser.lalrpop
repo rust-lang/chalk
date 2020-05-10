@@ -196,6 +196,7 @@ pub Ty: Ty = {
 
 TyWithoutFor: Ty = {
     <ScalarType> => Ty::Scalar { ty: <> },
+    "str" => Ty::Str,
     <n:Id> => Ty::Id { name: n},
     "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: vec![],
