@@ -412,6 +412,10 @@ fn match_type_name<I: Interner>(
         TypeName::Slice => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
         TypeName::Raw(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
         TypeName::Ref(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
+        TypeName::FnDef(fn_def_id) => builder
+            .db
+            .fn_def_datum(fn_def_id)
+            .to_program_clauses(builder),
     }
 }
 

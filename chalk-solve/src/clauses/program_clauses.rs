@@ -337,6 +337,63 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
     }
 }
 
+impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+        debug_heading!("FnDatum::to_program_clauses(self={:?})", self);
+
+        let interner = builder.interner();
+        let binders = self.binders.map_ref(|b| &b.where_clauses);
+        builder.push_binders(&binders, |builder, where_clauses| {
+            let self_appl_ty = &ApplicationTy {
+                name: self.id.cast(interner),
+                substitution: builder.substitution_in_scope(),
+            };
+            let self_ty = self_appl_ty.clone().intern(interner);
+
+            // forall<T> {
+            //     WF(foo<T>) :- WF(T: Eq).
+            // }
+            builder.push_clause(
+                WellFormed::Ty(self_ty.clone()),
+                where_clauses
+                    .iter()
+                    .cloned()
+                    .map(|qwc| qwc.into_well_formed_goal(interner)),
+            );
+
+            // forall<T> {
+            //     IsFullyVisible(foo<T>) :- IsFullyVisible(T).
+            // }
+            builder.push_clause(
+                DomainGoal::IsFullyVisible(self_ty.clone()),
+                self_appl_ty
+                    .type_parameters(interner)
+                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>(interner)),
+            );
+
+            for qwc in where_clauses {
+                // Generate implied bounds rules. We have to push the binders from the where-clauses
+                // too -- e.g., if we had `fn foo<T: for<'a> Bar<&'a i32>>()`, we would
+                // create a reverse rule like:
+                //
+                // ```notrust
+                // forall<T, 'a> { FromEnv(T: Bar<&'a i32>) :- FromEnv(foo<T>) }
+                // ```
+                //
+                // In other words, you can assume `T: Bar<&'a i32>`
+                // for any `'a` *if* you are assuming that `foo<T>` is
+                // well formed.
+                builder.push_binders(&qwc, |builder, wc| {
+                    builder.push_clause(
+                        wc.into_from_env_goal(interner),
+                        Some(self_ty.clone().from_env()),
+                    );
+                });
+            }
+        });
+    }
+}
+
 impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
     /// Given the following trait declaration: `trait Ord<T> where Self: Eq<T> { ... }`, generate:
     ///
