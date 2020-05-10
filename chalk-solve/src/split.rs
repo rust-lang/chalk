@@ -29,10 +29,8 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         } = *projection;
         let parameters = substitution.parameters(interner);
         let associated_ty_data = &self.associated_ty_data(associated_ty_id);
-        let trait_datum = &self.trait_datum(associated_ty_data.trait_id);
-        let trait_num_params = trait_datum.binders.len(interner);
-        let split_point = parameters.len() - trait_num_params;
-        let (other_params, trait_params) = parameters.split_at(split_point);
+        let (trait_params, other_params) =
+            self.split_associated_ty_parameters(parameters, &**associated_ty_data);
         (associated_ty_data.clone(), trait_params, other_params)
     }
 
