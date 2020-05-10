@@ -3,13 +3,13 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, GenericArg, Goal, Goals,
-    ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, FnDefId, GenericArg,
+    Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
     ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType,
-    OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
+    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -25,6 +25,10 @@ pub struct Program {
     /// For each ADT:
     pub adt_kinds: BTreeMap<AdtId<ChalkIr>, TypeKind>,
 
+    pub fn_def_ids: BTreeMap<Identifier, FnDefId<ChalkIr>>,
+
+    pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
+
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
 
@@ -33,6 +37,8 @@ pub struct Program {
 
     /// For each ADT:
     pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
+
+    pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -332,6 +338,10 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         self.adt_data[&id].clone()
+    }
+
+    fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
+        self.fn_def_data[&id].clone()
     }
 
     fn impls_for_trait(

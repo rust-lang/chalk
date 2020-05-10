@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, GenericArg, ImplId, OpaqueTyId,
-    ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef, Ty, TyData,
-    TypeName, VariableKind, WhereClause, WithKind,
+    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -102,6 +102,23 @@ pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FnDefDatum<I: Interner> {
+    pub id: FnDefId<I>,
+    pub binders: Binders<FnDefDatumBound<I>>,
+    pub flags: FnDefFlags,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+pub struct FnDefDatumBound<I: Interner> {
+    pub argument_types: Vec<Ty<I>>,
+    pub return_type: Ty<I>,
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct FnDefFlags {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// A rust intermediate representation (rust_ir) of a Trait Definition. For

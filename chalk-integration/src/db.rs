@@ -10,6 +10,7 @@ use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
 use chalk_ir::Environment;
+use chalk_ir::FnDefId;
 use chalk_ir::GenericArg;
 use chalk_ir::Goal;
 use chalk_ir::ImplId;
@@ -22,6 +23,7 @@ use chalk_rust_ir::AdtDatum;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
+use chalk_rust_ir::FnDefDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::OpaqueTyDatum;
 use chalk_rust_ir::TraitDatum;
@@ -112,6 +114,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         self.program_ir().unwrap().adt_datum(id)
+    }
+
+    fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
+        self.program_ir().unwrap().fn_def_datum(id)
     }
 
     fn impls_for_trait(
