@@ -2,7 +2,7 @@ use crate::interner::ChalkIr;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId,
+    self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
     QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
 };
 use chalk_parse::ast::*;
@@ -19,9 +19,11 @@ use crate::program::Program as LoweredProgram;
 use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
 type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
+type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
 type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
+type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
@@ -36,6 +38,8 @@ pub type LowerResult<T> = Result<T, RustIrError>;
 struct Env<'k> {
     adt_ids: &'k AdtIds,
     adt_kinds: &'k AdtKinds,
+    fn_def_ids: &'k FnDefIds,
+    fn_def_kinds: &'k FnDefKinds,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
@@ -73,6 +77,7 @@ struct AssociatedTyLookup {
 enum TypeLookup {
     Adt(chalk_ir::AdtId<ChalkIr>),
     GenericArg(BoundVar),
+    FnDef(chalk_ir::FnDefId<ChalkIr>),
     Opaque(chalk_ir::OpaqueTyId<ChalkIr>),
 }
 
@@ -94,6 +99,10 @@ impl<'k> Env<'k> {
 
         if let Some(id) = self.adt_ids.get(&name.str) {
             return Ok(TypeLookup::Adt(*id));
+        }
+
+        if let Some(id) = self.fn_def_ids.get(&name.str) {
+            return Ok(TypeLookup::FnDef(*id));
         }
 
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {
@@ -138,6 +147,10 @@ impl<'k> Env<'k> {
 
     fn adt_kind(&self, id: chalk_ir::AdtId<ChalkIr>) -> &TypeKind {
         &self.adt_kinds[&id]
+    }
+
+    fn fn_def_kind(&self, id: chalk_ir::FnDefId<ChalkIr>) -> &TypeKind {
+        &self.fn_def_kinds[&id]
     }
 
     fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
@@ -240,9 +253,11 @@ impl LowerProgram for Program {
         }
 
         let mut adt_ids = BTreeMap::new();
+        let mut fn_def_ids = BTreeMap::new();
         let mut trait_ids = BTreeMap::new();
         let mut opaque_ty_ids = BTreeMap::new();
         let mut adt_kinds = BTreeMap::new();
+        let mut fn_def_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
         let mut object_safe_traits = HashSet::new();
@@ -253,6 +268,12 @@ impl LowerProgram for Program {
                     let id = AdtId(raw_id);
                     adt_ids.insert(type_kind.name.clone(), id);
                     adt_kinds.insert(id, type_kind);
+                }
+                Item::FnDefn(defn) => {
+                    let type_kind = defn.lower_type_kind()?;
+                    let id = FnDefId(raw_id);
+                    fn_def_ids.insert(type_kind.name.clone(), id);
+                    fn_def_kinds.insert(id, type_kind);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -276,6 +297,7 @@ impl LowerProgram for Program {
         }
 
         let mut adt_data = BTreeMap::new();
+        let mut fn_def_data = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
@@ -287,6 +309,8 @@ impl LowerProgram for Program {
             let empty_env = Env {
                 adt_ids: &adt_ids,
                 adt_kinds: &adt_kinds,
+                fn_def_ids: &fn_def_ids,
+                fn_def_kinds: &fn_def_kinds,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
@@ -298,6 +322,13 @@ impl LowerProgram for Program {
                 Item::StructDefn(ref d) => {
                     let adt_id = AdtId(raw_id);
                     adt_data.insert(adt_id, Arc::new(d.lower_adt(adt_id, &empty_env)?));
+                }
+                Item::FnDefn(ref defn) => {
+                    let fn_def_id = FnDefId(raw_id);
+                    fn_def_data.insert(
+                        fn_def_id,
+                        Arc::new(defn.lower_fn_def(fn_def_id, &empty_env)?),
+                    );
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
@@ -454,10 +485,13 @@ impl LowerProgram for Program {
 
         let program = LoweredProgram {
             adt_ids,
+            fn_def_ids,
             trait_ids,
             adt_kinds,
+            fn_def_kinds,
             trait_kinds,
             adt_data,
+            fn_def_data,
             trait_data,
             well_known_traits,
             impl_data,
@@ -529,6 +563,16 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for StructDefn {
+    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+        None
+    }
+
+    fn declared_parameters(&self) -> &[VariableKind] {
+        &self.variable_kinds
+    }
+}
+
+impl LowerParameterMap for FnDefn {
     fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
         None
     }
@@ -628,6 +672,26 @@ impl LowerTypeKind for StructDefn {
                 crate::Unit,
             ),
         })
+    }
+}
+
+impl LowerTypeKind for FnDefn {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        let interner = &ChalkIr;
+        Ok(TypeKind {
+            sort: TypeSort::FnDef,
+            name: self.name.str.clone(),
+            binders: chalk_ir::Binders::new(
+                chalk_ir::VariableKinds::from(interner, self.all_parameters().anonymize()),
+                crate::Unit,
+            ),
+        })
+    }
+}
+
+impl LowerWhereClauses for FnDefn {
+    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
+        &self.where_clauses
     }
 }
 
@@ -844,6 +908,42 @@ impl LowerAdtDefn for StructDefn {
 
         Ok(rust_ir::AdtDatum {
             id: adt_id,
+            binders,
+            flags,
+        })
+    }
+}
+
+trait LowerFnDefn {
+    fn lower_fn_def(
+        &self,
+        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
+        env: &Env,
+    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>>;
+}
+
+impl LowerFnDefn for FnDefn {
+    fn lower_fn_def(
+        &self,
+        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
+        env: &Env,
+    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
+        let binders = env.in_binders(self.all_parameters(), |env| {
+            let args: LowerResult<_> = self.argument_types.iter().map(|t| t.lower(env)).collect();
+            let where_clauses = self.lower_where_clauses(env)?;
+            let return_type = self.return_type.lower(env)?;
+
+            Ok(rust_ir::FnDefDatumBound {
+                argument_types: args?,
+                where_clauses,
+                return_type,
+            })
+        })?;
+
+        let flags = rust_ir::FnDefFlags {};
+
+        Ok(rust_ir::FnDefDatum {
+            id: fn_def_id,
             binders,
             flags,
         })
@@ -1121,6 +1221,22 @@ impl LowerTy for Ty {
                     }
                 }
                 TypeLookup::GenericArg(d) => Ok(chalk_ir::TyData::BoundVar(d).intern(interner)),
+                TypeLookup::FnDef(id) => {
+                    let k = env.fn_def_kind(id);
+                    if k.binders.len(interner) > 0 {
+                        Err(RustIrError::IncorrectNumberOfTypeParameters {
+                            identifier: name.clone(),
+                            expected: k.binders.len(interner),
+                            actual: 0,
+                        })
+                    } else {
+                        Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
+                            num_binders: k.binders.len(interner),
+                            substitution: chalk_ir::Substitution::empty(interner),
+                        })
+                        .intern(interner))
+                    }
+                }
                 TypeLookup::Opaque(id) => Ok(chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(
                     chalk_ir::OpaqueTy {
                         opaque_ty_id: id,
@@ -1157,14 +1273,14 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Apply { name, ref args } => {
-                let id = match env.lookup_type(name)? {
-                    TypeLookup::Adt(id) => id,
+                let (id, k) = match env.lookup_type(name)? {
+                    TypeLookup::Adt(id) => (id.0, env.adt_kind(id)),
                     TypeLookup::GenericArg(_) | TypeLookup::Opaque(_) => {
                         Err(RustIrError::CannotApplyTypeParameter(name.clone()))?
                     }
+                    TypeLookup::FnDef(id) => (id.0, env.fn_def_kind(id)),
                 };
 
-                let k = env.adt_kind(id);
                 if k.binders.len(interner) != args.len() {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name.clone(),
@@ -1188,11 +1304,18 @@ impl LowerTy for Ty {
                     }
                 }
 
-                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Adt(id),
-                    substitution,
-                })
-                .intern(interner))
+                match k.sort {
+                    TypeSort::FnDef => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                        name: chalk_ir::TypeName::FnDef(FnDefId(id)),
+                        substitution,
+                    })
+                    .intern(interner)),
+                    _ => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                        name: chalk_ir::TypeName::Adt(AdtId(id)),
+                        substitution,
+                    })
+                    .intern(interner)),
+                }
             }
 
             Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Alias(
@@ -1485,9 +1608,11 @@ impl LowerGoal<LoweredProgram> for Goal {
 
         let env = Env {
             adt_ids: &program.adt_ids,
+            fn_def_ids: &program.fn_def_ids,
             trait_ids: &program.trait_ids,
             opaque_ty_ids: &program.opaque_ty_ids,
             adt_kinds: &program.adt_kinds,
+            fn_def_kinds: &program.fn_def_kinds,
             trait_kinds: &program.trait_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),

@@ -22,6 +22,7 @@ pub use interner::{Identifier, RawId};
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeSort {
     Struct,
+    FnDef,
     Trait,
     Opaque,
 }
