@@ -957,6 +957,41 @@ mod test {
     }
 
     #[test]
+    fn test_tuples() {
+        reparse_test(
+            "
+            struct Fuu {
+                fuu_field: ()
+            }
+            ",
+        );
+        reparse_test(
+            "
+            struct Uff {
+                fuu_field: (Iff,),
+                iff2_field: (Iff, Iff, Iff)
+            }
+            struct Iff { }
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo<T> {
+                field: (u32,*const T,T),
+                field2: (T,),
+                field3: (T)
+            }
+            trait Bar {
+                type Baz;
+            }
+            impl<T> Bar for Foo<T> {
+                type Baz = (T,Foo<T>,u32);
+            }
+            ",
+        );
+    }
+
+    #[test]
     fn test_trait_impl_associated_type() {
         reparse_test(
             "

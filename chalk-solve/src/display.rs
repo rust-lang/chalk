@@ -466,7 +466,23 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                 )?;
             }
             TypeName::Scalar(scalar) => write!(f, "{}", scalar.display(s))?,
-            TypeName::Tuple(_) => todo!("scalar types"),
+            TypeName::Tuple(arity) => {
+                write!(
+                    f,
+                    "({}{})",
+                    self.substitution
+                        .parameters(interner)
+                        .iter()
+                        .map(|p| p.display(s))
+                        .format(", "),
+                    if arity == 1 {
+                        // need trailing single comma
+                        ","
+                    } else {
+                        ""
+                    }
+                )?
+            }
             TypeName::OpaqueType(_) => todo!("opaque type usage"),
             TypeName::Raw(raw) => {
                 let mutability = match raw {
