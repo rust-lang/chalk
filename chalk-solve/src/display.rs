@@ -7,8 +7,8 @@ use std::{
 
 use chalk_ir::{
     interner::Interner, AliasEq, AliasTy, ApplicationTy, AssocTypeId, BoundVar, Fn as ChalkFn,
-    Lifetime, LifetimeData, Parameter, ParameterData, ParameterKind, ParameterKinds,
-    QuantifiedWhereClause, StructId, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    Lifetime, LifetimeData, Mutability, Parameter, ParameterData, ParameterKind, ParameterKinds,
+    QuantifiedWhereClause, Scalar, StructId, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use chalk_rust_ir::{
     AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, Polarity,
@@ -428,13 +428,58 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     ","
                 )?;
             }
-            TypeName::Scalar(_) => todo!("scalar types"),
+            TypeName::Scalar(scalar) => write!(f, "{}", scalar.display(s))?,
             TypeName::Tuple(_) => todo!("scalar types"),
             TypeName::OpaqueType(_) => todo!("opaque type usage"),
-            TypeName::Raw(_) => write!(f, "raw ptr type")?,
+            TypeName::Raw(raw) => {
+                let mutability = match raw {
+                    Mutability::Mut => "*mut ",
+                    Mutability::Not => "*const ",
+                };
+                write!(
+                    f,
+                    "{}{}",
+                    mutability,
+                    self.first_type_parameter(interner).unwrap().display(s)
+                )?
+            }
             TypeName::Error => write!(f, "{{error}}")?,
         }
         Ok(())
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for Scalar {
+    fn fmt(&self, _s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        use chalk_ir::{FloatTy::*, IntTy::*, UintTy::*};
+        write!(
+            f,
+            "{}",
+            match self {
+                Scalar::Bool => "bool",
+                Scalar::Char => "char",
+                Scalar::Int(int) => match int {
+                    Isize => "isize",
+                    I8 => "i8",
+                    I16 => "i16",
+                    I32 => "i32",
+                    I64 => "i64",
+                    I128 => "i128",
+                },
+                Scalar::Uint(uint) => match uint {
+                    Usize => "usize",
+                    U8 => "u8",
+                    U16 => "u16",
+                    U32 => "u32",
+                    U64 => "u64",
+                    U128 => "u128",
+                },
+                Scalar::Float(float) => match float {
+                    F32 => "f32",
+                    F64 => "f64",
+                },
+            }
+        )
     }
 }
 
