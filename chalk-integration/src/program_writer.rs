@@ -21,7 +21,6 @@ mod test {
         }
         for datum in program.opaque_ty_data.values() {
             display::write_top_level(&mut out, program, &**datum).unwrap();
-            //display::write_top_level(&mut out, program, &**datum).unwrap();
         }
         out
     }

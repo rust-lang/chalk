@@ -143,7 +143,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
         let (_impl_display, assoc_ty_value_display) =
             s.db.split_associated_ty_value_parameters(&display_params, self);
 
-        write!(f, "type {}", assoc_ty_data.id.display(s))?;
+        write!(f, "{}type {}", s.indent(), assoc_ty_data.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", &assoc_ty_value_display, ", ")?;
         write!(f, " = {};", value.ty.display(s))?;
         Ok(())
@@ -175,13 +175,6 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             trait_ref.trait_id,
             &trait_ref.substitution.parameters(interner)[1..],
         );
-
-        let assoc_ty_values = self.associated_ty_value_ids.iter().map(|assoc_ty_value| {
-            s.db.associated_ty_value(*assoc_ty_value)
-                .display(s)
-                .to_string()
-        });
-
         write!(f, "impl")?;
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
         write!(
@@ -191,12 +184,20 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             full_trait_name,
             trait_ref.self_type_parameter(interner).display(s)
         )?;
-
         if !value.where_clauses.is_empty() {
-            write!(f, "where {} ", value.where_clauses.display(s))?;
+            let s = &s.add_indent();
+            write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
         }
         write!(f, "{{")?;
-        write_joined_non_empty_list!(f, "\n{}\n", assoc_ty_values, "\n")?;
+        {
+            let s = &s.add_indent();
+            let assoc_ty_values = self.associated_ty_value_ids.iter().map(|assoc_ty_value| {
+                s.db.associated_ty_value(*assoc_ty_value)
+                    .display(s)
+                    .to_string()
+            });
+            write_joined_non_empty_list!(f, "\n{}\n", assoc_ty_values, "\n")?;
+        }
         write!(f, "}}")?;
         Ok(())
     }
@@ -813,7 +814,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
         write!(f, " ")?;
         if !value.where_clauses.is_empty() {
-            write!(f, "where {} ", value.where_clauses.display(s))?;
+            write!(f, "\nwhere {}\n", value.where_clauses.display(s))?;
         }
         write!(f, "{{")?;
         let s = &s.add_indent();
@@ -838,15 +839,11 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
         let s = &s.add_debrujin_index(None);
         let value = self.binders.skip_binders();
         write!(f, "struct {}", self.id.display(s),)?;
-        write_joined_non_empty_list!(
-            f,
-            "<{}> ",
-            s.binder_var_display(&self.binders.binders),
-            ", "
-        )?;
+        write_joined_non_empty_list!(f, "<{}>", s.binder_var_display(&self.binders.binders), ", ")?;
         write!(f, " ")?;
         if !value.where_clauses.is_empty() {
-            write!(f, "where {} ", value.where_clauses.display(s))?;
+            let s = &s.add_indent();
+            write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
         }
         write!(f, "{{")?;
         let s = &s.add_indent();
