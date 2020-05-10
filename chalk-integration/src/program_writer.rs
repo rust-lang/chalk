@@ -19,8 +19,8 @@ mod test {
         for datum in program.impl_data.values() {
             display::write_top_level(&mut out, program, &**datum).unwrap();
         }
-        for _datum in program.opaque_ty_data.values() {
-            todo!("opaque type display");
+        for datum in program.opaque_ty_data.values() {
+            display::write_top_level(&mut out, program, &**datum).unwrap();
             //display::write_top_level(&mut out, program, &**datum).unwrap();
         }
         out
@@ -628,6 +628,15 @@ mod test {
             ",
         );
         assert!(!in_impl.output_text.contains("Self"));
+        let in_opaque = reparse_test(
+            "
+            struct Foo<T> {}
+            trait Que<T> {}
+            impl<T> Que<T> for Foo<T> {}
+            opaque type Bar<T>: Que<T> = Foo<T>;
+        ",
+        );
+        assert!(!in_opaque.output_text.contains("Self"));
     }
 
     #[test]
@@ -1029,6 +1038,121 @@ mod test {
                 type Assoc2<B> = Floo<U, B>;
                 type Assoc3<C, D> = Floo<Floo<T, D>, Floo<U, C>>;
             }
+            ",
+        );
+    }
+    #[test]
+    fn opaque_types() {
+        reparse_test(
+            "
+            struct Bar {}
+            trait Buz {}
+            trait Baz {
+                type Hi;
+            }
+            impl Buz for Bar {}
+            impl Baz for Foo {
+                type Hi = Foo;
+            }
+            opaque type Foo: Buz = Bar;
+            ",
+        );
+    }
+
+    #[test]
+    fn test_generic_opaque_types() {
+        reparse_test(
+            "
+            struct Foo {}
+            trait Bar<T> {}
+            opaque type Baz<T>: Bar<T> = Foo;
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo<T> {}
+            struct Unit {}
+            trait Bar<T, U> {}
+            opaque type Boz<U>: Bar<Unit, U> = Foo<U>;
+            ",
+        );
+    }
+
+    #[test]
+    fn test_opaque_type_as_type_value() {
+        reparse_test(
+            "
+            struct Foo {}
+            trait Bar {}
+            trait Fuzz {
+                type Assoc: Bar;
+            }
+            impl Bar for Foo {}
+            impl Fuzz for Foo {
+                type Assoc = Bax;
+            }
+            opaque type Bax: Bar = Foo;
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo {}
+            trait Bar<T> {}
+            trait Faz {
+                type Assoc;
+            }
+            impl Faz for Foo {
+                type Assoc = fn(Baz);
+            }
+            opaque type Baz: Bar<Foo> = Foo;
+            ",
+        );
+    }
+
+    // Generic opaque types can't currently be used as types (these fail to lower)
+    #[ignore]
+    #[test]
+    fn test_generic_opaque_type_as_value1() {
+        reparse_test(
+            "
+            struct Foo {}
+            trait Bar<T> {}
+            trait Fizz {
+                type Assoc: Bar<Foo>;
+            }
+            impl<T> Bar<T> for Foo {}
+            impl Fizz for Foo {
+                type Assoc = Baz<Foo>;
+            }
+            opaque type Baz<T>: Bar<T> = Foo;
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo {}
+            trait Bar<T> {}
+            trait Faz {
+                type Assoc;
+            }
+            impl Faz for Foo {
+                type Assoc = fn(Baz<Foo>);
+            }
+            opaque type Baz<T>: Bar<T> = Foo;
+            ",
+        );
+        reparse_test(
+            "
+            struct Foo<T> {}
+            struct Unit {}
+            trait Bar<T, U> {}
+            trait Fez {
+                type Assoc;
+            }
+            impl Fez for Foo {
+                type Assoc = fn(Biiiz<Unit>);
+            }
+            impl<T, U> Bar<T, U> for Foo {}
+            opaque type Biiiz<U>: Bar<Unit, U> = Foo<U>;
             ",
         );
     }

@@ -7,12 +7,13 @@ use std::{
 
 use chalk_ir::{
     interner::Interner, AliasEq, AliasTy, ApplicationTy, AssocTypeId, BoundVar, Fn as ChalkFn,
-    Lifetime, LifetimeData, Mutability, Parameter, ParameterData, ParameterKind, ParameterKinds,
-    QuantifiedWhereClause, Scalar, StructId, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    Lifetime, LifetimeData, Mutability, OpaqueTy, OpaqueTyId, Parameter, ParameterData,
+    ParameterKind, ParameterKinds, ProjectionTy, QuantifiedWhereClause, Scalar, StructId, TraitId,
+    TraitRef, Ty, TyData, TypeName, WhereClause,
 };
 use chalk_rust_ir::{
-    AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, Polarity,
-    QuantifiedInlineBound, StructDatum, TraitBound, TraitDatum,
+    AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, OpaqueTyDatum,
+    Polarity, QuantifiedInlineBound, StructDatum, TraitBound, TraitDatum,
 };
 use itertools::Itertools;
 
@@ -53,9 +54,8 @@ where
                 write_top_level(f, db, &*v)?;
             }
             RecordedItemId::OpaqueTy(id) => {
-                let _v = db.opaque_ty_data(id);
-                todo!("opaque ty display")
-                // write_top_level(f, db, v)?;
+                let v = db.opaque_ty_data(id);
+                write_top_level(f, db, &*v)?;
             }
         }
     }
@@ -268,6 +268,68 @@ impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
         f.write_str(&s.db.assoc_type_name(*self))
     }
 }
+impl<I: Interner> RenderAsRust<I> for OpaqueTyId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        f.write_str(&s.db.opaque_type_name(*self))
+    }
+}
+
+fn display_self_where_clauses_as_bounds<'a, I: Interner>(
+    s: &'a WriterState<'a, I>,
+    bounds: &'a [QuantifiedWhereClause<I>],
+) -> impl Display + 'a {
+    as_display(move |f| {
+        let interner = s.db.interner();
+        write!(
+            f,
+            "{}",
+            bounds
+                .iter()
+                .map(|bound| {
+                    as_display(|f| {
+                        // each individual trait can have a forall
+                        let s = &s.add_debrujin_index(None);
+                        if !bound.binders.is_empty(interner) {
+                            write!(
+                                f,
+                                "forall<{}> ",
+                                s.binder_var_display(&bound.binders)
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
+                            )?;
+                        }
+                        match &bound.skip_binders() {
+                            WhereClause::Implemented(trait_ref) => display_trait_with_generics(
+                                s,
+                                trait_ref.trait_id,
+                                &trait_ref.substitution.parameters(interner)[1..],
+                            )
+                            .fmt(f),
+                            WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
+                                AliasTy::Projection(projection_ty) => {
+                                    let (assoc_ty_datum, trait_params, assoc_type_params) =
+                                        s.db.split_projection(&projection_ty);
+                                    display_trait_with_assoc_ty_value(
+                                        s,
+                                        assoc_ty_datum,
+                                        &trait_params[1..],
+                                        assoc_type_params,
+                                        &alias_eq.ty,
+                                    )
+                                    .fmt(f)
+                                }
+                                AliasTy::Opaque(_opaque) => todo!("opaque type AliasTy"),
+                            },
+                        }
+                    })
+                    .to_string()
+                })
+                .collect::<Vec<_>>()
+                .join(" + ")
+        )
+    })
+}
 
 impl<I: Interner> RenderAsRust<I> for TyData<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
@@ -275,59 +337,14 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
         match self {
             TyData::Dyn(dyn_ty) => {
                 let s = &s.add_debrujin_index(None);
-                let bounds = dyn_ty.bounds.skip_binders();
-                write!(f, "dyn ")?;
                 // dyn_ty.bounds.binders creates a Self binding for the trait
+                let bounds = dyn_ty.bounds.skip_binders();
                 write!(
                     f,
-                    "{}",
-                    bounds
-                        .iter(interner)
-                        .map(|bound| {
-                            as_display(|f| {
-                                // each individual trait within the 'dyn' can have a
-                                // forall clause.
-                                let s = &s.add_debrujin_index(None);
-                                if !bound.binders.is_empty(interner) {
-                                    write!(
-                                        f,
-                                        "forall<{}> ",
-                                        s.binder_var_display(&bound.binders)
-                                            .collect::<Vec<_>>()
-                                            .join(", ")
-                                    )?;
-                                }
-                                match &bound.skip_binders() {
-                                    WhereClause::Implemented(trait_ref) => {
-                                        display_trait_with_generics(
-                                            s,
-                                            trait_ref.trait_id,
-                                            &trait_ref.substitution.parameters(interner)[1..],
-                                        )
-                                        .fmt(f)
-                                    }
-                                    WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
-                                        AliasTy::Projection(projection_ty) => {
-                                            let (assoc_ty_datum, trait_params, assoc_type_params) =
-                                                s.db.split_projection(&projection_ty);
-                                            display_trait_with_assoc_ty_value(
-                                                s,
-                                                assoc_ty_datum,
-                                                &trait_params[1..],
-                                                assoc_type_params,
-                                                &alias_eq.ty,
-                                            )
-                                            .fmt(f)
-                                        }
-                                        AliasTy::Opaque(_opaque) => todo!("todo impl Trait"),
-                                    },
-                                }
-                            })
-                            .to_string()
-                        })
-                        .collect::<Vec<_>>()
-                        .join(" + ")
-                )
+                    "dyn {}",
+                    display_self_where_clauses_as_bounds(s, bounds.as_slice(interner))
+                )?;
+                Ok(())
             }
             TyData::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
             TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
@@ -341,32 +358,50 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
 
 impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        match self {
+            AliasTy::Projection(projection_ty) => projection_ty.fmt(s, f),
+            AliasTy::Opaque(opaque_ty) => opaque_ty.fmt(s, f),
+        }
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // <X as Y<A1, A2, A3>>::Z<B1, B2, B3>
 
         // Now, we split out A*, Y/Z and B*:
         // trait_params is X, A1, A2, A3,
         // assoc_type_params is B1, B2, B3,
         // assoc_ty_datum stores info about Y and Z.
-        match self {
-            AliasTy::Projection(projection_ty) => {
-                let (assoc_ty_datum, trait_params, assoc_type_params) =
-                    s.db.split_projection(&projection_ty);
-                write!(
-                    f,
-                    "<{} as {}>::{}",
-                    trait_params[0].display(s),
-                    display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
-                    assoc_ty_datum.id.display(s),
-                )?;
-                write_joined_non_empty_list!(
-                    f,
-                    "<{}>",
-                    assoc_type_params.iter().map(|param| param.display(s)),
-                    ", "
-                )
-            }
-            AliasTy::Opaque(_) => todo!("opaque types"),
-        }
+        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db.split_projection(&self);
+        write!(
+            f,
+            "<{} as {}>::{}",
+            trait_params[0].display(s),
+            display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
+            assoc_ty_datum.id.display(s),
+        )?;
+        write_joined_non_empty_list!(
+            f,
+            "<{}>",
+            assoc_type_params.iter().map(|param| param.display(s)),
+            ", "
+        )?;
+        Ok(())
+    }
+}
+impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db.interner();
+        write!(
+            f,
+            "{}",
+            display_trait_with_generics(
+                s,
+                self.opaque_ty_id,
+                self.substitution.parameters(interner),
+            )
+        )
     }
 }
 
@@ -569,14 +604,14 @@ impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
 /// This is shared between where bounds & dyn Trait.
 fn display_trait_with_generics<'a, I: Interner>(
     s: &'a WriterState<'a, I>,
-    trait_id: TraitId<I>,
+    trait_name: impl RenderAsRust<I> + 'a,
     trait_params: impl IntoIterator<Item = &'a Parameter<I>> + 'a,
 ) -> impl Display + 'a {
     use std::fmt::Write;
     let trait_params = trait_params.into_iter().map(|param| param.display(s));
     let mut trait_params_str = String::new();
     write_joined_non_empty_list!(trait_params_str, "<{}>", trait_params, ", ").unwrap();
-    as_display(move |f| write!(f, "{}{}", trait_id.display(s), trait_params_str))
+    as_display(move |f| write!(f, "{}{}", trait_name.display(s), trait_params_str))
 }
 
 /// This implementation correct inside where clauses.
@@ -808,6 +843,26 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
             ",\n"
         )?;
         write!(f, "}}")?;
+        Ok(())
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for OpaqueTyDatum<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        let s = &s.add_debrujin_index(None);
+        let bounds = self.bound.skip_binders();
+        write!(f, "opaque type {}", self.opaque_ty_id.display(s))?;
+        write_joined_non_empty_list!(f, "<{}>", s.binder_var_display(&self.bound.binders), ", ")?;
+        {
+            let s = &s.add_debrujin_index(Some(0));
+            let clauses = bounds.bounds.skip_binders();
+            write!(
+                f,
+                ": {} = ",
+                display_self_where_clauses_as_bounds(s, clauses)
+            )?;
+        }
+        write!(f, "{};", bounds.hidden_ty.display(s))?;
         Ok(())
     }
 }

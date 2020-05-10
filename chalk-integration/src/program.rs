@@ -484,4 +484,12 @@ impl RustIrDatabase<ChalkIr> for Program {
             .name
             .to_string()
     }
+
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
+        self.opaque_ty_kinds
+            .get(&opaque_ty_id)
+            .unwrap()
+            .name
+            .to_string()
+    }
 }

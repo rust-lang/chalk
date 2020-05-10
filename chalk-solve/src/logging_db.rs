@@ -149,8 +149,11 @@ where
     fn struct_name(&self, struct_id: StructId<I>) -> String {
         self.db.struct_name(struct_id)
     }
-    fn assoc_type_name(&self, ident: AssocTypeId<I>) -> String {
-        self.db.assoc_type_name(ident)
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
+        self.db.assoc_type_name(assoc_ty_id)
+    }
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
+        self.db.opaque_type_name(opaque_ty_id)
     }
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.record(trait_id);
@@ -278,6 +281,9 @@ where
     fn interner(&self) -> &I {
         self.db.interner()
     }
+    fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
+        self.db.is_object_safe(trait_id)
+    }
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
         self.db.trait_name(trait_id)
     }
@@ -287,9 +293,8 @@ where
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
         self.db.assoc_type_name(assoc_ty_id)
     }
-
-    fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
-        self.db.is_object_safe(trait_id)
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
+        self.db.opaque_type_name(opaque_ty_id)
     }
 }
 
