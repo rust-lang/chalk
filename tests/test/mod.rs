@@ -8,6 +8,8 @@ use chalk_solve::ext::*;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
 
+use crate::test_util::assert_same;
+
 #[cfg(feature = "bench")]
 mod bench;
 mod coherence;
@@ -30,15 +32,6 @@ fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str) {
     };
 
     assert_same(&result, expected);
-}
-
-fn assert_same(result: &str, expected: &str) {
-    println!("expected:\n{}", expected);
-    println!("actual:\n{}", result);
-
-    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
 // different goals
