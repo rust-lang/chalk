@@ -182,6 +182,38 @@ fn dyn_super_trait_cycle() {
 }
 
 #[test]
+fn dyn_super_trait_not_a_cycle() {
+    test! {
+        program {
+            trait Thing<T> {}
+            trait Foo where Self: Thing<B> {}
+            trait Bar where Self: Foo, Self: Thing<A> {}
+
+            struct A {}
+            struct B {}
+        }
+
+        goal {
+            dyn Bar: Foo
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            dyn Bar: Thing<A>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            dyn Bar: Thing<B>
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
 fn dyn_super_trait_higher_ranked() {
     test! {
         program {

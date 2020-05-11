@@ -133,6 +133,10 @@ pub fn super_traits<I: Interner>(
     ) {
         let interner = db.interner();
         let trait_id = trait_ref.skip_binders().trait_id;
+        // Avoid cycles
+        if !seen_traits.insert(trait_id) {
+            return;
+        }
         trait_refs.push(trait_ref.clone());
         let trait_datum = db.trait_datum(trait_id);
         let super_trait_refs = trait_datum
@@ -153,10 +157,6 @@ pub fn super_traits<I: Interner>(
                                 {
                                     return None;
                                 }
-                                // Avoid cycles
-                                if !seen_traits.insert(tr.trait_id) {
-                                    return None;
-                                }
                                 Some(tr.clone())
                             }
                             WhereClause::AliasEq(_) => None,
@@ -175,6 +175,7 @@ pub fn super_traits<I: Interner>(
             let q_super_trait_ref = actual_binders.fuse_binders(interner);
             go(db, q_super_trait_ref, seen_traits, trait_refs);
         }
+        seen_traits.remove(&trait_id);
     }
 
     Binders::new(trait_datum.binders.binders.clone(), trait_refs)
