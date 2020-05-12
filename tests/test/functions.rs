@@ -59,6 +59,26 @@ fn fn_defs() {
             "Unique"
         }
 
+    }
+}
 
+#[test]
+fn fn_def_implied_bounds_from_env() {
+    test! {
+        program {
+            trait Foo { }
+
+            struct Bar { }
+            impl Foo for Bar { }
+
+            fn baz<T>() where T: Foo;
+        }
+        goal {
+            if (FromEnv(baz<Bar>)) {
+                Bar: Foo
+            }
+        } yields {
+            "Unique"
+        }
     }
 }
