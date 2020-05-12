@@ -27,7 +27,7 @@ pub(crate) struct InferenceSnapshot<I: Interner> {
 }
 
 #[allow(type_alias_bounds)]
-pub(crate) type ParameterEnaVariable<I: Interner> = ParameterKind<EnaVariable<I>>;
+pub(crate) type ParameterEnaVariable<I: Interner> = WithKind<I, EnaVariable<I>>;
 
 impl<I: Interner> InferenceTable<I> {
     /// Create an empty inference table with no variables.
@@ -129,7 +129,7 @@ impl<I: Interner> InferenceTable<I> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(ref val) => {
-                let ty = val.as_ref(interner).ty().unwrap().clone();
+                let ty = val.assert_ty_ref(interner).clone();
                 assert!(!ty.needs_shift(interner));
                 Some(ty)
             }
@@ -168,7 +168,7 @@ impl<I: Interner> InferenceTable<I> {
     fn probe_ty_var(&mut self, interner: &I, var: EnaVariable<I>) -> Option<Ty<I>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => Some(val.as_ref(interner).ty().unwrap().clone()),
+            InferenceValue::Bound(ref val) => Some(val.assert_ty_ref(interner).clone()),
         }
     }
 
@@ -182,9 +182,7 @@ impl<I: Interner> InferenceTable<I> {
     fn probe_lifetime_var(&mut self, interner: &I, var: EnaVariable<I>) -> Option<Lifetime<I>> {
         match self.unify.probe_value(var) {
             InferenceValue::Unbound(_) => None,
-            InferenceValue::Bound(ref val) => {
-                Some(val.as_ref(interner).lifetime().unwrap().clone())
-            }
+            InferenceValue::Bound(ref val) => Some(val.assert_lifetime_ref(interner).clone()),
         }
     }
 
@@ -209,7 +207,7 @@ impl<I: Interner> InferenceTable<I> {
     ) -> bool {
         for value in subst.as_parameters(interner) {
             match value.data(interner) {
-                ParameterKind::Ty(ty) => {
+                GenericArgData::Ty(ty) => {
                     if let Some(var) = ty.inference_var(interner) {
                         if self.var_is_bound(var) {
                             return false;
@@ -217,7 +215,7 @@ impl<I: Interner> InferenceTable<I> {
                     }
                 }
 
-                ParameterKind::Lifetime(lifetime) => {
+                GenericArgData::Lifetime(lifetime) => {
                     if let Some(var) = lifetime.inference_var(interner) {
                         if self.var_is_bound(var) {
                             return false;
@@ -232,14 +230,17 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 pub(crate) trait ParameterEnaVariableExt<I: Interner> {
-    fn to_parameter(self, interner: &I) -> Parameter<I>;
+    fn to_generic_arg(&self, interner: &I) -> GenericArg<I>;
 }
 
 impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
-    fn to_parameter(self, interner: &I) -> Parameter<I> {
-        match self {
-            ParameterKind::Ty(v) => v.to_ty(interner).cast(interner),
-            ParameterKind::Lifetime(v) => v.to_lifetime(interner).cast(interner),
+    fn to_generic_arg(&self, interner: &I) -> GenericArg<I> {
+        // we are matching on kind, so skipping it is fine
+        let ena_variable = self.skip_kind();
+        match self.kind {
+            VariableKind::Ty => ena_variable.to_ty(interner).cast(interner),
+            VariableKind::Lifetime => ena_variable.to_lifetime(interner).cast(interner),
+            VariableKind::Phantom(..) => unreachable!(),
         }
     }
 }

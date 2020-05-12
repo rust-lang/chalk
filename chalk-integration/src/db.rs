@@ -9,11 +9,11 @@ use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
 use chalk_ir::Environment;
+use chalk_ir::GenericArg;
 use chalk_ir::Goal;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::OpaqueTyId;
-use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
 use chalk_ir::StructId;
 use chalk_ir::TraitId;
@@ -117,11 +117,11 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn impls_for_trait(
         &self,
         trait_id: TraitId<ChalkIr>,
-        parameters: &[Parameter<ChalkIr>],
+        generic_args: &[GenericArg<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
         self.program_ir()
             .unwrap()
-            .impls_for_trait(trait_id, parameters)
+            .impls_for_trait(trait_id, generic_args)
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<ChalkIr>) -> Vec<ImplId<ChalkIr>> {

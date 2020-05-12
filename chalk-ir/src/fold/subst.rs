@@ -3,14 +3,18 @@ use crate::fold::shift::Shift;
 
 pub struct Subst<'s, 'i, I: Interner> {
     /// Values to substitute. A reference to a free variable with
-    /// index `i` will be mapped to `parameter_lists[i]` -- if `i >
-    /// parameter_lists.len()`, then we will leave the variable untouched.
-    parameters: &'s [Parameter<I>],
+    /// index `i` will be mapped to `parameters[i]` -- if `i >
+    /// parameters.len()`, then we will leave the variable untouched.
+    parameters: &'s [GenericArg<I>],
     interner: &'i I,
 }
 
 impl<I: Interner> Subst<'_, '_, I> {
-    pub fn apply<T: Fold<I, I>>(interner: &I, parameters: &[Parameter<I>], value: &T) -> T::Result {
+    pub fn apply<T: Fold<I, I>>(
+        interner: &I,
+        parameters: &[GenericArg<I>],
+        value: &T,
+    ) -> T::Result {
         value
             .fold_with(
                 &mut Subst {
@@ -54,7 +58,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
         // ```
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                ParameterKind::Ty(t) => Ok(t.shifted_in_from(self.interner(), outer_binder)),
+                GenericArgData::Ty(t) => Ok(t.shifted_in_from(self.interner(), outer_binder)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
@@ -75,7 +79,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
 
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                ParameterKind::Lifetime(l) => Ok(l.shifted_in_from(self.interner(), outer_binder)),
+                GenericArgData::Lifetime(l) => Ok(l.shifted_in_from(self.interner(), outer_binder)),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {

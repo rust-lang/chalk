@@ -1,9 +1,9 @@
 use crate::interner::ChalkIr;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds, Goal, Goals,
-    Lifetime, OpaqueTy, OpaqueTyId, Parameter, ParameterKinds, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, StructId,
-    Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds, GenericArg,
+    Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, StructId, Substitution, TraitId, Ty,
+    VariableKinds,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -64,27 +64,27 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_parameter(
+    fn debug_generic_arg(
         &self,
-        parameter: &Parameter<ChalkIr>,
+        generic_arg: &GenericArg<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_parameter_kinds(
+    fn debug_variable_kinds(
         &self,
-        parameter_kinds: &ParameterKinds<ChalkIr>,
+        variable_kinds: &VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_parameter_kinds_with_angles(
+    fn debug_variable_kinds_with_angles(
         &self,
-        parameter_kinds: &ParameterKinds<ChalkIr>,
+        variable_kinds: &VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
     fn debug_canonical_var_kinds(
         &self,
-        parameter_kinds: &CanonicalVarKinds<ChalkIr>,
+        variable_kinds: &CanonicalVarKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

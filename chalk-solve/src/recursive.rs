@@ -372,7 +372,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                     let res = self.solve_via_implication(
                         canonical_goal,
                         &Binders::new(
-                            ParameterKinds::from(self.program.interner(), vec![]),
+                            VariableKinds::from(self.program.interner(), vec![]),
                             implication.clone(),
                         ),
                         minimums,
@@ -473,7 +473,7 @@ fn calculate_inputs<I: Interner>(
     interner: &I,
     domain_goal: &DomainGoal<I>,
     solution: &Solution<I>,
-) -> Vec<Parameter<I>> {
+) -> Vec<GenericArg<I>> {
     if let Some(subst) = solution.constrained_subst() {
         let subst_goal = subst.value.subst.apply(&domain_goal, interner);
         subst_goal.inputs(interner)

@@ -1,7 +1,10 @@
 use crate::AliasTy;
 use crate::ApplicationTy;
 use crate::AssocTypeId;
+use crate::CanonicalVarKind;
 use crate::CanonicalVarKinds;
+use crate::GenericArg;
+use crate::GenericArgData;
 use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
@@ -9,10 +12,6 @@ use crate::Lifetime;
 use crate::LifetimeData;
 use crate::OpaqueTy;
 use crate::OpaqueTyId;
-use crate::Parameter;
-use crate::ParameterData;
-use crate::ParameterKind;
-use crate::ParameterKinds;
 use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
@@ -26,7 +25,8 @@ use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
 use crate::TyData;
-use crate::UniverseIndex;
+use crate::VariableKind;
+use crate::VariableKinds;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
@@ -72,12 +72,12 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// "Interned" representation of a "generic parameter", which can
     /// be either a type or a lifetime.  In normal user code,
-    /// `Self::InternedParameter` is not referenced. Instead, we refer to
-    /// `Parameter<Self>`, which wraps this type.
+    /// `Self::InternedGenericArg` is not referenced. Instead, we refer to
+    /// `GenericArg<Self>`, which wraps this type.
     ///
-    /// An `InternedType` is created by `intern_parameter` and can be
-    /// converted back to its underlying data via `parameter_data`.
-    type InternedParameter: Debug + Clone + Eq + Hash;
+    /// An `InternedType` is created by `intern_generic_arg` and can be
+    /// converted back to its underlying data via `generic_arg_data`.
+    type InternedGenericArg: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "goal".  In normal user code,
     /// `Self::InternedGoal` is not referenced. Instead, we refer to
@@ -127,15 +127,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// and can be converted back to its underlying data via `quantified_where_clauses_data`.
     type InternedQuantifiedWhereClauses: Debug + Clone + Eq + Hash;
 
-    /// "Interned" representation of a list of parameter kind.  
-    /// In normal user code, `Self::InternedParameterKinds` is not referenced.
-    /// Instead, we refer to `ParameterKinds<Self>`, which wraps this type.
+    /// "Interned" representation of a list of variable kinds.  
+    /// In normal user code, `Self::InternedVariableKinds` is not referenced.
+    /// Instead, we refer to `VariableKinds<Self>`, which wraps this type.
     ///
-    /// An `InternedParameterKinds` is created by `intern_parameter_kinds`
-    /// and can be converted back to its underlying data via `parameter_kinds_data`.
-    type InternedParameterKinds: Debug + Clone + Eq + Hash;
+    /// An `InternedVariableKinds` is created by `intern_generic_arg_kinds`
+    /// and can be converted back to its underlying data via `variable_kinds_data`.
+    type InternedVariableKinds: Debug + Clone + Eq + Hash;
 
-    /// "Interned" representation of a list of parameter kind with universe index.  
+    /// "Interned" representation of a list of variable kinds with universe index.  
     /// In normal user code, `Self::InternedCanonicalVarKinds` is not referenced.
     /// Instead, we refer to `CanonicalVarKinds<Self>`, which wraps this type.
     ///
@@ -283,8 +283,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter(
-        parameter: &Parameter<Self>,
+    fn debug_generic_arg(
+        generic_arg: &GenericArg<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -298,8 +298,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter_kinds(
-        parameter_kinds: &ParameterKinds<Self>,
+    fn debug_variable_kinds(
+        variable_kinds: &VariableKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -313,8 +313,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter_kinds_with_angles(
-        parameter_kinds: &ParameterKinds<Self>,
+    fn debug_variable_kinds_with_angles(
+        variable_kinds: &VariableKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -483,12 +483,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `ParameterData::intern` (which will ultimately call this
+    /// `GenericArgData::intern` (which will ultimately call this
     /// method).
-    fn intern_parameter(&self, data: ParameterData<Self>) -> Self::InternedParameter;
+    fn intern_generic_arg(&self, data: GenericArgData<Self>) -> Self::InternedGenericArg;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn parameter_data<'a>(&self, lifetime: &'a Self::InternedParameter) -> &'a ParameterData<Self>;
+    fn generic_arg_data<'a>(
+        &self,
+        lifetime: &'a Self::InternedGenericArg,
+    ) -> &'a GenericArgData<Self>;
 
     /// Create an "interned" goal from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -517,14 +520,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// method).
     fn intern_substitution<E>(
         &self,
-        data: impl IntoIterator<Item = Result<Parameter<Self>, E>>,
+        data: impl IntoIterator<Item = Result<GenericArg<Self>, E>>,
     ) -> Result<Self::InternedSubstitution, E>;
 
     /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
     fn substitution_data<'a>(
         &self,
         substitution: &'a Self::InternedSubstitution,
-    ) -> &'a [Parameter<Self>];
+    ) -> &'a [GenericArg<Self>];
 
     /// Create an "interned" program clause from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -571,46 +574,46 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter kinds from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `ParameterKinds::from` (which will ultimately call this
+    /// `VariableKinds::from` (which will ultimately call this
     /// method).
-    fn intern_parameter_kinds<E>(
+    fn intern_generic_arg_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
-    ) -> Result<Self::InternedParameterKinds, E>;
+        data: impl IntoIterator<Item = Result<VariableKind<Self>, E>>,
+    ) -> Result<Self::InternedVariableKinds, E>;
 
-    /// Lookup the slice of `ParameterKind` that was interned to
-    /// create a `ParameterKinds`.
-    fn parameter_kinds_data<'a>(
+    /// Lookup the slice of `VariableKinds` that was interned to
+    /// create a `VariableKinds`.
+    fn variable_kinds_data<'a>(
         &self,
-        parameter_kinds: &'a Self::InternedParameterKinds,
-    ) -> &'a [ParameterKind<()>];
+        variable_kinds: &'a Self::InternedVariableKinds,
+    ) -> &'a [VariableKind<Self>];
 
-    /// Create an "interned" parameter kinds with universe index from `data`. This is not
+    /// Create "interned" variable kinds with universe index from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `CanonicalVarKinds::from` (which will ultimately call this
     /// method).
     fn intern_canonical_var_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+        data: impl IntoIterator<Item = Result<CanonicalVarKind<Self>, E>>,
     ) -> Result<Self::InternedCanonicalVarKinds, E>;
 
-    /// Lookup the slice of `ParameterKind` that was interned to
-    /// create a `ParameterKinds`.
+    /// Lookup the slice of `CanonicalVariableKind` that was interned to
+    /// create a `CanonicalVariableKinds`.
     fn canonical_var_kinds_data<'a>(
         &self,
         canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
-    ) -> &'a [ParameterKind<UniverseIndex>];
+    ) -> &'a [CanonicalVarKind<Self>];
 }
 
 pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
 
-    fn transfer_parameter_kinds(
-        parameter_kinds: I::InternedParameterKinds,
-    ) -> Self::InternedParameterKinds;
+    fn transfer_variable_kinds(
+        variable_kinds: I::InternedVariableKinds,
+    ) -> Self::InternedVariableKinds;
 
     fn transfer_canonical_var_kinds(
-        parameter_kinds: I::InternedCanonicalVarKinds,
+        variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
 }
 
@@ -619,16 +622,16 @@ impl<I: Interner> TargetInterner<I> for I {
         def_id
     }
 
-    fn transfer_parameter_kinds(
-        parameter_kinds: I::InternedParameterKinds,
-    ) -> Self::InternedParameterKinds {
-        parameter_kinds
+    fn transfer_variable_kinds(
+        variable_kinds: I::InternedVariableKinds,
+    ) -> Self::InternedVariableKinds {
+        variable_kinds
     }
 
     fn transfer_canonical_var_kinds(
-        parameter_kinds: I::InternedCanonicalVarKinds,
+        variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds {
-        parameter_kinds
+        variable_kinds
     }
 }
 

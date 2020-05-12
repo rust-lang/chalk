@@ -30,7 +30,7 @@ use std::u32;
 ///   reject illegal values. Once the value of a variable is known, it
 ///   can never change.
 ///   - The value we actually store for variables is a
-///     `ir::Parameter`, and hence it does carry along the kind of the
+///     `ir::GenericArg`, and hence it does carry along the kind of the
 ///     variable via the enum variant. However, we should always know
 ///     the kind of the variable from context, and hence we typically
 ///     "downcast" the resulting variable using
@@ -88,7 +88,7 @@ impl<I: Interner> UnifyKey for EnaVariable<I> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum InferenceValue<I: Interner> {
     Unbound(UniverseIndex),
-    Bound(Parameter<I>),
+    Bound(GenericArg<I>),
 }
 
 impl<I: Interner> InferenceValue<I> {

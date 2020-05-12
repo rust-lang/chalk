@@ -289,23 +289,23 @@ impl<I: Interner> Zip<I> for Goal<I> {
 }
 
 // I'm too lazy to make `enum_zip` support type parameters.
-impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+impl<I: Interner> Zip<I> for VariableKind<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
     {
         match (a, b) {
-            (ParameterKind::Ty(a), ParameterKind::Ty(b)) => Zip::zip_with(zipper, a, b),
-            (ParameterKind::Lifetime(a), ParameterKind::Lifetime(b)) => Zip::zip_with(zipper, a, b),
-            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
+            (VariableKind::Ty, VariableKind::Ty) => Ok(()),
+            (VariableKind::Lifetime, VariableKind::Lifetime) => Ok(()),
+            (VariableKind::Phantom(..), _) | (_, VariableKind::Phantom(..)) => unreachable!(),
+            (VariableKind::Ty, _) | (VariableKind::Lifetime, _) => {
                 panic!("zipping things of mixed kind")
             }
         }
     }
 }
 
-#[allow(unreachable_code, unused_variables)]
-impl<I: Interner> Zip<I> for Parameter<I> {
+impl<I: Interner> Zip<I> for GenericArg<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,

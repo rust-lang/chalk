@@ -5,10 +5,10 @@
 //! The more interesting impls of `Visit` remain in the `visit` module.
 
 use crate::{
-    AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, Goals, ImplId, IntTy, Interner,
-    Mutability, OpaqueTyId, Parameter, ParameterKind, PlaceholderIndex, ProgramClause,
-    ProgramClauseData, ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, StructId,
-    Substitution, SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
+    AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, GenericArg, Goals, ImplId, IntTy,
+    Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauseData,
+    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, StructId, Substitution,
+    SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
 };
 use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 use std::{marker::PhantomData, sync::Arc};
@@ -138,7 +138,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
     }
 }
 
-impl<I: Interner> Visit<I> for Parameter<I> {
+impl<I: Interner> Visit<I> for GenericArg<I> {
     fn visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,
@@ -295,26 +295,6 @@ impl<I: Interner> Visit<I> for PhantomData<I> {
         I: 'i,
     {
         R::new()
-    }
-}
-
-impl<I: Interner, T, L> Visit<I> for ParameterKind<T, L>
-where
-    T: Visit<I>,
-    L: Visit<I>,
-{
-    fn visit_with<'i, R: VisitResult>(
-        &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
-        outer_binder: DebruijnIndex,
-    ) -> R
-    where
-        I: 'i,
-    {
-        match self {
-            ParameterKind::Ty(a) => a.visit_with(visitor, outer_binder),
-            ParameterKind::Lifetime(a) => a.visit_with(visitor, outer_binder),
-        }
     }
 }
 

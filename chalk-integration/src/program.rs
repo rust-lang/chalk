@@ -3,8 +3,8 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
-    OpaqueTy, OpaqueTyId, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
+    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, GenericArg, Goal, Goals, ImplId,
+    Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses,
     ProjectionTy, StructId, Substitution, TraitId, Ty,
 };
 use chalk_rust_ir::{
@@ -184,40 +184,40 @@ impl tls::DebugContext for Program {
         write!(fmt, "{:?}", lifetime.data(interner))
     }
 
-    fn debug_parameter(
+    fn debug_generic_arg(
         &self,
-        parameter: &Parameter<ChalkIr>,
+        generic_arg: &GenericArg<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter.data(interner).inner_debug())
+        write!(fmt, "{:?}", generic_arg.data(interner).inner_debug())
     }
 
-    fn debug_parameter_kinds(
+    fn debug_variable_kinds(
         &self,
-        parameter_kinds: &chalk_ir::ParameterKinds<ChalkIr>,
+        variable_kinds: &chalk_ir::VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter_kinds.as_slice(interner))
+        write!(fmt, "{:?}", variable_kinds.as_slice(interner))
     }
 
-    fn debug_parameter_kinds_with_angles(
+    fn debug_variable_kinds_with_angles(
         &self,
-        parameter_kinds: &chalk_ir::ParameterKinds<ChalkIr>,
+        variable_kinds: &chalk_ir::VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter_kinds.inner_debug(interner))
+        write!(fmt, "{:?}", variable_kinds.inner_debug(interner))
     }
 
     fn debug_canonical_var_kinds(
         &self,
-        parameter_kinds: &chalk_ir::CanonicalVarKinds<ChalkIr>,
+        variable_kinds: &chalk_ir::CanonicalVarKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter_kinds.as_slice(interner))
+        write!(fmt, "{:?}", variable_kinds.as_slice(interner))
     }
 
     fn debug_goal(
@@ -337,7 +337,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn impls_for_trait(
         &self,
         trait_id: TraitId<ChalkIr>,
-        parameters: &[Parameter<ChalkIr>],
+        parameters: &[GenericArg<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
         let interner = self.interner();
         self.impl_data
