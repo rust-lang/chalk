@@ -5,9 +5,9 @@
 //! The more interesting impls of `Visit` remain in the `visit` module.
 
 use crate::{
-    AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, GenericArg, Goals, ImplId, IntTy,
+    AdtId, AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, GenericArg, Goals, ImplId, IntTy,
     Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauseData,
-    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, StructId, Substitution,
+    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution,
     SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
 };
 use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
@@ -232,7 +232,7 @@ macro_rules! id_visit {
 }
 
 id_visit!(ImplId);
-id_visit!(StructId);
+id_visit!(AdtId);
 id_visit!(TraitId);
 id_visit!(OpaqueTyId);
 id_visit!(AssocTypeId);

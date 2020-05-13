@@ -1,14 +1,14 @@
 use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, Goals, Lifetime,
+    AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, Goals, Lifetime,
     OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
     QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind,
     VariableKinds,
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
-    QuantifiedWhereClause, StructId, TyData,
+    QuantifiedWhereClause, TyData,
 };
 use std::fmt;
 use std::fmt::Debug;
@@ -46,13 +46,14 @@ impl Interner for ChalkIr {
     type InternedVariableKinds = Vec<VariableKind<ChalkIr>>;
     type InternedCanonicalVarKinds = Vec<CanonicalVarKind<ChalkIr>>;
     type DefId = RawId;
+    type InternedAdtId = RawId;
     type Identifier = Identifier;
 
-    fn debug_struct_id(
-        type_kind_id: StructId<ChalkIr>,
+    fn debug_adt_id(
+        type_kind_id: AdtId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_struct_id(type_kind_id, fmt)))
+        tls::with_current_program(|prog| Some(prog?.debug_adt_id(type_kind_id, fmt)))
     }
 
     fn debug_trait_id(

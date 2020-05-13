@@ -8,9 +8,9 @@ impl<I: Interner> Debug for TraitId<I> {
     }
 }
 
-impl<I: Interner> Debug for StructId<I> {
+impl<I: Interner> Debug for AdtId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
+        I::debug_adt_id(*self, fmt).unwrap_or_else(|| write!(fmt, "AdtId({:?})", self.0))
     }
 }
 
@@ -139,7 +139,7 @@ impl Debug for UniverseIndex {
 impl<I: Interner> Debug for TypeName<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            TypeName::Struct(id) => write!(fmt, "{:?}", id),
+            TypeName::Adt(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
             TypeName::Scalar(scalar) => write!(fmt, "{:?}", scalar),
             TypeName::Str => write!(fmt, "Str"),

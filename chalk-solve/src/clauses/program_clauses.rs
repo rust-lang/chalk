@@ -180,7 +180,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     }
 }
 
-impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
+impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
     /// ```notrust
@@ -230,7 +230,7 @@ impl<I: Interner> ToProgramClauses<I> for StructDatum<I> {
     /// ```
     ///
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
-        debug_heading!("StructDatum::to_program_clauses(self={:?})", self);
+        debug_heading!("AdtDatum::to_program_clauses(self={:?})", self);
 
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| &b.where_clauses);

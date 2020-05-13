@@ -294,12 +294,12 @@ where
     }
 }
 
-impl<I> CastTo<TypeName<I>> for StructId<I>
+impl<I> CastTo<TypeName<I>> for AdtId<I>
 where
     I: Interner,
 {
     fn cast_to(self, _interner: &I) -> TypeName<I> {
-        TypeName::Struct(self)
+        TypeName::Adt(self)
     }
 }
 
