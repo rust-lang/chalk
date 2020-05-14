@@ -81,8 +81,6 @@ FnDefn: FnDefn = {
         where_clauses: w,
         argument_types: args,
         return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
-        flags: FnDefFlags {
-        },
     }
 };
 

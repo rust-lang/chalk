@@ -50,11 +50,7 @@ pub struct FnDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
-    pub flags: FnDefFlags,
 }
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct FnDefFlags {}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TraitDefn {

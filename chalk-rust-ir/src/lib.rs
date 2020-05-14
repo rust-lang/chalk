@@ -107,7 +107,6 @@ pub struct AdtFlags {
 pub struct FnDefDatum<I: Interner> {
     pub id: FnDefId<I>,
     pub binders: Binders<FnDefDatumBound<I>>,
-    pub flags: FnDefFlags,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
@@ -116,9 +115,6 @@ pub struct FnDefDatumBound<I: Interner> {
     pub return_type: Ty<I>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct FnDefFlags {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// A rust intermediate representation (rust_ir) of a Trait Definition. For

@@ -940,12 +940,9 @@ impl LowerFnDefn for FnDefn {
             })
         })?;
 
-        let flags = rust_ir::FnDefFlags {};
-
         Ok(rust_ir::FnDefDatum {
             id: fn_def_id,
             binders,
-            flags,
         })
     }
 }
