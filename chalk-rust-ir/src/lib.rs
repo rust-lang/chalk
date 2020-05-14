@@ -104,15 +104,45 @@ pub struct AdtFlags {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// A rust intermediate represention (rust_ir) of a function definition/declaration.
+/// For example, in the following rust code:
+///
+/// ```ignore
+/// fn foo<T>() -> i32 where T: Eq;
+/// ```
+///
+/// This would represent the declaration of `foo`.
+///
+/// Note this is distinct from a function pointer, which points to
+/// a function with a given type signature, whereas this represents
+/// a specific function definition.
 pub struct FnDefDatum<I: Interner> {
     pub id: FnDefId<I>,
     pub binders: Binders<FnDefDatumBound<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+/// Represents the bounds on a `FnDefDatum`, including
+/// the function definition's type signature and where clauses.
 pub struct FnDefDatumBound<I: Interner> {
+    /// Types of the function's arguments
+    /// ```ignore
+    /// fn foo<T>(bar: i32, baz: T);
+    ///                ^^^       ^
+    /// ```
+    ///
     pub argument_types: Vec<Ty<I>>,
+    /// Return type of the function
+    /// ```ignore
+    /// fn foo<T>() -> i32;
+    ///                ^^^
+    /// ```
     pub return_type: Ty<I>,
+    /// Where clauses defined on the function
+    /// ```ignore
+    /// fn foo<T>() where T: Eq;
+    ///             ^^^^^^^^^^^
+    /// ```
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
