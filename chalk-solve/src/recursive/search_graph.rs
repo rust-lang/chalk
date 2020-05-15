@@ -4,8 +4,7 @@ use std::ops::IndexMut;
 use std::usize;
 
 use super::stack::StackDepth;
-use super::{Minimums, UCanonicalGoal};
-use crate::Solution;
+use super::{Answer, Minimums, UCanonicalGoal};
 use chalk_engine::fallible::{Fallible, NoSolution};
 use chalk_ir::{interner::Interner, ClausePriority};
 use rustc_hash::FxHashMap;
@@ -23,7 +22,7 @@ pub(super) struct DepthFirstNumber {
 pub(super) struct Node<I: Interner> {
     pub(crate) goal: UCanonicalGoal<I>,
 
-    pub(crate) solution: Fallible<Solution<I>>,
+    pub(crate) solution: Fallible<Answer<I>>,
     pub(crate) solution_priority: ClausePriority,
 
     /// This is `Some(X)` if we are actively exploring this node, or
@@ -88,7 +87,7 @@ impl<I: Interner> SearchGraph<I> {
     pub(crate) fn move_to_cache(
         &mut self,
         dfn: DepthFirstNumber,
-        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Answer<I>>>,
     ) {
         debug!("move_to_cache(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);

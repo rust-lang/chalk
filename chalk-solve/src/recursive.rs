@@ -16,10 +16,37 @@ use rustc_hash::FxHashMap;
 
 type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Answer<I: Interner> {
+    pub solution: Solution<I>,
+    pub delayed_goals: Vec<UCanonicalGoal<I>>,
+}
+
+impl<I: Interner> Answer<I> {
+    pub fn new(solution: Solution<I>, delayed_goals: Vec<UCanonicalGoal<I>>) -> Self {
+        Self {
+            solution,
+            delayed_goals,
+        }
+    }
+
+    pub fn needs_refinement(&self) -> bool {
+        !self.delayed_goals.is_empty()
+    }
+
+    pub fn combine(self, other: Answer<I>, interner: &I) -> Self {
+        let mut goals = vec![];
+        let combined_solution = self.solution.combine(other.solution, interner);
+        goals.extend(self.delayed_goals);
+        goals.extend(other.delayed_goals);
+        Answer::new(combined_solution, goals)
+    }
+}
+
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,
     search_graph: SearchGraph<I>,
-    cache: FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+    cache: FxHashMap<UCanonicalGoal<I>, Fallible<Answer<I>>>,
 
     caching_enabled: bool,
 }
@@ -105,7 +132,35 @@ impl<'me, I: Interner> Solver<'me, I> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
-        self.solve_goal(canonical_goal.clone(), minimums)
+        self.solve_goal(canonical_goal.clone(), minimums).map(|a| {
+            assert!(a.delayed_goals.is_empty()); // at this point there should be no delayed goals
+            a.solution
+        })
+    }
+
+    fn refine_answer(
+        &mut self,
+        goal: UCanonicalGoal<I>,
+        answer: Answer<I>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Answer<I>> {
+        debug_heading!("refine_answer(goal = {:?}, answer = {:?})", goal, answer);
+        let mut cur_solution = answer.solution.clone();
+        let mut delayed_goals = vec![];
+
+        for subgoal in answer.delayed_goals {
+            if goal == subgoal {
+                debug!("encountered trivial cycle");
+            } else {
+                debug!("solving delayed goal(subgoal={:?})", subgoal);
+                let answer = self.solve_goal(subgoal, minimums)?;
+                cur_solution = cur_solution.combine(answer.solution, self.program.interner());
+                delayed_goals.extend(answer.delayed_goals);
+            }
+        }
+        let refined_answer = Answer::new(cur_solution, delayed_goals);
+        debug!("refined_answer={:?}", refined_answer);
+        Ok(refined_answer)
     }
 
     /// Attempt to solve a goal that has been fully broken down into leaf form
@@ -115,13 +170,19 @@ impl<'me, I: Interner> Solver<'me, I> {
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    ) -> Fallible<Answer<I>> {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
             debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return value.clone();
+            return value.clone().and_then(|a| {
+                if a.needs_refinement() {
+                    self.refine_answer(goal.clone(), a, minimums)
+                } else {
+                    Ok(a)
+                }
+            });
         }
 
         // Next, check if the goal is in the search tree already.
@@ -138,11 +199,15 @@ impl<'me, I: Interner> Solver<'me, I> {
                         subst: goal.trivial_substitution(self.program.interner()),
                         constraints: vec![],
                     };
+
                     debug!("applying coinductive semantics");
-                    return Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
+                    return Ok(Answer::new(
+                        Solution::Unique(Canonical {
+                            value,
+                            binders: goal.clone().canonical.binders,
+                        }),
+                        vec![goal],
+                    ));
                 }
 
                 self.context.stack[depth].flag_cycle();
@@ -163,7 +228,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // The initial result for this table is error.
             let depth = self.context.stack.push(self.program, &goal);
             let dfn = self.context.search_graph.insert(&goal, depth);
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
+            let subgoal_minimums = self.solve_new_subgoal(goal.clone(), depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
             self.context.stack.pop(depth);
@@ -191,7 +256,21 @@ impl<'me, I: Interner> Solver<'me, I> {
                 }
             }
 
-            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            info!(
+                "solve_goal: goal ={:?} solution_unrefined ={:?} prio ={:?}",
+                goal, result, priority
+            );
+            let result = result.and_then(|a| {
+                if a.needs_refinement() {
+                    self.refine_answer(goal.clone(), a, minimums)
+                } else {
+                    Ok(a)
+                }
+            });
+            info!(
+                "solve_goal: goal={:?} solution_refined={:?} prio={:?}",
+                goal, result, priority
+            );
             result
         }
     }
@@ -258,9 +337,10 @@ impl<'me, I: Interner> Solver<'me, I> {
                             Ok(clauses) => {
                                 self.solve_from_clauses(&canonical_goal, clauses, minimums)
                             }
-                            Err(Floundered) => {
-                                (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
-                            }
+                            Err(Floundered) => (
+                                Ok(Answer::new(Solution::Ambig(Guidance::Unknown), vec![])),
+                                ClausePriority::High,
+                            ),
                         }
                     };
                     debug!("prog_solution={:?}", prog_solution);
@@ -314,7 +394,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             }
 
             let current_answer_is_ambig = match &current_answer {
-                Ok(s) => s.is_ambig(),
+                Ok(s) => s.solution.is_ambig(),
                 Err(_) => false,
             };
 
@@ -337,7 +417,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> (Fallible<Answer<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
         if let Err(e) = fulfill.push_goal(&goal.environment, goal.goal) {
@@ -354,7 +434,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clauses: C,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority)
+    ) -> (Fallible<Answer<I>>, ClausePriority)
     where
         C: IntoIterator<Item = ProgramClause<I>>,
     {
@@ -363,8 +443,18 @@ impl<'me, I: Interner> Solver<'me, I> {
             debug_heading!("clause={:?}", program_clause);
 
             // If we have a completely ambiguous answer, it's not going to get better, so stop
-            if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
-                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
+            if let Some((
+                Answer {
+                    solution: Solution::Ambig(Guidance::Unknown),
+                    ..
+                },
+                ClausePriority::High,
+            )) = cur_solution
+            {
+                return (
+                    Ok(Answer::new(Solution::Ambig(Guidance::Unknown), vec![])),
+                    ClausePriority::High,
+                );
             }
 
             match program_clause.data(self.program.interner()) {
@@ -424,7 +514,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: &Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> (Fallible<Answer<I>>, ClausePriority) {
         info_heading!(
             "solve_via_implication(\
              \n    canonical_goal={:?},\
@@ -485,11 +575,11 @@ fn calculate_inputs<I: Interner>(
 fn combine_with_priorities_for_goal<I: Interner>(
     interner: &I,
     goal: &Goal<I>,
-    a: Fallible<Solution<I>>,
+    a: Fallible<Answer<I>>,
     prio_a: ClausePriority,
-    b: Fallible<Solution<I>>,
+    b: Fallible<Answer<I>>,
     prio_b: ClausePriority,
-) -> (Fallible<Solution<I>>, ClausePriority) {
+) -> (Fallible<Answer<I>>, ClausePriority) {
     let domain_goal = match goal.data(interner) {
         GoalData::DomainGoal(domain_goal) => domain_goal,
         _ => {
@@ -512,11 +602,11 @@ fn combine_with_priorities_for_goal<I: Interner>(
 fn combine_with_priorities<I: Interner>(
     interner: &I,
     domain_goal: &DomainGoal<I>,
-    a: Solution<I>,
+    a: Answer<I>,
     prio_a: ClausePriority,
-    b: Solution<I>,
+    b: Answer<I>,
     prio_b: ClausePriority,
-) -> (Solution<I>, ClausePriority) {
+) -> (Answer<I>, ClausePriority) {
     match (prio_a, prio_b, a, b) {
         (ClausePriority::High, ClausePriority::Low, higher, lower)
         | (ClausePriority::Low, ClausePriority::High, lower, higher) => {
@@ -526,8 +616,8 @@ fn combine_with_priorities<I: Interner>(
             // solution overriding a general low-priority one. Currently inputs
             // only matter for projections; in a goal like `AliasEq(<?0 as
             // Trait>::Type = ?1)`, ?0 is the input.
-            let inputs_higher = calculate_inputs(interner, domain_goal, &higher);
-            let inputs_lower = calculate_inputs(interner, domain_goal, &lower);
+            let inputs_higher = calculate_inputs(interner, domain_goal, &higher.solution);
+            let inputs_lower = calculate_inputs(interner, domain_goal, &lower.solution);
             if inputs_higher == inputs_lower {
                 debug!(
                     "preferring solution: {:?} over {:?} because of higher prio",

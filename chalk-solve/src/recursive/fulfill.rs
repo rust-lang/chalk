@@ -15,18 +15,9 @@ use rustc_hash::FxHashSet;
 use std::fmt::Debug;
 use zip::Zip;
 
-enum Outcome {
-    Complete,
+enum Outcome<I: Interner> {
+    Complete(Vec<UCanonicalGoal<I>>),
     Incomplete,
-}
-
-impl Outcome {
-    fn is_complete(&self) -> bool {
-        match *self {
-            Outcome::Complete => true,
-            _ => false,
-        }
-    }
 }
 
 /// A goal that must be resolved
@@ -48,7 +39,7 @@ enum Obligation<I: Interner> {
 struct PositiveSolution<I: Interner> {
     free_vars: Vec<ParameterEnaVariable<I>>,
     universes: UniverseMap,
-    solution: Solution<I>,
+    answer: Answer<I>,
 }
 
 /// When refuting a goal, there's no impact on inference state.
@@ -239,7 +230,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         Ok(PositiveSolution {
             free_vars,
             universes,
-            solution: result?,
+            answer: result?,
         })
     }
 
@@ -265,7 +256,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             .u_canonicalize(self.solver.program.interner(), &canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
         if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
-            if solution.is_unique() {
+            if solution.solution.is_unique() {
                 Err(NoSolution)
             } else {
                 Ok(NegativeSolution::Ambiguous)
@@ -318,7 +309,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         }
     }
 
-    fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome> {
+    fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome<I>> {
         debug_heading!("fulfill(obligations={:#?})", self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
@@ -327,6 +318,8 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // `obligations` array. This process is repeated so long as we are
         // learning new things about our inference state.
         let mut obligations = Vec::with_capacity(self.obligations.len());
+        let mut delayed_goals = Vec::new();
+
         let mut progress = true;
 
         while progress {
@@ -346,17 +339,17 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                         let PositiveSolution {
                             free_vars,
                             universes,
-                            solution,
+                            answer,
                         } = self.prove(wc, minimums)?;
 
-                        if solution.has_definite() {
-                            if let Some(constrained_subst) = solution.constrained_subst() {
+                        if answer.solution.has_definite() {
+                            if let Some(constrained_subst) = answer.solution.constrained_subst() {
                                 self.apply_solution(free_vars, universes, constrained_subst);
                                 progress = true;
                             }
                         }
-
-                        solution.is_ambig()
+                        delayed_goals.extend(answer.delayed_goals);
+                        answer.solution.is_ambig()
                     }
                     Obligation::Refute(ref goal) => {
                         let answer = self.refute(goal)?;
@@ -380,7 +373,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         assert!(obligations.is_empty());
 
         if self.obligations.is_empty() {
-            Ok(Outcome::Complete)
+            Ok(Outcome::Complete(delayed_goals))
         } else {
             Ok(Outcome::Incomplete)
         }
@@ -393,17 +386,17 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         mut self,
         subst: Substitution<I>,
         minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    ) -> Fallible<Answer<I>> {
         let outcome = match self.fulfill(minimums) {
             Ok(o) => o,
             Err(e) => return Err(e),
         };
 
         if self.cannot_prove {
-            return Ok(Solution::Ambig(Guidance::Unknown));
+            return Ok(Answer::new(Solution::Ambig(Guidance::Unknown), vec![]));
         }
 
-        if outcome.is_complete() {
+        if let Outcome::Complete(delayed_goals) = outcome {
             // No obligations remain, so we have definitively solved our goals,
             // and the current inference state is the unique way to solve them.
 
@@ -412,7 +405,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                 self.solver.program.interner(),
                 &ConstrainedSubst { subst, constraints },
             );
-            return Ok(Solution::Unique(constrained.quantified));
+            return Ok(Answer::new(
+                Solution::Unique(constrained.quantified),
+                delayed_goals,
+            ));
         }
 
         // Otherwise, we have (positive or negative) obligations remaining, but
@@ -435,19 +431,22 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                     let PositiveSolution {
                         free_vars,
                         universes,
-                        solution,
+                        answer,
                     } = self.prove(&goal, minimums).unwrap();
-                    if let Some(constrained_subst) = solution.constrained_subst() {
+                    if let Some(constrained_subst) = answer.solution.constrained_subst() {
                         self.apply_solution(free_vars, universes, constrained_subst);
                         let subst = self
                             .infer
                             .canonicalize(self.solver.program.interner(), &subst);
-                        return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
+                        return Ok(Answer::new(
+                            Solution::Ambig(Guidance::Suggested(subst.quantified)),
+                            answer.delayed_goals,
+                        ));
                     }
                 }
             }
 
-            Ok(Solution::Ambig(Guidance::Unknown))
+            Ok(Answer::new(Solution::Ambig(Guidance::Unknown), vec![]))
         } else {
             // While we failed to prove the goal, we still learned that
             // something had to hold. Here's an example where this happens:
@@ -472,7 +471,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             let subst = self
                 .infer
                 .canonicalize(self.solver.program.interner(), &subst);
-            Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
+            Ok(Answer::new(
+                Solution::Ambig(Guidance::Definite(subst.quantified)),
+                vec![],
+            ))
         }
     }
 
