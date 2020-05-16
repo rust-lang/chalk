@@ -511,6 +511,13 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                 )?;
             }
             TypeName::Str => write!(f, "str")?,
+            TypeName::Slice => {
+                write!(
+                    f,
+                    "[{}]",
+                    self.first_type_parameter(interner).unwrap().display(s)
+                )?;
+            }
             TypeName::Error => write!(f, "{{error}}")?,
         }
         Ok(())

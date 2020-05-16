@@ -39,6 +39,22 @@ fn test_scalar_types() {
 }
 
 #[test]
+fn test_slice_types() {
+    reparse_test(
+        "
+        struct Foo<T> {
+            field: [T]
+        }
+        trait Bar {
+            type Baz;
+        }
+        impl<T> Bar for Foo<T> {
+            type Baz = [T];
+        }",
+    );
+}
+
+#[test]
 fn test_str_types() {
     reparse_test(
         "
