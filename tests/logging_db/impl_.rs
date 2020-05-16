@@ -21,3 +21,19 @@ fn test_simple_impl() {
     ",
     );
 }
+
+#[test]
+fn test_impl_for_generic() {
+    reparse_test(
+        "
+        trait Bar<T> {}
+        impl<T,G> Bar<T> for G {}
+    ",
+    );
+    reparse_test(
+        "
+        trait Baz {}
+        impl<T> Baz for T {}
+    ",
+    );
+}
