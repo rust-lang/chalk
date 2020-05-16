@@ -510,6 +510,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     self.substitution.at(interner, 1).display(s)
                 )?;
             }
+            TypeName::Str => write!(f, "str")?,
             TypeName::Error => write!(f, "{{error}}")?,
         }
         Ok(())

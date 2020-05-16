@@ -39,6 +39,23 @@ fn test_scalar_types() {
 }
 
 #[test]
+fn test_str_types() {
+    reparse_test(
+        "
+            struct Foo {
+                field: str
+            }
+            trait Bar {
+                type Baz;
+            }
+            impl Bar for Foo {
+                type Baz = str;
+            }
+            ",
+    );
+}
+
+#[test]
 fn test_raw_ptr_types() {
     reparse_test(
         "
