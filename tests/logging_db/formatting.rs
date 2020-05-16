@@ -77,3 +77,26 @@ impl [a-zA-Z0-9_-]+ for [a-zA-Z0-9_-]+ \{\}
 impl [a-zA-Z0-9_-]+ for dyn [a-zA-Z0-9_-]+ \{\}"#,
     );
 }
+
+#[test]
+fn test_assoc_ty_where_clause() {
+    test_formatting(
+        "
+        trait Bar {}
+        trait Fuzz {
+            type Assoc
+            where 
+                dyn Bar: Bar,
+                Self: Bar;
+        }
+    ",
+        r#"trait [a-zA-Z0-9_-]+ \{\s*\}
+trait [a-zA-Z0-9_-]+ \{
+  type [a-zA-Z0-9_-]+
+  where
+    dyn [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+,
+    [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+;
+\}
+"#,
+    );
+}

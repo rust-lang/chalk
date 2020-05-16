@@ -782,7 +782,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
 
         let datum_bounds = &self.binders.skip_binders();
 
-        if !(datum_bounds.bounds.is_empty() && datum_bounds.where_clauses.is_empty()) {
+        if !datum_bounds.bounds.is_empty() {
             write!(f, ": ")?;
         }
 
