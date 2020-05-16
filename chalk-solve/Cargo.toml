@@ -19,7 +19,6 @@ chalk-macros = { version = "0.10.1-dev", path = "../chalk-macros" }
 chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
 chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine" }
 chalk-ir = { version = "0.10.1-dev", path = "../chalk-ir" }
-chalk-rust-ir = { version = "0.10.1-dev", path = "../chalk-rust-ir" }
 
 [dev-dependencies]
 chalk-integration = { version = "0.10.1-dev", path = "../chalk-integration" }

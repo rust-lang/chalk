@@ -1,8 +1,8 @@
 #![deny(rust_2018_idioms)]
 
+use crate::rust_ir::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
-use chalk_rust_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -20,6 +20,7 @@ pub mod ext;
 pub mod goal_builder;
 mod infer;
 pub mod recursive;
+pub mod rust_ir;
 mod solve;
 pub mod split;
 pub mod wf;

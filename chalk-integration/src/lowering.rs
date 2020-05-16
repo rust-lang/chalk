@@ -6,9 +6,8 @@ use chalk_ir::{
     QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
 };
 use chalk_parse::ast::*;
-use chalk_rust_ir as rust_ir;
-use chalk_rust_ir::{
-    Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,
+use chalk_solve::rust_ir::{
+    self, Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,
 };
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;

@@ -1,11 +1,11 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
 use crate::ext::*;
+use crate::rust_ir::*;
 use crate::{goal_builder::GoalBuilder, Solution};
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
-use chalk_rust_ir::*;
 use itertools::Itertools;
 
 impl<I: Interner> CoherenceSolver<'_, I> {
