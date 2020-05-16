@@ -46,6 +46,7 @@ pub(super) enum RootSearchFail {
 }
 
 /// This is returned when we try to select a subgoal for a strand.
+#[derive(PartialEq)]
 enum SubGoalSelection {
     /// A subgoal was successfully selected. It has already been checked
     /// to not be floundering. However, it may have an answer already, be
@@ -108,6 +109,31 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     },
                     ambiguous: answer.ambiguous,
                 })
+            }
+            Err(RootSearchFail::Floundered) => {
+                if state.stack.is_empty() {
+                    if let Some(answer) = state.forest.tables[table].answer(answer_index) {
+                        debug!("floundered but still has answer {:?}", answer);
+                        let has_delayed_subgoals = !answer.subst.value.delayed_subgoals.is_empty();
+                        if has_delayed_subgoals {
+                            return Err(RootSearchFail::InvalidAnswer);
+                        }
+                        Ok(CompleteAnswer {
+                            subst: Canonical {
+                                binders: answer.subst.binders.clone(),
+                                value: ConstrainedSubst {
+                                    subst: answer.subst.value.subst.clone(),
+                                    constraints: answer.subst.value.constraints.clone(),
+                                },
+                            },
+                            ambiguous: answer.ambiguous,
+                        })
+                    } else {
+                        Err(RootSearchFail::Floundered)
+                    }
+                } else {
+                    Err(RootSearchFail::Floundered)
+                }
             }
             Err(err) => Err(err),
         }
@@ -505,19 +531,17 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                             self.on_subgoal_selected(strand)?;
                             continue;
                         }
-                        SubGoalSelection::NoRemainingSubgoals => {
-                            match self.on_no_remaining_subgoals(strand) {
+                        selection @ SubGoalSelection::NoRemainingSubgoals
+                        | selection @ SubGoalSelection::Floundered => {
+                            match self.on_no_remaining_subgoals(
+                                strand,
+                                selection == SubGoalSelection::Floundered,
+                            ) {
                                 NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
                                 NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
                                 NoRemainingSubgoalsResult::Success => {}
                             };
                             continue;
-                        }
-                        SubGoalSelection::Floundered => {
-                            // The strand floundered when trying to select a subgoal.
-                            // This will always return a `RootSearchFail`, either because the
-                            // root table floundered or we yield with `QuantumExceeded`.
-                            return Err(self.on_subgoal_selection_flounder(strand));
                         }
                     }
                 }
@@ -896,10 +920,19 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         Ok(())
     }
 
-    fn on_no_remaining_subgoals(&mut self, strand: Strand<I, C>) -> NoRemainingSubgoalsResult {
-        debug!("no remaining subgoals for the table");
-
-        match self.pursue_answer(strand) {
+    fn on_no_remaining_subgoals(
+        &mut self,
+        strand: Strand<I, C>,
+        floundered: bool,
+    ) -> NoRemainingSubgoalsResult {
+        let possible_answer = if !floundered {
+            debug!("no remaining subgoals for the table");
+            self.pursue_answer(strand)
+        } else {
+            debug!("all remaining subgoals floundered for the table");
+            self.pursue_answer_from_floundered(strand)
+        };
+        match possible_answer {
             Some(answer_index) => {
                 debug!("answer is available");
 
@@ -942,6 +975,14 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 }
             }
             None => {
+                if floundered {
+                    // The strand floundered when trying to select a subgoal.
+                    // This will always return a `RootSearchFail`, either because the
+                    // root table floundered or we yield with `QuantumExceeded`.
+                    return NoRemainingSubgoalsResult::RootSearchFail(
+                        self.on_subgoal_selection_flounder(),
+                    );
+                }
                 debug!("answer is not available (or not new)");
 
                 // This table ned nowhere of interest
@@ -1005,15 +1046,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         Some(Forest::canonicalize_strand(self.context, strand))
     }
 
-    fn on_subgoal_selection_flounder(&mut self, strand: Strand<I, C>) -> RootSearchFail {
+    fn on_subgoal_selection_flounder(&mut self) -> RootSearchFail {
         debug!("all subgoals floundered");
 
         // We were unable to select a subgoal for this strand
         // because all of them had floundered or because any one
         // that we dependended on negatively floundered
-
-        // We discard this strand because it led nowhere of interest
-        drop(strand);
 
         loop {
             // This table is marked as floundered
@@ -1271,6 +1309,55 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 }
             } else {
                 return SubGoalSelection::Selected;
+            }
+        }
+    }
+
+    fn pursue_answer_from_floundered(&mut self, strand: Strand<I, C>) -> Option<AnswerIndex> {
+        let table = self.stack.top().table;
+        let Strand {
+            mut infer,
+            ex_clause:
+                ExClause {
+                    subst,
+                    constraints,
+                    ambiguous: _,
+                    subgoals,
+                    delayed_subgoals,
+                    answer_time: _,
+                    floundered_subgoals: _,
+                },
+            selected_subgoal: _,
+            last_pursued_time: _,
+        } = strand;
+        assert!(subgoals.is_empty());
+        let subst = infer.canonicalize_answer_subst(
+            self.context.interner(),
+            subst,
+            constraints,
+            delayed_subgoals,
+        );
+        debug!(
+            "answer from floundered goal: table={:?}, subst={:?}",
+            table, subst
+        );
+
+        let answer = Answer {
+            subst,
+            ambiguous: true,
+        };
+        let is_trivial_answer = self
+            .context
+            .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst);
+
+        if is_trivial_answer {
+            None
+        } else {
+            if let Some(answer_index) = self.forest.tables[table].push_answer(answer) {
+                Some(answer_index)
+            } else {
+                info!("answer: not a new answer, returning None");
+                None
             }
         }
     }

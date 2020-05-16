@@ -83,7 +83,11 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     if !answer.ambiguous {
                         SubstitutionResult::Definite(answer.subst)
                     } else {
-                        SubstitutionResult::Ambiguous(answer.subst)
+                        if context.is_trivial_constrained_substitution(&answer.subst) {
+                            SubstitutionResult::Floundered
+                        } else {
+                            SubstitutionResult::Ambiguous(answer.subst)
+                        }
                     }
                 }
                 AnswerResult::Floundered => SubstitutionResult::Floundered,

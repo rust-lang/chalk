@@ -176,10 +176,11 @@ fn subgoal_cycle_uninhabited() {
         }
 
         // Infinite recursion -> we flounder
+        // Still return the necessary substitution T = Box<..>
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(2, None)] {
-            "Floundered"
+            "Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"
         }
 
         // Unsurprisingly, applying negation also flounders.
@@ -201,7 +202,7 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T = Vec<Alice>, not { Vec<Vec<T>>: Foo } }
         } yields_first[SolverChoice::slg(2, None)] {
-            "Floundered"
+            "Ambiguous(substitution [?0 := Vec<Alice>], lifetime constraints [])"
         }
 
         // Same query with larger threshold works fine, though.
@@ -216,7 +217,7 @@ fn subgoal_cycle_uninhabited() {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
         } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := !1_0], lifetime constraints []",
-            "Floundered"
+            "Ambiguous(for<?U1> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"
         }
     }
 }
@@ -234,11 +235,12 @@ fn subgoal_cycle_inhabited() {
         }
 
         // Exceeds size threshold -> flounder
+        // Still return necessary substitution T = Box<..>
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(3, None)] {
             "substitution [?0 := Alice], lifetime constraints []",
-            "Floundered"
+            "Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"
         }
     }
 }
