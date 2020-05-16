@@ -69,6 +69,36 @@ fn test_raw_ptr_types() {
 }
 
 #[test]
+fn test_reference_types() {
+    reparse_test(
+        "
+            struct Foo<'a,T> {
+                field: &'a T
+            }
+            trait Bar {
+                type Baz;
+            }
+            impl<'a,T> Bar for Foo<'a,T> {
+                type Baz = &'a u32;
+            }
+            ",
+    );
+    reparse_test(
+        "
+            struct Foo<'a,T> {
+                field: &'a mut T
+            }
+            trait Bar {
+                type Baz;
+            }
+            impl<'a,T> Bar for Foo<'a,T> {
+                type Baz = &'a mut u32;
+            }
+            ",
+    );
+}
+
+#[test]
 fn test_tuples() {
     reparse_test(
         "

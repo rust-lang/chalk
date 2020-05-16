@@ -497,6 +497,19 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     self.first_type_parameter(interner).unwrap().display(s)
                 )?
             }
+            TypeName::Ref(mutability) => {
+                let mutability = match mutability {
+                    Mutability::Mut => "mut ",
+                    Mutability::Not => "",
+                };
+                write!(
+                    f,
+                    "&{} {}{}",
+                    self.substitution.at(interner, 0).display(s),
+                    mutability,
+                    self.substitution.at(interner, 1).display(s)
+                )?;
+            }
             TypeName::Error => write!(f, "{{error}}")?,
         }
         Ok(())
