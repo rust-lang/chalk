@@ -10,7 +10,7 @@ pub enum HhGoal<C: Context> {
     Implies(C::ProgramClauses, C::Goal),
     All(Vec<C::Goal>),
     Not(C::Goal),
-    Unify(C::Variance, C::Parameter, C::Parameter),
+    Unify(C::Variance, C::GenericArg, C::GenericArg),
     DomainGoal(C::DomainGoal),
 
     /// Indicates something that cannot be proven to be true or false

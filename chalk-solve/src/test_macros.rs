@@ -6,7 +6,7 @@ macro_rules! ty {
             name: ty_name!($n),
             substitution: chalk_ir::Substitution::from(
                 &chalk_integration::interner::ChalkIr,
-                vec![$(arg!($arg)),*] as Vec<chalk_ir::Parameter<_>>
+                vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
         }).intern(&chalk_integration::interner::ChalkIr)
     };
@@ -16,7 +16,7 @@ macro_rules! ty {
             num_binders: $n,
             substitution: chalk_ir::Substitution::from(
                 &chalk_integration::interner::ChalkIr,
-                vec![$(arg!($arg)),*] as Vec<chalk_ir::Parameter<_>>
+                vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
         }).intern(&chalk_integration::interner::ChalkIr)
     };
@@ -33,7 +33,7 @@ macro_rules! ty {
             associated_ty_id: AssocTypeId(chalk_integration::interner::RawId { index: $n }),
             substitution: chalk_ir::Substitution::from(
                 &chalk_integration::interner::ChalkIr,
-                vec![$(arg!($arg)),*] as Vec<chalk_ir::Parameter<_>>
+                vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
         }).intern(&chalk_integration::interner::ChalkIr)
     };
@@ -64,16 +64,16 @@ macro_rules! ty {
 
 macro_rules! arg {
     ((lifetime $b:tt)) => {
-        chalk_ir::Parameter::new(
+        chalk_ir::GenericArg::new(
             &chalk_integration::interner::ChalkIr,
-            chalk_ir::ParameterKind::Lifetime(lifetime!($b)),
+            chalk_ir::GenericArgData::Lifetime(lifetime!($b)),
         )
     };
 
     ($arg:tt) => {
-        chalk_ir::Parameter::new(
+        chalk_ir::GenericArg::new(
             &chalk_integration::interner::ChalkIr,
-            chalk_ir::ParameterKind::Ty(ty!($arg)),
+            chalk_ir::GenericArgData::Ty(ty!($arg)),
         )
     };
 }

@@ -113,8 +113,8 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Option<
     }
 }
 
-impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
-    type Result = Parameter<TI>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for GenericArg<I> {
+    type Result = GenericArg<TI>;
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
@@ -128,7 +128,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
         let target_interner = folder.target_interner();
 
         let data = self.data(interner).fold_with(folder, outer_binder)?;
-        Ok(Parameter::new(target_interner, data))
+        Ok(GenericArg::new(target_interner, data))
     }
 }
 
@@ -329,31 +329,6 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
         TI: 'i,
     {
         Ok(PhantomData)
-    }
-}
-
-impl<I: Interner, TI: TargetInterner<I>, T, L> Fold<I, TI> for ParameterKind<T, L>
-where
-    T: Fold<I, TI>,
-    L: Fold<I, TI>,
-{
-    type Result = ParameterKind<T::Result, L::Result>;
-
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I, TI>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-        TI: 'i,
-    {
-        match self {
-            ParameterKind::Ty(a) => Ok(ParameterKind::Ty(a.fold_with(folder, outer_binder)?)),
-            ParameterKind::Lifetime(a) => {
-                Ok(ParameterKind::Lifetime(a.fold_with(folder, outer_binder)?))
-            }
-        }
     }
 }
 

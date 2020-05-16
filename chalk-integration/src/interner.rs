@@ -1,13 +1,14 @@
 use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds, Goals, Lifetime, OpaqueTy, OpaqueTyId,
-    ParameterKinds, ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
-    SeparatorTraitRef, Substitution, TraitId, Ty,
+    AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, Goals, Lifetime,
+    OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind,
+    VariableKinds,
 };
 use chalk_ir::{
-    Goal, GoalData, LifetimeData, Parameter, ParameterData, ParameterKind, ProgramClause,
-    ProgramClauseData, QuantifiedWhereClause, StructId, TyData, UniverseIndex,
+    GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
+    QuantifiedWhereClause, StructId, TyData,
 };
 use std::fmt;
 use std::fmt::Debug;
@@ -35,15 +36,15 @@ pub struct ChalkIr;
 impl Interner for ChalkIr {
     type InternedType = Arc<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
-    type InternedParameter = ParameterData<ChalkIr>;
+    type InternedGenericArg = GenericArgData<ChalkIr>;
     type InternedGoal = Arc<GoalData<ChalkIr>>;
     type InternedGoals = Vec<Goal<ChalkIr>>;
-    type InternedSubstitution = Vec<Parameter<ChalkIr>>;
+    type InternedSubstitution = Vec<GenericArg<ChalkIr>>;
     type InternedProgramClause = ProgramClauseData<ChalkIr>;
     type InternedProgramClauses = Vec<ProgramClause<ChalkIr>>;
     type InternedQuantifiedWhereClauses = Vec<QuantifiedWhereClause<ChalkIr>>;
-    type InternedParameterKinds = Vec<ParameterKind<()>>;
-    type InternedCanonicalVarKinds = Vec<ParameterKind<UniverseIndex>>;
+    type InternedVariableKinds = Vec<VariableKind<ChalkIr>>;
+    type InternedCanonicalVarKinds = Vec<CanonicalVarKind<ChalkIr>>;
     type DefId = RawId;
     type Identifier = Identifier;
 
@@ -105,26 +106,26 @@ impl Interner for ChalkIr {
             .or_else(|| Some(write!(fmt, "{:?}", lifetime.interned())))
     }
 
-    fn debug_parameter(
-        parameter: &Parameter<ChalkIr>,
+    fn debug_generic_arg(
+        generic_arg: &GenericArg<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_parameter(parameter, fmt)))
+        tls::with_current_program(|prog| Some(prog?.debug_generic_arg(generic_arg, fmt)))
     }
 
-    fn debug_parameter_kinds(
-        parameter_kinds: &ParameterKinds<Self>,
+    fn debug_variable_kinds(
+        variable_kinds: &VariableKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_parameter_kinds(parameter_kinds, fmt)))
+        tls::with_current_program(|prog| Some(prog?.debug_variable_kinds(variable_kinds, fmt)))
     }
 
-    fn debug_parameter_kinds_with_angles(
-        parameter_kinds: &ParameterKinds<Self>,
+    fn debug_variable_kinds_with_angles(
+        variable_kinds: &VariableKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| {
-            Some(prog?.debug_parameter_kinds_with_angles(parameter_kinds, fmt))
+            Some(prog?.debug_variable_kinds_with_angles(variable_kinds, fmt))
         })
     }
 
@@ -212,15 +213,15 @@ impl Interner for ChalkIr {
         lifetime
     }
 
-    fn intern_parameter(&self, parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
-        parameter
+    fn intern_generic_arg(&self, generic_arg: GenericArgData<ChalkIr>) -> GenericArgData<ChalkIr> {
+        generic_arg
     }
 
-    fn parameter_data<'a>(
+    fn generic_arg_data<'a>(
         &self,
-        parameter: &'a ParameterData<ChalkIr>,
-    ) -> &'a ParameterData<ChalkIr> {
-        parameter
+        generic_arg: &'a GenericArgData<ChalkIr>,
+    ) -> &'a GenericArgData<ChalkIr> {
+        generic_arg
     }
 
     fn intern_goal(&self, goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
@@ -244,15 +245,15 @@ impl Interner for ChalkIr {
 
     fn intern_substitution<E>(
         &self,
-        data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
-    ) -> Result<Vec<Parameter<ChalkIr>>, E> {
+        data: impl IntoIterator<Item = Result<GenericArg<ChalkIr>, E>>,
+    ) -> Result<Vec<GenericArg<ChalkIr>>, E> {
         data.into_iter().collect()
     }
 
     fn substitution_data<'a>(
         &self,
-        substitution: &'a Vec<Parameter<ChalkIr>>,
-    ) -> &'a [Parameter<ChalkIr>] {
+        substitution: &'a Vec<GenericArg<ChalkIr>>,
+    ) -> &'a [GenericArg<ChalkIr>] {
         substitution
     }
 
@@ -294,23 +295,23 @@ impl Interner for ChalkIr {
     ) -> &'a [QuantifiedWhereClause<Self>] {
         clauses
     }
-    fn intern_parameter_kinds<E>(
+    fn intern_generic_arg_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
-    ) -> Result<Self::InternedParameterKinds, E> {
+        data: impl IntoIterator<Item = Result<VariableKind<ChalkIr>, E>>,
+    ) -> Result<Self::InternedVariableKinds, E> {
         data.into_iter().collect()
     }
 
-    fn parameter_kinds_data<'a>(
+    fn variable_kinds_data<'a>(
         &self,
-        parameter_kinds: &'a Self::InternedParameterKinds,
-    ) -> &'a [ParameterKind<()>] {
-        parameter_kinds
+        variable_kinds: &'a Self::InternedVariableKinds,
+    ) -> &'a [VariableKind<ChalkIr>] {
+        variable_kinds
     }
 
     fn intern_canonical_var_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+        data: impl IntoIterator<Item = Result<CanonicalVarKind<ChalkIr>, E>>,
     ) -> Result<Self::InternedCanonicalVarKinds, E> {
         data.into_iter().collect()
     }
@@ -318,7 +319,7 @@ impl Interner for ChalkIr {
     fn canonical_var_kinds_data<'a>(
         &self,
         canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
-    ) -> &'a [ParameterKind<UniverseIndex>] {
+    ) -> &'a [CanonicalVarKind<ChalkIr>] {
         canonical_var_kinds
     }
 }

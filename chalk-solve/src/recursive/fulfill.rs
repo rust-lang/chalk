@@ -307,7 +307,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
 
         for (i, free_var) in free_vars.into_iter().enumerate() {
             let subst_value = subst.at(self.interner(), i);
-            let free_value = free_var.to_parameter(self.interner());
+            let free_value = free_var.to_generic_arg(self.interner());
             self.unify(empty_env, &free_value, subst_value)
                 .unwrap_or_else(|err| {
                     panic!(

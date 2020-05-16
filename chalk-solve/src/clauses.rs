@@ -319,7 +319,7 @@ fn program_clauses_that_could_match<I: Interner>(
 fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
-    trait_parameters: &[Parameter<I>],
+    trait_parameters: &[GenericArg<I>],
 ) {
     debug_heading!(
         "push_program_clauses_for_associated_type_values_in_impls_of(\

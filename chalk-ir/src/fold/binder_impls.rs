@@ -49,8 +49,8 @@ where
             value: self_value,
         } = self;
         let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
-        let binders = ParameterKinds {
-            interned: TI::transfer_parameter_kinds(self_binders.interned().clone()),
+        let binders = VariableKinds {
+            interned: TI::transfer_variable_kinds(self_binders.interned().clone()),
         };
         Ok(Binders::new(binders, value))
     }

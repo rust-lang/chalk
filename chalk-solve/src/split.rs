@@ -18,8 +18,8 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         projection: &'p ProjectionTy<I>,
     ) -> (
         Arc<AssociatedTyDatum<I>>,
-        &'p [Parameter<I>],
-        &'p [Parameter<I>],
+        &'p [GenericArg<I>],
+        &'p [GenericArg<I>],
     ) {
         let interner = self.interner();
         let ProjectionTy {
@@ -41,7 +41,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     fn trait_parameters_from_projection<'p>(
         &self,
         projection: &'p ProjectionTy<I>,
-    ) -> &'p [Parameter<I>] {
+    ) -> &'p [GenericArg<I>] {
         let (_, trait_params, _) = self.split_projection(projection);
         trait_params
     }
@@ -122,9 +122,9 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// * the projection `<Vec<Y> as Iterable>::Iter<'x>`
     fn impl_parameters_and_projection_from_associated_ty_value<'p>(
         &self,
-        parameters: &'p [Parameter<I>],
+        parameters: &'p [GenericArg<I>],
         associated_ty_value: &AssociatedTyValue<I>,
-    ) -> (&'p [Parameter<I>], ProjectionTy<I>) {
+    ) -> (&'p [GenericArg<I>], ProjectionTy<I>) {
         let interner = self.interner();
         debug_heading!(
             "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",

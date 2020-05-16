@@ -24,7 +24,7 @@ fn push_tuple_copy_conditions<I: Interner>(
         trait_ref,
         substitution
             .iter(interner)
-            .map(|param| param.ty(interner).unwrap().clone()),
+            .map(|param| param.assert_ty_ref(interner).clone()),
     );
 }
 

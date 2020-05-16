@@ -680,8 +680,8 @@ impl WfWellKnownGoals {
 
                         // StructName<StructP1..StructPn> = ImplSelfType
                         GoalData::EqGoal(EqGoal {
-                            a: ParameterData::Ty(def_struct).intern(interner),
-                            b: ParameterData::Ty(impl_struct.clone()).intern(interner),
+                            a: GenericArgData::Ty(def_struct).intern(interner),
+                            b: GenericArgData::Ty(impl_struct.clone()).intern(interner),
                         })
                         .intern(interner)
                     },

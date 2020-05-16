@@ -221,7 +221,7 @@ fn atc_accounting() {
 }
 
 #[test]
-fn check_parameter_kinds() {
+fn check_variable_kinds() {
     lowering_error! {
         program {
             struct Foo<'a> { }

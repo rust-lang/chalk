@@ -46,7 +46,7 @@ impl<I: Interner> InferenceTable<I> {
             value0
                 .binders
                 .iter(interner)
-                .map(|pk| pk.map(|ui| universes.map_universe_to_canonical(ui))),
+                .map(|pk| pk.map_ref(|&ui| universes.map_universe_to_canonical(ui))),
         );
 
         UCanonicalized {

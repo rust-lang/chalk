@@ -10,13 +10,13 @@ use chalk_engine::fallible::Fallible;
 use chalk_ir::{
     fold::{Fold, Folder},
     interner::{HasInterner, Interner},
-    Binders, BoundVar, DebruijnIndex, Lifetime, LifetimeData, ParameterKind, ParameterKinds, Ty,
-    TyData,
+    Binders, BoundVar, DebruijnIndex, Lifetime, LifetimeData, Ty, TyData, VariableKind,
+    VariableKinds,
 };
 use rustc_hash::FxHashMap;
 
 pub struct Generalize<'i, I: Interner> {
-    binders: Vec<ParameterKind<()>>,
+    binders: Vec<VariableKind<I>>,
     mapping: FxHashMap<BoundVar, usize>,
     interner: &'i I,
 }
@@ -35,7 +35,7 @@ impl<I: Interner> Generalize<'_, I> {
         let value = value
             .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
             .unwrap();
-        Binders::new(ParameterKinds::from(interner, generalize.binders), value)
+        Binders::new(VariableKinds::from(interner, generalize.binders), value)
     }
 }
 
@@ -52,7 +52,7 @@ impl<'i, I: Interner> Folder<'i, I> for Generalize<'i, I> {
         let binder_vec = &mut self.binders;
         let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
             let i = binder_vec.len();
-            binder_vec.push(ParameterKind::Ty(()));
+            binder_vec.push(VariableKind::Ty);
             i
         });
         let new_var = BoundVar::new(outer_binder, *new_index);
@@ -67,7 +67,7 @@ impl<'i, I: Interner> Folder<'i, I> for Generalize<'i, I> {
         let binder_vec = &mut self.binders;
         let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
             let i = binder_vec.len();
-            binder_vec.push(ParameterKind::Ty(()));
+            binder_vec.push(VariableKind::Ty);
             i
         });
         let new_var = BoundVar::new(outer_binder, *new_index);

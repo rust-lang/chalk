@@ -138,7 +138,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
                 .binders
                 .iter(interner)
                 .zip(0..)
-                .map(|p| p.to_parameter(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         );
 
         // Shift passthru into one level of binder, to account for the `forall<P0..Pn>`

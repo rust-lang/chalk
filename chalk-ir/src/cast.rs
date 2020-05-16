@@ -82,7 +82,7 @@ reflexive_impl!(for(I: Interner) Goal<I>);
 reflexive_impl!(for(I: Interner) WhereClause<I>);
 reflexive_impl!(for(I: Interner) ProgramClause<I>);
 reflexive_impl!(for(I: Interner) QuantifiedWhereClause<I>);
-reflexive_impl!(for(I: Interner) ParameterKinds<I>);
+reflexive_impl!(for(I: Interner) VariableKinds<I>);
 reflexive_impl!(for(I: Interner) CanonicalVarKinds<I>);
 
 impl<I: Interner> CastTo<WhereClause<I>> for TraitRef<I> {
@@ -162,20 +162,20 @@ impl<I: Interner> CastTo<TyData<I>> for AliasTy<I> {
     }
 }
 
-impl<I: Interner> CastTo<Parameter<I>> for Ty<I> {
-    fn cast_to(self, interner: &I) -> Parameter<I> {
-        Parameter::new(interner, ParameterKind::Ty(self))
+impl<I: Interner> CastTo<GenericArg<I>> for Ty<I> {
+    fn cast_to(self, interner: &I) -> GenericArg<I> {
+        GenericArg::new(interner, GenericArgData::Ty(self))
     }
 }
 
-impl<I: Interner> CastTo<Parameter<I>> for Lifetime<I> {
-    fn cast_to(self, interner: &I) -> Parameter<I> {
-        Parameter::new(interner, ParameterKind::Lifetime(self))
+impl<I: Interner> CastTo<GenericArg<I>> for Lifetime<I> {
+    fn cast_to(self, interner: &I) -> GenericArg<I> {
+        GenericArg::new(interner, GenericArgData::Lifetime(self))
     }
 }
 
-impl<I: Interner> CastTo<Parameter<I>> for Parameter<I> {
-    fn cast_to(self, _interner: &I) -> Parameter<I> {
+impl<I: Interner> CastTo<GenericArg<I>> for GenericArg<I> {
+    fn cast_to(self, _interner: &I) -> GenericArg<I> {
         self
     }
 }

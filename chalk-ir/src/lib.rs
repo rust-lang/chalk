@@ -760,142 +760,130 @@ impl<I: Interner> ApplicationTy<I> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum ParameterKind<T, L = T> {
-    Ty(T),
-    Lifetime(L),
+pub enum VariableKind<I: Interner> {
+    Ty,
+    Lifetime,
+    Phantom(Void, PhantomData<I>),
 }
 
-impl<T> ParameterKind<T> {
-    pub fn into_inner(self) -> T {
+impl<I: Interner> VariableKind<I> {
+    fn to_bound_variable(&self, interner: &I, bound_var: BoundVar) -> GenericArg<I> {
         match self {
-            ParameterKind::Ty(t) => t,
-            ParameterKind::Lifetime(t) => t,
-        }
-    }
-
-    pub fn map<OP, U>(self, op: OP) -> ParameterKind<U>
-    where
-        OP: FnOnce(T) -> U,
-    {
-        match self {
-            ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
-            ParameterKind::Lifetime(t) => ParameterKind::Lifetime(op(t)),
-        }
-    }
-
-    pub fn map_ref<OP, U>(&self, op: OP) -> ParameterKind<U>
-    where
-        OP: FnOnce(&T) -> U,
-    {
-        match self {
-            ParameterKind::Ty(t) => ParameterKind::Ty(op(t)),
-            ParameterKind::Lifetime(t) => ParameterKind::Lifetime(op(t)),
-        }
-    }
-}
-
-impl<T, L> ParameterKind<T, L> {
-    pub fn assert_ty_ref(&self) -> &T {
-        self.as_ref().ty().unwrap()
-    }
-
-    pub fn assert_lifetime_ref(&self) -> &L {
-        self.as_ref().lifetime().unwrap()
-    }
-
-    pub fn as_ref(&self) -> ParameterKind<&T, &L> {
-        match *self {
-            ParameterKind::Ty(ref t) => ParameterKind::Ty(t),
-            ParameterKind::Lifetime(ref l) => ParameterKind::Lifetime(l),
-        }
-    }
-
-    pub fn is_ty(&self) -> bool {
-        match self {
-            ParameterKind::Ty(_) => true,
-            ParameterKind::Lifetime(_) => false,
-        }
-    }
-
-    pub fn ty(self) -> Option<T> {
-        match self {
-            ParameterKind::Ty(t) => Some(t),
-            _ => None,
-        }
-    }
-
-    pub fn lifetime(self) -> Option<L> {
-        match self {
-            ParameterKind::Lifetime(t) => Some(t),
-            _ => None,
+            VariableKind::Ty => {
+                GenericArgData::Ty(TyData::BoundVar(bound_var).intern(interner)).intern(interner)
+            }
+            VariableKind::Lifetime => {
+                GenericArgData::Lifetime(LifetimeData::BoundVar(bound_var).intern(interner))
+                    .intern(interner)
+            }
+            VariableKind::Phantom(..) => unreachable!(),
         }
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct Parameter<I: Interner> {
-    interned: I::InternedParameter,
+pub struct GenericArg<I: Interner> {
+    interned: I::InternedGenericArg,
 }
 
-impl<I: Interner> Parameter<I> {
-    pub fn new(interner: &I, data: ParameterData<I>) -> Self {
-        let interned = I::intern_parameter(interner, data);
-        Parameter { interned }
+impl<I: Interner> GenericArg<I> {
+    pub fn new(interner: &I, data: GenericArgData<I>) -> Self {
+        let interned = I::intern_generic_arg(interner, data);
+        GenericArg { interned }
     }
 
-    pub fn interned(&self) -> &I::InternedParameter {
+    pub fn interned(&self) -> &I::InternedGenericArg {
         &self.interned
     }
 
-    pub fn data(&self, interner: &I) -> &ParameterData<I> {
-        I::parameter_data(interner, &self.interned)
+    pub fn data(&self, interner: &I) -> &GenericArgData<I> {
+        I::generic_arg_data(interner, &self.interned)
     }
 
     pub fn assert_ty_ref(&self, interner: &I) -> &Ty<I> {
-        self.as_ref(interner).ty().unwrap()
+        self.ty(interner).unwrap()
     }
 
     pub fn assert_lifetime_ref(&self, interner: &I) -> &Lifetime<I> {
-        self.as_ref(interner).lifetime().unwrap()
-    }
-
-    pub fn as_ref(&self, interner: &I) -> ParameterKind<&Ty<I>, &Lifetime<I>> {
-        match self.data(interner) {
-            ParameterKind::Ty(t) => ParameterKind::Ty(t),
-            ParameterKind::Lifetime(l) => ParameterKind::Lifetime(l),
-        }
+        self.lifetime(interner).unwrap()
     }
 
     pub fn is_ty(&self, interner: &I) -> bool {
         match self.data(interner) {
-            ParameterKind::Ty(_) => true,
-            ParameterKind::Lifetime(_) => false,
+            GenericArgData::Ty(_) => true,
+            GenericArgData::Lifetime(_) => false,
         }
     }
 
     pub fn ty(&self, interner: &I) -> Option<&Ty<I>> {
         match self.data(interner) {
-            ParameterKind::Ty(t) => Some(t),
+            GenericArgData::Ty(t) => Some(t),
             _ => None,
         }
     }
 
     pub fn lifetime(&self, interner: &I) -> Option<&Lifetime<I>> {
         match self.data(interner) {
-            ParameterKind::Lifetime(t) => Some(t),
+            GenericArgData::Lifetime(t) => Some(t),
             _ => None,
         }
     }
 }
 
-#[allow(type_alias_bounds)]
-pub type ParameterData<I: Interner> = ParameterKind<Ty<I>, Lifetime<I>>;
+#[derive(Clone, PartialEq, Eq, Hash, Visit, Fold, Zip)]
+pub enum GenericArgData<I: Interner> {
+    Ty(Ty<I>),
+    Lifetime(Lifetime<I>),
+}
 
-impl<I: Interner> ParameterData<I> {
-    pub fn intern(self, interner: &I) -> Parameter<I> {
-        Parameter::new(interner, self)
+impl<I: Interner> GenericArgData<I> {
+    pub fn intern(self, interner: &I) -> GenericArg<I> {
+        GenericArg::new(interner, self)
     }
 }
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct WithKind<I: Interner, T> {
+    pub kind: VariableKind<I>,
+    value: T,
+}
+
+impl<I: Interner, T> HasInterner for WithKind<I, T> {
+    type Interner = I;
+}
+
+impl<I: Interner, T> WithKind<I, T> {
+    pub fn new(kind: VariableKind<I>, value: T) -> Self {
+        Self { kind, value }
+    }
+
+    pub fn map<U, OP>(self, op: OP) -> WithKind<I, U>
+    where
+        OP: FnOnce(T) -> U,
+    {
+        WithKind {
+            kind: self.kind,
+            value: op(self.value),
+        }
+    }
+
+    pub fn map_ref<U, OP>(&self, op: OP) -> WithKind<I, U>
+    where
+        OP: FnOnce(&T) -> U,
+    {
+        WithKind {
+            kind: self.kind.clone(),
+            value: op(&self.value),
+        }
+    }
+
+    pub fn skip_kind(&self) -> &T {
+        &self.value
+    }
+}
+
+#[allow(type_alias_bounds)]
+pub type CanonicalVarKind<I: Interner> = WithKind<I, UniverseIndex>;
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum AliasTy<I: Interner> {
@@ -1207,10 +1195,10 @@ impl<I: Interner> DomainGoal<I> {
         }
     }
 
-    pub fn inputs(&self, interner: &I) -> Vec<Parameter<I>> {
+    pub fn inputs(&self, interner: &I) -> Vec<GenericArg<I>> {
         match self {
             DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
-                vec![ParameterKind::Ty(alias_eq.alias.clone().intern(interner)).intern(interner)]
+                vec![GenericArgData::Ty(alias_eq.alias.clone().intern(interner)).intern(interner)]
             }
             _ => Vec::new(),
         }
@@ -1219,8 +1207,8 @@ impl<I: Interner> DomainGoal<I> {
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 pub struct EqGoal<I: Interner> {
-    pub a: Parameter<I>,
-    pub b: Parameter<I>,
+    pub a: GenericArg<I>,
+    pub b: GenericArg<I>,
 }
 
 /// Proves that the given type alias **normalizes** to the given
@@ -1253,7 +1241,7 @@ impl<I: Interner> HasInterner for AliasEq<I> {
 /// of `self.binders`.)
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Binders<T: HasInterner> {
-    pub binders: ParameterKinds<T::Interner>,
+    pub binders: VariableKinds<T::Interner>,
     value: T,
 }
 
@@ -1262,7 +1250,7 @@ impl<T: HasInterner> HasInterner for Binders<T> {
 }
 
 impl<T: HasInterner> Binders<T> {
-    pub fn new(binders: ParameterKinds<T::Interner>, value: T) -> Self {
+    pub fn new(binders: VariableKinds<T::Interner>, value: T) -> Self {
         Self { binders, value }
     }
 
@@ -1270,7 +1258,7 @@ impl<T: HasInterner> Binders<T> {
     /// (value)`. Since our deBruijn indices count binders, not variables, this
     /// is sometimes useful.
     pub fn empty(interner: &T::Interner, value: T) -> Self {
-        let binders = ParameterKinds::new(interner);
+        let binders = VariableKinds::new(interner);
         Self { binders, value }
     }
 
@@ -1342,7 +1330,7 @@ impl<T: HasInterner> Binders<T> {
             self.binders
                 .iter(interner)
                 .enumerate()
-                .map(|(i, pk)| (pk, i).to_parameter(interner)),
+                .map(|(i, pk)| (pk, i).to_generic_arg(interner)),
         )
     }
 
@@ -1359,7 +1347,7 @@ impl<T: HasInterner> Binders<T> {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
         let value = op(new_var);
-        let binders = ParameterKinds::from(interner, iter::once(ParameterKind::Ty(())));
+        let binders = VariableKinds::from(interner, iter::once(VariableKind::Ty));
         Binders { binders, value }
     }
 
@@ -1384,10 +1372,10 @@ where
                 .binders
                 .iter(interner)
                 .enumerate()
-                .map(|(i, pk)| (pk, i + num_binders).to_parameter(interner)),
+                .map(|(i, pk)| (pk, i + num_binders).to_generic_arg(interner)),
         );
         let value = self.value.substitute(interner, &subst);
-        let binders = ParameterKinds::from(
+        let binders = VariableKinds::from(
             interner,
             self.binders
                 .iter(interner)
@@ -1398,7 +1386,7 @@ where
     }
 }
 
-impl<T: HasInterner> From<Binders<T>> for (ParameterKinds<T::Interner>, T) {
+impl<T: HasInterner> From<Binders<T>> for (VariableKinds<T::Interner>, T) {
     fn from(binders: Binders<T>) -> Self {
         (binders.binders, binders.value)
     }
@@ -1460,7 +1448,7 @@ where
 
 pub struct BindersIntoIterator<V: HasInterner + IntoIterator> {
     iter: <V as IntoIterator>::IntoIter,
-    binders: ParameterKinds<V::Interner>,
+    binders: VariableKinds<V::Interner>,
 }
 
 impl<V> Iterator for BindersIntoIterator<V>
@@ -1622,42 +1610,39 @@ impl<I: Interner> ProgramClauses<I> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct ParameterKinds<I: Interner> {
-    interned: I::InternedParameterKinds,
+pub struct VariableKinds<I: Interner> {
+    interned: I::InternedVariableKinds,
 }
 
-impl<I: Interner> ParameterKinds<I> {
+impl<I: Interner> VariableKinds<I> {
     pub fn new(interner: &I) -> Self {
-        Self::from(interner, None::<ParameterKind<()>>)
+        Self::from(interner, None::<VariableKind<I>>)
     }
 
-    pub fn interned(&self) -> &I::InternedParameterKinds {
+    pub fn interned(&self) -> &I::InternedVariableKinds {
         &self.interned
     }
 
-    pub fn from(
-        interner: &I,
-        parameter_kinds: impl IntoIterator<Item = ParameterKind<()>>,
-    ) -> Self {
+    pub fn from(interner: &I, variable_kinds: impl IntoIterator<Item = VariableKind<I>>) -> Self {
         Self::from_fallible(
             interner,
-            parameter_kinds
+            variable_kinds
                 .into_iter()
-                .map(|p| -> Result<ParameterKind<()>, ()> { Ok(p) }),
+                .map(|p| -> Result<VariableKind<I>, ()> { Ok(p) }),
         )
         .unwrap()
     }
 
     pub fn from_fallible<E>(
         interner: &I,
-        parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<()>, E>>,
+        variable_kinds: impl IntoIterator<Item = Result<VariableKind<I>, E>>,
     ) -> Result<Self, E> {
-        Ok(ParameterKinds {
-            interned: I::intern_parameter_kinds(interner, parameter_kinds.into_iter())?,
+        Ok(VariableKinds {
+            interned: I::intern_generic_arg_kinds(interner, variable_kinds.into_iter())?,
         })
     }
 
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<()>> {
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, VariableKind<I>> {
         self.as_slice(interner).iter()
     }
 
@@ -1669,8 +1654,8 @@ impl<I: Interner> ParameterKinds<I> {
         self.as_slice(interner).len()
     }
 
-    pub fn as_slice(&self, interner: &I) -> &[ParameterKind<()>] {
-        interner.parameter_kinds_data(&self.interned)
+    pub fn as_slice(&self, interner: &I) -> &[VariableKind<I>] {
+        interner.variable_kinds_data(&self.interned)
     }
 }
 
@@ -1681,7 +1666,7 @@ pub struct CanonicalVarKinds<I: Interner> {
 
 impl<I: Interner> CanonicalVarKinds<I> {
     pub fn new(interner: &I) -> Self {
-        Self::from(interner, None::<ParameterKind<UniverseIndex>>)
+        Self::from(interner, None::<CanonicalVarKind<I>>)
     }
 
     pub fn interned(&self) -> &I::InternedCanonicalVarKinds {
@@ -1690,27 +1675,27 @@ impl<I: Interner> CanonicalVarKinds<I> {
 
     pub fn from(
         interner: &I,
-        parameter_kinds: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
+        variable_kinds: impl IntoIterator<Item = CanonicalVarKind<I>>,
     ) -> Self {
         Self::from_fallible(
             interner,
-            parameter_kinds
+            variable_kinds
                 .into_iter()
-                .map(|p| -> Result<ParameterKind<UniverseIndex>, ()> { Ok(p) }),
+                .map(|p| -> Result<CanonicalVarKind<I>, ()> { Ok(p) }),
         )
         .unwrap()
     }
 
     pub fn from_fallible<E>(
         interner: &I,
-        parameter_kinds: impl IntoIterator<Item = Result<ParameterKind<UniverseIndex>, E>>,
+        variable_kinds: impl IntoIterator<Item = Result<CanonicalVarKind<I>, E>>,
     ) -> Result<Self, E> {
         Ok(CanonicalVarKinds {
-            interned: I::intern_canonical_var_kinds(interner, parameter_kinds.into_iter())?,
+            interned: I::intern_canonical_var_kinds(interner, variable_kinds.into_iter())?,
         })
     }
 
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ParameterKind<UniverseIndex>> {
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, CanonicalVarKind<I>> {
         self.as_slice(interner).iter()
     }
 
@@ -1722,7 +1707,7 @@ impl<I: Interner> CanonicalVarKinds<I> {
         self.as_slice(interner).len()
     }
 
-    pub fn as_slice(&self, interner: &I) -> &[ParameterKind<UniverseIndex>] {
+    pub fn as_slice(&self, interner: &I) -> &[CanonicalVarKind<I>] {
         interner.canonical_var_kinds_data(&self.interned)
     }
 }
@@ -1777,15 +1762,16 @@ impl<T: HasInterner> UCanonical<T> {
                 .enumerate()
                 .map(|(index, pk)| {
                     let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);
-                    match pk {
-                        ParameterKind::Ty(_) => {
-                            ParameterKind::Ty(TyData::BoundVar(bound_var).intern(interner))
+                    match pk.kind {
+                        VariableKind::Ty => {
+                            GenericArgData::Ty(TyData::BoundVar(bound_var).intern(interner))
                                 .intern(interner)
                         }
-                        ParameterKind::Lifetime(_) => ParameterKind::Lifetime(
+                        VariableKind::Lifetime => GenericArgData::Lifetime(
                             LifetimeData::BoundVar(bound_var).intern(interner),
                         )
                         .intern(interner),
+                        VariableKind::Phantom(..) => unreachable!(),
                     }
                 })
                 .collect::<Vec<_>>(),
@@ -1869,7 +1855,7 @@ impl<I: Interner> Goal<I> {
         self,
         interner: &I,
         kind: QuantifierKind,
-        binders: ParameterKinds<I>,
+        binders: VariableKinds<I>,
     ) -> Goal<I> {
         GoalData::Quantified(kind, Binders::new(binders, self)).intern(interner)
     }
@@ -2005,20 +1991,20 @@ pub struct Substitution<I: Interner> {
 impl<I: Interner> Substitution<I> {
     pub fn from(
         interner: &I,
-        parameters: impl IntoIterator<Item = impl CastTo<Parameter<I>>>,
+        parameters: impl IntoIterator<Item = impl CastTo<GenericArg<I>>>,
     ) -> Self {
         Self::from_fallible(
             interner,
             parameters
                 .into_iter()
-                .map(|p| -> Result<Parameter<I>, ()> { Ok(p.cast(interner)) }),
+                .map(|p| -> Result<GenericArg<I>, ()> { Ok(p.cast(interner)) }),
         )
         .unwrap()
     }
 
     pub fn from_fallible<E>(
         interner: &I,
-        parameters: impl IntoIterator<Item = Result<impl CastTo<Parameter<I>>, E>>,
+        parameters: impl IntoIterator<Item = Result<impl CastTo<GenericArg<I>>, E>>,
     ) -> Result<Self, E> {
         use crate::cast::Caster;
         Ok(Substitution {
@@ -2031,27 +2017,27 @@ impl<I: Interner> Substitution<I> {
     }
 
     /// Index into the list of parameters
-    pub fn at(&self, interner: &I, index: usize) -> &Parameter<I> {
+    pub fn at(&self, interner: &I, index: usize) -> &GenericArg<I> {
         &self.parameters(interner)[index]
     }
 
-    pub fn from1(interner: &I, parameter: impl CastTo<Parameter<I>>) -> Self {
+    pub fn from1(interner: &I, parameter: impl CastTo<GenericArg<I>>) -> Self {
         Self::from(interner, Some(parameter))
     }
 
     pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<Parameter<I>>)
+        Self::from(interner, None::<GenericArg<I>>)
     }
 
     pub fn is_empty(&self, interner: &I) -> bool {
         self.parameters(interner).is_empty()
     }
 
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Parameter<I>> {
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, GenericArg<I>> {
         self.parameters(interner).iter()
     }
 
-    pub fn parameters(&self, interner: &I) -> &[Parameter<I>] {
+    pub fn parameters(&self, interner: &I) -> &[GenericArg<I>] {
         interner.substitution_data(&self.interned)
     }
 
@@ -2072,14 +2058,14 @@ impl<I: Interner> Substitution<I> {
     /// Basically, each value is mapped to a type or lifetime with its
     /// same index.
     pub fn is_identity_subst(&self, interner: &I) -> bool {
-        self.iter(interner).zip(0..).all(|(parameter, index)| {
+        self.iter(interner).zip(0..).all(|(generic_arg, index)| {
             let index_db = BoundVar::new(DebruijnIndex::INNERMOST, index);
-            match parameter.data(interner) {
-                ParameterKind::Ty(ty) => match ty.data(interner) {
+            match generic_arg.data(interner) {
+                GenericArgData::Ty(ty) => match ty.data(interner) {
                     TyData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
-                ParameterKind::Lifetime(lifetime) => match lifetime.data(interner) {
+                GenericArgData::Lifetime(lifetime) => match lifetime.data(interner) {
                     LifetimeData::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },
@@ -2110,37 +2096,37 @@ struct SubstFolder<'i, I: Interner> {
 
 impl<I: Interner> SubstFolder<'_, I> {
     /// Index into the list of parameters
-    pub fn at(&self, index: usize) -> &Parameter<I> {
+    pub fn at(&self, index: usize) -> &GenericArg<I> {
         let interner = self.interner;
         &self.subst.parameters(interner)[index]
     }
 }
 
 pub trait AsParameters<I: Interner> {
-    fn as_parameters(&self, interner: &I) -> &[Parameter<I>];
+    fn as_parameters(&self, interner: &I) -> &[GenericArg<I>];
 }
 
 impl<I: Interner> AsParameters<I> for Substitution<I> {
     #[allow(unreachable_code, unused_variables)]
-    fn as_parameters(&self, interner: &I) -> &[Parameter<I>] {
+    fn as_parameters(&self, interner: &I) -> &[GenericArg<I>] {
         self.parameters(interner)
     }
 }
 
-impl<I: Interner> AsParameters<I> for [Parameter<I>] {
-    fn as_parameters(&self, _interner: &I) -> &[Parameter<I>] {
+impl<I: Interner> AsParameters<I> for [GenericArg<I>] {
+    fn as_parameters(&self, _interner: &I) -> &[GenericArg<I>] {
         self
     }
 }
 
-impl<I: Interner> AsParameters<I> for [Parameter<I>; 1] {
-    fn as_parameters(&self, _interner: &I) -> &[Parameter<I>] {
+impl<I: Interner> AsParameters<I> for [GenericArg<I>; 1] {
+    fn as_parameters(&self, _interner: &I) -> &[GenericArg<I>] {
         self
     }
 }
 
-impl<I: Interner> AsParameters<I> for Vec<Parameter<I>> {
-    fn as_parameters(&self, _interner: &I) -> &[Parameter<I>] {
+impl<I: Interner> AsParameters<I> for Vec<GenericArg<I>> {
+    fn as_parameters(&self, _interner: &I) -> &[GenericArg<I>] {
         self
     }
 }
@@ -2149,42 +2135,29 @@ impl<T, I: Interner> AsParameters<I> for &T
 where
     T: ?Sized + AsParameters<I>,
 {
-    fn as_parameters(&self, interner: &I) -> &[Parameter<I>] {
+    fn as_parameters(&self, interner: &I) -> &[GenericArg<I>] {
         T::as_parameters(self, interner)
     }
 }
 
-pub trait ToParameter {
+pub trait ToGenericArg<I: Interner> {
     /// Utility for converting a list of all the binders into scope
     /// into references to those binders. Simply pair the binders with
-    /// the indices, and invoke `to_parameter()` on the `(binder,
+    /// the indices, and invoke `to_generic_arg()` on the `(binder,
     /// index)` pair. The result will be a reference to a bound
     /// variable of appropriate kind at the corresponding index.
-    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
-        self.to_parameter_at_depth(interner, DebruijnIndex::INNERMOST)
+    fn to_generic_arg(&self, interner: &I) -> GenericArg<I> {
+        self.to_generic_arg_at_depth(interner, DebruijnIndex::INNERMOST)
     }
 
-    fn to_parameter_at_depth<I: Interner>(
-        &self,
-        interner: &I,
-        debruijn: DebruijnIndex,
-    ) -> Parameter<I>;
+    fn to_generic_arg_at_depth(&self, interner: &I, debruijn: DebruijnIndex) -> GenericArg<I>;
 }
 
-impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter_at_depth<I: Interner>(
-        &self,
-        interner: &I,
-        debruijn: DebruijnIndex,
-    ) -> Parameter<I> {
+impl<'a, I: Interner> ToGenericArg<I> for (&'a VariableKind<I>, usize) {
+    fn to_generic_arg_at_depth(&self, interner: &I, debruijn: DebruijnIndex) -> GenericArg<I> {
         let &(binder, index) = self;
         let bound_var = BoundVar::new(debruijn, index);
-        match *binder {
-            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(bound_var)
-                .intern(interner)
-                .cast(interner),
-            ParameterKind::Ty(_) => TyData::BoundVar(bound_var).intern(interner).cast(interner),
-        }
+        binder.to_bound_variable(interner, bound_var)
     }
 }
 

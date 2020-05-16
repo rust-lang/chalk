@@ -30,7 +30,7 @@ pub enum Item {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct StructDefn {
     pub name: Identifier,
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub fields: Vec<Field>,
     pub flags: StructFlags,
@@ -45,7 +45,7 @@ pub struct StructFlags {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TraitDefn {
     pub name: Identifier,
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
     pub flags: TraitFlags,
@@ -74,7 +74,7 @@ pub struct TraitFlags {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyDefn {
     pub name: Identifier,
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub bounds: Vec<QuantifiedInlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
@@ -82,19 +82,19 @@ pub struct AssocTyDefn {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct OpaqueTyDefn {
     pub ty: Ty,
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub identifier: Identifier,
     pub bounds: Vec<QuantifiedInlineBound>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum ParameterKind {
+pub enum VariableKind {
     Ty(Identifier),
     Lifetime(Identifier),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum Parameter {
+pub enum GenericArg {
     Ty(Ty),
     Lifetime(Lifetime),
 }
@@ -108,7 +108,7 @@ pub enum InlineBound {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct QuantifiedInlineBound {
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub bound: InlineBound,
 }
 
@@ -117,7 +117,7 @@ pub struct QuantifiedInlineBound {
 /// Does not know anything about what it's binding.
 pub struct TraitBound {
     pub trait_name: Identifier,
-    pub args_no_self: Vec<Parameter>,
+    pub args_no_self: Vec<GenericArg>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -126,7 +126,7 @@ pub struct TraitBound {
 pub struct AliasEqBound {
     pub trait_bound: TraitBound,
     pub name: Identifier,
-    pub args: Vec<Parameter>,
+    pub args: Vec<GenericArg>,
     pub value: Ty,
 }
 
@@ -147,7 +147,7 @@ impl fmt::Display for Kind {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Impl {
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub trait_ref: TraitRef,
     pub polarity: Polarity,
     pub where_clauses: Vec<QuantifiedWhereClause>,
@@ -164,7 +164,7 @@ pub enum ImplType {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyValue {
     pub name: Identifier,
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub value: Ty,
     pub default: bool,
 }
@@ -179,7 +179,7 @@ pub enum Ty {
     },
     Apply {
         name: Identifier,
-        args: Vec<Parameter>,
+        args: Vec<GenericArg>,
     },
     Projection {
         proj: ProjectionTy,
@@ -259,13 +259,13 @@ pub enum Lifetime {
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
-    pub args: Vec<Parameter>,
+    pub args: Vec<GenericArg>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct TraitRef {
     pub trait_name: Identifier,
-    pub args: Vec<Parameter>,
+    pub args: Vec<GenericArg>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -332,7 +332,7 @@ pub enum LeafGoal {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct QuantifiedWhereClause {
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub where_clause: WhereClause,
 }
 
@@ -346,15 +346,15 @@ pub struct Field {
 /// This allows users to add arbitrary `A :- B` clauses into the
 /// logic; it has no equivalent in Rust, but it's useful for testing.
 pub struct Clause {
-    pub parameter_kinds: Vec<ParameterKind>,
+    pub variable_kinds: Vec<VariableKind>,
     pub consequence: DomainGoal,
     pub conditions: Vec<Box<Goal>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Goal {
-    ForAll(Vec<ParameterKind>, Box<Goal>),
-    Exists(Vec<ParameterKind>, Box<Goal>),
+    ForAll(Vec<VariableKind>, Box<Goal>),
+    Exists(Vec<VariableKind>, Box<Goal>),
     Implies(Vec<Clause>, Box<Goal>),
     And(Box<Goal>, Vec<Box<Goal>>),
     Not(Box<Goal>),

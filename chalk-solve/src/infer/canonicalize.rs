@@ -92,7 +92,9 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     fn add(&mut self, free_var: ParameterEnaVariable<I>) -> usize {
         self.free_vars
             .iter()
-            .position(|&v| v == free_var)
+            // FIXME(areredify) With addition of constants this one is questionable,
+            // since you won't be able to `==` `VariableKind` anymore
+            .position(|v| v == &free_var)
             .unwrap_or_else(|| {
                 let next_index = self.free_vars.len();
                 self.free_vars.push(free_var);
@@ -157,7 +159,9 @@ where
                 // canonical index `root_var` in the union-find table,
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
-                let free_var = ParameterKind::Ty(self.table.unify.find(var));
+                let free_var =
+                    ParameterEnaVariable::new(VariableKind::Ty, self.table.unify.find(var));
+
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
                 Ok(TyData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
@@ -184,7 +188,8 @@ where
                     .shifted_in_from(interner, outer_binder))
             }
             None => {
-                let free_var = ParameterKind::Lifetime(self.table.unify.find(var));
+                let free_var =
+                    ParameterEnaVariable::new(VariableKind::Lifetime, self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);
                 Ok(

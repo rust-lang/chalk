@@ -184,9 +184,9 @@ fn quantify_simple() {
             binders: CanonicalVarKinds::from(
                 interner,
                 vec![
-                    ParameterKind::Ty(U2),
-                    ParameterKind::Ty(U1),
-                    ParameterKind::Ty(U0),
+                    CanonicalVarKind::new(VariableKind::Ty, U2),
+                    CanonicalVarKind::new(VariableKind::Ty, U1),
+                    CanonicalVarKind::new(VariableKind::Ty, U0),
                 ]
             ),
         }
@@ -225,9 +225,9 @@ fn quantify_bound() {
             binders: CanonicalVarKinds::from(
                 interner,
                 vec![
-                    ParameterKind::Ty(U1),
-                    ParameterKind::Ty(U0),
-                    ParameterKind::Ty(U2),
+                    CanonicalVarKind::new(VariableKind::Ty, U1),
+                    CanonicalVarKind::new(VariableKind::Ty, U0),
+                    CanonicalVarKind::new(VariableKind::Ty, U2),
                 ]
             ),
         }
@@ -268,7 +268,10 @@ fn quantify_ty_under_binder() {
             value: ty!(function 3 (apply (item 0) (bound 1) (bound 1 0) (bound 1 0) (lifetime (bound 1 1)))),
             binders: CanonicalVarKinds::from(
                 interner,
-                vec![ParameterKind::Ty(U0), ParameterKind::Lifetime(U0)]
+                vec![
+                    CanonicalVarKind::new(VariableKind::Ty, U0),
+                    CanonicalVarKind::new(VariableKind::Lifetime, U0)
+                ]
             ),
         }
     );

@@ -13,13 +13,13 @@ impl<I: Interner> InferenceTable<I> {
     pub(crate) fn fresh_subst(
         &mut self,
         interner: &I,
-        binders: &[ParameterKind<UniverseIndex>],
+        binders: &[CanonicalVarKind<I>],
     ) -> Substitution<I> {
         Substitution::from(
             interner,
             binders.iter().map(|kind| {
-                let param_infer_var = kind.map(|ui| self.new_variable(ui));
-                param_infer_var.to_parameter(interner)
+                let param_infer_var = kind.map_ref(|&ui| self.new_variable(ui));
+                param_infer_var.to_generic_arg(interner)
             }),
         )
     }
@@ -51,11 +51,11 @@ impl<I: Interner> InferenceTable<I> {
     ) -> T::Result
     where
         T: Fold<I>,
-        U: IntoIterator<Item = ParameterKind<()>>,
+        U: IntoIterator<Item = VariableKind<I>>,
     {
         let binders: Vec<_> = binders
             .into_iter()
-            .map(|pk| pk.map(|()| universe))
+            .map(|pk| CanonicalVarKind::new(pk, universe))
             .collect();
         let subst = self.fresh_subst(interner, &binders);
         subst.apply(&arg, interner)
@@ -91,11 +91,12 @@ impl<I: Interner> InferenceTable<I> {
             .map(|(idx, pk)| {
                 let placeholder_idx = PlaceholderIndex { ui, idx };
                 match pk {
-                    ParameterKind::Lifetime(()) => {
+                    VariableKind::Lifetime => {
                         let lt = placeholder_idx.to_lifetime(interner);
                         lt.cast(interner)
                     }
-                    ParameterKind::Ty(()) => placeholder_idx.to_ty(interner).cast(interner),
+                    VariableKind::Ty => placeholder_idx.to_ty(interner).cast(interner),
+                    VariableKind::Phantom(..) => unreachable!(),
                 }
             })
             .collect();
@@ -104,7 +105,7 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 pub(crate) trait IntoBindersAndValue<'a, I: Interner> {
-    type Binders: IntoIterator<Item = ParameterKind<()>>;
+    type Binders: IntoIterator<Item = VariableKind<I>>;
     type Value;
 
     fn into_binders_and_value(self, interner: &'a I) -> (Self::Binders, Self::Value);
@@ -114,8 +115,9 @@ impl<'a, I, T> IntoBindersAndValue<'a, I> for &'a Binders<T>
 where
     I: Interner,
     T: HasInterner<Interner = I>,
+    I: 'a,
 {
-    type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
+    type Binders = std::iter::Cloned<std::slice::Iter<'a, VariableKind<I>>>;
     type Value = &'a T;
 
     fn into_binders_and_value(self, interner: &'a I) -> (Self::Binders, Self::Value) {
@@ -127,21 +129,21 @@ impl<'a, I> IntoBindersAndValue<'a, I> for &'a Fn<I>
 where
     I: Interner,
 {
-    type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::ParameterKind<()>>;
+    type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::VariableKind<I>>;
     type Value = &'a Substitution<I>;
 
     fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
-        fn make_lifetime(_: usize) -> ParameterKind<()> {
-            ParameterKind::Lifetime(())
-        }
-
-        let p: fn(usize) -> ParameterKind<()> = make_lifetime;
+        let p: fn(usize) -> VariableKind<I> = make_lifetime;
         ((0..self.num_binders).map(p), &self.substitution)
     }
 }
 
-impl<'a, T, I: Interner> IntoBindersAndValue<'a, I> for (&'a Vec<ParameterKind<()>>, &'a T) {
-    type Binders = std::iter::Cloned<std::slice::Iter<'a, ParameterKind<()>>>;
+fn make_lifetime<I: Interner>(_: usize) -> VariableKind<I> {
+    VariableKind::Lifetime
+}
+
+impl<'a, T, I: Interner> IntoBindersAndValue<'a, I> for (&'a Vec<VariableKind<I>>, &'a T) {
+    type Binders = std::iter::Cloned<std::slice::Iter<'a, VariableKind<I>>>;
     type Value = &'a T;
 
     fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {

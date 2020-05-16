@@ -103,7 +103,7 @@ pub trait Context: Clone + Debug {
 
     /// A term that can be quantified over and unified -- in current
     /// Chalk, either a type or lifetime.
-    type Parameter: Debug;
+    type GenericArg: Debug;
 
     /// A rule like `DomainGoal :- Goal`.
     ///
@@ -354,13 +354,13 @@ pub trait UnificationOps<C: Context> {
     ///
     /// If the parameters fail to unify, then `Error` is returned
     // Used by: simplify
-    fn unify_parameters_into_ex_clause(
+    fn unify_generic_args_into_ex_clause(
         &mut self,
         interner: &C::Interner,
         environment: &C::Environment,
         variance: C::Variance,
-        a: &C::Parameter,
-        b: &C::Parameter,
+        a: &C::GenericArg,
+        b: &C::GenericArg,
         ex_clause: &mut ExClause<C>,
     ) -> Fallible<()>;
 }

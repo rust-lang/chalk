@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, ImplId, OpaqueTyId, Parameter,
-    ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId, Substitution, ToParameter,
-    TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, GenericArg, ImplId, OpaqueTyId,
+    ProjectionTy, QuantifiedWhereClause, StructId, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -271,7 +271,7 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct TraitBound<I: Interner> {
     pub trait_id: TraitId<I>,
-    pub args_no_self: Vec<Parameter<I>>,
+    pub args_no_self: Vec<GenericArg<I>>,
 }
 
 impl<I: Interner> TraitBound<I> {
@@ -298,7 +298,7 @@ pub struct AliasEqBound<I: Interner> {
     pub trait_bound: TraitBound<I>,
     pub associated_ty_id: AssocTypeId<I>,
     /// Does not include trait parameters.
-    pub parameters: Vec<Parameter<I>>,
+    pub parameters: Vec<GenericArg<I>>,
     pub value: Ty<I>,
 }
 
@@ -327,17 +327,17 @@ impl<I: Interner> AliasEqBound<I> {
     }
 }
 
-pub trait Anonymize {
-    /// Utility function that converts from a list of generic parameters
-    /// which *have* names (`ParameterKind<T>`) to a list of
+pub trait Anonymize<I: Interner> {
+    /// Utility function that converts from a list of generic arguments
+    /// which *have* associated data (`WithKind<I, T>`) to a list of
     /// "anonymous" generic parameters that just preserves their
-    /// kinds (`ParameterKind<()>`). Often convenient in lowering.
-    fn anonymize(&self) -> Vec<ParameterKind<()>>;
+    /// kinds (`VariableKind<I>`). Often convenient in lowering.
+    fn anonymize(&self) -> Vec<VariableKind<I>>;
 }
 
-impl<T> Anonymize for [ParameterKind<T>] {
-    fn anonymize(&self) -> Vec<ParameterKind<()>> {
-        self.iter().map(|pk| pk.map_ref(|_| ())).collect()
+impl<I: Interner, T> Anonymize<I> for [WithKind<I, T>] {
+    fn anonymize(&self) -> Vec<VariableKind<I>> {
+        self.iter().map(|pk| pk.kind).collect()
     }
 }
 
@@ -408,7 +408,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
             binders
                 .iter(interner)
                 .zip(0..)
-                .map(|p| p.to_parameter(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
