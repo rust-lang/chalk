@@ -179,7 +179,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
         write!(
             f,
-            " {}{} for {} ",
+            " {}{} for {}",
             self.polarity.display(s),
             full_trait_name,
             trait_ref.self_type_parameter(interner).display(s)
@@ -187,6 +187,8 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         if !value.where_clauses.is_empty() {
             let s = &s.add_indent();
             write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
+        } else {
+            write!(f, " ")?;
         }
         write!(f, "{{")?;
         {
@@ -833,9 +835,11 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         let binders = s.binder_var_display(&self.binders.binders).skip(1);
         write!(f, "trait {}", self.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
-        write!(f, " ")?;
         if !value.where_clauses.is_empty() {
-            write!(f, "\nwhere {}\n", value.where_clauses.display(s))?;
+            let s = &s.add_indent();
+            write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
+        } else {
+            write!(f, " ")?;
         }
         write!(f, "{{")?;
         let s = &s.add_indent();
@@ -861,10 +865,11 @@ impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
         let value = self.binders.skip_binders();
         write!(f, "struct {}", self.id.display(s),)?;
         write_joined_non_empty_list!(f, "<{}>", s.binder_var_display(&self.binders.binders), ", ")?;
-        write!(f, " ")?;
         if !value.where_clauses.is_empty() {
             let s = &s.add_indent();
             write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
+        } else {
+            write!(f, " ")?;
         }
         write!(f, "{{")?;
         let s = &s.add_indent();

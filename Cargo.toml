@@ -35,4 +35,5 @@ chalk-integration = { version = "0.16.0-dev.0", path = "chalk-integration" }
 # used for program_writer test errors
 diff = "0.1"
 pretty_assertions = "0.6.1"
+regex = "1"
 tracing = "0.1"

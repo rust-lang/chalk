@@ -1,10 +1,12 @@
 use chalk_integration::{program::Program, query::LoweringDatabase, tls};
 use chalk_solve::display;
+use regex::Regex;
 use std::{fmt::Debug, sync::Arc};
 
 mod assoc_ty;
 mod built_ins;
 mod dyn_;
+mod formatting;
 mod impl_;
 mod lifetimes;
 mod opaque_ty;
@@ -134,6 +136,23 @@ fn reparse_into_different_test<'a>(
         original_program,
         output_program,
         target_program,
+    }
+}
+
+fn test_formatting(src: &str, acceptable: &str) {
+    let result = reparse_test(src);
+    let acceptable = Regex::new(acceptable).unwrap();
+    if !acceptable.is_match(&result.output_text) {
+        panic!(
+            "output_text's formatting didn't match the criteria.\
+            \noutput_text:\n\"{0}\"\
+            \ncriteria:\n\"{1}\"\
+            \ndebug output: {0:?}\
+            \ndebug criteria: {2:?}\n",
+            result.output_text,
+            acceptable,
+            acceptable.as_str()
+        );
     }
 }
 
