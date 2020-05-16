@@ -8,6 +8,13 @@ fn test_function_type() {
             impl Baz<fn(Foo)> for Foo { }
             ",
     );
+    reparse_test(
+        "
+            struct Foo { }
+            trait Baz { }
+            impl Baz for fn(Foo) { }
+        ",
+    );
 }
 
 #[test]
@@ -32,6 +39,9 @@ fn test_scalar_types() {
                 impl Bar for Foo {{
                     type Baz = {0};
                 }}
+                impl Bar for {0} {{
+                    type Baz = {0};
+                }}
                 ",
             scalar
         ));
@@ -50,6 +60,9 @@ fn test_slice_types() {
         }
         impl<T> Bar for Foo<T> {
             type Baz = [T];
+        }
+        impl<T> Bar for [T] {
+            type Baz = Foo<T>;
         }",
     );
 }
@@ -65,6 +78,9 @@ fn test_str_types() {
                 type Baz;
             }
             impl Bar for Foo {
+                type Baz = str;
+            }
+            impl Bar for str {
                 type Baz = str;
             }
             ",
@@ -84,6 +100,9 @@ fn test_raw_ptr_types() {
             impl<T> Bar for Foo<T> {
                 type Baz = *const u32;
             }
+            impl Bar for *const u32 {
+                type Baz = *const u32;
+            }
             ",
     );
     reparse_test(
@@ -96,6 +115,22 @@ fn test_raw_ptr_types() {
             }
             impl<T> Bar for Foo<T> {
                 type Baz = *mut u32;
+            }
+            impl Bar for *mut u32 {
+                type Baz = *mut u32;
+            }
+            ",
+    );
+    reparse_test(
+        "
+            trait Bar {
+                type Baz;
+            }
+            impl<T> Bar for *mut T {
+                type Baz = *mut T;
+            }
+            impl<T> Bar for *const T {
+                type Baz = *const T;
             }
             ",
     );
@@ -114,6 +149,9 @@ fn test_reference_types() {
             impl<'a,T> Bar for Foo<'a,T> {
                 type Baz = &'a u32;
             }
+            impl<'a> Bar for &'a u32 {
+                type Baz = &'a u32;
+            }
             ",
     );
     reparse_test(
@@ -126,6 +164,22 @@ fn test_reference_types() {
             }
             impl<'a,T> Bar for Foo<'a,T> {
                 type Baz = &'a mut u32;
+            }
+            impl<'a> Bar for &'a mut u32 {
+                type Baz = &'a u32;
+            }
+            ",
+    );
+    reparse_test(
+        "
+            trait Bar {
+                type Baz;
+            }
+            impl<'a,T> Bar for &'a mut T {
+                type Baz = &'a mut T;
+            }
+            impl<'a,T> Bar for &'a T {
+                type Baz = &'a T;
             }
             ",
     );
@@ -163,5 +217,19 @@ fn test_tuples() {
                 type Baz = (T,Foo<T>,u32);
             }
             ",
+    );
+    reparse_test(
+        "
+            trait Blug {}
+            impl<T1,T2> Blug for (T1,T2) {
+                
+            }
+            impl<T1> Blug for (T1,) {
+
+            }
+            impl Blug for () {
+
+            }
+        ",
     );
 }
