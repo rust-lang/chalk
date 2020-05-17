@@ -3,9 +3,9 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, GenericArg, Goal, Goals, ImplId,
-    Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses,
-    ProjectionTy, Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, GenericArg, Goal, Goals,
+    ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_rust_ir::{
     AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType,

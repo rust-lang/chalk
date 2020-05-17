@@ -676,14 +676,13 @@ impl WfWellKnownGoals {
                 gb.exists(&impl_self_ty, def_adt, |gb, _, impl_adt, def_adt| {
                     let interner = gb.interner();
 
-                        // StructName<StructP1..StructPn> = ImplSelfType
-                        GoalData::EqGoal(EqGoal {
-                            a: GenericArgData::Ty(def_adt).intern(interner),
-                            b: GenericArgData::Ty(impl_adt.clone()).intern(interner),
-                        })
-                        .intern(interner)
-                    },
-                )
+                    // StructName<StructP1..StructPn> = ImplSelfType
+                    GoalData::EqGoal(EqGoal {
+                        a: GenericArgData::Ty(def_adt).intern(interner),
+                        b: GenericArgData::Ty(impl_adt.clone()).intern(interner),
+                    })
+                    .intern(interner)
+                })
             },
         );
 

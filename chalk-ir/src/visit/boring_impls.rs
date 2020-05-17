@@ -7,8 +7,8 @@
 use crate::{
     AdtId, AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, GenericArg, Goals, ImplId, IntTy,
     Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauseData,
-    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution,
-    SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
+    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution, SuperVisit,
+    TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
 };
 use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 use std::{marker::PhantomData, sync::Arc};

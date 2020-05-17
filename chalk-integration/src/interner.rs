@@ -1,8 +1,8 @@
 use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, Goals, Lifetime,
-    OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, Goals,
+    Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
     QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind,
     VariableKinds,
 };
