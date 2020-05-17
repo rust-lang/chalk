@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     collections::BTreeMap,
     fmt::{Display, Formatter, Result},
     rc::Rc,
@@ -19,14 +20,12 @@ use itertools::Itertools;
 
 use crate::{logging_db::RecordedItemId, split::Split, RustIrDatabase};
 
-pub fn write_top_level<I, DB, T, F>(f: &mut F, db: &DB, v: &T) -> Result
+pub fn write_top_level<I, T, F>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
 where
     I: Interner,
-    DB: RustIrDatabase<I>,
     T: RenderAsRust<I>,
     F: std::fmt::Write,
 {
-    let ws = &WriterState::new(db);
     write!(f, "{}\n", v.display(ws))
 }
 
@@ -39,23 +38,24 @@ where
     DB: RustIrDatabase<I>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
+    let ws = &WriterState::new(db);
     for id in ids {
         match id {
             RecordedItemId::Impl(id) => {
                 let v = db.impl_datum(id);
-                write_top_level(f, db, &*v)?;
+                write_top_level(f, ws, &*v)?;
             }
             RecordedItemId::Struct(id) => {
                 let v = db.struct_datum(id);
-                write_top_level(f, db, &*v)?;
+                write_top_level(f, ws, &*v)?;
             }
             RecordedItemId::Trait(id) => {
                 let v = db.trait_datum(id);
-                write_top_level(f, db, &*v)?;
+                write_top_level(f, ws, &*v)?;
             }
             RecordedItemId::OpaqueTy(id) => {
                 let v = db.opaque_ty_data(id);
-                write_top_level(f, db, &*v)?;
+                write_top_level(f, ws, &*v)?;
             }
         }
     }
@@ -256,13 +256,17 @@ impl<I: Interner> RenderAsRust<I> for Parameter<I> {
 impl<I: Interner> RenderAsRust<I> for StructId<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // TODO: use debug methods?
-        f.write_str(&s.db.struct_name(*self))
+        write!(
+            f,
+            "{}",
+            s.alias_for_id_name(self.0, s.db.struct_name(*self))
+        )
     }
 }
 impl<I: Interner> RenderAsRust<I> for TraitId<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // TODO: use debug methods?
-        f.write_str(&s.db.trait_name(*self))
+        write!(f, "{}", s.alias_for_id_name(self.0, s.db.trait_name(*self)))
     }
 }
 impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
@@ -274,7 +278,11 @@ impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
 impl<I: Interner> RenderAsRust<I> for OpaqueTyId<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // TODO: use debug methods?
-        f.write_str(&s.db.opaque_type_name(*self))
+        write!(
+            f,
+            "{}",
+            s.alias_for_id_name(self.0, s.db.opaque_type_name(*self))
+        )
     }
 }
 
@@ -928,6 +936,44 @@ impl Display for InvertedBoundVar {
     }
 }
 
+#[derive(Debug)]
+struct DefIdAliases<I: Interner> {
+    /// Map from the DefIds we've encountered to a u32 alias id unique to all ids
+    /// the same name.
+    aliases: BTreeMap<I::DefId, u32>,
+    /// Map from each name to the next unused u32 alias id.
+    next_unused_for_name: BTreeMap<String, u32>,
+}
+
+impl<I: Interner> Default for DefIdAliases<I> {
+    fn default() -> Self {
+        DefIdAliases {
+            aliases: BTreeMap::default(),
+            next_unused_for_name: BTreeMap::default(),
+        }
+    }
+}
+
+impl<I: Interner> DefIdAliases<I> {
+    fn alias_for_id_name(&mut self, id: I::DefId, name: String) -> String {
+        let next_unused_for_name = &mut self.next_unused_for_name;
+        let alias = *self.aliases.entry(id).or_insert_with(|| {
+            let next_unused: &mut u32 =
+                dbg!(next_unused_for_name.entry(dbg!(&name).clone())).or_default();
+            let id = *next_unused;
+            *next_unused += 1;
+            dbg!(id)
+        });
+        // If there are no conflicts, keep the name the same so that we don't
+        // need name-agnostic equality in display tests.
+        if alias == 0 {
+            name
+        } else {
+            format!("{}_{}", name, alias)
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct WriterState<'a, I: Interner> {
     db: &'a dyn RustIrDatabase<I>,
@@ -937,6 +983,7 @@ pub struct WriterState<'a, I: Interner> {
     remapping: Rc<BTreeMap<InvertedBoundVar, InvertedBoundVar>>,
     // the inverted_bound_var which maps to "Self"
     self_mapping: Option<InvertedBoundVar>,
+    def_id_aliases: Rc<RefCell<DefIdAliases<I>>>,
 }
 type IndexWithinBinding = usize;
 impl<'a, I: Interner> WriterState<'a, I> {
@@ -947,6 +994,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             debrujin_indices_deep: 0,
             remapping: Rc::new(BTreeMap::new()),
             self_mapping: None,
+            def_id_aliases: Default::default(),
         }
     }
 
@@ -959,6 +1007,10 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
     fn indent(&self) -> impl Display {
         std::iter::repeat("  ").take(self.indent_level).format("")
+    }
+
+    fn alias_for_id_name(&self, id: I::DefId, name: String) -> impl Display {
+        self.def_id_aliases.borrow_mut().alias_for_id_name(id, name)
     }
 
     /// Adds a level of debrujin index, and possibly a "Self" parameter.
@@ -1000,6 +1052,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
         WriterState {
             remapping: Rc::new(remapping),
+            def_id_aliases: self.def_id_aliases.clone(),
             ..*self
         }
     }

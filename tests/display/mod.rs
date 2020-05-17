@@ -1,5 +1,5 @@
 use chalk_integration::{program::Program, query::LoweringDatabase, tls};
-use chalk_solve::display;
+use chalk_solve::display::{self, WriterState};
 use regex::Regex;
 use std::{fmt::Debug, sync::Arc};
 
@@ -17,17 +17,18 @@ mod where_clauses;
 
 fn write_program(program: &Program) -> String {
     let mut out = String::new();
+    let ws = &WriterState::new(program);
     for datum in program.struct_data.values() {
-        display::write_top_level(&mut out, program, &**datum).unwrap();
+        display::write_top_level(&mut out, ws, &**datum).unwrap();
     }
     for datum in program.trait_data.values() {
-        display::write_top_level(&mut out, program, &**datum).unwrap();
+        display::write_top_level(&mut out, ws, &**datum).unwrap();
     }
     for datum in program.impl_data.values() {
-        display::write_top_level(&mut out, program, &**datum).unwrap();
+        display::write_top_level(&mut out, ws, &**datum).unwrap();
     }
     for datum in program.opaque_ty_data.values() {
-        display::write_top_level(&mut out, program, &**datum).unwrap();
+        display::write_top_level(&mut out, ws, &**datum).unwrap();
     }
     out
 }
