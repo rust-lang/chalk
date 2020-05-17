@@ -10,8 +10,10 @@ use crate::{
     ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution, SuperVisit,
     TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
 };
-use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 use std::{marker::PhantomData, sync::Arc};
+
+#[cfg(feature = "slg-solver")]
+use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 
 /// Convenience function to visit all the items in the iterator it.
 pub fn visit_iter<'i, T, I, R>(
@@ -203,8 +205,6 @@ const_visit!(usize);
 const_visit!(PlaceholderIndex);
 const_visit!(QuantifierKind);
 const_visit!(DebruijnIndex);
-const_visit!(chalk_engine::TableIndex);
-const_visit!(chalk_engine::TimeStamp);
 const_visit!(ClausePriority);
 const_visit!(());
 const_visit!(Scalar);
@@ -212,6 +212,11 @@ const_visit!(UintTy);
 const_visit!(IntTy);
 const_visit!(FloatTy);
 const_visit!(Mutability);
+
+#[cfg(feature = "slg-solver")]
+const_visit!(chalk_engine::TableIndex);
+#[cfg(feature = "slg-solver")]
+const_visit!(chalk_engine::TimeStamp);
 
 #[macro_export]
 macro_rules! id_visit {
@@ -299,6 +304,7 @@ impl<I: Interner> Visit<I> for PhantomData<I> {
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner> Visit<I> for ExClause<C>
 where
     C: Context,
@@ -336,6 +342,7 @@ where
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner> Visit<I> for FlounderedSubgoal<C>
 where
     C: Context,
@@ -363,6 +370,7 @@ where
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner> Visit<I> for Literal<C>
 where
     C: Context,

@@ -6,10 +6,11 @@
 
 use crate::interner::TargetInterner;
 use crate::*;
-use chalk_engine::context::Context;
-use chalk_engine::{ExClause, FlounderedSubgoal, Literal};
 use std::marker::PhantomData;
 use std::sync::Arc;
+
+#[cfg(feature = "slg-solver")]
+use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 
 impl<'a, T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a T {
     type Result = T::Result;
@@ -240,8 +241,6 @@ copy_fold!(usize);
 copy_fold!(PlaceholderIndex);
 copy_fold!(QuantifierKind);
 copy_fold!(DebruijnIndex);
-copy_fold!(chalk_engine::TableIndex);
-copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
 copy_fold!(UintTy);
 copy_fold!(IntTy);
@@ -249,6 +248,11 @@ copy_fold!(FloatTy);
 copy_fold!(Scalar);
 copy_fold!(ClausePriority);
 copy_fold!(Mutability);
+
+#[cfg(feature = "slg-solver")]
+copy_fold!(chalk_engine::TableIndex);
+#[cfg(feature = "slg-solver")]
+copy_fold!(chalk_engine::TimeStamp);
 
 #[macro_export]
 macro_rules! id_fold {
@@ -337,6 +341,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ExClause<C>
 where
     C: Context,
@@ -377,6 +382,7 @@ where
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FlounderedSubgoal<C>
 where
     C: Context,
@@ -407,6 +413,7 @@ where
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Literal<C>
 where
     C: Context,

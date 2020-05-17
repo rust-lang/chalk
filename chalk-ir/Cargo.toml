@@ -12,4 +12,9 @@ edition = "2018"
 [dependencies]
 chalk-engine-base = { version = "0.10.1-dev", path = "../chalk-engine-base" }
 chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
-chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine" }
+chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine", optional = true }
+
+[features]
+default = ["slg-solver"]
+
+slg-solver = ["chalk-engine"]
