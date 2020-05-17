@@ -5,9 +5,9 @@
 //! `DomainGoal` type, add arena lifetime parameters, and more. See
 //! [`Context`] trait for a list of types.
 
-use crate::fallible::Fallible;
 use crate::hh::HhGoal;
 use crate::{CompleteAnswer, ExClause};
+use chalk_engine_base::results::{Fallible, Floundered};
 use std::fmt::Debug;
 use std::hash::Hash;
 
@@ -281,11 +281,6 @@ pub trait AggregateOps<C: Context> {
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
 pub trait InferenceTable<C: Context>: ResolventOps<C> + TruncateOps<C> + UnificationOps<C> {}
-
-/// Error type for the `UnificationOps::program_clauses` method --
-/// indicates that the complete set of program clauses for this goal
-/// cannot be enumerated.
-pub struct Floundered;
 
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<C: Context> {

@@ -1,7 +1,6 @@
 use crate::context::{
-    Context, ContextOps, Floundered, InferenceTable, ResolventOps, TruncateOps, UnificationOps,
+    Context, ContextOps, InferenceTable, ResolventOps, TruncateOps, UnificationOps,
 };
-use crate::fallible::NoSolution;
 use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::{Stack, StackIndex};
@@ -10,6 +9,7 @@ use crate::table::AnswerIndex;
 use crate::{
     Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
+use chalk_engine_base::results::{Floundered, NoSolution};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 

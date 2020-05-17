@@ -54,7 +54,7 @@
 //!   Popularized by Lambda Prolog.
 
 #[macro_use]
-extern crate chalk_macros;
+extern crate chalk_engine_base;
 
 use crate::context::Context;
 use std::cmp::min;
@@ -62,7 +62,6 @@ use std::usize;
 
 pub mod context;
 mod derived;
-pub mod fallible;
 pub mod forest;
 pub mod hh;
 mod logic;

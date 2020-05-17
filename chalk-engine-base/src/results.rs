@@ -6,3 +6,8 @@ pub type Fallible<T> = Result<T, NoSolution>;
 /// cannot be performed.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NoSolution;
+
+/// Error type for the `UnificationOps::program_clauses` method --
+/// indicates that the complete set of program clauses for this goal
+/// cannot be enumerated.
+pub struct Floundered;

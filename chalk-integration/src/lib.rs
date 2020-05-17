@@ -2,7 +2,7 @@
 #![cfg_attr(feature = "bench", feature(test))]
 
 #[macro_use]
-extern crate chalk_macros;
+extern crate chalk_engine_base;
 
 pub mod db;
 pub mod error;
