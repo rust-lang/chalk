@@ -10,9 +10,9 @@ use crate::{Guidance, RustIrDatabase, Solution};
 use chalk_engine_base::results::{Fallible, Floundered, NoSolution};
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Binders, Canonical, ClausePriority, ConstrainedSubst, DomainGoal, Environment, Goal, GoalData,
-    InEnvironment, Parameter, ParameterKinds, ProgramClause, ProgramClauseData,
-    ProgramClauseImplication, UCanonical,
+    Binders, Canonical, ClausePriority, ConstrainedSubst, DomainGoal, Environment, GenericArg,
+    Goal, GoalData, InEnvironment, ProgramClause, ProgramClauseData, ProgramClauseImplication,
+    UCanonical, VariableKinds,
 };
 use rustc_hash::FxHashMap;
 
