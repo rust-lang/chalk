@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, GenericArg, ImplId, OpaqueTyId,
-    ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef, Ty, TyData,
-    TypeName, VariableKind, WhereClause, WithKind,
+    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -101,6 +101,49 @@ pub struct AdtDatumBound<I: Interner> {
 pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// A rust intermediate represention (rust_ir) of a function definition/declaration.
+/// For example, in the following rust code:
+///
+/// ```ignore
+/// fn foo<T>() -> i32 where T: Eq;
+/// ```
+///
+/// This would represent the declaration of `foo`.
+///
+/// Note this is distinct from a function pointer, which points to
+/// a function with a given type signature, whereas this represents
+/// a specific function definition.
+pub struct FnDefDatum<I: Interner> {
+    pub id: FnDefId<I>,
+    pub binders: Binders<FnDefDatumBound<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+/// Represents the bounds on a `FnDefDatum`, including
+/// the function definition's type signature and where clauses.
+pub struct FnDefDatumBound<I: Interner> {
+    /// Types of the function's arguments
+    /// ```ignore
+    /// fn foo<T>(bar: i32, baz: T);
+    ///                ^^^       ^
+    /// ```
+    ///
+    pub argument_types: Vec<Ty<I>>,
+    /// Return type of the function
+    /// ```ignore
+    /// fn foo<T>() -> i32;
+    ///                ^^^
+    /// ```
+    pub return_type: Ty<I>,
+    /// Where clauses defined on the function
+    /// ```ignore
+    /// fn foo<T>() where T: Eq;
+    ///             ^^^^^^^^^^^
+    /// ```
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -21,6 +21,12 @@ impl<I: Interner> Debug for AssocTypeId<I> {
     }
 }
 
+impl<I: Interner> Debug for FnDefId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        I::debug_fn_def_id(*self, fmt).unwrap_or_else(|| write!(fmt, "FnDefId({:?})", self.0))
+    }
+}
+
 impl<I: Interner> Debug for Ty<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_ty(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
@@ -146,6 +152,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
             TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
             TypeName::Slice => write!(fmt, "{{slice}}"),
+            TypeName::FnDef(fn_def) => write!(fmt, "{:?}", fn_def),
             TypeName::Raw(mutability) => write!(fmt, "{:?}", mutability),
             TypeName::Ref(mutability) => write!(fmt, "{:?}", mutability),
             TypeName::Error => write!(fmt, "{{error}}"),

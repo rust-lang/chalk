@@ -169,6 +169,9 @@ pub enum TypeName<I: Interner> {
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>),
 
+    /// a function definition
+    FnDef(FnDefId<I>),
+
     /// the string primitive type
     Str,
 
@@ -236,6 +239,9 @@ pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OpaqueTyId<I: Interner>(pub I::DefId);
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FnDefId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 

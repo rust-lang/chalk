@@ -21,6 +21,7 @@ pub struct Program {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Item {
     StructDefn(StructDefn),
+    FnDefn(FnDefn),
     TraitDefn(TraitDefn),
     OpaqueTyDefn(OpaqueTyDefn),
     Impl(Impl),
@@ -40,6 +41,15 @@ pub struct StructDefn {
 pub struct StructFlags {
     pub upstream: bool,
     pub fundamental: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FnDefn {
+    pub name: Identifier,
+    pub variable_kinds: Vec<VariableKind>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub argument_types: Vec<Ty>,
+    pub return_type: Ty,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

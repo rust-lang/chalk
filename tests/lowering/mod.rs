@@ -559,3 +559,28 @@ fn slices() {
         }
     }
 }
+
+#[test]
+fn fn_defs() {
+    lowering_success! {
+        program {
+            trait Quux { }
+
+            fn foo<'a, T>(bar: T, baz: &'a mut T) -> u32
+                where T: Quux;
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Quux { }
+
+            fn foo<T>(bar: TT) -> T
+                where T: Quux;
+        }
+
+        error_msg {
+            "invalid type name `TT`"
+        }
+    }
+}

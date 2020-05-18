@@ -1,6 +1,6 @@
 use crate::clauses::builder::ClauseBuilder;
 use crate::split::Split;
-use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::cast::{Cast, CastTo, Caster};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_rust_ir::*;
@@ -180,6 +180,129 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     }
 }
 
+fn application_ty<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    type_name: impl CastTo<TypeName<I>>,
+) -> ApplicationTy<I> {
+    let interner = builder.interner();
+    ApplicationTy {
+        name: type_name.cast(interner),
+        substitution: builder.substitution_in_scope(),
+    }
+}
+
+/// Generates the "well-formed" program clauses for an applicative type
+/// with the name `type_name`. For example, given a struct definition:
+///
+/// ```ignore
+/// struct Foo<T: Eq> { }
+/// ```
+///
+/// we would generate the clause:
+///
+/// ```notrust
+/// forall<T> {
+///     WF(Foo<T>) :- WF(T: Eq).
+/// }
+/// ```
+///
+/// # Parameters
+/// - builder -- the clause builder. We assume all the generic types from `Foo` are in scope
+/// - type_name -- in our example above, the name `Foo`
+/// - where_clauses -- the list of where clauses declared on the type (`T: Eq`, in our example)
+fn well_formed_program_clauses<'a, I, Wc>(
+    builder: &'a mut ClauseBuilder<'_, I>,
+    type_name: impl CastTo<TypeName<I>>,
+    where_clauses: Wc,
+) where
+    I: Interner,
+    Wc: Iterator<Item = &'a QuantifiedWhereClause<I>>,
+{
+    let interner = builder.interner();
+    let appl_ty = application_ty(builder, type_name);
+    let ty = appl_ty.clone().intern(interner);
+    builder.push_clause(
+        WellFormed::Ty(ty.clone()),
+        where_clauses
+            .cloned()
+            .map(|qwc| qwc.into_well_formed_goal(interner)),
+    );
+}
+
+/// Generates the "fully visible" program clauses for an applicative type
+/// with the name `type_name`. For example, given a struct definition:
+///
+/// ```ignore
+/// struct Foo<T: Eq> { }
+/// ```
+///
+/// we would generate the clause:
+///
+/// ```notrust
+/// forall<T> {
+///     IsFullyVisible(Foo<T>) :- IsFullyVisible(T).
+/// }
+/// ```
+///
+/// # Parameters
+///
+/// - builder -- the clause builder. We assume all the generic types from `Foo` are in scope
+/// - type_name -- in our example above, the name `Foo`
+fn fully_visible_program_clauses<'a, I>(
+    builder: &'a mut ClauseBuilder<'_, I>,
+    type_name: impl CastTo<TypeName<I>>,
+) where
+    I: Interner,
+{
+    let interner = builder.interner();
+    let appl_ty = application_ty(builder, type_name);
+    let ty = appl_ty.clone().intern(interner);
+    builder.push_clause(
+        DomainGoal::IsFullyVisible(ty.clone()),
+        appl_ty
+            .type_parameters(interner)
+            .map(|typ| DomainGoal::IsFullyVisible(typ).cast::<Goal<_>>(interner)),
+    );
+}
+
+/// Generates the "implied bounds" clauses for an applicative
+/// type with the name `type_name`. For example, if `type_name`
+/// represents a struct `S` that is declared like:
+///
+/// ```ignore
+/// struct S<T> where T: Eq {  }
+/// ```
+///
+/// then we would generate the rule:
+///
+/// ```notrust
+/// FromEnv(T: Eq) :- FromEnv(S<T>)
+/// ```
+///
+/// # Parameters
+///
+/// - builder -- the clause builder. We assume all the generic types from `S` are in scope.
+/// - type_name -- in our example above, the name `S`
+/// - where_clauses -- the list of where clauses declared on the type (`T: Eq`, in our example).
+fn implied_bounds_program_clauses<'a, I, Wc>(
+    builder: &'a mut ClauseBuilder<'_, I>,
+    type_name: impl CastTo<TypeName<I>>,
+    where_clauses: Wc,
+) where
+    I: Interner,
+    Wc: Iterator<Item = &'a QuantifiedWhereClause<I>>,
+{
+    let interner = builder.interner();
+    let appl_ty = application_ty(builder, type_name);
+    let ty = appl_ty.clone().intern(interner);
+
+    for qwc in where_clauses {
+        builder.push_binders(&qwc, |builder, wc| {
+            builder.push_clause(wc.into_from_env_goal(interner), Some(ty.clone().from_env()));
+        });
+    }
+}
+
 impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
     /// Given the following type definition: `struct Foo<T: Eq> { }`, generate:
     ///
@@ -234,33 +357,17 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
 
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| &b.where_clauses);
+        let id = self.id;
+
         builder.push_binders(&binders, |builder, where_clauses| {
-            let self_appl_ty = &ApplicationTy {
-                name: self.id.cast(interner),
-                substitution: builder.substitution_in_scope(),
-            };
+            well_formed_program_clauses(builder, id, where_clauses.iter());
+
+            implied_bounds_program_clauses(builder, id, where_clauses.iter());
+
+            fully_visible_program_clauses(builder, id);
+
+            let self_appl_ty = application_ty(builder, id);
             let self_ty = self_appl_ty.clone().intern(interner);
-
-            // forall<T> {
-            //     WF(Foo<T>) :- WF(T: Eq).
-            // }
-            builder.push_clause(
-                WellFormed::Ty(self_ty.clone()),
-                where_clauses
-                    .iter()
-                    .cloned()
-                    .map(|qwc| qwc.into_well_formed_goal(interner)),
-            );
-
-            // forall<T> {
-            //     IsFullyVisible(Foo<T>) :- IsFullyVisible(T).
-            // }
-            builder.push_clause(
-                DomainGoal::IsFullyVisible(self_ty.clone()),
-                self_appl_ty
-                    .type_parameters(interner)
-                    .map(|ty| DomainGoal::IsFullyVisible(ty).cast::<Goal<_>>(interner)),
-            );
 
             // Fundamental types often have rules in the form of:
             //     Goal(FundamentalType<T>) :- Goal(T)
@@ -313,26 +420,40 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
             if self.flags.fundamental {
                 fundamental_rule!(DownstreamType);
             }
+        });
+    }
+}
 
-            for qwc in where_clauses {
-                // Generate implied bounds rules. We have to push the binders from the where-clauses
-                // too -- e.g., if we had `struct Foo<T: for<'a> Bar<&'a i32>>`, we would
-                // create a reverse rule like:
-                //
-                // ```notrust
-                // forall<T, 'a> { FromEnv(T: Bar<&'a i32>) :- FromEnv(Foo<T>) }
-                // ```
-                //
-                // In other words, you can assume `T: Bar<&'a i32>`
-                // for any `'a` *if* you are assuming that `Foo<T>` is
-                // well formed.
-                builder.push_binders(&qwc, |builder, wc| {
-                    builder.push_clause(
-                        wc.into_from_env_goal(interner),
-                        Some(self_ty.clone().from_env()),
-                    );
-                });
-            }
+impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
+    /// Given the following function definition: `fn bar<T>() where T: Eq`, generate:
+    ///
+    /// ```notrust
+    /// -- Rule WellFormed-Type
+    /// forall<T> {
+    ///     WF(bar<T>) :- WF(T: Eq)
+    /// }
+    ///
+    /// -- Rule Implied-Bound-From-Type
+    /// forall<T> {
+    ///     FromEnv(T: Eq) :- FromEnv(bar<T>).
+    /// }
+    ///
+    /// forall<T> {
+    ///     IsFullyVisible(bar<T>) :- IsFullyVisible(T).
+    /// }
+    /// ```
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+        debug_heading!("FnDatum::to_program_clauses(self={:?})", self);
+
+        let binders = self.binders.map_ref(|b| &b.where_clauses);
+        let id = self.id;
+
+        builder.push_binders(&binders, |builder, where_clauses| {
+            well_formed_program_clauses(builder, id, where_clauses.iter());
+
+            implied_bounds_program_clauses(builder, id, where_clauses.iter());
+
+            fully_visible_program_clauses(builder, id);
         });
     }
 }
