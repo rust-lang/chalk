@@ -122,9 +122,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "chalk"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
- "chalk-engine-base 0.10.1-dev",
  "chalk-integration 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
  "chalk-parse 0.10.1-dev",
@@ -135,6 +135,13 @@ dependencies = [
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "chalk-base"
+version = "0.10.1-dev"
+dependencies = [
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -151,24 +158,17 @@ dependencies = [
 name = "chalk-engine"
 version = "0.10.1-dev"
 dependencies = [
- "chalk-engine-base 0.10.1-dev",
+ "chalk-base 0.10.1-dev",
  "rustc-hash 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "chalk-engine-base"
-version = "0.10.1-dev"
-dependencies = [
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "chalk-integration"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
- "chalk-engine-base 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
  "chalk-parse 0.10.1-dev",
  "chalk-solve 0.10.1-dev",
@@ -180,9 +180,9 @@ dependencies = [
 name = "chalk-ir"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
- "chalk-engine-base 0.10.1-dev",
 ]
 
 [[package]]
@@ -199,9 +199,9 @@ dependencies = [
 name = "chalk-solve"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
- "chalk-engine-base 0.10.1-dev",
  "chalk-integration 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
  "ena 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",

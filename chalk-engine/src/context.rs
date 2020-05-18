@@ -7,7 +7,7 @@
 
 use crate::hh::HhGoal;
 use crate::{CompleteAnswer, ExClause};
-use chalk_engine_base::results::{Fallible, Floundered};
+use chalk_base::results::{Fallible, Floundered};
 use std::fmt::Debug;
 use std::hash::Hash;
 

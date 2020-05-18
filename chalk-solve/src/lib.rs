@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 #[macro_use]
-extern crate chalk_engine_base;
+extern crate chalk_base;
 
 #[cfg(test)]
 #[macro_use]

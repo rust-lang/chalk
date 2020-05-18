@@ -8,8 +8,8 @@ use crate::{
 };
 use chalk_engine::forest::SubstitutionResult;
 use chalk_ir::{
-    AdtId, AssocTypeId, Canonical, ConstrainedSubst, Environment, FnDefId, GenericArg, Goal, ImplId,
-    InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, UCanonical,
+    AdtId, AssocTypeId, Canonical, ConstrainedSubst, Environment, FnDefId, GenericArg, Goal,
+    ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, UCanonical,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,

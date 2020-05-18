@@ -10,7 +10,7 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
-chalk-engine-base = { version = "0.10.1-dev", path = "../chalk-engine-base" }
+chalk-base = { version = "0.10.1-dev", path = "../chalk-base" }
 chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
 chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine", optional = true }
 

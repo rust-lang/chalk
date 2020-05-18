@@ -7,8 +7,8 @@ use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
+use chalk_base::results::*;
 use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
-use chalk_engine_base::results::*;
 use std::iter;
 use std::marker::PhantomData;
 

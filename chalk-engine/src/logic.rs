@@ -9,7 +9,7 @@ use crate::table::AnswerIndex;
 use crate::{
     Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
-use chalk_engine_base::results::{Floundered, NoSolution};
+use chalk_base::results::{Floundered, NoSolution};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 

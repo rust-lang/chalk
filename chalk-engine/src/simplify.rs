@@ -2,7 +2,7 @@ use crate::context::{Context, ContextOps, InferenceTable};
 use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::{ExClause, Literal, TimeStamp};
-use chalk_engine_base::results::Fallible;
+use chalk_base::results::Fallible;
 
 impl<C: Context> Forest<C> {
     /// Simplifies an HH goal into a series of positive domain goals

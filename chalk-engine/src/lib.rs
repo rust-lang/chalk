@@ -54,7 +54,7 @@
 //!   Popularized by Lambda Prolog.
 
 #[macro_use]
-extern crate chalk_engine_base;
+extern crate chalk_base;
 
 use crate::context::Context;
 use std::cmp::min;

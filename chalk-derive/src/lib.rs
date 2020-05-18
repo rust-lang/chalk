@@ -235,7 +235,7 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
     });
 
     // when the two variants are different
-    quote!((_, _)  => Err(::chalk_engine_base::results::NoSolution)).to_tokens(&mut body);
+    quote!((_, _)  => Err(::chalk_base::results::NoSolution)).to_tokens(&mut body);
 
     s.add_bounds(synstructure::AddBounds::None);
     s.bound_impl(
@@ -246,7 +246,7 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
                 zipper: &mut Z,
                  a: &Self,
                  b: &Self,
-            ) -> ::chalk_engine_base::results::Fallible<()>
+            ) -> ::chalk_base::results::Fallible<()>
             where
                 #interner: 'i,
                 {
@@ -316,7 +316,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
                 &self,
                 folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner, #target_interner >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> ::chalk_engine_base::results::Fallible<Self::Result>
+            ) -> ::chalk_base::results::Fallible<Self::Result>
             where
                 #interner: 'i,
                 #target_interner: 'i,

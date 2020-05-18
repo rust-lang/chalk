@@ -7,7 +7,7 @@ use crate::infer::{
 };
 use crate::recursive::{Minimums, Solver};
 use crate::solve::{truncate, Guidance, Solution};
-use chalk_engine_base::results::{Fallible, NoSolution};
+use chalk_base::results::{Fallible, NoSolution};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};

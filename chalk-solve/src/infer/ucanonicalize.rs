@@ -1,4 +1,4 @@
-use chalk_engine_base::results::*;
+use chalk_base::results::*;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{Visit, Visitor};

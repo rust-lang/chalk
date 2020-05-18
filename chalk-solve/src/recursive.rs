@@ -7,7 +7,7 @@ use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
 use crate::{Guidance, RustIrDatabase, Solution};
-use chalk_engine_base::results::{Fallible, Floundered, NoSolution};
+use chalk_base::results::{Fallible, Floundered, NoSolution};
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     Binders, Canonical, ClausePriority, ConstrainedSubst, DomainGoal, Environment, GenericArg,

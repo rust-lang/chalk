@@ -6,7 +6,7 @@
 //! happen with `dyn Trait` currently; that's the only case where we use the
 //! types passed to `program_clauses` in the clauses we generate.
 
-use chalk_engine_base::results::Fallible;
+use chalk_base::results::Fallible;
 use chalk_ir::{
     fold::{Fold, Folder},
     interner::{HasInterner, Interner},

@@ -1,5 +1,5 @@
 [package]
-name = "chalk-engine-base"
+name = "chalk-base"
 version = "0.10.1-dev"
 description = "Base types for Chalk logic engines"
 license = "Apache-2.0/MIT"
