@@ -50,15 +50,11 @@ pub mod program_clauses;
 pub fn push_auto_trait_impls<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
-    struct_id: StructId<I>,
+    adt_id: AdtId<I>,
 ) {
-    debug_heading!(
-        "push_auto_trait_impls({:?}, {:?})",
-        auto_trait_id,
-        struct_id
-    );
+    debug_heading!("push_auto_trait_impls({:?}, {:?})", auto_trait_id, adt_id);
 
-    let struct_datum = &builder.db.struct_datum(struct_id);
+    let adt_datum = &builder.db.adt_datum(adt_id);
     let interner = builder.interner();
 
     // Must be an auto trait.
@@ -71,17 +67,17 @@ pub fn push_auto_trait_impls<I: Interner>(
     );
 
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
-    // for Foo<..>`, where `Foo` is the struct we're looking at, then
+    // for Foo<..>`, where `Foo` is the adt we're looking at, then
     // we don't generate our own rules.
-    if builder.db.impl_provided_for(auto_trait_id, struct_id) {
+    if builder.db.impl_provided_for(auto_trait_id, adt_id) {
         debug!("impl provided");
         return;
     }
 
-    let binders = struct_datum.binders.map_ref(|b| &b.fields);
+    let binders = adt_datum.binders.map_ref(|b| &b.fields);
     builder.push_binders(&binders, |builder, fields| {
         let self_ty: Ty<_> = ApplicationTy {
-            name: struct_id.cast(interner),
+            name: adt_id.cast(interner),
             substitution: builder.substitution_in_scope(),
         }
         .intern(interner);
@@ -187,8 +183,8 @@ fn program_clauses_that_could_match<I: Interner>(
             if trait_datum.is_auto_trait() {
                 match trait_ref.self_type_parameter(interner).data(interner) {
                     TyData::Apply(apply) => match &apply.name {
-                        TypeName::Struct(struct_id) => {
-                            push_auto_trait_impls(builder, trait_id, *struct_id);
+                        TypeName::Adt(adt_id) => {
+                            push_auto_trait_impls(builder, trait_id, *adt_id);
                         }
                         _ => {}
                     },
@@ -396,7 +392,7 @@ fn match_type_name<I: Interner>(
     application: &ApplicationTy<I>,
 ) {
     match application.name {
-        TypeName::Struct(struct_id) => match_struct(builder, struct_id),
+        TypeName::Adt(adt_id) => match_adt(builder, adt_id),
         TypeName::OpaqueType(opaque_ty_id) => builder
             .db
             .opaque_ty_data(opaque_ty_id)
@@ -429,11 +425,8 @@ fn match_alias_ty<I: Interner>(builder: &mut ClauseBuilder<'_, I>, alias: &Alias
     }
 }
 
-fn match_struct<I: Interner>(builder: &mut ClauseBuilder<'_, I>, struct_id: StructId<I>) {
-    builder
-        .db
-        .struct_datum(struct_id)
-        .to_program_clauses(builder)
+fn match_adt<I: Interner>(builder: &mut ClauseBuilder<'_, I>, adt_id: AdtId<I>) {
+    builder.db.adt_datum(adt_id).to_program_clauses(builder)
 }
 
 pub fn program_clauses_for_env<'db, I: Interner>(

@@ -2,8 +2,8 @@ use crate::interner::ChalkIr;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
-    self, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId,
-    QuantifiedWhereClauses, StructId, Substitution, ToGenericArg, TraitId,
+    self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, ImplId, OpaqueTyId,
+    QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
 };
 use chalk_parse::ast::*;
 use chalk_rust_ir as rust_ir;
@@ -18,10 +18,10 @@ use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
 use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
-type StructIds = BTreeMap<Ident, chalk_ir::StructId<ChalkIr>>;
+type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
 type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
-type StructKinds = BTreeMap<chalk_ir::StructId<ChalkIr>, TypeKind>;
+type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
@@ -34,8 +34,8 @@ pub type LowerResult<T> = Result<T, RustIrError>;
 
 #[derive(Clone, Debug)]
 struct Env<'k> {
-    struct_ids: &'k StructIds,
-    struct_kinds: &'k StructKinds,
+    adt_ids: &'k AdtIds,
+    adt_kinds: &'k AdtKinds,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
@@ -71,7 +71,7 @@ struct AssociatedTyLookup {
 }
 
 enum TypeLookup {
-    Struct(chalk_ir::StructId<ChalkIr>),
+    Adt(chalk_ir::AdtId<ChalkIr>),
     GenericArg(BoundVar),
     Opaque(chalk_ir::OpaqueTyId<ChalkIr>),
 }
@@ -92,8 +92,8 @@ impl<'k> Env<'k> {
             return Ok(TypeLookup::GenericArg(*k));
         }
 
-        if let Some(id) = self.struct_ids.get(&name.str) {
-            return Ok(TypeLookup::Struct(*id));
+        if let Some(id) = self.adt_ids.get(&name.str) {
+            return Ok(TypeLookup::Adt(*id));
         }
 
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {
@@ -114,7 +114,7 @@ impl<'k> Env<'k> {
             return Err(RustIrError::NotTrait(name.clone()));
         }
 
-        if let Some(_) = self.struct_ids.get(&name.str) {
+        if let Some(_) = self.adt_ids.get(&name.str) {
             return Err(RustIrError::NotTrait(name.clone()));
         }
 
@@ -136,8 +136,8 @@ impl<'k> Env<'k> {
         Err(RustIrError::InvalidLifetimeName(name.clone()))
     }
 
-    fn struct_kind(&self, id: chalk_ir::StructId<ChalkIr>) -> &TypeKind {
-        &self.struct_kinds[&id]
+    fn adt_kind(&self, id: chalk_ir::AdtId<ChalkIr>) -> &TypeKind {
+        &self.adt_kinds[&id]
     }
 
     fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
@@ -239,10 +239,10 @@ impl LowerProgram for Program {
             }
         }
 
-        let mut struct_ids = BTreeMap::new();
+        let mut adt_ids = BTreeMap::new();
         let mut trait_ids = BTreeMap::new();
         let mut opaque_ty_ids = BTreeMap::new();
-        let mut struct_kinds = BTreeMap::new();
+        let mut adt_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
         let mut object_safe_traits = HashSet::new();
@@ -250,9 +250,9 @@ impl LowerProgram for Program {
             match item {
                 Item::StructDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
-                    let id = StructId(raw_id);
-                    struct_ids.insert(type_kind.name.clone(), id);
-                    struct_kinds.insert(id, type_kind);
+                    let id = AdtId(raw_id);
+                    adt_ids.insert(type_kind.name.clone(), id);
+                    adt_kinds.insert(id, type_kind);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -275,7 +275,7 @@ impl LowerProgram for Program {
             };
         }
 
-        let mut struct_data = BTreeMap::new();
+        let mut adt_data = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
@@ -285,8 +285,8 @@ impl LowerProgram for Program {
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
-                struct_ids: &struct_ids,
-                struct_kinds: &struct_kinds,
+                adt_ids: &adt_ids,
+                adt_kinds: &adt_kinds,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
@@ -296,8 +296,8 @@ impl LowerProgram for Program {
 
             match *item {
                 Item::StructDefn(ref d) => {
-                    let struct_id = StructId(raw_id);
-                    struct_data.insert(struct_id, Arc::new(d.lower_struct(struct_id, &empty_env)?));
+                    let adt_id = AdtId(raw_id);
+                    adt_data.insert(adt_id, Arc::new(d.lower_adt(adt_id, &empty_env)?));
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
@@ -453,11 +453,11 @@ impl LowerProgram for Program {
         }
 
         let program = LoweredProgram {
-            struct_ids,
+            adt_ids,
             trait_ids,
-            struct_kinds,
+            adt_kinds,
             trait_kinds,
-            struct_data,
+            adt_data,
             trait_data,
             well_known_traits,
             impl_data,
@@ -807,20 +807,20 @@ impl LowerLeafGoal for LeafGoal {
     }
 }
 
-trait LowerStructDefn {
-    fn lower_struct(
+trait LowerAdtDefn {
+    fn lower_adt(
         &self,
-        struct_id: chalk_ir::StructId<ChalkIr>,
+        adt_id: chalk_ir::AdtId<ChalkIr>,
         env: &Env,
-    ) -> LowerResult<rust_ir::StructDatum<ChalkIr>>;
+    ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>>;
 }
 
-impl LowerStructDefn for StructDefn {
-    fn lower_struct(
+impl LowerAdtDefn for StructDefn {
+    fn lower_adt(
         &self,
-        struct_id: chalk_ir::StructId<ChalkIr>,
+        adt_id: chalk_ir::AdtId<ChalkIr>,
         env: &Env,
-    ) -> LowerResult<rust_ir::StructDatum<ChalkIr>> {
+    ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>> {
         if self.flags.fundamental && self.all_parameters().len() != 1 {
             Err(RustIrError::InvalidFundamentalTypesParameters(
                 self.name.clone(),
@@ -831,19 +831,19 @@ impl LowerStructDefn for StructDefn {
             let fields: LowerResult<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
-            Ok(rust_ir::StructDatumBound {
+            Ok(rust_ir::AdtDatumBound {
                 fields: fields?,
                 where_clauses,
             })
         })?;
 
-        let flags = rust_ir::StructFlags {
+        let flags = rust_ir::AdtFlags {
             upstream: self.flags.upstream,
             fundamental: self.flags.fundamental,
         };
 
-        Ok(rust_ir::StructDatum {
-            id: struct_id,
+        Ok(rust_ir::AdtDatum {
+            id: adt_id,
             binders,
             flags,
         })
@@ -1104,8 +1104,8 @@ impl LowerTy for Ty {
         let interner = env.interner();
         match self {
             Ty::Id { name } => match env.lookup_type(name)? {
-                TypeLookup::Struct(id) => {
-                    let k = env.struct_kind(id);
+                TypeLookup::Adt(id) => {
+                    let k = env.adt_kind(id);
                     if k.binders.len(interner) > 0 {
                         Err(RustIrError::IncorrectNumberOfTypeParameters {
                             identifier: name.clone(),
@@ -1114,7 +1114,7 @@ impl LowerTy for Ty {
                         })
                     } else {
                         Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::Struct(id),
+                            name: chalk_ir::TypeName::Adt(id),
                             substitution: chalk_ir::Substitution::empty(interner),
                         })
                         .intern(interner))
@@ -1158,13 +1158,13 @@ impl LowerTy for Ty {
 
             Ty::Apply { name, ref args } => {
                 let id = match env.lookup_type(name)? {
-                    TypeLookup::Struct(id) => id,
+                    TypeLookup::Adt(id) => id,
                     TypeLookup::GenericArg(_) | TypeLookup::Opaque(_) => {
                         Err(RustIrError::CannotApplyTypeParameter(name.clone()))?
                     }
                 };
 
-                let k = env.struct_kind(id);
+                let k = env.adt_kind(id);
                 if k.binders.len(interner) != args.len() {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name.clone(),
@@ -1189,7 +1189,7 @@ impl LowerTy for Ty {
                 }
 
                 Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Struct(id),
+                    name: chalk_ir::TypeName::Adt(id),
                     substitution,
                 })
                 .intern(interner))
@@ -1484,10 +1484,10 @@ impl LowerGoal<LoweredProgram> for Goal {
             .collect();
 
         let env = Env {
-            struct_ids: &program.struct_ids,
+            adt_ids: &program.adt_ids,
             trait_ids: &program.trait_ids,
             opaque_ty_ids: &program.opaque_ty_ids,
-            struct_kinds: &program.struct_kinds,
+            adt_kinds: &program.adt_kinds,
             trait_kinds: &program.trait_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),

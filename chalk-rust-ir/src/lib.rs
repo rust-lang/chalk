@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, GenericArg, ImplId, OpaqueTyId,
-    ProjectionTy, QuantifiedWhereClause, StructId, Substitution, ToGenericArg, TraitId, TraitRef,
-    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
+    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, GenericArg, ImplId, OpaqueTyId,
+    ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef, Ty, TyData,
+    TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -38,7 +38,7 @@ impl<I: Interner> ImplDatum<I> {
         self.binders.skip_binders().trait_ref.trait_id
     }
 
-    pub fn self_type_struct_id(&self, interner: &I) -> Option<StructId<I>> {
+    pub fn self_type_adt_id(&self, interner: &I) -> Option<AdtId<I>> {
         match self
             .binders
             .skip_binders()
@@ -47,7 +47,7 @@ impl<I: Interner> ImplDatum<I> {
             .data(interner)
         {
             TyData::Apply(apply) => match apply.name {
-                TypeName::Struct(id) => Some(id),
+                TypeName::Adt(id) => Some(id),
                 _ => None,
             },
             _ => None,
@@ -79,26 +79,26 @@ pub struct DefaultImplDatumBound<I: Interner> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructDatum<I: Interner> {
-    pub binders: Binders<StructDatumBound<I>>,
-    pub id: StructId<I>,
-    pub flags: StructFlags,
+pub struct AdtDatum<I: Interner> {
+    pub binders: Binders<AdtDatumBound<I>>,
+    pub id: AdtId<I>,
+    pub flags: AdtFlags,
 }
 
-impl<I: Interner> StructDatum<I> {
+impl<I: Interner> AdtDatum<I> {
     pub fn name(&self, interner: &I) -> TypeName<I> {
         self.id.cast(interner)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
-pub struct StructDatumBound<I: Interner> {
+pub struct AdtDatumBound<I: Interner> {
     pub fields: Vec<Ty<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructFlags {
+pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
 }

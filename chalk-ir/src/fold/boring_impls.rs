@@ -253,6 +253,10 @@ copy_fold!(Mutability);
 #[macro_export]
 macro_rules! id_fold {
     ($t:ident) => {
+        $crate::id_fold!($t, transfer_def_id);
+    };
+
+    ($t:ident, $transfer_fn:ident) => {
         impl<I: Interner, TI: TargetInterner<I>> $crate::fold::Fold<I, TI> for $t<I> {
             type Result = $t<TI>;
             fn fold_with<'i>(
@@ -265,7 +269,7 @@ macro_rules! id_fold {
                 TI: 'i,
             {
                 let $t(def_id_tf) = *self;
-                let def_id_ttf = TI::transfer_def_id(def_id_tf);
+                let def_id_ttf = TI::$transfer_fn(def_id_tf);
                 Ok($t(def_id_ttf))
             }
         }
@@ -273,7 +277,7 @@ macro_rules! id_fold {
 }
 
 id_fold!(ImplId);
-id_fold!(StructId);
+id_fold!(AdtId, transfer_adt_id);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
 id_fold!(OpaqueTyId);

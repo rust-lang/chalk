@@ -110,6 +110,6 @@ macro_rules! lifetime {
 
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        chalk_ir::TypeName::Struct(StructId(chalk_integration::interner::RawId { index: $n }))
+        chalk_ir::TypeName::Adt(AdtId(chalk_integration::interner::RawId { index: $n }))
     };
 }

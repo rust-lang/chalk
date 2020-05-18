@@ -5,6 +5,7 @@ use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
 use crate::tls;
 use chalk_engine::forest::SubstitutionResult;
+use chalk_ir::AdtId;
 use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
@@ -15,15 +16,14 @@ use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::OpaqueTyId;
 use chalk_ir::ProgramClause;
-use chalk_ir::StructId;
 use chalk_ir::TraitId;
 use chalk_ir::{ProgramClauses, UCanonical};
+use chalk_rust_ir::AdtDatum;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::OpaqueTyDatum;
-use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_rust_ir::WellKnownTrait;
 use chalk_solve::RustIrDatabase;
@@ -110,8 +110,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().opaque_ty_data(id)
     }
 
-    fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
-        self.program_ir().unwrap().struct_datum(id)
+    fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
+        self.program_ir().unwrap().adt_datum(id)
     }
 
     fn impls_for_trait(
@@ -130,14 +130,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .local_impls_to_coherence_check(trait_id)
     }
 
-    fn impl_provided_for(
-        &self,
-        auto_trait_id: TraitId<ChalkIr>,
-        struct_id: StructId<ChalkIr>,
-    ) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, adt_id: AdtId<ChalkIr>) -> bool {
         self.program_ir()
             .unwrap()
-            .impl_provided_for(auto_trait_id, struct_id)
+            .impl_provided_for(auto_trait_id, adt_id)
     }
 
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {

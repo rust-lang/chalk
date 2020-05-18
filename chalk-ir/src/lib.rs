@@ -144,8 +144,9 @@ pub enum Mutability {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, Visit)]
 pub enum TypeName<I: Interner> {
-    /// a type like `Vec<T>`
-    Struct(StructId<I>),
+    /// Abstract data types, i.e., structs, unions, or enumerations.
+    /// For example, a type like `Vec<T>`.
+    Adt(AdtId<I>),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
     AssociatedType(AssocTypeId<I>),
@@ -211,7 +212,7 @@ impl UniverseIndex {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct StructId<I: Interner>(pub I::DefId);
+pub struct AdtId<I: Interner>(pub I::InternedAdtId);
 
 /// The id of a trait definition; could be used to load the trait datum by
 /// invoking the [`trait_datum`] method.

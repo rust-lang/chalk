@@ -14,7 +14,7 @@ use chalk_rust_ir::*;
 
 #[derive(Debug)]
 pub enum WfError<I: Interner> {
-    IllFormedTypeDecl(chalk_ir::StructId<I>),
+    IllFormedTypeDecl(chalk_ir::AdtId<I>),
     IllFormedTraitImpl(chalk_ir::TraitId<I>),
 }
 
@@ -144,7 +144,8 @@ where
         Self { db, solver_choice }
     }
 
-    pub fn verify_struct_decl(&self, struct_id: StructId<I>) -> Result<(), WfError<I>> {
+    /// TODO: Currently only handles structs, may need more work for enums & unions
+    pub fn verify_adt_decl(&self, adt_id: AdtId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
 
         // Given a struct like
@@ -154,7 +155,7 @@ where
         //     data: Vec<T>
         // }
         // ```
-        let struct_datum = self.db.struct_datum(struct_id);
+        let struct_datum = self.db.adt_datum(adt_id);
 
         let mut gb = GoalBuilder::new(self.db);
         let struct_data = struct_datum
@@ -199,7 +200,7 @@ where
         };
 
         if !is_legal {
-            Err(WfError::IllFormedTypeDecl(struct_id))
+            Err(WfError::IllFormedTypeDecl(adt_id))
         } else {
             Ok(())
         }
@@ -534,11 +535,11 @@ impl WfWellKnownGoals {
         let ty = trait_ref.self_type_parameter(interner);
         let ty_data = ty.data(interner);
 
-        let (struct_id, substitution) = match ty_data {
+        let (adt_id, substitution) = match ty_data {
             TyData::Apply(ApplicationTy {
-                name: TypeName::Struct(struct_id),
+                name: TypeName::Adt(adt_id),
                 substitution,
-            }) => (*struct_id, substitution),
+            }) => (*adt_id, substitution),
             // TODO(areredify)
             // when #368 lands, extend this to handle everything accordingly
             _ => return None,
@@ -556,9 +557,9 @@ impl WfWellKnownGoals {
                     .negate(interner)
                 });
 
-        let struct_datum = db.struct_datum(struct_id);
+        let adt_datum = db.adt_datum(adt_id);
 
-        let goals = struct_datum
+        let goals = adt_datum
             .binders
             .map_ref(|b| &b.fields)
             .substitute(interner, substitution)
@@ -616,7 +617,7 @@ impl WfWellKnownGoals {
     ) -> Option<Goal<I>> {
         let interner = db.interner();
 
-        let struct_id = match impl_datum.self_type_struct_id(interner) {
+        let adt_id = match impl_datum.self_type_adt_id(interner) {
             Some(id) => id,
             // Drop can only be implemented on a nominal type
             None => return Some(GoalData::CannotProve(()).intern(interner)),
@@ -624,15 +625,15 @@ impl WfWellKnownGoals {
 
         let mut gb = GoalBuilder::new(db);
 
-        let struct_datum = db.struct_datum(struct_id);
-        let struct_name = struct_datum.name(interner);
+        let adt_datum = db.adt_datum(adt_id);
+        let adt_name = adt_datum.name(interner);
 
         let impl_fields = impl_datum
             .binders
             .map_ref(|v| (&v.trait_ref, &v.where_clauses));
 
         // forall<ImplP1...ImplPn> { .. }
-        let implied_by_struct_def_goal =
+        let implied_by_adt_def_goal =
             gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
                 let interner = gb.interner();
 
@@ -659,36 +660,32 @@ impl WfWellKnownGoals {
 
         // forall<StructP1..StructPN> {...}
         let eq_goal = gb.forall(
-            &struct_datum.binders,
-            (struct_name, impl_self_ty),
-            |gb, substitution, _, (struct_name, impl_self_ty)| {
+            &adt_datum.binders,
+            (adt_name, impl_self_ty),
+            |gb, substitution, _, (adt_name, impl_self_ty)| {
                 let interner = gb.interner();
 
-                let def_struct: Ty<I> = ApplicationTy {
-                    name: struct_name,
+                let def_adt: Ty<I> = ApplicationTy {
+                    name: adt_name,
                     substitution,
                 }
                 .cast(interner)
                 .intern(interner);
 
                 // exists<ImplP1...ImplPn> { .. }
-                gb.exists(
-                    &impl_self_ty,
-                    def_struct,
-                    |gb, _, impl_struct, def_struct| {
-                        let interner = gb.interner();
+                gb.exists(&impl_self_ty, def_adt, |gb, _, impl_adt, def_adt| {
+                    let interner = gb.interner();
 
-                        // StructName<StructP1..StructPn> = ImplSelfType
-                        GoalData::EqGoal(EqGoal {
-                            a: GenericArgData::Ty(def_struct).intern(interner),
-                            b: GenericArgData::Ty(impl_struct.clone()).intern(interner),
-                        })
-                        .intern(interner)
-                    },
-                )
+                    // StructName<StructP1..StructPn> = ImplSelfType
+                    GoalData::EqGoal(EqGoal {
+                        a: GenericArgData::Ty(def_adt).intern(interner),
+                        b: GenericArgData::Ty(impl_adt.clone()).intern(interner),
+                    })
+                    .intern(interner)
+                })
             },
         );
 
-        Some(gb.all([implied_by_struct_def_goal, eq_goal].iter()))
+        Some(gb.all([implied_by_adt_def_goal, eq_goal].iter()))
     }
 }

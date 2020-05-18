@@ -100,8 +100,8 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let solver = wf::WfSolver::new(db, db.solver_choice());
-        for &id in program.struct_data.keys() {
-            solver.verify_struct_decl(id)?;
+        for &id in program.adt_data.keys() {
+            solver.verify_adt_decl(id)?;
         }
 
         for &impl_id in program.impl_data.keys() {
@@ -136,7 +136,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .for_each(|d| d.to_program_clauses(builder));
 
     program
-        .struct_data
+        .adt_data
         .values()
         .for_each(|d| d.to_program_clauses(builder));
 
@@ -145,8 +145,8 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         .iter()
         .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
     {
-        for &struct_id in program.struct_data.keys() {
-            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, struct_id);
+        for &adt_id in program.adt_data.keys() {
+            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, adt_id);
         }
     }
 

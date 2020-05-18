@@ -36,7 +36,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
 
     /// Returns the datum for the impl with the given id.
-    fn struct_datum(&self, struct_id: StructId<I>) -> Arc<StructDatum<I>>;
+    fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>>;
 
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>>;
@@ -68,12 +68,12 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>>;
 
     /// Returns true if there is an explicit impl of the auto trait
-    /// `auto_trait_id` for the struct `struct_id`. This is part of
+    /// `auto_trait_id` for the ADT `adt_id`. This is part of
     /// the auto trait handling -- if there is no explicit impl given
     /// by the user for the struct, then we provide default impls
     /// based on the field types (otherwise, we rely on the impls the
     /// user gave).
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, struct_id: StructId<I>) -> bool;
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool;
 
     /// A stop-gap solution to force an impl for a given well-known trait.
     /// Useful when the logic for a given trait is absent or incomplete.

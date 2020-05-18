@@ -3,13 +3,13 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, GenericArg, Goal, Goals, ImplId,
-    Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses,
-    ProjectionTy, StructId, Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, GenericArg, Goal, Goals,
+    ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, OpaqueTyDatum,
-    StructDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType,
+    OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -19,11 +19,11 @@ use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
-    /// From struct name to item-id. Used during lowering only.
-    pub struct_ids: BTreeMap<Identifier, StructId<ChalkIr>>,
+    /// From ADT name to item-id. Used during lowering only.
+    pub adt_ids: BTreeMap<Identifier, AdtId<ChalkIr>>,
 
-    /// For each struct:
-    pub struct_kinds: BTreeMap<StructId<ChalkIr>, TypeKind>,
+    /// For each ADT:
+    pub adt_kinds: BTreeMap<AdtId<ChalkIr>, TypeKind>,
 
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
@@ -31,8 +31,8 @@ pub struct Program {
     /// For each trait:
     pub trait_kinds: BTreeMap<TraitId<ChalkIr>, TypeKind>,
 
-    /// For each struct:
-    pub struct_data: BTreeMap<StructId<ChalkIr>, Arc<StructDatum<ChalkIr>>>,
+    /// For each ADT:
+    pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -78,16 +78,16 @@ impl Program {
 }
 
 impl tls::DebugContext for Program {
-    fn debug_struct_id(
+    fn debug_adt_id(
         &self,
-        struct_id: StructId<ChalkIr>,
+        adt_id: AdtId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.struct_kinds.get(&struct_id) {
+        if let Some(k) = self.adt_kinds.get(&adt_id) {
             write!(fmt, "{}", k.name)
         } else {
-            fmt.debug_struct("InvalidStructId")
-                .field("index", &struct_id.0)
+            fmt.debug_struct("InvalidAdtId")
+                .field("index", &adt_id.0)
                 .finish()
         }
     }
@@ -330,8 +330,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.opaque_ty_data[&id].clone()
     }
 
-    fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
-        self.struct_data[&id].clone()
+    fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
+        self.adt_data[&id].clone()
     }
 
     fn impls_for_trait(
@@ -367,17 +367,13 @@ impl RustIrDatabase<ChalkIr> for Program {
             .collect()
     }
 
-    fn impl_provided_for(
-        &self,
-        auto_trait_id: TraitId<ChalkIr>,
-        struct_id: StructId<ChalkIr>,
-    ) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, adt_id: AdtId<ChalkIr>) -> bool {
         let interner = self.interner();
         // Look for an impl like `impl Send for Foo` where `Foo` is
-        // the struct.  See `push_auto_trait_impls` for more.
+        // the ADT.  See `push_auto_trait_impls` for more.
         self.impl_data.values().any(|impl_datum| {
             impl_datum.trait_id() == auto_trait_id
-                && impl_datum.self_type_struct_id(interner) == Some(struct_id)
+                && impl_datum.self_type_adt_id(interner) == Some(adt_id)
         })
     }
 

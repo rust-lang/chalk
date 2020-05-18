@@ -1,3 +1,4 @@
+use crate::AdtId;
 use crate::AliasTy;
 use crate::ApplicationTy;
 use crate::AssocTypeId;
@@ -20,7 +21,6 @@ use crate::ProjectionTy;
 use crate::QuantifiedWhereClause;
 use crate::QuantifiedWhereClauses;
 use crate::SeparatorTraitRef;
-use crate::StructId;
 use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
@@ -127,7 +127,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// and can be converted back to its underlying data via `quantified_where_clauses_data`.
     type InternedQuantifiedWhereClauses: Debug + Clone + Eq + Hash;
 
-    /// "Interned" representation of a list of variable kinds.  
+    /// "Interned" representation of a list of variable kinds.
     /// In normal user code, `Self::InternedVariableKinds` is not referenced.
     /// Instead, we refer to `VariableKinds<Self>`, which wraps this type.
     ///
@@ -135,7 +135,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// and can be converted back to its underlying data via `variable_kinds_data`.
     type InternedVariableKinds: Debug + Clone + Eq + Hash;
 
-    /// "Interned" representation of a list of variable kinds with universe index.  
+    /// "Interned" representation of a list of variable kinds with universe index.
     /// In normal user code, `Self::InternedCanonicalVarKinds` is not referenced.
     /// Instead, we refer to `CanonicalVarKinds<Self>`, which wraps this type.
     ///
@@ -144,8 +144,11 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// to its underlying data via `canonical_var_kinds_data`.
     type InternedCanonicalVarKinds: Debug + Clone + Eq + Hash;
 
-    /// The core "id" type used for struct-ids and the like.
+    /// The core "id" type used for trait-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
+
+    /// The ID type for ADTs
+    type InternedAdtId: Debug + Copy + Eq + Ord + Hash;
 
     type Identifier: Debug + Clone + Eq + Hash;
 
@@ -157,10 +160,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_struct_id(
-        struct_id: StructId<Self>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
+    fn debug_adt_id(adt_id: AdtId<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
@@ -608,6 +608,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
 
+    fn transfer_adt_id(adt_id: I::InternedAdtId) -> Self::InternedAdtId;
+
     fn transfer_variable_kinds(
         variable_kinds: I::InternedVariableKinds,
     ) -> Self::InternedVariableKinds;
@@ -620,6 +622,10 @@ pub trait TargetInterner<I: Interner>: Interner {
 impl<I: Interner> TargetInterner<I> for I {
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId {
         def_id
+    }
+
+    fn transfer_adt_id(adt_id: I::InternedAdtId) -> Self::InternedAdtId {
+        adt_id
     }
 
     fn transfer_variable_kinds(
