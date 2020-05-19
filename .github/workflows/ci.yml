@@ -16,12 +16,16 @@ jobs:
         rust: [stable, nightly]
     steps:
       - name: Checkout the source code
-        uses: actions/checkout@master
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
 
-      - name: Setup Rust ${{ matrix.rust }}
-        run: rustup set profile minimal && rustup update ${{ matrix.rust }} --no-self-update && rustup default ${{ matrix.rust }}
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          override: true
 
       - name: Build chalk-engine without default features
         run: cd chalk-engine && cargo build --no-default-features
@@ -69,27 +73,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the source code
-        uses: actions/checkout@master
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
 
-      - name: Setup Rust stable with rustfmt
-        run: |
-          rustup set profile minimal
-          rustup update stable --no-self-update
-          rustup default stable
-          rustup component add rustfmt
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
 
       - name: Check formatting of all crates in the workspace
         run: cargo fmt --all -- --check
-  
+
   mdbook-linkcheck:
     name: Book link check
     runs-on: ubuntu-latest
     if: github.ref != 'refs/heads/master'
     steps:
       - name: Checkout the source code
-        uses: actions/checkout@master
+        uses: actions/checkout@v2
         with:
           fetch-depth: 1
 

@@ -21,7 +21,7 @@ chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine", optional = tr
 chalk-ir = { version = "0.10.1-dev", path = "../chalk-ir", default-features = false }
 
 [dev-dependencies]
-chalk-integration = { version = "0.10.1-dev", path = "../chalk-integration" }
+chalk-integration = { path = "../chalk-integration" }
 
 [features]
 default = ["slg-solver", "recursive-solver"]
