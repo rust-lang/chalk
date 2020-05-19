@@ -85,11 +85,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_ty_ty<'a>(&mut self, a: &'a Ty<I>, b: &'a Ty<I>) -> Fallible<()> {
         let interner = self.interner;
         //         ^^                 ^^         ^^ FIXME rustc bug
-        if let Some(n_a) = self.table.normalize_shallow(interner, a) {
-            return self.unify_ty_ty(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_shallow(interner, b) {
-            return self.unify_ty_ty(a, &n_b);
-        }
+
+        let n_a = self.table.normalize_ty_shallow(interner, a);
+        let n_b = self.table.normalize_ty_shallow(interner, b);
+        let a = n_a.as_ref().unwrap_or(a);
+        let b = n_b.as_ref().unwrap_or(b);
 
         debug_heading!(
             "unify_ty_ty(a={:?}\
@@ -273,11 +273,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         let interner = self.interner;
 
-        if let Some(n_a) = self.table.normalize_lifetime(interner, a) {
-            return self.unify_lifetime_lifetime(&n_a, b);
-        } else if let Some(n_b) = self.table.normalize_lifetime(interner, b) {
-            return self.unify_lifetime_lifetime(a, &n_b);
-        }
+        let n_a = self.table.normalize_lifetime_shallow(interner, a);
+        let n_b = self.table.normalize_lifetime_shallow(interner, b);
+        let a = n_a.as_ref().unwrap_or(a);
+        let b = n_b.as_ref().unwrap_or(b);
 
         debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
@@ -334,6 +333,97 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
+    fn unify_const_const<'a>(&mut self, a: &'a Const<I>, b: &'a Const<I>) -> Fallible<()> {
+        let interner = self.interner;
+
+        let n_a = self.table.normalize_const_shallow(interner, a);
+        let n_b = self.table.normalize_const_shallow(interner, b);
+        let a = n_a.as_ref().unwrap_or(a);
+        let b = n_b.as_ref().unwrap_or(b);
+
+        debug_heading!(
+            "unify_const_const(a={:?}\
+             ,\n               b={:?})",
+            a,
+            b
+        );
+
+        let ConstData {
+            ty: a_ty,
+            value: a_val,
+        } = a.data(interner);
+        let ConstData {
+            ty: b_ty,
+            value: b_val,
+        } = b.data(interner);
+
+        self.unify_ty_ty(a_ty, b_ty)?;
+
+        match (a_val, b_val) {
+            // Unifying two inference variables: unify them in the underlying
+            // ena table.
+            (&ConstValue::InferenceVar(var1), &ConstValue::InferenceVar(var2)) => {
+                debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
+                let var1 = EnaVariable::from(var1);
+                let var2 = EnaVariable::from(var2);
+                Ok(self
+                    .table
+                    .unify
+                    .unify_var_var(var1, var2)
+                    .expect("unification of two unbound variables cannot fail"))
+            }
+
+            // Unifying an inference variables with a non-inference variable.
+            (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
+            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
+                debug!("unify_var_ty(var={:?}, ty={:?})", var, b);
+                self.unify_var_const(var, b)
+            }
+
+            (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
+            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
+                debug!("unify_var_ty(var={:?}, ty={:?})", var, a);
+
+                self.unify_var_const(var, a)
+            }
+
+            (&ConstValue::Placeholder(p1), &ConstValue::Placeholder(p2)) => {
+                Zip::zip_with(self, &p1, &p2)
+            }
+
+            (&ConstValue::Concrete(ref ev1), &ConstValue::Concrete(ref ev2)) => {
+                if ev1.const_eq(a_ty, ev2, interner) {
+                    Ok(())
+                } else {
+                    Err(NoSolution)
+                }
+            }
+
+            (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
+            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),
+
+            (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => panic!(
+                "unification encountered bound variable: a={:?} b={:?}",
+                a, b
+            ),
+        }
+    }
+
+    fn unify_var_const(&mut self, var: InferenceVar, c: &Const<I>) -> Fallible<()> {
+        debug!("unify_var_const(var={:?}, c={:?})", var, c);
+
+        let interner = self.interner;
+        let var = EnaVariable::from(var);
+
+        self.table
+            .unify
+            .unify_var_value(var, InferenceValue::from_const(interner, c.clone()))
+            .unwrap();
+        debug!("unify_var_const: var {:?} set to {:?}", var, c);
+
+        Ok(())
+    }
+
     fn push_lifetime_eq_constraint(&mut self, a: Lifetime<I>, b: Lifetime<I>) {
         self.constraints.push(InEnvironment::new(
             self.environment,
@@ -353,6 +443,10 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
 
     fn zip_lifetimes(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         self.unify_lifetime_lifetime(a, b)
+    }
+
+    fn zip_consts(&mut self, a: &Const<I>, b: &Const<I>) -> Fallible<()> {
+        self.unify_const_const(a, b)
     }
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>

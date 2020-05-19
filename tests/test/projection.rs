@@ -458,6 +458,48 @@ fn normalize_gat2() {
 }
 
 #[test]
+fn normalize_gat_const() {
+    test! {
+        program {
+            trait StreamingIterator<T> { type Item<const N>; }
+            struct Span<const N, T> { }
+            struct StreamIterMut<T> { }
+            impl<T> StreamingIterator<T> for StreamIterMut<T> {
+                type Item<const N> = Span<N, T>;
+            }
+        }
+
+        goal {
+            forall<const N, T> {
+                exists<U> {
+                    Normalize(<StreamIterMut<T> as StreamingIterator<T>>::Item<N> -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := Span<!1_0, !1_1>], lifetime constraints []"
+        }
+
+        goal {
+            forall<const N, T> {
+                <StreamIterMut<T> as StreamingIterator<T>>::Item<N> = Span<N, T>
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<const N, T, U> {
+                if (T: StreamingIterator<U, Item<N> = Span<N, U>>) {
+                    <T as StreamingIterator<U>>::Item<N> = Span<N, U>
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
 fn normalize_gat_with_where_clause() {
     test! {
         program {

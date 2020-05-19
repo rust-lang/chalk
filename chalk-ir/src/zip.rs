@@ -20,13 +20,14 @@ use std::sync::Arc;
 /// `ItemId` requires that all `ItemId` in the two zipped values match
 /// up.
 pub trait Zipper<'i, I: Interner> {
-    /// Indicates that the two types `a` and `b` were found in
-    /// matching spots, beneath `binders` levels of binders.
+    /// Indicates that the two types `a` and `b` were found in matching spots.
     fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()>;
 
-    /// Indicates that the two lifetimes `a` and `b` were found in
-    /// matching spots, beneath `binders` levels of binders.
+    /// Indicates that the two lifetimes `a` and `b` were found in matching spots.
     fn zip_lifetimes(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()>;
+
+    /// Indicates that the two consts `a` and `b` were found in matching spots.
+    fn zip_consts(&mut self, a: &Const<I>, b: &Const<I>) -> Fallible<()>;
 
     /// Zips two values appearing beneath binders.
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
@@ -48,6 +49,10 @@ where
 
     fn zip_lifetimes(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         (**self).zip_lifetimes(a, b)
+    }
+
+    fn zip_consts(&mut self, a: &Const<I>, b: &Const<I>) -> Fallible<()> {
+        (**self).zip_consts(a, b)
     }
 
     fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
@@ -166,6 +171,14 @@ impl<I: Interner> Zip<I> for Lifetime<I> {
     }
 }
 
+impl<I: Interner> Zip<I> for Const<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        zipper.zip_consts(a, b)
+    }
+}
 impl<I: Interner, T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>> Zip<I>
     for Binders<T>
 {
@@ -290,15 +303,17 @@ impl<I: Interner> Zip<I> for Goal<I> {
 
 // I'm too lazy to make `enum_zip` support type parameters.
 impl<I: Interner> Zip<I> for VariableKind<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
     {
         match (a, b) {
             (VariableKind::Ty, VariableKind::Ty) => Ok(()),
             (VariableKind::Lifetime, VariableKind::Lifetime) => Ok(()),
-            (VariableKind::Phantom(..), _) | (_, VariableKind::Phantom(..)) => unreachable!(),
-            (VariableKind::Ty, _) | (VariableKind::Lifetime, _) => {
+            (VariableKind::Const(ty_a), VariableKind::Const(ty_b)) => {
+                Zip::zip_with(zipper, ty_a, ty_b)
+            }
+            (VariableKind::Ty, _) | (VariableKind::Lifetime, _) | (VariableKind::Const(_), _) => {
                 panic!("zipping things of mixed kind")
             }
         }

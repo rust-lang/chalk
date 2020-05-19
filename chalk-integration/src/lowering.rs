@@ -29,8 +29,7 @@ type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), Associa
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
 
-type NamedGenericArg = chalk_ir::WithKind<ChalkIr, Ident>;
-type ParameterMap = BTreeMap<NamedGenericArg, BoundVar>;
+type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
@@ -74,52 +73,108 @@ struct AssociatedTyLookup {
     addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 
-enum TypeLookup {
-    Adt(chalk_ir::AdtId<ChalkIr>),
-    GenericArg(BoundVar),
-    FnDef(chalk_ir::FnDefId<ChalkIr>),
-    Opaque(chalk_ir::OpaqueTyId<ChalkIr>),
-}
-
-enum LifetimeLookup {
-    GenericArg(BoundVar),
+enum ApplyTypeLookup {
+    Adt(AdtId<ChalkIr>),
+    FnDef(FnDefId<ChalkIr>),
 }
 
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
 impl<'k> Env<'k> {
-    fn lookup_type(&self, name: &Identifier) -> LowerResult<TypeLookup> {
-        if let Some(k) = self.parameter_map.get(&NamedGenericArg::new(
-            chalk_ir::VariableKind::Ty,
-            name.str.clone(),
-        )) {
-            return Ok(TypeLookup::GenericArg(*k));
+    fn lookup_generic_arg(&self, name: &Identifier) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
+        let interner = self.interner();
+
+        if let Some(p) = self.parameter_map.get(&name.str) {
+            let b = p.skip_kind();
+            return match &p.kind {
+                chalk_ir::VariableKind::Ty => Ok(chalk_ir::TyData::BoundVar(*b)
+                    .intern(interner)
+                    .cast(interner)),
+                chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
+                    .intern(interner)
+                    .cast(interner)),
+                chalk_ir::VariableKind::Const(ty) => {
+                    Ok(b.to_const(interner, ty.clone()).cast(interner))
+                }
+            };
         }
 
         if let Some(id) = self.adt_ids.get(&name.str) {
-            return Ok(TypeLookup::Adt(*id));
+            let k = self.adt_kind(*id);
+            if k.binders.len(interner) > 0 {
+                return Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name.clone(),
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                });
+            } else {
+                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: chalk_ir::TypeName::Adt(*id),
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner)
+                .cast(interner));
+            };
         }
 
         if let Some(id) = self.fn_def_ids.get(&name.str) {
-            return Ok(TypeLookup::FnDef(*id));
+            let k = self.fn_def_kind(*id);
+            if k.binders.len(interner) > 0 {
+                return Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name.clone(),
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                });
+            } else {
+                return Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
+                    num_binders: k.binders.len(interner),
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner)
+                .cast(interner));
+            }
         }
 
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {
-            return Ok(TypeLookup::Opaque(*id));
+            return Ok(
+                chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+                    opaque_ty_id: *id,
+                    substitution: chalk_ir::Substitution::empty(interner),
+                }))
+                .intern(interner)
+                .cast(interner),
+            );
         }
         if let Some(_) = self.trait_ids.get(&name.str) {
             return Err(RustIrError::NotStruct(name.clone()));
         }
 
-        Err(RustIrError::InvalidTypeName(name.clone()))
+        Err(RustIrError::InvalidParameterName(name.clone()))
+    }
+
+    fn lookup_apply_type(&self, name: &Identifier) -> LowerResult<ApplyTypeLookup> {
+        if let Some(_) = self.parameter_map.get(&name.str) {
+            return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
+        }
+
+        if let Some(_) = self.opaque_ty_ids.get(&name.str) {
+            return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
+        }
+
+        if let Some(id) = self.adt_ids.get(&name.str) {
+            return Ok(ApplyTypeLookup::Adt(*id));
+        }
+
+        if let Some(id) = self.fn_def_ids.get(&name.str) {
+            return Ok(ApplyTypeLookup::FnDef(*id));
+        }
+
+        Err(RustIrError::NotStruct(name.clone()))
     }
 
     fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
-        if let Some(_) = self.parameter_map.get(&NamedGenericArg::new(
-            chalk_ir::VariableKind::Ty,
-            name.str.clone(),
-        )) {
+        if let Some(_) = self.parameter_map.get(&name.str) {
             return Err(RustIrError::NotTrait(name.clone()));
         }
 
@@ -131,18 +186,11 @@ impl<'k> Env<'k> {
             return Ok(*id);
         }
 
-        Err(RustIrError::InvalidTypeName(name.clone()))
+        Err(RustIrError::InvalidTraitName(name.clone()))
     }
 
-    fn lookup_lifetime(&self, name: &Identifier) -> LowerResult<LifetimeLookup> {
-        if let Some(k) = self.parameter_map.get(&NamedGenericArg::new(
-            chalk_ir::VariableKind::Lifetime,
-            name.str.clone(),
-        )) {
-            return Ok(LifetimeLookup::GenericArg(*k));
-        }
-
-        Err(RustIrError::InvalidLifetimeName(name.clone()))
+    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
+        &self.trait_kinds[&id]
     }
 
     fn adt_kind(&self, id: chalk_ir::AdtId<ChalkIr>) -> &TypeKind {
@@ -153,27 +201,34 @@ impl<'k> Env<'k> {
         &self.fn_def_kinds[&id]
     }
 
-    fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
-        &self.trait_kinds[&id]
-    }
-
     /// Introduces new parameters, shifting the indices of existing
     /// parameters to accommodate them. The indices of the new binders
     /// will be assigned in order as they are iterated.
     fn introduce<I>(&self, binders: I) -> LowerResult<Self>
     where
-        I: IntoIterator<Item = NamedGenericArg>,
+        I: IntoIterator<Item = chalk_ir::WithKind<ChalkIr, Ident>>,
         I::IntoIter: ExactSizeIterator,
     {
-        let binders = binders
-            .into_iter()
-            .enumerate()
-            .map(|(i, k)| (k, BoundVar::new(DebruijnIndex::INNERMOST, i)));
+        // As binders to introduce we recieve `ParameterKind<Ident>`,
+        // which we need to transform into `(Ident, ParameterKind<BoundVar>)`,
+        // because that is the key-value pair for ParameterMap.
+        // `swap_inner` lets us do precisely that, replacing `Ident` inside
+        // `ParameterKind<Ident>` with a `BoundVar` and returning both.
+        let binders = binders.into_iter().enumerate().map(|(i, k)| {
+            let (kind, name) = k.into();
+            (
+                name,
+                chalk_ir::WithKind::new(kind, BoundVar::new(DebruijnIndex::INNERMOST, i)),
+            )
+        });
         let len = binders.len();
+
+        // For things already in the parameter map, we take each existing key-value pair
+        // `(Ident, ParameterKind<BoundVar>)` and shift in the inner `BoundVar`.
         let parameter_map: ParameterMap = self
             .parameter_map
             .iter()
-            .map(|(k, v)| (k.clone(), v.shifted_in()))
+            .map(|(k, v)| (k.clone(), v.map_ref(|b| b.shifted_in())))
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
@@ -187,7 +242,7 @@ impl<'k> Env<'k> {
 
     fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> LowerResult<chalk_ir::Binders<T>>
     where
-        I: IntoIterator<Item = NamedGenericArg>,
+        I: IntoIterator<Item = chalk_ir::WithKind<ChalkIr, Ident>>,
         I::IntoIter: ExactSizeIterator,
         T: HasInterner<Interner = ChalkIr>,
         OP: FnOnce(&Self) -> LowerResult<T>,
@@ -196,7 +251,7 @@ impl<'k> Env<'k> {
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
         Ok(chalk_ir::Binders::new(
-            chalk_ir::VariableKinds::from(interner, binders.iter().map(|v| v.kind)),
+            chalk_ir::VariableKinds::from(interner, binders.iter().map(|v| v.kind.clone())),
             op(&env)?,
         ))
     }
@@ -443,7 +498,7 @@ impl LowerProgram for Program {
                             // So the `impl Trait<T1..Tn>` will be lowered to `exists<Self> { Self: Trait<T1..Tn> }`.
                             let bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
                                 .in_binders(
-                                    Some(NamedGenericArg::new(
+                                    Some(chalk_ir::WithKind::new(
                                         chalk_ir::VariableKind::Ty,
                                         Atom::from(FIXME_SELF),
                                     )),
@@ -513,9 +568,9 @@ trait LowerTypeKind {
 }
 
 trait LowerParameterMap {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg>;
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>>;
     fn declared_parameters(&self) -> &[VariableKind];
-    fn all_parameters(&self) -> Vec<NamedGenericArg> {
+    fn all_parameters(&self) -> Vec<chalk_ir::WithKind<ChalkIr, Ident>> {
         self.synthetic_parameters()
             .into_iter()
             .chain(self.declared_parameters().iter().map(|id| id.lower()))
@@ -554,6 +609,10 @@ trait LowerParameterMap {
         self.all_parameters()
             .into_iter()
             .zip((0..).map(|i| BoundVar::new(DebruijnIndex::INNERMOST, i)))
+            .map(|(k, v)| {
+                let (kind, name) = k.into();
+                (name, chalk_ir::WithKind::new(kind, v))
+            })
             .collect()
     }
 
@@ -563,7 +622,7 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for StructDefn {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
 
@@ -573,7 +632,7 @@ impl LowerParameterMap for StructDefn {
 }
 
 impl LowerParameterMap for FnDefn {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
 
@@ -583,7 +642,7 @@ impl LowerParameterMap for FnDefn {
 }
 
 impl LowerParameterMap for Impl {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
 
@@ -593,7 +652,7 @@ impl LowerParameterMap for Impl {
 }
 
 impl LowerParameterMap for AssocTyDefn {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
 
@@ -603,7 +662,7 @@ impl LowerParameterMap for AssocTyDefn {
 }
 
 impl LowerParameterMap for AssocTyValue {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
 
@@ -613,8 +672,8 @@ impl LowerParameterMap for AssocTyValue {
 }
 
 impl LowerParameterMap for TraitDefn {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
-        Some(NamedGenericArg::new(
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
+        Some(chalk_ir::WithKind::new(
             chalk_ir::VariableKind::Ty,
             Atom::from(SELF),
         ))
@@ -626,7 +685,7 @@ impl LowerParameterMap for TraitDefn {
 }
 
 impl LowerParameterMap for Clause {
-    fn synthetic_parameters(&self) -> Option<NamedGenericArg> {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
 
@@ -635,17 +694,32 @@ impl LowerParameterMap for Clause {
     }
 }
 
+fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
+    chalk_ir::ApplicationTy {
+        name: chalk_ir::TypeName::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::U32)),
+        substitution: Substitution::empty(&ChalkIr),
+    }
+    .cast(&ChalkIr)
+    .intern(&ChalkIr)
+}
+
 trait LowerVariableKind {
-    fn lower(&self) -> NamedGenericArg;
+    fn lower(&self) -> chalk_ir::WithKind<ChalkIr, Ident>;
 }
 
 impl LowerVariableKind for VariableKind {
-    fn lower(&self) -> NamedGenericArg {
+    fn lower(&self) -> chalk_ir::WithKind<ChalkIr, Ident> {
         match self {
-            VariableKind::Ty(n) => NamedGenericArg::new(chalk_ir::VariableKind::Ty, n.str.clone()),
-            VariableKind::Lifetime(n) => {
-                NamedGenericArg::new(chalk_ir::VariableKind::Lifetime, n.str.clone())
+            VariableKind::Ty(n) => {
+                chalk_ir::WithKind::new(chalk_ir::VariableKind::Ty, n.str.clone())
             }
+            VariableKind::Lifetime(n) => {
+                chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, n.str.clone())
+            }
+            VariableKind::Const(ref n) => chalk_ir::WithKind::new(
+                chalk_ir::VariableKind::Const(get_type_of_u32()),
+                n.str.clone(),
+            ),
         }
     }
 }
@@ -857,12 +931,7 @@ impl LowerLeafGoal for LeafGoal {
             LeafGoal::DomainGoal { goal } => {
                 chalk_ir::Goal::all(interner, goal.lower(env)?.into_iter().casted(interner))
             }
-            LeafGoal::UnifyTys { a, b } => chalk_ir::EqGoal {
-                a: a.lower(env)?.cast(interner),
-                b: b.lower(env)?.cast(interner),
-            }
-            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
-            LeafGoal::UnifyLifetimes { ref a, ref b } => chalk_ir::EqGoal {
+            LeafGoal::UnifyGenericArgs { a, b } => chalk_ir::EqGoal {
                 a: a.lower(env)?.cast(interner),
                 b: b.lower(env)?.cast(interner),
             }
@@ -1200,53 +1269,20 @@ impl LowerTy for Ty {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
         let interner = env.interner();
         match self {
-            Ty::Id { name } => match env.lookup_type(name)? {
-                TypeLookup::Adt(id) => {
-                    let k = env.adt_kind(id);
-                    if k.binders.len(interner) > 0 {
-                        Err(RustIrError::IncorrectNumberOfTypeParameters {
-                            identifier: name.clone(),
-                            expected: k.binders.len(interner),
-                            actual: 0,
-                        })
-                    } else {
-                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::Adt(id),
-                            substitution: chalk_ir::Substitution::empty(interner),
-                        })
-                        .intern(interner))
+            Ty::Id { name } => {
+                let parameter = env.lookup_generic_arg(&name)?;
+                parameter.ty(interner).map(|ty| ty.clone()).ok_or_else(|| {
+                    RustIrError::IncorrectParameterKind {
+                        identifier: name.clone(),
+                        expected: Kind::Ty,
+                        actual: parameter.kind(),
                     }
-                }
-                TypeLookup::GenericArg(d) => Ok(chalk_ir::TyData::BoundVar(d).intern(interner)),
-                TypeLookup::FnDef(id) => {
-                    let k = env.fn_def_kind(id);
-                    if k.binders.len(interner) > 0 {
-                        Err(RustIrError::IncorrectNumberOfTypeParameters {
-                            identifier: name.clone(),
-                            expected: k.binders.len(interner),
-                            actual: 0,
-                        })
-                    } else {
-                        Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
-                            num_binders: k.binders.len(interner),
-                            substitution: chalk_ir::Substitution::empty(interner),
-                        })
-                        .intern(interner))
-                    }
-                }
-                TypeLookup::Opaque(id) => Ok(chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(
-                    chalk_ir::OpaqueTy {
-                        opaque_ty_id: id,
-                        substitution: chalk_ir::Substitution::empty(interner),
-                    },
-                ))
-                .intern(interner)),
-            },
-
+                })
+            }
             Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
-                    Some(NamedGenericArg::new(
+                    Some(chalk_ir::WithKind::new(
                         chalk_ir::VariableKind::Ty,
                         Atom::from(FIXME_SELF),
                     )),
@@ -1270,12 +1306,11 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Apply { name, ref args } => {
-                let (id, k) = match env.lookup_type(name)? {
-                    TypeLookup::Adt(id) => (id.0, env.adt_kind(id)),
-                    TypeLookup::GenericArg(_) | TypeLookup::Opaque(_) => {
-                        Err(RustIrError::CannotApplyTypeParameter(name.clone()))?
+                let (apply_name, k) = match env.lookup_apply_type(&name)? {
+                    ApplyTypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
+                    ApplyTypeLookup::FnDef(id) => {
+                        (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id))
                     }
-                    TypeLookup::FnDef(id) => (id.0, env.fn_def_kind(id)),
                 };
 
                 if k.binders.len(interner) != args.len() {
@@ -1291,7 +1326,12 @@ impl LowerTy for Ty {
                     args.iter().map(|t| Ok(t.lower(env)?)),
                 )?;
 
-                for (param, arg) in k.binders.binders.iter(interner).zip(args.iter()) {
+                for (param, arg) in k
+                    .binders
+                    .binders
+                    .iter(interner)
+                    .zip(substitution.iter(interner))
+                {
                     if param.kind() != arg.kind() {
                         Err(RustIrError::IncorrectParameterKind {
                             identifier: name.clone(),
@@ -1300,19 +1340,11 @@ impl LowerTy for Ty {
                         })?;
                     }
                 }
-
-                match k.sort {
-                    TypeSort::FnDef => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                        name: chalk_ir::TypeName::FnDef(FnDefId(id)),
-                        substitution,
-                    })
-                    .intern(interner)),
-                    _ => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                        name: chalk_ir::TypeName::Adt(AdtId(id)),
-                        substitution,
-                    })
-                    .intern(interner)),
-                }
+                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: apply_name,
+                    substitution,
+                })
+                .intern(interner))
             }
 
             Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Alias(
@@ -1325,7 +1357,7 @@ impl LowerTy for Ty {
                 ref ty,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
-                    NamedGenericArg::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
+                    chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
                 }))?;
 
                 let function = chalk_ir::Fn {
@@ -1406,9 +1438,18 @@ trait LowerGenericArg {
 impl LowerGenericArg for GenericArg {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
         let interner = env.interner();
-        match *self {
+        match self {
             GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
             GenericArg::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
+            GenericArg::Id(name) => env.lookup_generic_arg(&name),
+            GenericArg::ConstValue(value) => Ok(chalk_ir::ConstData {
+                ty: get_type_of_u32(),
+                value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst {
+                    interned: value.clone(),
+                }),
+            }
+            .intern(interner)
+            .cast(interner)),
         }
     }
 }
@@ -1421,11 +1462,17 @@ impl LowerLifetime for Lifetime {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
         let interner = env.interner();
         match self {
-            Lifetime::Id { name } => match env.lookup_lifetime(name)? {
-                LifetimeLookup::GenericArg(d) => {
-                    Ok(chalk_ir::LifetimeData::BoundVar(d).intern(interner))
-                }
-            },
+            Lifetime::Id { name } => {
+                let parameter = env.lookup_generic_arg(&name)?;
+                parameter
+                    .lifetime(interner)
+                    .map(|l| l.clone())
+                    .ok_or_else(|| RustIrError::IncorrectParameterKind {
+                        identifier: name.clone(),
+                        expected: Kind::Lifetime,
+                        actual: parameter.kind(),
+                    })
+            }
         }
     }
 }
@@ -1722,15 +1769,7 @@ impl Kinded for VariableKind {
         match *self {
             VariableKind::Ty(_) => Kind::Ty,
             VariableKind::Lifetime(_) => Kind::Lifetime,
-        }
-    }
-}
-
-impl Kinded for GenericArg {
-    fn kind(&self) -> Kind {
-        match *self {
-            GenericArg::Ty(_) => Kind::Ty,
-            GenericArg::Lifetime(_) => Kind::Lifetime,
+            VariableKind::Const(_) => Kind::Const,
         }
     }
 }
@@ -1740,7 +1779,7 @@ impl Kinded for chalk_ir::VariableKind<ChalkIr> {
         match self {
             chalk_ir::VariableKind::Ty => Kind::Ty,
             chalk_ir::VariableKind::Lifetime => Kind::Lifetime,
-            chalk_ir::VariableKind::Phantom(..) => unreachable!(),
+            chalk_ir::VariableKind::Const(_) => Kind::Const,
         }
     }
 }
@@ -1750,6 +1789,7 @@ impl Kinded for chalk_ir::GenericArgData<ChalkIr> {
         match self {
             chalk_ir::GenericArgData::Ty(_) => Kind::Ty,
             chalk_ir::GenericArgData::Lifetime(_) => Kind::Lifetime,
+            chalk_ir::GenericArgData::Const(_) => Kind::Const,
         }
     }
 }

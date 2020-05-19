@@ -13,6 +13,18 @@ fn two_impls_for_same_type() {
             "overlapping impls of trait `Foo`"
         }
     }
+
+    lowering_error! {
+        program {
+            trait Foo { }
+            struct Bar<const N> { }
+            impl Foo for Bar<3> { }
+            impl Foo for Bar<3> { }
+        }
+        error_msg {
+            "overlapping impls of trait `Foo`"
+        }
+    }
 }
 
 #[test]
@@ -36,6 +48,16 @@ fn concrete_impl_and_blanket_impl() {
             struct Bar { }
             impl Foo for Bar { }
             impl<T> Foo for T { }
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Foo { }
+            struct S {}
+            struct Bar<const N> { }
+            impl Foo for Bar<3> { }
+            impl<const N> Foo for Bar<N> { }
         }
     }
 }

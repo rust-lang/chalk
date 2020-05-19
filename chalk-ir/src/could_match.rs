@@ -48,6 +48,10 @@ where
                 Ok(())
             }
 
+            fn zip_consts(&mut self, _: &Const<I>, _: &Const<I>) -> Fallible<()> {
+                Ok(())
+            }
+
             fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
             where
                 T: HasInterner + Zip<I>,

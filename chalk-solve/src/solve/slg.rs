@@ -456,14 +456,17 @@ impl<I: Interner> MayInvalidate<'_, I> {
             (GenericArgData::Lifetime(l1), GenericArgData::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)
             }
-            (GenericArgData::Ty(_), _) | (GenericArgData::Lifetime(_), _) => panic!(
+            (GenericArgData::Const(c1), GenericArgData::Const(c2)) => self.aggregate_consts(c1, c2),
+            (GenericArgData::Ty(_), _)
+            | (GenericArgData::Lifetime(_), _)
+            | (GenericArgData::Const(_), _) => panic!(
                 "mismatched parameter kinds: new={:?} current={:?}",
                 new, current
             ),
         }
     }
 
-    // Returns true if the two types could be unequal.
+    /// Returns true if the two types could be unequal.
     fn aggregate_tys(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
         let interner = self.interner;
         match (new.data(interner), current.data(interner)) {
@@ -505,7 +508,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
             }
 
             (TyData::Placeholder(p1), TyData::Placeholder(p2)) => {
-                self.aggregate_placeholder_tys(p1, p2)
+                self.aggregate_placeholders(p1, p2)
             }
 
             (
@@ -527,8 +530,56 @@ impl<I: Interner> MayInvalidate<'_, I> {
         }
     }
 
+    /// Returns true if the two consts could be unequal.    
     fn aggregate_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
         true
+    }
+
+    /// Returns true if the two consts could be unequal.
+    fn aggregate_consts(&mut self, new: &Const<I>, current: &Const<I>) -> bool {
+        let interner = self.interner;
+        let ConstData {
+            ty: new_ty,
+            value: new_value,
+        } = new.data(interner);
+        let ConstData {
+            ty: current_ty,
+            value: current_value,
+        } = current.data(interner);
+
+        if self.aggregate_tys(new_ty, current_ty) {
+            return true;
+        }
+
+        match (new_value, current_value) {
+            (_, ConstValue::BoundVar(_)) => {
+                // see comment in aggregate_tys
+                false
+            }
+
+            (ConstValue::BoundVar(_), _) => {
+                // see comment in aggregate_tys
+                true
+            }
+
+            (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => {
+                panic!(
+                    "unexpected free inference variable in may-invalidate: {:?} vs {:?}",
+                    new, current,
+                );
+            }
+
+            (ConstValue::Placeholder(p1), ConstValue::Placeholder(p2)) => {
+                self.aggregate_placeholders(p1, p2)
+            }
+
+            (ConstValue::Concrete(c1), ConstValue::Concrete(c2)) => {
+                !c1.const_eq(new_ty, c2, interner)
+            }
+
+            // Only variants left are placeholder = concrete, which always fails
+            (ConstValue::Placeholder(_), _) | (ConstValue::Concrete(_), _) => true,
+        }
     }
 
     fn aggregate_application_tys(
@@ -553,7 +604,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
         )
     }
 
-    fn aggregate_placeholder_tys(
+    fn aggregate_placeholders(
         &mut self,
         new: &PlaceholderIndex,
         current: &PlaceholderIndex,

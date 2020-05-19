@@ -299,6 +299,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
 mod auto_traits;
 mod coherence_goals;
 mod coinduction;
+mod constants;
 mod cycle;
 mod existential_types;
 mod functions;

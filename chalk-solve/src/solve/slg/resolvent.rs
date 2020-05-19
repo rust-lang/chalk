@@ -386,7 +386,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
     fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
 
-        if let Some(pending) = self.table.normalize_shallow(interner, pending) {
+        if let Some(pending) = self.table.normalize_ty_shallow(interner, pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
@@ -447,7 +447,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
     fn zip_lifetimes(&mut self, answer: &Lifetime<I>, pending: &Lifetime<I>) -> Fallible<()> {
         let interner = self.interner;
-        if let Some(pending) = self.table.normalize_lifetime(interner, pending) {
+        if let Some(pending) = self.table.normalize_lifetime_shallow(interner, pending) {
             return Zip::zip_with(self, answer, &pending);
         }
 
@@ -482,6 +482,62 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             ),
 
             (LifetimeData::Phantom(..), _) => unreachable!(),
+        }
+    }
+
+    fn zip_consts(&mut self, answer: &Const<I>, pending: &Const<I>) -> Fallible<()> {
+        let interner = self.interner;
+        if let Some(pending) = self.table.normalize_const_shallow(interner, pending) {
+            return Zip::zip_with(self, answer, &pending);
+        }
+
+        let ConstData {
+            ty: answer_ty,
+            value: answer_value,
+        } = answer.data(interner);
+        let ConstData {
+            ty: pending_ty,
+            value: pending_value,
+        } = pending.data(interner);
+
+        self.zip_tys(answer_ty, pending_ty)?;
+
+        if let ConstValue::BoundVar(answer_depth) = answer_value {
+            if self.unify_free_answer_var(
+                interner,
+                *answer_depth,
+                GenericArgData::Const(pending.clone()),
+            )? {
+                return Ok(());
+            }
+        }
+
+        match (answer_value, pending_value) {
+            (ConstValue::BoundVar(answer_depth), ConstValue::BoundVar(pending_depth)) => {
+                self.assert_matching_vars(*answer_depth, *pending_depth)
+            }
+
+            (ConstValue::Placeholder(_), ConstValue::Placeholder(_)) => {
+                assert_eq!(answer, pending);
+                Ok(())
+            }
+
+            (ConstValue::Concrete(c1), ConstValue::Concrete(c2)) => {
+                assert!(c1.const_eq(answer_ty, c2, interner));
+                Ok(())
+            }
+
+            (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => panic!(
+                "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
+                answer, pending,
+            ),
+
+            (ConstValue::BoundVar(_), _)
+            | (ConstValue::Placeholder(_), _)
+            | (ConstValue::Concrete(_), _) => panic!(
+                "structural mismatch between answer `{:?}` and pending goal `{:?}`",
+                answer, pending,
+            ),
         }
     }
 

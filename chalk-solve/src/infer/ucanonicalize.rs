@@ -253,19 +253,7 @@ where
         self
     }
 
-    fn visit_free_placeholder_ty(
-        &mut self,
-        universe: PlaceholderIndex,
-        _outer_binder: DebruijnIndex,
-    ) {
-        self.universes.add(universe.ui);
-    }
-
-    fn visit_free_placeholder_lifetime(
-        &mut self,
-        universe: PlaceholderIndex,
-        _outer_binder: DebruijnIndex,
-    ) {
+    fn visit_free_placeholder(&mut self, universe: PlaceholderIndex, _outer_binder: DebruijnIndex) {
         self.universes.add(universe.ui);
     }
 

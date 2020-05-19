@@ -96,7 +96,9 @@ impl<I: Interner> InferenceTable<I> {
                         lt.cast(interner)
                     }
                     VariableKind::Ty => placeholder_idx.to_ty(interner).cast(interner),
-                    VariableKind::Phantom(..) => unreachable!(),
+                    VariableKind::Const(ty) => {
+                        placeholder_idx.to_const(interner, ty).cast(interner)
+                    }
                 }
             })
             .collect();

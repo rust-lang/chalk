@@ -380,7 +380,7 @@ pub trait Anonymize<I: Interner> {
 
 impl<I: Interner, T> Anonymize<I> for [WithKind<I, T>] {
     fn anonymize(&self) -> Vec<VariableKind<I>> {
-        self.iter().map(|pk| pk.kind).collect()
+        self.iter().map(|pk| pk.kind.clone()).collect()
     }
 }
 

@@ -1,8 +1,8 @@
 use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, Goals,
-    Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData,
+    Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
     QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind,
     VariableKinds,
 };
@@ -36,6 +36,8 @@ pub struct ChalkIr;
 impl Interner for ChalkIr {
     type InternedType = Arc<TyData<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
+    type InternedConst = Arc<ConstData<ChalkIr>>;
+    type InternedConcreteConst = u32;
     type InternedGenericArg = GenericArgData<ChalkIr>;
     type InternedGoal = Arc<GoalData<ChalkIr>>;
     type InternedGoals = Vec<Goal<ChalkIr>>;
@@ -212,6 +214,18 @@ impl Interner for ChalkIr {
 
     fn lifetime_data<'a>(&self, lifetime: &'a LifetimeData<ChalkIr>) -> &'a LifetimeData<ChalkIr> {
         lifetime
+    }
+
+    fn intern_const(&self, constant: ConstData<ChalkIr>) -> Arc<ConstData<ChalkIr>> {
+        Arc::new(constant)
+    }
+
+    fn const_data<'a>(&self, constant: &'a Arc<ConstData<ChalkIr>>) -> &'a ConstData<ChalkIr> {
+        constant
+    }
+
+    fn const_eq(&self, _ty: &Arc<TyData<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
+        c1 == c2
     }
 
     fn intern_generic_arg(&self, generic_arg: GenericArgData<ChalkIr>) -> GenericArgData<ChalkIr> {

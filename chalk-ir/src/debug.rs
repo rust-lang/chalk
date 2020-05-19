@@ -39,6 +39,18 @@ impl<I: Interner> Debug for Lifetime<I> {
     }
 }
 
+impl<I: Interner> Debug for Const<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_const(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
+impl<I: Interner> Debug for ConcreteConst<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.interned)
+    }
+}
+
 impl<I: Interner> Debug for GenericArg<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_generic_arg(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
@@ -261,13 +273,24 @@ impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
             if index > 0 {
                 write!(fmt, ", ")?;
             }
-            match *binder {
+            match binder {
                 VariableKind::Ty => write!(fmt, "type")?,
                 VariableKind::Lifetime => write!(fmt, "lifetime")?,
-                VariableKind::Phantom(..) => unreachable!(),
+                VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty)?,
             }
         }
         write!(fmt, ">")
+    }
+}
+
+impl<I: Interner> Debug for ConstData<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        match &self.value {
+            ConstValue::BoundVar(db) => write!(fmt, "{:?}", db),
+            ConstValue::InferenceVar(var) => write!(fmt, "{:?}", var),
+            ConstValue::Placeholder(index) => write!(fmt, "{:?}", index),
+            ConstValue::Concrete(evaluated) => write!(fmt, "{:?}", evaluated),
+        }
     }
 }
 
@@ -326,6 +349,7 @@ impl<'a, I: Interner> Debug for GenericArgDataInnerDebug<'a, I> {
         match self.0 {
             GenericArgData::Ty(n) => write!(fmt, "{:?}", n),
             GenericArgData::Lifetime(n) => write!(fmt, "{:?}", n),
+            GenericArgData::Const(n) => write!(fmt, "{:?}", n),
         }
     }
 }
@@ -731,16 +755,17 @@ impl<I: Interner> Debug for GenericArgData<I> {
         match self {
             GenericArgData::Ty(t) => write!(fmt, "Ty({:?})", t),
             GenericArgData::Lifetime(l) => write!(fmt, "Lifetime({:?})", l),
+            GenericArgData::Const(c) => write!(fmt, "Const({:?})", c),
         }
     }
 }
 
 impl<I: Interner> Debug for VariableKind<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match *self {
+        match self {
             VariableKind::Ty => write!(fmt, "type"),
             VariableKind::Lifetime => write!(fmt, "lifetime"),
-            VariableKind::Phantom(..) => unreachable!(),
+            VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty),
         }
     }
 }
@@ -751,7 +776,7 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
         match &self.kind {
             VariableKind::Ty => write!(fmt, "{:?} with kind type", value),
             VariableKind::Lifetime => write!(fmt, "{:?} with kind lifetime", value),
-            VariableKind::Phantom(..) => unreachable!(),
+            VariableKind::Const(ty) => write!(fmt, "{:?} with kind {:?}", value, ty),
         }
     }
 }
