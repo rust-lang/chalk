@@ -25,6 +25,7 @@ type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
+type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
@@ -42,6 +43,7 @@ struct Env<'k> {
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
+    opaque_ty_kinds: &'k OpaqueTyKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
@@ -76,6 +78,7 @@ struct AssociatedTyLookup {
 enum ApplyTypeLookup {
     Adt(AdtId<ChalkIr>),
     FnDef(FnDefId<ChalkIr>),
+    Opaque(OpaqueTyId<ChalkIr>),
 }
 
 const SELF: &str = "Self";
@@ -158,16 +161,16 @@ impl<'k> Env<'k> {
             return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
         }
 
-        if let Some(_) = self.opaque_ty_ids.get(&name.str) {
-            return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
-        }
-
         if let Some(id) = self.adt_ids.get(&name.str) {
             return Ok(ApplyTypeLookup::Adt(*id));
         }
 
         if let Some(id) = self.fn_def_ids.get(&name.str) {
             return Ok(ApplyTypeLookup::FnDef(*id));
+        }
+
+        if let Some(id) = self.opaque_ty_ids.get(&name.str) {
+            return Ok(ApplyTypeLookup::Opaque(*id));
         }
 
         Err(RustIrError::NotStruct(name.clone()))
@@ -199,6 +202,10 @@ impl<'k> Env<'k> {
 
     fn fn_def_kind(&self, id: chalk_ir::FnDefId<ChalkIr>) -> &TypeKind {
         &self.fn_def_kinds[&id]
+    }
+
+    fn opaque_kind(&self, id: chalk_ir::OpaqueTyId<ChalkIr>) -> &TypeKind {
+        &self.opaque_ty_kinds[&id]
     }
 
     /// Introduces new parameters, shifting the indices of existing
@@ -369,6 +376,7 @@ impl LowerProgram for Program {
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
+                opaque_ty_kinds: &opaque_ty_kinds,
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
             };
@@ -1311,6 +1319,9 @@ impl LowerTy for Ty {
                     ApplyTypeLookup::FnDef(id) => {
                         (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id))
                     }
+                    ApplyTypeLookup::Opaque(id) => {
+                        (chalk_ir::TypeName::OpaqueType(id), env.opaque_kind(id))
+                    }
                 };
 
                 if k.binders.len(interner) != args.len() {
@@ -1658,6 +1669,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             adt_kinds: &program.adt_kinds,
             fn_def_kinds: &program.fn_def_kinds,
             trait_kinds: &program.trait_kinds,
+            opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),
         };
