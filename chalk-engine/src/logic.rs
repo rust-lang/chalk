@@ -6,7 +6,7 @@ use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::{Stack, StackIndex};
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
-use crate::table::AnswerIndex;
+use crate::table::{AnswerIndex, Table};
 use crate::{
     Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
@@ -222,9 +222,9 @@ impl<C: Context> Forest<C> {
             goal
         );
         let coinductive_goal = context.is_coinductive(&goal);
-        let table = self.tables.insert(goal, coinductive_goal);
-        self.push_initial_strands(context, table);
-        table
+        let mut table = Table::new(goal.clone(), coinductive_goal);
+        Self::push_initial_strands(context, self.tables.next_index(), &mut table);
+        self.tables.insert(table)
     }
 
     /// When a table is first created, this function is invoked to
@@ -238,23 +238,22 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, this corresponds to the *Program
     /// Clause Resolution* step being applied eagerly, as many times
     /// as possible.
-    fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
+    fn push_initial_strands(context: &impl ContextOps<C>, table_idx: TableIndex, table: &mut Table<C>) {
         // Instantiate the table goal with fresh inference variables.
-        let table_goal = self.tables[table].table_goal.clone();
+        let table_goal = table.table_goal.clone();
         let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
-        self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
+        Self::push_initial_strands_instantiated(context, table_idx, table, infer, subst, environment, goal);
     }
 
     fn push_initial_strands_instantiated(
-        &mut self,
         context: &impl ContextOps<C>,
-        table: TableIndex,
+        table_idx: TableIndex,
+        table: &mut Table<C>,
         mut infer: C::InferenceTable,
         subst: C::Substitution,
         environment: C::Environment,
         goal: C::Goal,
     ) {
-        let table_ref = &mut self.tables[table];
         match context.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
@@ -277,13 +276,13 @@ impl<C: Context> Forest<C> {
                                     last_pursued_time: TimeStamp::default(),
                                 };
                                 let canonical_strand = Self::canonicalize_strand(context, strand);
-                                table_ref.enqueue_strand(canonical_strand);
+                                table.enqueue_strand(canonical_strand);
                             }
                         }
                     }
                     Err(Floundered) => {
-                        debug!("Marking table {:?} as floundered!", table);
-                        table_ref.mark_floundered();
+                        debug!("Marking table {:?} as floundered!", table_idx);
+                        table.mark_floundered();
                     }
                 }
             }
@@ -311,7 +310,7 @@ impl<C: Context> Forest<C> {
                         last_pursued_time: TimeStamp::default(),
                     };
                     let canonical_strand = Self::canonicalize_strand(context, strand);
-                    table_ref.enqueue_strand(canonical_strand);
+                    table.enqueue_strand(canonical_strand);
                 }
             }
         }

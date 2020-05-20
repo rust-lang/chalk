@@ -1,17 +1,26 @@
-use chalk_ir::interner::ChalkIr;
+use chalk_ir::interner::{ChalkIr, RawId};
+use chalk_ir::ApplicationTy;
 use chalk_ir::AssocTypeId;
+use chalk_ir::Binders;
 use chalk_ir::ImplId;
 use chalk_ir::OpaqueTyId;
 use chalk_ir::Parameter;
+use chalk_ir::ParameterKinds;
 use chalk_ir::ProgramClause;
 use chalk_ir::StructId;
+use chalk_ir::Substitution;
 use chalk_ir::TraitId;
+use chalk_ir::TraitRef;
+use chalk_ir::Ty;
 use chalk_ir::TypeName;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
 use chalk_rust_ir::ImplDatum;
+use chalk_rust_ir::ImplDatumBound;
+use chalk_rust_ir::ImplType;
 use chalk_rust_ir::OpaqueTyDatum;
+use chalk_rust_ir::Polarity;
 use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_rust_ir::WellKnownTrait;
@@ -40,7 +49,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
 
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
         assert_eq!(id.0.index, 0);
-        return Arc::new(chalk_rust_ir::TraitDatum {
+        Arc::new(chalk_rust_ir::TraitDatum {
             id,
             binders: chalk_ir::Binders::new(
                 chalk_ir::ParameterKinds::new(&ChalkIr),
@@ -58,11 +67,37 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             },
             associated_ty_ids: vec![],
             well_known: None,
-        });
+        })
     }
 
     fn impl_datum(&self, id: ImplId<ChalkIr>) -> Arc<ImplDatum<ChalkIr>> {
-        unimplemented!()
+        assert_eq!(id.0.index, 1);
+
+        let substitution = Ty::new(
+            &ChalkIr,
+            ApplicationTy {
+                name: TypeName::Struct(StructId(RawId { index: 1 })),
+                substitution: Substitution::empty(&ChalkIr),
+            },
+        );
+
+        let binders = Binders::new(
+            ParameterKinds::new(&ChalkIr),
+            ImplDatumBound {
+                trait_ref: TraitRef {
+                    trait_id: TraitId(RawId { index: 0 }),
+                    substitution: Substitution::from1(&ChalkIr, substitution),
+                },
+                where_clauses: vec![],
+            },
+        );
+
+        Arc::new(ImplDatum {
+            polarity: Polarity::Positive,
+            binders,
+            impl_type: ImplType::Local,
+            associated_ty_value_ids: vec![],
+        })
     }
 
     fn associated_ty_value(
@@ -89,7 +124,8 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         trait_id: TraitId<ChalkIr>,
         parameters: &[Parameter<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
-        unimplemented!()
+        assert_eq!(trait_id.0.index, 0);
+        vec![ImplId(RawId { index: 1 })]
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<ChalkIr>) -> Vec<ImplId<ChalkIr>> {
@@ -165,7 +201,7 @@ fn unwind_safety() {
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
     }));
-    assert!(result.is_err() == true);
+    assert!(result.is_err());
 
     // solve again but without panicking this time
     db.panic = false;
