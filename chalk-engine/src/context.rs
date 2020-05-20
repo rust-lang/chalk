@@ -44,9 +44,9 @@ pub trait Context: Clone + Debug {
 
     /// A canonicalized `GoalInEnvironment` -- that is, one where all
     /// free inference variables have been bound into the canonical
-    /// binder. See [the rustc-dev-guide] for more information.
+    /// binder. See [the chalk book] for more information.
     ///
-    /// [the rustc-dev-guide]: https://rustc-dev-guide.rust-lang.org/traits/canonicalization.html
+    /// [the chalk book]: https://rust-lang.github.io/chalk/book/canonical_queries/canonicalization.html
     type CanonicalGoalInEnvironment: Debug;
 
     /// A u-canonicalized `GoalInEnvironment` -- this is one where the
@@ -103,7 +103,7 @@ pub trait Context: Clone + Debug {
 
     /// A term that can be quantified over and unified -- in current
     /// Chalk, either a type or lifetime.
-    type Parameter: Debug;
+    type GenericArg: Debug;
 
     /// A rule like `DomainGoal :- Goal`.
     ///
@@ -354,13 +354,13 @@ pub trait UnificationOps<C: Context> {
     ///
     /// If the parameters fail to unify, then `Error` is returned
     // Used by: simplify
-    fn unify_parameters_into_ex_clause(
+    fn unify_generic_args_into_ex_clause(
         &mut self,
         interner: &C::Interner,
         environment: &C::Environment,
         variance: C::Variance,
-        a: &C::Parameter,
-        b: &C::Parameter,
+        a: &C::GenericArg,
+        b: &C::GenericArg,
         ex_clause: &mut ExClause<C>,
     ) -> Fallible<()>;
 }

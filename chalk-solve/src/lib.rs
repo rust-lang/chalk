@@ -9,6 +9,10 @@ use std::sync::Arc;
 #[macro_use]
 extern crate chalk_macros;
 
+#[cfg(test)]
+#[macro_use]
+mod test_macros;
+
 pub mod clauses;
 pub mod coherence;
 mod coinductive_goal;
@@ -32,7 +36,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
 
     /// Returns the datum for the impl with the given id.
-    fn struct_datum(&self, struct_id: StructId<I>) -> Arc<StructDatum<I>>;
+    fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>>;
+
+    fn fn_def_datum(&self, fn_def_id: FnDefId<I>) -> Arc<FnDefDatum<I>>;
 
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>>;
@@ -43,9 +49,6 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the `OpaqueTyDatum` with the given id.
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>>;
 
-    /// If `id` is a struct id, returns `Some(id)` (but cast to `StructId`).
-    fn as_struct_id(&self, id: &TypeName<I>) -> Option<StructId<I>>;
-
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
     /// trying to match (if known: these parameters may contain
@@ -55,7 +58,8 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// apply. The parameters are provided as a "hint" to help the
     /// implementor do less work, but can be completely ignored if
     /// desired.
-    fn impls_for_trait(&self, trait_id: TraitId<I>, parameters: &[Parameter<I>]) -> Vec<ImplId<I>>;
+    fn impls_for_trait(&self, trait_id: TraitId<I>, parameters: &[GenericArg<I>])
+        -> Vec<ImplId<I>>;
 
     /// Returns the impls that require coherence checking. This is not the
     /// full set of impls that exist:
@@ -66,12 +70,12 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>>;
 
     /// Returns true if there is an explicit impl of the auto trait
-    /// `auto_trait_id` for the struct `struct_id`. This is part of
+    /// `auto_trait_id` for the ADT `adt_id`. This is part of
     /// the auto trait handling -- if there is no explicit impl given
     /// by the user for the struct, then we provide default impls
     /// based on the field types (otherwise, we rely on the impls the
     /// user gave).
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, struct_id: StructId<I>) -> bool;
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool;
 
     /// A stop-gap solution to force an impl for a given well-known trait.
     /// Useful when the logic for a given trait is absent or incomplete.
@@ -87,8 +91,17 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns id of a trait lang item, if found
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<I>>;
 
+    /// Calculates program clauses from an env. This is intended to call the
+    /// `program_clauses_for_env` function and then possibly cache the clauses.
+    fn program_clauses_for_env(&self, environment: &Environment<I>) -> ProgramClauses<I>;
+
     fn interner(&self) -> &I;
+
+    /// Check if a trait is object safe
+    fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;
 }
+
+pub use clauses::program_clauses_for_env;
 
 pub use solve::Guidance;
 pub use solve::Solution;

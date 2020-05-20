@@ -1,29 +1,31 @@
 use crate::error::ChalkError;
+use crate::interner::ChalkIr;
 use crate::lowering::LowerGoal;
 use crate::program::Program;
 use crate::query::{Lowering, LoweringDatabase};
+use crate::tls;
 use chalk_engine::forest::SubstitutionResult;
-use chalk_ir::interner::ChalkIr;
-use chalk_ir::tls;
+use chalk_ir::AdtId;
 use chalk_ir::AssocTypeId;
 use chalk_ir::Canonical;
 use chalk_ir::ConstrainedSubst;
+use chalk_ir::Environment;
+use chalk_ir::FnDefId;
+use chalk_ir::GenericArg;
 use chalk_ir::Goal;
 use chalk_ir::ImplId;
 use chalk_ir::InEnvironment;
 use chalk_ir::OpaqueTyId;
-use chalk_ir::Parameter;
 use chalk_ir::ProgramClause;
-use chalk_ir::StructId;
 use chalk_ir::TraitId;
-use chalk_ir::TypeName;
-use chalk_ir::UCanonical;
+use chalk_ir::{ProgramClauses, UCanonical};
+use chalk_rust_ir::AdtDatum;
 use chalk_rust_ir::AssociatedTyDatum;
 use chalk_rust_ir::AssociatedTyValue;
 use chalk_rust_ir::AssociatedTyValueId;
+use chalk_rust_ir::FnDefDatum;
 use chalk_rust_ir::ImplDatum;
 use chalk_rust_ir::OpaqueTyDatum;
-use chalk_rust_ir::StructDatum;
 use chalk_rust_ir::TraitDatum;
 use chalk_rust_ir::WellKnownTrait;
 use chalk_solve::RustIrDatabase;
@@ -110,22 +112,22 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().opaque_ty_data(id)
     }
 
-    fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
-        self.program_ir().unwrap().struct_datum(id)
+    fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
+        self.program_ir().unwrap().adt_datum(id)
     }
 
-    fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
-        self.program_ir().unwrap().as_struct_id(type_name)
+    fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
+        self.program_ir().unwrap().fn_def_datum(id)
     }
 
     fn impls_for_trait(
         &self,
         trait_id: TraitId<ChalkIr>,
-        parameters: &[Parameter<ChalkIr>],
+        generic_args: &[GenericArg<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
         self.program_ir()
             .unwrap()
-            .impls_for_trait(trait_id, parameters)
+            .impls_for_trait(trait_id, generic_args)
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<ChalkIr>) -> Vec<ImplId<ChalkIr>> {
@@ -134,14 +136,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .local_impls_to_coherence_check(trait_id)
     }
 
-    fn impl_provided_for(
-        &self,
-        auto_trait_id: TraitId<ChalkIr>,
-        struct_id: StructId<ChalkIr>,
-    ) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, adt_id: AdtId<ChalkIr>) -> bool {
         self.program_ir()
             .unwrap()
-            .impl_provided_for(auto_trait_id, struct_id)
+            .impl_provided_for(auto_trait_id, adt_id)
     }
 
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {
@@ -150,7 +148,18 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .well_known_trait_id(well_known_trait)
     }
 
+    fn program_clauses_for_env(
+        &self,
+        environment: &Environment<ChalkIr>,
+    ) -> ProgramClauses<ChalkIr> {
+        chalk_solve::program_clauses_for_env(self, environment)
+    }
+
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
+    }
+
+    fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
+        self.program_ir().unwrap().is_object_safe(trait_id)
     }
 }

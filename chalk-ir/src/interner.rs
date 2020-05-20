@@ -1,7 +1,12 @@
+use crate::AdtId;
 use crate::AliasTy;
 use crate::ApplicationTy;
 use crate::AssocTypeId;
+use crate::CanonicalVarKind;
 use crate::CanonicalVarKinds;
+use crate::FnDefId;
+use crate::GenericArg;
+use crate::GenericArgData;
 use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
@@ -9,10 +14,6 @@ use crate::Lifetime;
 use crate::LifetimeData;
 use crate::OpaqueTy;
 use crate::OpaqueTyId;
-use crate::Parameter;
-use crate::ParameterData;
-use crate::ParameterKind;
-use crate::ParameterKinds;
 use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
@@ -21,21 +22,18 @@ use crate::ProjectionTy;
 use crate::QuantifiedWhereClause;
 use crate::QuantifiedWhereClauses;
 use crate::SeparatorTraitRef;
-use crate::StructId;
 use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
 use crate::TyData;
-use crate::UniverseIndex;
+use crate::VariableKind;
+use crate::VariableKinds;
 use chalk_engine::context::Context;
 use chalk_engine::ExClause;
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
-
-#[cfg(any(test, feature = "default-interner"))]
-pub use default::*;
 
 /// A "interner" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
@@ -75,12 +73,12 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// "Interned" representation of a "generic parameter", which can
     /// be either a type or a lifetime.  In normal user code,
-    /// `Self::InternedParameter` is not referenced. Instead, we refer to
-    /// `Parameter<Self>`, which wraps this type.
+    /// `Self::InternedGenericArg` is not referenced. Instead, we refer to
+    /// `GenericArg<Self>`, which wraps this type.
     ///
-    /// An `InternedType` is created by `intern_parameter` and can be
-    /// converted back to its underlying data via `parameter_data`.
-    type InternedParameter: Debug + Clone + Eq + Hash;
+    /// An `InternedType` is created by `intern_generic_arg` and can be
+    /// converted back to its underlying data via `generic_arg_data`.
+    type InternedGenericArg: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "goal".  In normal user code,
     /// `Self::InternedGoal` is not referenced. Instead, we refer to
@@ -130,15 +128,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// and can be converted back to its underlying data via `quantified_where_clauses_data`.
     type InternedQuantifiedWhereClauses: Debug + Clone + Eq + Hash;
 
-    /// "Interned" representation of a list of parameter kind.  
-    /// In normal user code, `Self::InternedParameterKinds` is not referenced.
-    /// Instead, we refer to `ParameterKinds<Self>`, which wraps this type.
+    /// "Interned" representation of a list of variable kinds.
+    /// In normal user code, `Self::InternedVariableKinds` is not referenced.
+    /// Instead, we refer to `VariableKinds<Self>`, which wraps this type.
     ///
-    /// An `InternedParameterKinds` is created by `intern_parameter_kinds`
-    /// and can be converted back to its underlying data via `parameter_kinds_data`.
-    type InternedParameterKinds: Debug + Clone + Eq + Hash;
+    /// An `InternedVariableKinds` is created by `intern_generic_arg_kinds`
+    /// and can be converted back to its underlying data via `variable_kinds_data`.
+    type InternedVariableKinds: Debug + Clone + Eq + Hash;
 
-    /// "Interned" representation of a list of parameter kind with universe index.  
+    /// "Interned" representation of a list of variable kinds with universe index.
     /// In normal user code, `Self::InternedCanonicalVarKinds` is not referenced.
     /// Instead, we refer to `CanonicalVarKinds<Self>`, which wraps this type.
     ///
@@ -147,8 +145,11 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// to its underlying data via `canonical_var_kinds_data`.
     type InternedCanonicalVarKinds: Debug + Clone + Eq + Hash;
 
-    /// The core "id" type used for struct-ids and the like.
+    /// The core "id" type used for trait-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
+
+    /// The ID type for ADTs
+    type InternedAdtId: Debug + Copy + Eq + Ord + Hash;
 
     type Identifier: Debug + Clone + Eq + Hash;
 
@@ -160,10 +161,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_struct_id(
-        struct_id: StructId<Self>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
+    fn debug_adt_id(adt_id: AdtId<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
@@ -201,10 +199,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_opaque_ty_id(
         opaque_ty_id: OpaqueTyId<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    fn debug_fn_def_id(
+        fn_def_id: FnDefId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an alias. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -225,10 +234,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_projection_ty(
         projection_ty: &ProjectionTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an OpaqueTy. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -237,10 +249,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ///
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
     fn debug_opaque_ty(
         opaque_ty: &OpaqueTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result>;
+    ) -> Option<fmt::Result> {
+        None
+    }
 
     /// Prints the debug representation of an type. To get good
     /// results, this requires inspecting TLS, and is difficult to
@@ -277,8 +292,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter(
-        parameter: &Parameter<Self>,
+    fn debug_generic_arg(
+        generic_arg: &GenericArg<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -292,8 +307,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter_kinds(
-        parameter_kinds: &ParameterKinds<Self>,
+    fn debug_variable_kinds(
+        variable_kinds: &VariableKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -307,8 +322,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
-    fn debug_parameter_kinds_with_angles(
-        parameter_kinds: &ParameterKinds<Self>,
+    fn debug_variable_kinds_with_angles(
+        variable_kinds: &VariableKinds<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -477,12 +492,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `ParameterData::intern` (which will ultimately call this
+    /// `GenericArgData::intern` (which will ultimately call this
     /// method).
-    fn intern_parameter(&self, data: ParameterData<Self>) -> Self::InternedParameter;
+    fn intern_generic_arg(&self, data: GenericArgData<Self>) -> Self::InternedGenericArg;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn parameter_data<'a>(&self, lifetime: &'a Self::InternedParameter) -> &'a ParameterData<Self>;
+    fn generic_arg_data<'a>(
+        &self,
+        lifetime: &'a Self::InternedGenericArg,
+    ) -> &'a GenericArgData<Self>;
 
     /// Create an "interned" goal from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -497,7 +515,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `GoalsData::intern` (which will ultimately call this
     /// method).
-    fn intern_goals(&self, data: impl IntoIterator<Item = Goal<Self>>) -> Self::InternedGoals;
+    fn intern_goals<E>(
+        &self,
+        data: impl IntoIterator<Item = Result<Goal<Self>, E>>,
+    ) -> Result<Self::InternedGoals, E>;
 
     /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
     fn goals_data<'a>(&self, goals: &'a Self::InternedGoals) -> &'a [Goal<Self>];
@@ -508,14 +529,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// method).
     fn intern_substitution<E>(
         &self,
-        data: impl IntoIterator<Item = Result<Parameter<Self>, E>>,
+        data: impl IntoIterator<Item = Result<GenericArg<Self>, E>>,
     ) -> Result<Self::InternedSubstitution, E>;
 
     /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
     fn substitution_data<'a>(
         &self,
         substitution: &'a Self::InternedSubstitution,
-    ) -> &'a [Parameter<Self>];
+    ) -> &'a [GenericArg<Self>];
 
     /// Create an "interned" program clause from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -533,10 +554,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `ProgramClauses::from` (which will ultimately call this
     /// method).
-    fn intern_program_clauses(
+    fn intern_program_clauses<E>(
         &self,
-        data: impl IntoIterator<Item = ProgramClause<Self>>,
-    ) -> Self::InternedProgramClauses;
+        data: impl IntoIterator<Item = Result<ProgramClause<Self>, E>>,
+    ) -> Result<Self::InternedProgramClauses, E>;
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
     fn program_clauses_data<'a>(
@@ -548,10 +569,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `QuantifiedWhereClauses::from` (which will ultimately call this
     /// method).
-    fn intern_quantified_where_clauses(
+    fn intern_quantified_where_clauses<E>(
         &self,
-        data: impl IntoIterator<Item = QuantifiedWhereClause<Self>>,
-    ) -> Self::InternedQuantifiedWhereClauses;
+        data: impl IntoIterator<Item = Result<QuantifiedWhereClause<Self>, E>>,
+    ) -> Result<Self::InternedQuantifiedWhereClauses, E>;
 
     /// Lookup the slice of `QuantifiedWhereClause` that was interned to
     /// create a `QuantifiedWhereClauses`.
@@ -562,46 +583,48 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter kinds from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `ParameterKinds::from` (which will ultimately call this
+    /// `VariableKinds::from` (which will ultimately call this
     /// method).
-    fn intern_parameter_kinds(
+    fn intern_generic_arg_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = ParameterKind<()>>,
-    ) -> Self::InternedParameterKinds;
+        data: impl IntoIterator<Item = Result<VariableKind<Self>, E>>,
+    ) -> Result<Self::InternedVariableKinds, E>;
 
-    /// Lookup the slice of `ParameterKind` that was interned to
-    /// create a `ParameterKinds`.
-    fn parameter_kinds_data<'a>(
+    /// Lookup the slice of `VariableKinds` that was interned to
+    /// create a `VariableKinds`.
+    fn variable_kinds_data<'a>(
         &self,
-        parameter_kinds: &'a Self::InternedParameterKinds,
-    ) -> &'a [ParameterKind<()>];
+        variable_kinds: &'a Self::InternedVariableKinds,
+    ) -> &'a [VariableKind<Self>];
 
-    /// Create an "interned" parameter kinds with universe index from `data`. This is not
+    /// Create "interned" variable kinds with universe index from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `CanonicalVarKinds::from` (which will ultimately call this
     /// method).
-    fn intern_canonical_var_kinds(
+    fn intern_canonical_var_kinds<E>(
         &self,
-        data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
-    ) -> Self::InternedCanonicalVarKinds;
+        data: impl IntoIterator<Item = Result<CanonicalVarKind<Self>, E>>,
+    ) -> Result<Self::InternedCanonicalVarKinds, E>;
 
-    /// Lookup the slice of `ParameterKind` that was interned to
-    /// create a `ParameterKinds`.
+    /// Lookup the slice of `CanonicalVariableKind` that was interned to
+    /// create a `CanonicalVariableKinds`.
     fn canonical_var_kinds_data<'a>(
         &self,
         canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
-    ) -> &'a [ParameterKind<UniverseIndex>];
+    ) -> &'a [CanonicalVarKind<Self>];
 }
 
 pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
 
-    fn transfer_parameter_kinds(
-        parameter_kinds: I::InternedParameterKinds,
-    ) -> Self::InternedParameterKinds;
+    fn transfer_adt_id(adt_id: I::InternedAdtId) -> Self::InternedAdtId;
+
+    fn transfer_variable_kinds(
+        variable_kinds: I::InternedVariableKinds,
+    ) -> Self::InternedVariableKinds;
 
     fn transfer_canonical_var_kinds(
-        parameter_kinds: I::InternedCanonicalVarKinds,
+        variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
 }
 
@@ -610,16 +633,20 @@ impl<I: Interner> TargetInterner<I> for I {
         def_id
     }
 
-    fn transfer_parameter_kinds(
-        parameter_kinds: I::InternedParameterKinds,
-    ) -> Self::InternedParameterKinds {
-        parameter_kinds
+    fn transfer_adt_id(adt_id: I::InternedAdtId) -> Self::InternedAdtId {
+        adt_id
+    }
+
+    fn transfer_variable_kinds(
+        variable_kinds: I::InternedVariableKinds,
+    ) -> Self::InternedVariableKinds {
+        variable_kinds
     }
 
     fn transfer_canonical_var_kinds(
-        parameter_kinds: I::InternedCanonicalVarKinds,
+        variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds {
-        parameter_kinds
+        variable_kinds
     }
 }
 
@@ -631,337 +658,6 @@ impl<I: Interner> TargetInterner<I> for I {
 /// `Binder<T>`, since it allows us to figure out the interner of `T`.
 pub trait HasInterner {
     type Interner: Interner;
-}
-
-#[cfg(any(test, feature = "default-interner"))]
-mod default {
-    use super::*;
-    use crate::tls;
-    use lalrpop_intern::InternedString;
-    use std::fmt;
-
-    pub type Identifier = InternedString;
-
-    #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct RawId {
-        pub index: u32,
-    }
-
-    impl Debug for RawId {
-        fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(fmt, "#{}", self.index)
-        }
-    }
-
-    /// The default "interner" and the only interner used by chalk
-    /// itself. In this interner, no interning actually occurs.
-    #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-    pub struct ChalkIr;
-
-    impl Interner for ChalkIr {
-        type InternedType = Arc<TyData<ChalkIr>>;
-        type InternedLifetime = LifetimeData<ChalkIr>;
-        type InternedParameter = ParameterData<ChalkIr>;
-        type InternedGoal = Arc<GoalData<ChalkIr>>;
-        type InternedGoals = Vec<Goal<ChalkIr>>;
-        type InternedSubstitution = Vec<Parameter<ChalkIr>>;
-        type InternedProgramClause = ProgramClauseData<ChalkIr>;
-        type InternedProgramClauses = Vec<ProgramClause<ChalkIr>>;
-        type InternedQuantifiedWhereClauses = Vec<QuantifiedWhereClause<ChalkIr>>;
-        type InternedParameterKinds = Vec<ParameterKind<()>>;
-        type InternedCanonicalVarKinds = Vec<ParameterKind<UniverseIndex>>;
-        type DefId = RawId;
-        type Identifier = Identifier;
-
-        fn debug_struct_id(
-            type_kind_id: StructId<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_struct_id(type_kind_id, fmt)))
-        }
-
-        fn debug_trait_id(
-            type_kind_id: TraitId<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_trait_id(type_kind_id, fmt)))
-        }
-
-        fn debug_assoc_type_id(
-            id: AssocTypeId<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
-        }
-
-        fn debug_opaque_ty_id(
-            id: OpaqueTyId<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_opaque_ty_id(id, fmt)))
-        }
-
-        fn debug_alias(
-            alias: &AliasTy<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_alias(alias, fmt)))
-        }
-
-        fn debug_projection_ty(
-            proj: &ProjectionTy<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_projection_ty(proj, fmt)))
-        }
-
-        fn debug_opaque_ty(
-            opaque_ty: &OpaqueTy<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_opaque_ty(opaque_ty, fmt)))
-        }
-
-        fn debug_ty(ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_ty(ty, fmt)))
-        }
-
-        fn debug_lifetime(
-            lifetime: &Lifetime<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_lifetime(lifetime, fmt)))
-                .or_else(|| Some(write!(fmt, "{:?}", lifetime.interned)))
-        }
-
-        fn debug_parameter(
-            parameter: &Parameter<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_parameter(parameter, fmt)))
-        }
-
-        fn debug_parameter_kinds(
-            parameter_kinds: &ParameterKinds<Self>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| {
-                Some(prog?.debug_parameter_kinds(parameter_kinds, fmt))
-            })
-        }
-
-        fn debug_parameter_kinds_with_angles(
-            parameter_kinds: &ParameterKinds<Self>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| {
-                Some(prog?.debug_parameter_kinds_with_angles(parameter_kinds, fmt))
-            })
-        }
-
-        fn debug_canonical_var_kinds(
-            canonical_var_kinds: &CanonicalVarKinds<Self>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| {
-                Some(prog?.debug_canonical_var_kinds(canonical_var_kinds, fmt))
-            })
-        }
-
-        fn debug_goal(goal: &Goal<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_goal(goal, fmt)))
-        }
-
-        fn debug_goals(
-            goals: &Goals<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_goals(goals, fmt)))
-        }
-
-        fn debug_program_clause_implication(
-            pci: &ProgramClauseImplication<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_program_clause_implication(pci, fmt)))
-        }
-
-        fn debug_program_clause(
-            clause: &ProgramClause<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_program_clause(clause, fmt)))
-        }
-
-        fn debug_program_clauses(
-            clause: &ProgramClauses<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_program_clauses(clause, fmt)))
-        }
-
-        fn debug_application_ty(
-            application_ty: &ApplicationTy<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_application_ty(application_ty, fmt)))
-        }
-
-        fn debug_substitution(
-            substitution: &Substitution<ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| Some(prog?.debug_substitution(substitution, fmt)))
-        }
-
-        fn debug_separator_trait_ref(
-            separator_trait_ref: &SeparatorTraitRef<'_, ChalkIr>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| {
-                Some(prog?.debug_separator_trait_ref(separator_trait_ref, fmt))
-            })
-        }
-
-        fn debug_quantified_where_clauses(
-            clauses: &QuantifiedWhereClauses<Self>,
-            fmt: &mut fmt::Formatter<'_>,
-        ) -> Option<fmt::Result> {
-            tls::with_current_program(|prog| {
-                Some(prog?.debug_quantified_where_clauses(clauses, fmt))
-            })
-        }
-
-        fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
-            Arc::new(ty)
-        }
-
-        fn ty_data<'a>(&self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {
-            ty
-        }
-
-        fn intern_lifetime(&self, lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
-            lifetime
-        }
-
-        fn lifetime_data<'a>(
-            &self,
-            lifetime: &'a LifetimeData<ChalkIr>,
-        ) -> &'a LifetimeData<ChalkIr> {
-            lifetime
-        }
-
-        fn intern_parameter(&self, parameter: ParameterData<ChalkIr>) -> ParameterData<ChalkIr> {
-            parameter
-        }
-
-        fn parameter_data<'a>(
-            &self,
-            parameter: &'a ParameterData<ChalkIr>,
-        ) -> &'a ParameterData<ChalkIr> {
-            parameter
-        }
-
-        fn intern_goal(&self, goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
-            Arc::new(goal)
-        }
-
-        fn goal_data<'a>(&self, goal: &'a Arc<GoalData<ChalkIr>>) -> &'a GoalData<ChalkIr> {
-            goal
-        }
-
-        fn intern_goals(
-            &self,
-            data: impl IntoIterator<Item = Goal<ChalkIr>>,
-        ) -> Vec<Goal<ChalkIr>> {
-            data.into_iter().collect()
-        }
-
-        fn goals_data<'a>(&self, goals: &'a Vec<Goal<ChalkIr>>) -> &'a [Goal<ChalkIr>] {
-            goals
-        }
-
-        fn intern_substitution<E>(
-            &self,
-            data: impl IntoIterator<Item = Result<Parameter<ChalkIr>, E>>,
-        ) -> Result<Vec<Parameter<ChalkIr>>, E> {
-            data.into_iter().collect()
-        }
-
-        fn substitution_data<'a>(
-            &self,
-            substitution: &'a Vec<Parameter<ChalkIr>>,
-        ) -> &'a [Parameter<ChalkIr>] {
-            substitution
-        }
-
-        fn intern_program_clause(&self, data: ProgramClauseData<Self>) -> ProgramClauseData<Self> {
-            data
-        }
-
-        fn program_clause_data<'a>(
-            &self,
-            clause: &'a ProgramClauseData<Self>,
-        ) -> &'a ProgramClauseData<Self> {
-            clause
-        }
-
-        fn intern_program_clauses(
-            &self,
-            data: impl IntoIterator<Item = ProgramClause<Self>>,
-        ) -> Vec<ProgramClause<Self>> {
-            data.into_iter().collect()
-        }
-
-        fn program_clauses_data<'a>(
-            &self,
-            clauses: &'a Vec<ProgramClause<Self>>,
-        ) -> &'a [ProgramClause<Self>] {
-            clauses
-        }
-
-        fn intern_quantified_where_clauses(
-            &self,
-            data: impl IntoIterator<Item = QuantifiedWhereClause<Self>>,
-        ) -> Self::InternedQuantifiedWhereClauses {
-            data.into_iter().collect()
-        }
-
-        fn quantified_where_clauses_data<'a>(
-            &self,
-            clauses: &'a Self::InternedQuantifiedWhereClauses,
-        ) -> &'a [QuantifiedWhereClause<Self>] {
-            clauses
-        }
-        fn intern_parameter_kinds(
-            &self,
-            data: impl IntoIterator<Item = ParameterKind<()>>,
-        ) -> Self::InternedParameterKinds {
-            data.into_iter().collect()
-        }
-        fn parameter_kinds_data<'a>(
-            &self,
-            parameter_kinds: &'a Self::InternedParameterKinds,
-        ) -> &'a [ParameterKind<()>] {
-            parameter_kinds
-        }
-        fn intern_canonical_var_kinds(
-            &self,
-            data: impl IntoIterator<Item = ParameterKind<UniverseIndex>>,
-        ) -> Self::InternedCanonicalVarKinds {
-            data.into_iter().collect()
-        }
-        fn canonical_var_kinds_data<'a>(
-            &self,
-            canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
-        ) -> &'a [ParameterKind<UniverseIndex>] {
-            canonical_var_kinds
-        }
-    }
-
-    impl HasInterner for ChalkIr {
-        type Interner = ChalkIr;
-    }
 }
 
 impl<T: HasInterner> HasInterner for [T] {

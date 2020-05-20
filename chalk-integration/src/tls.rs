@@ -1,9 +1,9 @@
 use crate::interner::ChalkIr;
-use crate::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds, Goal, Goals,
-    Lifetime, OpaqueTy, OpaqueTyId, Parameter, ParameterKinds, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, StructId,
-    Substitution, TraitId, Ty,
+use chalk_ir::{
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds,
+    GenericArg, Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution,
+    TraitId, Ty, VariableKinds,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -14,9 +14,9 @@ thread_local! {
 }
 
 pub trait DebugContext {
-    fn debug_struct_id(
+    fn debug_adt_id(
         &self,
-        id: StructId<ChalkIr>,
+        id: AdtId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
@@ -64,27 +64,27 @@ pub trait DebugContext {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_parameter(
+    fn debug_generic_arg(
         &self,
-        parameter: &Parameter<ChalkIr>,
+        generic_arg: &GenericArg<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_parameter_kinds(
+    fn debug_variable_kinds(
         &self,
-        parameter_kinds: &ParameterKinds<ChalkIr>,
+        variable_kinds: &VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
-    fn debug_parameter_kinds_with_angles(
+    fn debug_variable_kinds_with_angles(
         &self,
-        parameter_kinds: &ParameterKinds<ChalkIr>,
+        variable_kinds: &VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
     fn debug_canonical_var_kinds(
         &self,
-        parameter_kinds: &CanonicalVarKinds<ChalkIr>,
+        variable_kinds: &CanonicalVarKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

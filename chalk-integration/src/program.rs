@@ -1,30 +1,33 @@
-use crate::{Identifier, TypeKind};
+use crate::interner::ChalkIr;
+use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
-use chalk_ir::interner::ChalkIr;
-use chalk_ir::tls;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AliasTy, ApplicationTy, AssocTypeId, Goal, Goals, ImplId, Lifetime,
-    OpaqueTy, OpaqueTyId, Parameter, ProgramClause, ProgramClauseImplication, ProgramClauses,
-    ProjectionTy, StructId, Substitution, TraitId, Ty, TypeName,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, FnDefId, GenericArg,
+    Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_rust_ir::{
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ImplDatum, ImplType, OpaqueTyDatum,
-    StructDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
+    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
-    /// From struct name to item-id. Used during lowering only.
-    pub struct_ids: BTreeMap<Identifier, StructId<ChalkIr>>,
+    /// From ADT name to item-id. Used during lowering only.
+    pub adt_ids: BTreeMap<Identifier, AdtId<ChalkIr>>,
 
-    /// For each struct:
-    pub struct_kinds: BTreeMap<StructId<ChalkIr>, TypeKind>,
+    /// For each ADT:
+    pub adt_kinds: BTreeMap<AdtId<ChalkIr>, TypeKind>,
+
+    pub fn_def_ids: BTreeMap<Identifier, FnDefId<ChalkIr>>,
+
+    pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
 
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
@@ -32,8 +35,10 @@ pub struct Program {
     /// For each trait:
     pub trait_kinds: BTreeMap<TraitId<ChalkIr>, TypeKind>,
 
-    /// For each struct:
-    pub struct_data: BTreeMap<StructId<ChalkIr>, Arc<StructDatum<ChalkIr>>>,
+    /// For each ADT:
+    pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
+
+    pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -62,6 +67,9 @@ pub struct Program {
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
+
+    /// Store the traits marked with `#[object_safe]`
+    pub object_safe_traits: HashSet<TraitId<ChalkIr>>,
 }
 
 impl Program {
@@ -76,16 +84,16 @@ impl Program {
 }
 
 impl tls::DebugContext for Program {
-    fn debug_struct_id(
+    fn debug_adt_id(
         &self,
-        struct_id: StructId<ChalkIr>,
+        adt_id: AdtId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(k) = self.struct_kinds.get(&struct_id) {
+        if let Some(k) = self.adt_kinds.get(&adt_id) {
             write!(fmt, "{}", k.name)
         } else {
-            fmt.debug_struct("InvalidStructId")
-                .field("index", &struct_id.0)
+            fmt.debug_struct("InvalidAdtId")
+                .field("index", &adt_id.0)
                 .finish()
         }
     }
@@ -182,40 +190,40 @@ impl tls::DebugContext for Program {
         write!(fmt, "{:?}", lifetime.data(interner))
     }
 
-    fn debug_parameter(
+    fn debug_generic_arg(
         &self,
-        parameter: &Parameter<ChalkIr>,
+        generic_arg: &GenericArg<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter.data(interner).inner_debug())
+        write!(fmt, "{:?}", generic_arg.data(interner).inner_debug())
     }
 
-    fn debug_parameter_kinds(
+    fn debug_variable_kinds(
         &self,
-        parameter_kinds: &chalk_ir::ParameterKinds<ChalkIr>,
+        variable_kinds: &chalk_ir::VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter_kinds.as_slice(interner))
+        write!(fmt, "{:?}", variable_kinds.as_slice(interner))
     }
 
-    fn debug_parameter_kinds_with_angles(
+    fn debug_variable_kinds_with_angles(
         &self,
-        parameter_kinds: &chalk_ir::ParameterKinds<ChalkIr>,
+        variable_kinds: &chalk_ir::VariableKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter_kinds.inner_debug(interner))
+        write!(fmt, "{:?}", variable_kinds.inner_debug(interner))
     }
 
     fn debug_canonical_var_kinds(
         &self,
-        parameter_kinds: &chalk_ir::CanonicalVarKinds<ChalkIr>,
+        variable_kinds: &chalk_ir::CanonicalVarKinds<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", parameter_kinds.as_slice(interner))
+        write!(fmt, "{:?}", variable_kinds.as_slice(interner))
     }
 
     fn debug_goal(
@@ -328,21 +336,18 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.opaque_ty_data[&id].clone()
     }
 
-    fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
-        self.struct_data[&id].clone()
+    fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
+        self.adt_data[&id].clone()
     }
 
-    fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
-        match type_name {
-            TypeName::Struct(struct_id) => Some(*struct_id),
-            _ => None,
-        }
+    fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
+        self.fn_def_data[&id].clone()
     }
 
     fn impls_for_trait(
         &self,
         trait_id: TraitId<ChalkIr>,
-        parameters: &[Parameter<ChalkIr>],
+        parameters: &[GenericArg<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
         let interner = self.interner();
         self.impl_data
@@ -372,17 +377,13 @@ impl RustIrDatabase<ChalkIr> for Program {
             .collect()
     }
 
-    fn impl_provided_for(
-        &self,
-        auto_trait_id: TraitId<ChalkIr>,
-        struct_id: StructId<ChalkIr>,
-    ) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, adt_id: AdtId<ChalkIr>) -> bool {
         let interner = self.interner();
         // Look for an impl like `impl Send for Foo` where `Foo` is
-        // the struct.  See `push_auto_trait_impls` for more.
+        // the ADT.  See `push_auto_trait_impls` for more.
         self.impl_data.values().any(|impl_datum| {
             impl_datum.trait_id() == auto_trait_id
-                && impl_datum.self_type_struct_id(interner) == Some(struct_id)
+                && impl_datum.self_type_adt_id(interner) == Some(adt_id)
         })
     }
 
@@ -390,7 +391,18 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.well_known_traits.get(&well_known_trait).map(|x| *x)
     }
 
+    fn program_clauses_for_env(
+        &self,
+        environment: &chalk_ir::Environment<ChalkIr>,
+    ) -> ProgramClauses<ChalkIr> {
+        chalk_solve::program_clauses_for_env(self, environment)
+    }
+
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
+    }
+
+    fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
+        self.object_safe_traits.contains(&trait_id)
     }
 }

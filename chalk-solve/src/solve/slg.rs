@@ -77,7 +77,7 @@ impl<I: Interner> context::Context for SlgContext<I> {
     type DomainGoal = DomainGoal<I>;
     type Goal = Goal<I>;
     type BindersGoal = Binders<Goal<I>>;
-    type Parameter = Parameter<I>;
+    type GenericArg = GenericArg<I>;
     type ProgramClause = ProgramClause<I>;
     type ProgramClauses = ProgramClauses<I>;
     type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<I>>;
@@ -401,13 +401,13 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
         self.infer.invert(interner, value)
     }
 
-    fn unify_parameters_into_ex_clause(
+    fn unify_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
         environment: &Environment<I>,
         _: (),
-        a: &Parameter<I>,
-        b: &Parameter<I>,
+        a: &GenericArg<I>,
+        b: &GenericArg<I>,
         ex_clause: &mut ExClause<SlgContext<I>>,
     ) -> Fallible<()> {
         let result = self.infer.unify(interner, environment, a, b)?;
@@ -439,7 +439,7 @@ impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
     fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
         self.iter(interner)
             .zip(subst.value.iter(interner))
-            .any(|(new, current)| MayInvalidate { interner }.aggregate_parameters(new, current))
+            .any(|(new, current)| MayInvalidate { interner }.aggregate_generic_args(new, current))
     }
 }
 
@@ -449,14 +449,14 @@ struct MayInvalidate<'i, I> {
 }
 
 impl<I: Interner> MayInvalidate<'_, I> {
-    fn aggregate_parameters(&mut self, new: &Parameter<I>, current: &Parameter<I>) -> bool {
+    fn aggregate_generic_args(&mut self, new: &GenericArg<I>, current: &GenericArg<I>) -> bool {
         let interner = self.interner;
         match (new.data(interner), current.data(interner)) {
-            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
-            (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
+            (GenericArgData::Ty(ty1), GenericArgData::Ty(ty2)) => self.aggregate_tys(ty1, ty2),
+            (GenericArgData::Lifetime(l1), GenericArgData::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2)
             }
-            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => panic!(
+            (GenericArgData::Ty(_), _) | (GenericArgData::Lifetime(_), _) => panic!(
                 "mismatched parameter kinds: new={:?} current={:?}",
                 new, current
             ),
@@ -630,6 +630,6 @@ impl<I: Interner> MayInvalidate<'_, I> {
         new_substitution
             .iter(interner)
             .zip(current_substitution.iter(interner))
-            .any(|(new, current)| self.aggregate_parameters(new, current))
+            .any(|(new, current)| self.aggregate_generic_args(new, current))
     }
 }

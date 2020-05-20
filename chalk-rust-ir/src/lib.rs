@@ -9,9 +9,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
-    AliasEq, AliasTy, AssocTypeId, Binders, BoundVar, DebruijnIndex, ImplId, LifetimeData,
-    OpaqueTyId, Parameter, ParameterKind, ProjectionTy, QuantifiedWhereClause, StructId,
-    Substitution, TraitId, TraitRef, Ty, TyData, TypeName, WhereClause,
+    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -38,7 +38,7 @@ impl<I: Interner> ImplDatum<I> {
         self.binders.skip_binders().trait_ref.trait_id
     }
 
-    pub fn self_type_struct_id(&self, interner: &I) -> Option<StructId<I>> {
+    pub fn self_type_adt_id(&self, interner: &I) -> Option<AdtId<I>> {
         match self
             .binders
             .skip_binders()
@@ -47,7 +47,7 @@ impl<I: Interner> ImplDatum<I> {
             .data(interner)
         {
             TyData::Apply(apply) => match apply.name {
-                TypeName::Struct(id) => Some(id),
+                TypeName::Adt(id) => Some(id),
                 _ => None,
             },
             _ => None,
@@ -79,28 +79,71 @@ pub struct DefaultImplDatumBound<I: Interner> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructDatum<I: Interner> {
-    pub binders: Binders<StructDatumBound<I>>,
-    pub id: StructId<I>,
-    pub flags: StructFlags,
+pub struct AdtDatum<I: Interner> {
+    pub binders: Binders<AdtDatumBound<I>>,
+    pub id: AdtId<I>,
+    pub flags: AdtFlags,
 }
 
-impl<I: Interner> StructDatum<I> {
+impl<I: Interner> AdtDatum<I> {
     pub fn name(&self, interner: &I) -> TypeName<I> {
         self.id.cast(interner)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
-pub struct StructDatumBound<I: Interner> {
+pub struct AdtDatumBound<I: Interner> {
     pub fields: Vec<Ty<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StructFlags {
+pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+/// A rust intermediate represention (rust_ir) of a function definition/declaration.
+/// For example, in the following rust code:
+///
+/// ```ignore
+/// fn foo<T>() -> i32 where T: Eq;
+/// ```
+///
+/// This would represent the declaration of `foo`.
+///
+/// Note this is distinct from a function pointer, which points to
+/// a function with a given type signature, whereas this represents
+/// a specific function definition.
+pub struct FnDefDatum<I: Interner> {
+    pub id: FnDefId<I>,
+    pub binders: Binders<FnDefDatumBound<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+/// Represents the bounds on a `FnDefDatum`, including
+/// the function definition's type signature and where clauses.
+pub struct FnDefDatumBound<I: Interner> {
+    /// Types of the function's arguments
+    /// ```ignore
+    /// fn foo<T>(bar: i32, baz: T);
+    ///                ^^^       ^
+    /// ```
+    ///
+    pub argument_types: Vec<Ty<I>>,
+    /// Return type of the function
+    /// ```ignore
+    /// fn foo<T>() -> i32;
+    ///                ^^^
+    /// ```
+    pub return_type: Ty<I>,
+    /// Where clauses defined on the function
+    /// ```ignore
+    /// fn foo<T>() where T: Eq;
+    ///             ^^^^^^^^^^^
+    /// ```
+    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -166,6 +209,16 @@ impl<I: Interner> TraitDatum<I> {
 
     pub fn is_coinductive_trait(&self) -> bool {
         self.flags.coinductive
+    }
+
+    /// Gives access to the where clauses of the trait, quantified over the type parameters of the trait:
+    ///
+    /// ```ignore
+    /// trait Foo<T> where T: Debug { }
+    ///              ^^^^^^^^^^^^^^
+    /// ```
+    pub fn where_clauses(&self) -> Binders<&Vec<QuantifiedWhereClause<I>>> {
+        self.binders.as_ref().map(|td| &td.where_clauses)
     }
 }
 
@@ -261,7 +314,7 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct TraitBound<I: Interner> {
     pub trait_id: TraitId<I>,
-    pub args_no_self: Vec<Parameter<I>>,
+    pub args_no_self: Vec<GenericArg<I>>,
 }
 
 impl<I: Interner> TraitBound<I> {
@@ -288,7 +341,7 @@ pub struct AliasEqBound<I: Interner> {
     pub trait_bound: TraitBound<I>,
     pub associated_ty_id: AssocTypeId<I>,
     /// Does not include trait parameters.
-    pub parameters: Vec<Parameter<I>>,
+    pub parameters: Vec<GenericArg<I>>,
     pub value: Ty<I>,
 }
 
@@ -317,51 +370,17 @@ impl<I: Interner> AliasEqBound<I> {
     }
 }
 
-pub trait Anonymize {
-    /// Utility function that converts from a list of generic parameters
-    /// which *have* names (`ParameterKind<T>`) to a list of
+pub trait Anonymize<I: Interner> {
+    /// Utility function that converts from a list of generic arguments
+    /// which *have* associated data (`WithKind<I, T>`) to a list of
     /// "anonymous" generic parameters that just preserves their
-    /// kinds (`ParameterKind<()>`). Often convenient in lowering.
-    fn anonymize(&self) -> Vec<ParameterKind<()>>;
+    /// kinds (`VariableKind<I>`). Often convenient in lowering.
+    fn anonymize(&self) -> Vec<VariableKind<I>>;
 }
 
-impl<T> Anonymize for [ParameterKind<T>] {
-    fn anonymize(&self) -> Vec<ParameterKind<()>> {
-        self.iter().map(|pk| pk.map_ref(|_| ())).collect()
-    }
-}
-
-pub trait ToParameter {
-    /// Utility for converting a list of all the binders into scope
-    /// into references to those binders. Simply pair the binders with
-    /// the indices, and invoke `to_parameter()` on the `(binder,
-    /// index)` pair. The result will be a reference to a bound
-    /// variable of appropriate kind at the corresponding index.
-    fn to_parameter<I: Interner>(&self, interner: &I) -> Parameter<I> {
-        self.to_parameter_at_depth(interner, DebruijnIndex::INNERMOST)
-    }
-
-    fn to_parameter_at_depth<I: Interner>(
-        &self,
-        interner: &I,
-        debruijn: DebruijnIndex,
-    ) -> Parameter<I>;
-}
-
-impl<'a> ToParameter for (&'a ParameterKind<()>, usize) {
-    fn to_parameter_at_depth<I: Interner>(
-        &self,
-        interner: &I,
-        debruijn: DebruijnIndex,
-    ) -> Parameter<I> {
-        let &(binder, index) = self;
-        let bound_var = BoundVar::new(debruijn, index);
-        match *binder {
-            ParameterKind::Lifetime(_) => LifetimeData::BoundVar(bound_var)
-                .intern(interner)
-                .cast(interner),
-            ParameterKind::Ty(_) => TyData::BoundVar(bound_var).intern(interner).cast(interner),
-        }
+impl<I: Interner, T> Anonymize<I> for [WithKind<I, T>] {
+    fn anonymize(&self) -> Vec<VariableKind<I>> {
+        self.iter().map(|pk| pk.kind).collect()
     }
 }
 
@@ -432,7 +451,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
             binders
                 .iter(interner)
                 .zip(0..)
-                .map(|p| p.to_parameter(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc

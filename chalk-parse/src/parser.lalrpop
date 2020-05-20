@@ -1,5 +1,5 @@
 use crate::ast::*;
-use lalrpop_intern::intern;
+use string_cache::DefaultAtom as Atom;
 
 grammar;
 
@@ -14,6 +14,7 @@ Items: Vec<Item> = {
 Item: Option<Item> = {
     Comment => None,
     StructDefn => Some(Item::StructDefn(<>)),
+    FnDefn => Some(Item::FnDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
     OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
     Impl => Some(Item::Impl(<>)),
@@ -28,8 +29,8 @@ pub Goal: Box<Goal> = {
 };
 
 Goal1: Box<Goal> = {
-    "forall" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
-    "exists" "<" <p:Comma<ParameterKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
+    "forall" "<" <p:Comma<VariableKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::ForAll(p, g)),
+    "exists" "<" <p:Comma<VariableKind>> ">" "{" <g:Goal> "}" => Box::new(Goal::Exists(p, g)),
     "if" "(" <h:SemiColon<InlineClause>> ")" "{" <g:Goal> "}" => Box::new(Goal::Implies(h, g)),
     "not" "{" <g:Goal> "}" => Box::new(Goal::Not(g)),
     "compatible" "{" <g:Goal> "}" => Box::new(Goal::Compatible(g)),
@@ -43,6 +44,7 @@ MarkerKeyword: () = "#" "[" "marker" "]";
 FundamentalKeyword: () = "#" "[" "fundamental" "]";
 NonEnumerableKeyword: () = "#" "[" "non_enumerable" "]";
 CoinductiveKeyword: () = "#" "[" "coinductive" "]";
+ObjectSafeKeyword: () = "#" "[" "object_safe" "]";
 
 WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::SizedTrait,
@@ -52,11 +54,11 @@ WellKnownTrait: WellKnownTrait = {
 };
 
 StructDefn: StructDefn = {
-    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "struct" <n:Id><p:Angle<ParameterKind>>
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
         name: n,
-        parameter_kinds: p,
+        variable_kinds: p,
         where_clauses: w,
         fields: f,
         flags: StructFlags {
@@ -66,12 +68,36 @@ StructDefn: StructDefn = {
     }
 };
 
+FnReturn: Ty = {
+    "->" <ty:Ty> => ty,
+};
+
+FnDefn: FnDefn = {
+    "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")" 
+        <ret_ty:FnReturn?> <w:QuantifiedWhereClauses> ";" => FnDefn
+    {
+        name: n,
+        variable_kinds: p,
+        where_clauses: w,
+        argument_types: args,
+        return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
+    }
+};
+
+FnArg: Ty = {
+    Id ":" <arg_ty: Ty> => arg_ty
+};
+
+FnArgs: Vec<Ty> = {
+    <Comma<FnArg>>
+};
+
 TraitDefn: TraitDefn = {
-    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<ParameterKind>>
+    <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <object_safe:ObjectSafeKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
     {
         name: n,
-        parameter_kinds: p,
+        variable_kinds: p,
         where_clauses: w,
         assoc_ty_defns: a,
         well_known,
@@ -82,17 +108,18 @@ TraitDefn: TraitDefn = {
             fundamental: fundamental.is_some(),
             non_enumerable: non_enumerable.is_some(),
             coinductive: coinductive.is_some(),
+            object_safe: object_safe.is_some(),
         },
     }
 };
 
 AssocTyDefn: AssocTyDefn = {
-    "type" <name:Id> <p:Angle<ParameterKind>> <b:(":" <Plus<QuantifiedInlineBound>>)?>
+    "type" <name:Id> <p:Angle<VariableKind>> <b:(":" <Plus<QuantifiedInlineBound>>)?>
         <w:QuantifiedWhereClauses> ";" =>
     {
         AssocTyDefn {
             name: name,
-            parameter_kinds: p,
+            variable_kinds: p,
             where_clauses: w,
             bounds: b.unwrap_or(vec![]),
         }
@@ -100,10 +127,10 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 OpaqueTyDefn: OpaqueTyDefn = {
-    "opaque" "type" <identifier:Id> <p:Angle<ParameterKind>> ":" <b:Plus<QuantifiedInlineBound>> "=" <ty:Ty> ";" => {
+    "opaque" "type" <identifier:Id> <p:Angle<VariableKind>> ":" <b:Plus<QuantifiedInlineBound>> "=" <ty:Ty> ";" => {
         OpaqueTyDefn {
             ty,
-            parameter_kinds: p,
+            variable_kinds: p,
             identifier,
             bounds: b,
         }
@@ -116,7 +143,7 @@ InlineBound: InlineBound = {
 };
 
 TraitBound: TraitBound = {
-    <t:Id> <a:Angle<Parameter>> => {
+    <t:Id> <a:Angle<GenericArg>> => {
         TraitBound {
             trait_name: t,
             args_no_self: a,
@@ -125,7 +152,7 @@ TraitBound: TraitBound = {
 };
 
 AliasEqBound: AliasEqBound = {
-    <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
+    <t:Id> "<" <a:(<Comma<GenericArg>> ",")?> <name:Id> <a2:Angle<GenericArg>>
         "=" <ty:Ty> ">" => AliasEqBound
     {
         trait_bound: TraitBound {
@@ -140,24 +167,24 @@ AliasEqBound: AliasEqBound = {
 
 QuantifiedInlineBound: QuantifiedInlineBound = {
     <b:InlineBound> => QuantifiedInlineBound {
-        parameter_kinds: vec![],
+        variable_kinds: vec![],
         bound: b,
     },
 
-    "forall" "<" <pk:Comma<ParameterKind>> ">" <b:InlineBound> => QuantifiedInlineBound {
-        parameter_kinds: pk,
+    "forall" "<" <pk:Comma<VariableKind>> ">" <b:InlineBound> => QuantifiedInlineBound {
+        variable_kinds: pk,
         bound: b,
     },
 };
 
 Impl: Impl = {
-    <external:UpstreamKeyword?> "impl" <p:Angle<ParameterKind>> <mark:"!"?> <t:Id> <a:Angle<Parameter>> "for" <s:Ty>
+    <external:UpstreamKeyword?> "impl" <p:Angle<VariableKind>> <mark:"!"?> <t:Id> <a:Angle<GenericArg>> "for" <s:Ty>
         <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
     {
-        let mut args = vec![Parameter::Ty(s)];
+        let mut args = vec![GenericArg::Ty(s)];
         args.extend(a);
         Impl {
-            parameter_kinds: p,
+            variable_kinds: p,
             polarity: Polarity::from_bool(mark.is_none()),
             trait_ref: TraitRef {
                 trait_name: t,
@@ -170,15 +197,15 @@ Impl: Impl = {
     },
 };
 
-ParameterKind: ParameterKind = {
-    Id => ParameterKind::Ty(<>),
-    LifetimeId => ParameterKind::Lifetime(<>),
+VariableKind: VariableKind = {
+    Id => VariableKind::Ty(<>),
+    LifetimeId => VariableKind::Lifetime(<>),
 };
 
 AssocTyValue: AssocTyValue = {
-    <default:"default"?> "type" <n:Id> <a:Angle<ParameterKind>> "=" <v:Ty> ";" => AssocTyValue {
+    <default:"default"?> "type" <n:Id> <a:Angle<VariableKind>> "=" <v:Ty> ";" => AssocTyValue {
         name: n,
-        parameter_kinds: a,
+        variable_kinds: a,
         value: v,
         default: default.is_some(),
     },
@@ -193,6 +220,8 @@ pub Ty: Ty = {
 };
 
 TyWithoutFor: Ty = {
+    <ScalarType> => Ty::Scalar { ty: <> },
+    "str" => Ty::Str,
     <n:Id> => Ty::Id { name: n},
     "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: vec![],
@@ -201,22 +230,61 @@ TyWithoutFor: Ty = {
     "dyn" <b:Plus<QuantifiedInlineBound>> => Ty::Dyn {
         bounds: b,
     },
-    <n:Id> "<" <a:Comma<Parameter>> ">" => Ty::Apply { name: n, args: a },
+    <n:Id> "<" <a:Comma<GenericArg>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
-    "(" <Ty> ")",
+    "(" <t:TupleOrParensInner> ")" => t,
+    "*" <m: RawMutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
+    "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
+    "&" <l: Lifetime> <t:Ty> => Ty::Ref{ mutability: Mutability::Not, lifetime: l, ty: Box::new(t) },
+    "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) }, 
+};
+
+ScalarType: ScalarType = {
+   "u8" => ScalarType::Uint(UintTy::U8),
+   "u16" => ScalarType::Uint(UintTy::U16),
+   "u32" => ScalarType::Uint(UintTy::U32),
+   "u64" => ScalarType::Uint(UintTy::U64),
+   "u128" => ScalarType::Uint(UintTy::U128),
+   "usize" => ScalarType::Uint(UintTy::Usize),
+   "i8" => ScalarType::Int(IntTy::I8),
+   "i16" => ScalarType::Int(IntTy::I16),
+   "i32" => ScalarType::Int(IntTy::I32),
+   "i64" => ScalarType::Int(IntTy::I64),
+   "i128" => ScalarType::Int(IntTy::I128),
+   "isize" => ScalarType::Int(IntTy::Isize),
+   "f32" => ScalarType::Float(FloatTy::F32),
+   "f64" => ScalarType::Float(FloatTy::F64),
+   "bool" => ScalarType::Bool,
+   "char" => ScalarType::Char,
+};
+
+TupleOrParensInner: Ty = {
+    <Ty>,
+    <first:Ty> "," <rest:Comma<Ty>> => {
+        let mut types = Vec::with_capacity(rest.len() + 1);
+        types.push(Box::new(first));
+        types.extend(rest.into_iter().map(Box::new));
+        Ty::Tuple { types }
+    },
+    () => Ty::Tuple { types: vec![] },
+};
+
+RawMutability: Mutability = {
+    "mut" => Mutability::Mut,
+    "const" => Mutability::Not,
 };
 
 Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
 };
 
-Parameter: Parameter = {
-    Ty => Parameter::Ty(<>),
-    Lifetime => Parameter::Lifetime(<>),
+GenericArg: GenericArg = {
+    Ty => GenericArg::Ty(<>),
+    Lifetime => GenericArg::Lifetime(<>),
 };
 
 ProjectionTy: ProjectionTy = {
-    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<Parameter>> => ProjectionTy {
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => ProjectionTy {
         trait_ref: t, name: n, args: a
     },
 };
@@ -233,14 +301,14 @@ Field: Field = {
 };
 
 Clause: Clause = {
-    "forall" <pk:Angle<ParameterKind>> "{" <dg:DomainGoal> "if" <g:Comma<Goal1>> "}" => Clause {
-        parameter_kinds: pk,
+    "forall" <pk:Angle<VariableKind>> "{" <dg:DomainGoal> "if" <g:Comma<Goal1>> "}" => Clause {
+        variable_kinds: pk,
         consequence: dg,
         conditions: g,
     },
 
-    "forall" <pk:Angle<ParameterKind>> "{" <dg:DomainGoal> "}" => Clause {
-        parameter_kinds: pk,
+    "forall" <pk:Angle<VariableKind>> "{" <dg:DomainGoal> "}" => Clause {
+        variable_kinds: pk,
         consequence: dg,
         conditions: vec![],
     },
@@ -248,13 +316,13 @@ Clause: Clause = {
 
 InlineClause1: Clause = {
     <dg:DomainGoal> => Clause {
-        parameter_kinds: vec![],
+        variable_kinds: vec![],
         consequence: dg,
         conditions: vec![],
     },
 
     <dg:DomainGoal> ":" "-" <g:Comma<Goal1>> => Clause {
-        parameter_kinds: vec![],
+        variable_kinds: vec![],
         consequence: dg,
         conditions: g,
     },
@@ -263,8 +331,8 @@ InlineClause1: Clause = {
 InlineClause: Clause = {
     <InlineClause1>,
 
-    "forall" "<" <pk:Comma<ParameterKind>> ">" "{" <c:InlineClause1> "}" => Clause {
-        parameter_kinds: pk,
+    "forall" "<" <pk:Comma<VariableKind>> ">" "{" <c:InlineClause1> "}" => Clause {
+        variable_kinds: pk,
         consequence: c.consequence,
         conditions: c.conditions,
     }
@@ -274,10 +342,10 @@ WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
     // `T: Foo<U = Bar>` -- projection equality
-    <s:Ty> ":" <t:Id> "<" <a:(<Comma<Parameter>> ",")?> <name:Id> <a2:Angle<Parameter>>
+    <s:Ty> ":" <t:Id> "<" <a:(<Comma<GenericArg>> ",")?> <name:Id> <a2:Angle<GenericArg>>
         "=" <ty:Ty> ">" =>
     {
-        let mut args = vec![Parameter::Ty(s)];
+        let mut args = vec![GenericArg::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
         let projection = ProjectionTy { trait_ref, name, args: a2 };
@@ -287,12 +355,12 @@ WhereClause: WhereClause = {
 
 QuantifiedWhereClause: QuantifiedWhereClause = {
     <wc:WhereClause> => QuantifiedWhereClause {
-        parameter_kinds: vec![],
+        variable_kinds: vec![],
         where_clause: wc,
     },
 
-    "forall" "<" <pk:Comma<ParameterKind>> ">" <wc:WhereClause> => QuantifiedWhereClause {
-        parameter_kinds: pk,
+    "forall" "<" <pk:Comma<VariableKind>> ">" <wc:WhereClause> => QuantifiedWhereClause {
+        variable_kinds: pk,
         where_clause: wc,
     },
 };
@@ -326,6 +394,8 @@ DomainGoal: DomainGoal = {
     "DownstreamType" "(" <ty:Ty> ")" => DomainGoal::DownstreamType { ty },
 
     "Reveal" => DomainGoal::Reveal,
+
+    "ObjectSafe" "(" <id:Id> ")" => DomainGoal::ObjectSafe { id }
 };
 
 LeafGoal: LeafGoal = {
@@ -337,8 +407,8 @@ LeafGoal: LeafGoal = {
 };
 
 TraitRef<S>: TraitRef = {
-    <s:Ty> S <t:Id> <a:Angle<Parameter>> => {
-        let mut args = vec![Parameter::Ty(s)];
+    <s:Ty> S <t:Id> <a:Angle<GenericArg>> => {
+        let mut args = vec![GenericArg::Ty(s)];
         args.extend(a);
         TraitRef {
             trait_name: t,
@@ -382,14 +452,14 @@ Angle<T>: Vec<T> = {
 
 Id: Identifier = {
     <l:@L> <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
-        str: intern(s),
+        str: Atom::from(s),
         span: Span::new(l, r),
     }
 };
 
 LifetimeId: Identifier = {
     <l:@L> <s:r"'([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
-        str: intern(s),
+        str: Atom::from(s),
         span: Span::new(l, r),
     }
 };

@@ -1,4 +1,4 @@
-use chalk_ir::interner::ChalkIr;
+use crate::interner::ChalkIr;
 use chalk_parse::ast::{Identifier, Kind};
 use chalk_solve::coherence::CoherenceError;
 use chalk_solve::wf::WfError;

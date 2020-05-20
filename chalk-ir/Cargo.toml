@@ -1,6 +1,6 @@
 [package]
 name = "chalk-ir"
-version = "0.1.0"
+version = "0.10.1-dev"
 description = "Chalk's internal representation of types, goals, and clauses"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -10,20 +10,6 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
-lalrpop-intern = { version = "0.15.1", optional = true }
-
-[dependencies.chalk-macros]
-version = "0.1.0"
-path = "../chalk-macros"
-
-[dependencies.chalk-engine]
-version = "0.9.0"
-path = "../chalk-engine"
-
-[dependencies.chalk-derive]
-version = "0.1.0"
-path = "../chalk-derive"
-
-[features]
-default = []
-default-interner = ["lalrpop-intern"]
+chalk-macros = { version = "0.10.1-dev", path = "../chalk-macros" }
+chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
+chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine" }

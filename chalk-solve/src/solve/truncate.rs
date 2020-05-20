@@ -75,9 +75,9 @@ mod tests {
     use super::*;
     #[test]
     fn one_type() {
-        use chalk_ir::interner::ChalkIr;
+        use chalk_integration::interner::ChalkIr;
         let interner = &ChalkIr;
-        let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
+        let mut table = InferenceTable::<chalk_integration::interner::ChalkIr>::new();
         let _u1 = table.new_universe();
 
         // Vec<Vec<Vec<Vec<T>>>>
@@ -94,9 +94,9 @@ mod tests {
 
     #[test]
     fn multiple_types() {
-        use chalk_ir::interner::ChalkIr;
+        use chalk_integration::interner::ChalkIr;
         let interner = &ChalkIr;
-        let mut table = InferenceTable::<chalk_ir::interner::ChalkIr>::new();
+        let mut table = InferenceTable::<chalk_integration::interner::ChalkIr>::new();
         let _u1 = table.new_universe();
 
         // Vec<Vec<Vec<Vec<T>>>>

@@ -8,9 +8,9 @@ impl<I: Interner> Debug for TraitId<I> {
     }
 }
 
-impl<I: Interner> Debug for StructId<I> {
+impl<I: Interner> Debug for AdtId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_struct_id(*self, fmt).unwrap_or_else(|| write!(fmt, "StructId({:?})", self.0))
+        I::debug_adt_id(*self, fmt).unwrap_or_else(|| write!(fmt, "AdtId({:?})", self.0))
     }
 }
 
@@ -18,6 +18,12 @@ impl<I: Interner> Debug for AssocTypeId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_assoc_type_id(*self, fmt)
             .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
+    }
+}
+
+impl<I: Interner> Debug for FnDefId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        I::debug_fn_def_id(*self, fmt).unwrap_or_else(|| write!(fmt, "FnDefId({:?})", self.0))
     }
 }
 
@@ -33,9 +39,9 @@ impl<I: Interner> Debug for Lifetime<I> {
     }
 }
 
-impl<I: Interner> Debug for Parameter<I> {
+impl<I: Interner> Debug for GenericArg<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+        I::debug_generic_arg(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
     }
 }
 
@@ -139,9 +145,16 @@ impl Debug for UniverseIndex {
 impl<I: Interner> Debug for TypeName<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            TypeName::Struct(id) => write!(fmt, "{:?}", id),
+            TypeName::Adt(id) => write!(fmt, "{:?}", id),
             TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
+            TypeName::Scalar(scalar) => write!(fmt, "{:?}", scalar),
+            TypeName::Str => write!(fmt, "Str"),
+            TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
             TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
+            TypeName::Slice => write!(fmt, "{{slice}}"),
+            TypeName::FnDef(fn_def) => write!(fmt, "{:?}", fn_def),
+            TypeName::Raw(mutability) => write!(fmt, "{:?}", mutability),
+            TypeName::Ref(mutability) => write!(fmt, "{:?}", mutability),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
@@ -210,47 +223,48 @@ impl<I: Interner> Debug for LifetimeData<I> {
     }
 }
 
-impl<I: Interner> ParameterKinds<I> {
-    fn debug(&self) -> ParameterKindsDebug<'_, I> {
-        ParameterKindsDebug(self)
+impl<I: Interner> VariableKinds<I> {
+    fn debug(&self) -> VariableKindsDebug<'_, I> {
+        VariableKindsDebug(self)
     }
 
-    pub fn inner_debug<'a>(&'a self, interner: &'a I) -> ParameterKindsInnerDebug<'a, I> {
-        ParameterKindsInnerDebug {
-            parameter_kinds: self,
+    pub fn inner_debug<'a>(&'a self, interner: &'a I) -> VariableKindsInnerDebug<'a, I> {
+        VariableKindsInnerDebug {
+            variable_kinds: self,
             interner,
         }
     }
 }
 
-struct ParameterKindsDebug<'a, I: Interner>(&'a ParameterKinds<I>);
+struct VariableKindsDebug<'a, I: Interner>(&'a VariableKinds<I>);
 
-impl<'a, I: Interner> Debug for ParameterKindsDebug<'a, I> {
+impl<'a, I: Interner> Debug for VariableKindsDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_parameter_kinds_with_angles(self.0, fmt)
+        I::debug_variable_kinds_with_angles(self.0, fmt)
             .unwrap_or_else(|| write!(fmt, "{:?}", self.0.interned))
     }
 }
 
-pub struct ParameterKindsInnerDebug<'a, I: Interner> {
-    parameter_kinds: &'a ParameterKinds<I>,
+pub struct VariableKindsInnerDebug<'a, I: Interner> {
+    variable_kinds: &'a VariableKinds<I>,
     interner: &'a I,
 }
 
-impl<'a, I: Interner> Debug for ParameterKindsInnerDebug<'a, I> {
+impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        // NB: We print parameter kinds as a list delimited by `<>`,
-        // like `<K1, K2, ..>`. This is because parameter kind lists
+        // NB: We print variable kinds as a list delimited by `<>`,
+        // like `<K1, K2, ..>`. This is because variable kind lists
         // are always associated with binders like `forall<type> {
         // ... }`.
         write!(fmt, "<")?;
-        for (index, binder) in self.parameter_kinds.iter(self.interner).enumerate() {
+        for (index, binder) in self.variable_kinds.iter(self.interner).enumerate() {
             if index > 0 {
                 write!(fmt, ", ")?;
             }
             match *binder {
-                ParameterKind::Ty(()) => write!(fmt, "type")?,
-                ParameterKind::Lifetime(()) => write!(fmt, "lifetime")?,
+                VariableKind::Ty => write!(fmt, "type")?,
+                VariableKind::Lifetime => write!(fmt, "lifetime")?,
+                VariableKind::Phantom(..) => unreachable!(),
             }
         }
         write!(fmt, ">")
@@ -305,20 +319,20 @@ impl<I: Interner> Goals<I> {
     }
 }
 
-pub struct ParameterDataInnerDebug<'a, I: Interner>(&'a ParameterData<I>);
+pub struct GenericArgDataInnerDebug<'a, I: Interner>(&'a GenericArgData<I>);
 
-impl<'a, I: Interner> Debug for ParameterDataInnerDebug<'a, I> {
+impl<'a, I: Interner> Debug for GenericArgDataInnerDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self.0 {
-            ParameterKind::Ty(n) => write!(fmt, "{:?}", n),
-            ParameterKind::Lifetime(n) => write!(fmt, "{:?}", n),
+            GenericArgData::Ty(n) => write!(fmt, "{:?}", n),
+            GenericArgData::Lifetime(n) => write!(fmt, "{:?}", n),
         }
     }
 }
 
-impl<I: Interner> ParameterData<I> {
-    pub fn inner_debug(&self) -> ParameterDataInnerDebug<'_, I> {
-        ParameterDataInnerDebug(self)
+impl<I: Interner> GenericArgData<I> {
+    pub fn inner_debug(&self) -> GenericArgDataInnerDebug<'_, I> {
+        GenericArgDataInnerDebug(self)
     }
 }
 
@@ -624,6 +638,7 @@ impl<I: Interner> Debug for DomainGoal<I> {
             DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
             DomainGoal::Reveal(_) => write!(fmt, "Reveal"),
+            DomainGoal::ObjectSafe(n) => write!(fmt, "ObjectSafe({:?})", n),
         }
     }
 }
@@ -701,7 +716,7 @@ impl<'a, T: HasInterner + Display> Display for CanonicalDisplay<'a, T> {
                 if i > 0 {
                     write!(f, ",")?;
                 }
-                write!(f, "?{}", pk.into_inner())?;
+                write!(f, "?{}", pk.skip_kind())?;
             }
 
             write!(f, "> {{ {} }}", value)?;
@@ -711,11 +726,32 @@ impl<'a, T: HasInterner + Display> Display for CanonicalDisplay<'a, T> {
     }
 }
 
-impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
+impl<I: Interner> Debug for GenericArgData<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        match self {
+            GenericArgData::Ty(t) => write!(fmt, "Ty({:?})", t),
+            GenericArgData::Lifetime(l) => write!(fmt, "Lifetime({:?})", l),
+        }
+    }
+}
+
+impl<I: Interner> Debug for VariableKind<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match *self {
-            ParameterKind::Ty(ref n) => write!(fmt, "Ty({:?})", n),
-            ParameterKind::Lifetime(ref n) => write!(fmt, "Lifetime({:?})", n),
+            VariableKind::Ty => write!(fmt, "type"),
+            VariableKind::Lifetime => write!(fmt, "lifetime"),
+            VariableKind::Phantom(..) => unreachable!(),
+        }
+    }
+}
+
+impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        let value = self.skip_kind();
+        match &self.kind {
+            VariableKind::Ty => write!(fmt, "{:?} with kind type", value),
+            VariableKind::Lifetime => write!(fmt, "{:?} with kind lifetime", value),
+            VariableKind::Phantom(..) => unreachable!(),
         }
     }
 }
@@ -723,7 +759,7 @@ impl<T: Debug, L: Debug> Debug for ParameterKind<T, L> {
 impl<I: Interner> Debug for Constraint<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            Constraint::LifetimeEq(a, b) => write!(fmt, "{:?} == {:?}", a, b),
+            Constraint::Outlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
         }
     }
 }
@@ -743,7 +779,7 @@ impl<I: Interner> Display for ConstrainedSubst<I> {
 impl<I: Interner> Substitution<I> {
     /// Displays the substitution in the form `< P0, .. Pn >`, or (if
     /// the substitution is empty) as an empty string.
-    pub fn with_angle(&self, interner: &I) -> Angle<'_, Parameter<I>> {
+    pub fn with_angle(&self, interner: &I) -> Angle<'_, GenericArg<I>> {
         Angle(self.parameters(interner))
     }
 }

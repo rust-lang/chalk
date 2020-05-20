@@ -9,3 +9,6 @@ TAGS
 *~
 target
 chalk-parse/src/parser.rs
+
+## IDE files
+/.idea/

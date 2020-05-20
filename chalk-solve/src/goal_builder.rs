@@ -3,7 +3,6 @@ use cast::CastTo;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::*;
-use chalk_rust_ir::ToParameter;
 use fold::shift::Shift;
 use fold::Fold;
 use interner::{HasInterner, Interner};
@@ -139,7 +138,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
                 .binders
                 .iter(interner)
                 .zip(0..)
-                .map(|p| p.to_parameter(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         );
 
         // Shift passthru into one level of binder, to account for the `forall<P0..Pn>`

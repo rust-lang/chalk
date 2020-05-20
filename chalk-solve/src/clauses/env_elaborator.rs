@@ -61,7 +61,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
         let interner = self.db.interner();
         match ty.data(interner) {
             TyData::Apply(application_ty) => {
-                match_type_name(&mut self.builder, application_ty.name)
+                match_type_name(&mut self.builder, interner, application_ty)
             }
             TyData::Alias(alias_ty) => match_alias_ty(&mut self.builder, alias_ty),
             TyData::Placeholder(_) => {}

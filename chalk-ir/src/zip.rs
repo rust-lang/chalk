@@ -195,7 +195,7 @@ macro_rules! eq_zip {
     };
 }
 
-eq_zip!(I => StructId<I>);
+eq_zip!(I => AdtId<I>);
 eq_zip!(I => TraitId<I>);
 eq_zip!(I => AssocTypeId<I>);
 eq_zip!(I => OpaqueTyId<I>);
@@ -205,54 +205,16 @@ eq_zip!(I => PhantomData<I>);
 eq_zip!(I => PlaceholderIndex);
 eq_zip!(I => ClausePriority);
 
-/// Generates a Zip impl that zips each field of the struct in turn.
-macro_rules! struct_zip {
-    (impl[$($param:tt)*] Zip<$I:ty> for $self:ty { $($field:ident),* $(,)* } $($w:tt)*) => {
-        impl<$($param)*> Zip<$I> for $self $($w)* {
-            fn zip_with<'i, Z: Zipper<'i, $I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
-            where
-                I: 'i,
-            {
-                // Validate that we have indeed listed all fields
-                let Self { $($field: _),* } = *a;
-                $(
-                    Zip::zip_with(zipper, &a.$field, &b.$field)?;
-                )*
-                Ok(())
-            }
-        }
+impl<T: HasInterner<Interner = I> + Zip<I>, I: Interner> Zip<I> for InEnvironment<T> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        Zip::zip_with(zipper, &a.environment, &b.environment)?;
+        Zip::zip_with(zipper, &a.goal, &b.goal)?;
+        Ok(())
     }
 }
-
-struct_zip!(impl[I: Interner] Zip<I> for TraitRef<I> {
-    trait_id,
-    substitution,
-});
-struct_zip!(impl[
-    T: HasInterner<Interner = I> + Zip<I>,
-    I: Interner,
-] Zip<I> for InEnvironment<T> {
-    environment,
-    goal,
-});
-struct_zip!(impl[I: Interner] Zip<I> for ApplicationTy<I> { name, substitution });
-struct_zip!(impl[I: Interner] Zip<I> for DynTy<I> { bounds });
-struct_zip!(impl[I: Interner] Zip<I> for Normalize<I> { alias, ty });
-struct_zip!(impl[I: Interner] Zip<I> for AliasEq<I> { alias, ty });
-struct_zip!(impl[I: Interner] Zip<I> for EqGoal<I> { a, b });
-struct_zip!(impl[I: Interner] Zip<I> for ProgramClauseImplication<I> {
-    consequence,
-    conditions,
-    priority,
-});
-struct_zip!(impl[I: Interner] Zip<I> for ProjectionTy<I> {
-    associated_ty_id,
-    substitution
-});
-struct_zip!(impl[I: Interner] Zip<I> for OpaqueTy<I> {
-    opaque_ty_id,
-    substitution
-});
 
 impl<I: Interner> Zip<I> for Environment<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
@@ -303,52 +265,6 @@ impl<I: Interner> Zip<I> for QuantifiedWhereClauses<I> {
     }
 }
 
-/// Generates a Zip impl that requires the two enums be the same
-/// variant, then zips each field of the variant in turn. Only works
-/// if all variants have a single parenthesized value right now.
-macro_rules! enum_zip {
-    (impl<$I:ident $(, $param:ident)*> for $self:ty { $( $variant:ident ),* $(,)* } $($w:tt)*) => {
-        impl<$I: Interner, $(, $param)*> Zip<$I> for $self $($w)* {
-            fn zip_with<'i, Z: Zipper<'i, $I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
-            where
-                I: 'i,
-            {
-                match (a, b) {
-                    $(
-                        (Self :: $variant (f_a), Self :: $variant (f_b)) => {
-                            Zip::zip_with(zipper, f_a, f_b)
-                        }
-                    )*
-
-                    #[allow(unreachable_patterns)] // needed if there is exactly one variant
-                    $((Self :: $variant ( .. ), _))|* => {
-                        return Err(NoSolution);
-                    }
-                }
-            }
-        }
-    }
-}
-
-enum_zip!(impl<I> for WellFormed<I> { Trait, Ty });
-enum_zip!(impl<I> for FromEnv<I> { Trait, Ty });
-enum_zip!(impl<I> for WhereClause<I> { Implemented, AliasEq });
-enum_zip!(impl<I> for DomainGoal<I> {
-    Holds,
-    WellFormed,
-    FromEnv,
-    Normalize,
-    IsLocal,
-    IsUpstream,
-    IsFullyVisible,
-    LocalImplAllowed,
-    Compatible,
-    DownstreamType,
-    Reveal,
-});
-enum_zip!(impl<I> for ProgramClauseData<I> { Implies, ForAll });
-enum_zip!(impl<I> for AliasTy<I> { Projection, Opaque });
-
 impl<I: Interner> Zip<I> for Substitution<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
@@ -372,60 +288,24 @@ impl<I: Interner> Zip<I> for Goal<I> {
     }
 }
 
-impl<I: Interner> Zip<I> for GoalData<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
-    where
-        I: 'i,
-    {
-        match (a, b) {
-            (&GoalData::Quantified(ref f_a, ref g_a), &GoalData::Quantified(ref f_b, ref g_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)?;
-                Zip::zip_with(zipper, g_a, g_b)
-            }
-            (&GoalData::Implies(ref f_a, ref g_a), &GoalData::Implies(ref f_b, ref g_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)?;
-                Zip::zip_with(zipper, g_a, g_b)
-            }
-            (&GoalData::All(ref g_a), &GoalData::All(ref g_b)) => Zip::zip_with(zipper, g_a, g_b),
-            (&GoalData::Not(ref f_a), &GoalData::Not(ref f_b)) => Zip::zip_with(zipper, f_a, f_b),
-            (&GoalData::EqGoal(ref f_a), &GoalData::EqGoal(ref f_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)
-            }
-            (&GoalData::DomainGoal(ref f_a), &GoalData::DomainGoal(ref f_b)) => {
-                Zip::zip_with(zipper, f_a, f_b)
-            }
-            (&GoalData::CannotProve(()), &GoalData::CannotProve(())) => Ok(()),
-            (&GoalData::Quantified(..), _)
-            | (&GoalData::Implies(..), _)
-            | (&GoalData::All(..), _)
-            | (&GoalData::Not(..), _)
-            | (&GoalData::EqGoal(..), _)
-            | (&GoalData::DomainGoal(..), _)
-            | (&GoalData::CannotProve(..), _) => {
-                return Err(NoSolution);
-            }
-        }
-    }
-}
-
 // I'm too lazy to make `enum_zip` support type parameters.
-impl<T: Zip<I>, L: Zip<I>, I: Interner> Zip<I> for ParameterKind<T, L> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+impl<I: Interner> Zip<I> for VariableKind<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(_zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
     {
         match (a, b) {
-            (ParameterKind::Ty(a), ParameterKind::Ty(b)) => Zip::zip_with(zipper, a, b),
-            (ParameterKind::Lifetime(a), ParameterKind::Lifetime(b)) => Zip::zip_with(zipper, a, b),
-            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
+            (VariableKind::Ty, VariableKind::Ty) => Ok(()),
+            (VariableKind::Lifetime, VariableKind::Lifetime) => Ok(()),
+            (VariableKind::Phantom(..), _) | (_, VariableKind::Phantom(..)) => unreachable!(),
+            (VariableKind::Ty, _) | (VariableKind::Lifetime, _) => {
                 panic!("zipping things of mixed kind")
             }
         }
     }
 }
 
-#[allow(unreachable_code, unused_variables)]
-impl<I: Interner> Zip<I> for Parameter<I> {
+impl<I: Interner> Zip<I> for GenericArg<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,

@@ -1,4 +1,4 @@
-use chalk_ir::interner::ChalkIr;
+use crate::interner::ChalkIr;
 use chalk_ir::ProgramClause;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

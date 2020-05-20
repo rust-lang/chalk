@@ -1,13 +1,14 @@
 #![allow(non_snake_case)]
 
 use chalk_integration::db::ChalkDatabase;
+use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::LowerGoal;
 use chalk_integration::query::LoweringDatabase;
-use chalk_ir;
-use chalk_ir::interner::ChalkIr;
 use chalk_solve::ext::*;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
+
+use crate::test_util::assert_same;
 
 #[cfg(feature = "bench")]
 mod bench;
@@ -31,15 +32,6 @@ fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str) {
     };
 
     assert_same(&result, expected);
-}
-
-fn assert_same(result: &str, expected: &str) {
-    println!("expected:\n{}", expected);
-    println!("actual:\n{}", result);
-
-    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
-    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }
 
 // different goals
@@ -239,7 +231,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
             db.set_solver_choice(solver_choice);
         }
 
-        chalk_ir::tls::set_current_program(&program, || {
+        chalk_integration::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
@@ -309,10 +301,17 @@ mod coherence_goals;
 mod coinduction;
 mod cycle;
 mod existential_types;
+mod functions;
 mod implied_bounds;
 mod impls;
 mod misc;
 mod negation;
+mod object_safe;
 mod projection;
+mod refs;
+mod scalars;
+mod slices;
+mod string;
+mod tuples;
 mod unify;
 mod wf_goals;

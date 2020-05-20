@@ -1,13 +1,22 @@
 [![Build Status](https://github.com/rust-lang/chalk/workflows/CI/badge.svg)](https://github.com/rust-lang/chalk/actions?workflow=CI)
+[![Chalk Book](https://img.shields.io/badge/book-chalk-blue.svg)](https://rust-lang.github.io/chalk/book/)
+[![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://rust-lang.github.io/chalk/chalk/)
 
 # chalk
 
 A [Prolog-ish][Prolog] interpreter written in Rust, intended perhaps for use in
 the compiler, but also for experimentation.
 
+See the [Chalk book](https://rust-lang.github.io/chalk/book/) for more information.
+
 ## FAQ
 
-**How does chalk relate to rustc?** The plan is to have rustc use the `chalk-engine` crate (in this repo), which defines chalk's solver. The rest of chalk can then be considered an elaborate unit testing harness. For more details, see [the Traits chapter of the rustc-dev-guide](https://rustc-dev-guide.rust-lang.org/traits/index.html).
+**How does chalk relate to rustc?** The plan is to have rustc use the
+`chalk-solve` crate (in this repo) to answer questions about Rust programs, for
+example, "Does `Vec<u32>` implement `Debug`?". Internally, chalk converts
+Rust-specific information into logic and uses a logic engine to find the answer
+to the original query. For more details, see
+[this explanation in the chalk book][chalk-lowering-details].
 
 **Where does the name come from?** `chalk` is named after [Chalkidiki], the area where [Aristotle] was
 born. Since Prolog is a logic programming language, this seemed a
@@ -16,6 +25,7 @@ suitable reference.
 [Prolog]: https://en.wikipedia.org/wiki/Prolog
 [Chalkidiki]: https://en.wikipedia.org/wiki/Chalkidiki
 [Aristotle]: https://en.wikipedia.org/wiki/Aristotle
+[chalk-lowering-details]: http://rust-lang.github.io/chalk/book/#chalk-works-by-converting-rust-goals-into-logical-inference-rules
 
 ## Blog posts
 [blog-posts]: #blog-posts
@@ -49,8 +59,9 @@ Unique; substitution [], lifetime constraints []
 If you'd like to contribute, consider joining the [Traits Working Group][working-group].
 We hang out on the [rust-lang zulip][rust-lang-zulip] in the [#wg-traits][wg-traits-stream] stream.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for more info.
+See [the contributing chapter][contributing] in the chalk book for more info.
 
 [working-group]: https://rust-lang.github.io/compiler-team/working-groups/traits/
 [rust-lang-zulip]:https://rust-lang.zulipchat.com
 [wg-traits-stream]: https://rust-lang.zulipchat.com/#narrow/stream/144729-wg-traits
+[contributing]: https://rust-lang.github.io/chalk/book/contribution_guide.html

@@ -113,8 +113,8 @@ impl<T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Option<
     }
 }
 
-impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
-    type Result = Parameter<TI>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for GenericArg<I> {
+    type Result = GenericArg<TI>;
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
@@ -128,7 +128,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Parameter<I> {
         let target_interner = folder.target_interner();
 
         let data = self.data(interner).fold_with(folder, outer_binder)?;
-        Ok(Parameter::new(target_interner, data))
+        Ok(GenericArg::new(target_interner, data))
     }
 }
 
@@ -243,11 +243,20 @@ copy_fold!(DebruijnIndex);
 copy_fold!(chalk_engine::TableIndex);
 copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
+copy_fold!(UintTy);
+copy_fold!(IntTy);
+copy_fold!(FloatTy);
+copy_fold!(Scalar);
 copy_fold!(ClausePriority);
+copy_fold!(Mutability);
 
 #[macro_export]
 macro_rules! id_fold {
     ($t:ident) => {
+        $crate::id_fold!($t, transfer_def_id);
+    };
+
+    ($t:ident, $transfer_fn:ident) => {
         impl<I: Interner, TI: TargetInterner<I>> $crate::fold::Fold<I, TI> for $t<I> {
             type Result = $t<TI>;
             fn fold_with<'i>(
@@ -260,7 +269,7 @@ macro_rules! id_fold {
                 TI: 'i,
             {
                 let $t(def_id_tf) = *self;
-                let def_id_ttf = TI::transfer_def_id(def_id_tf);
+                let def_id_ttf = TI::$transfer_fn(def_id_tf);
                 Ok($t(def_id_ttf))
             }
         }
@@ -268,10 +277,11 @@ macro_rules! id_fold {
 }
 
 id_fold!(ImplId);
-id_fold!(StructId);
+id_fold!(AdtId, transfer_adt_id);
 id_fold!(TraitId);
 id_fold!(AssocTypeId);
 id_fold!(OpaqueTyId);
+id_fold!(FnDefId);
 
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<I> {
     fn super_fold_with<'i>(
@@ -324,31 +334,6 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
         TI: 'i,
     {
         Ok(PhantomData)
-    }
-}
-
-impl<I: Interner, TI: TargetInterner<I>, T, L> Fold<I, TI> for ParameterKind<T, L>
-where
-    T: Fold<I, TI>,
-    L: Fold<I, TI>,
-{
-    type Result = ParameterKind<T::Result, L::Result>;
-
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I, TI>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-        TI: 'i,
-    {
-        match self {
-            ParameterKind::Ty(a) => Ok(ParameterKind::Ty(a.fold_with(folder, outer_binder)?)),
-            ParameterKind::Lifetime(a) => {
-                Ok(ParameterKind::Lifetime(a.fold_with(folder, outer_binder)?))
-            }
-        }
     }
 }
 

@@ -7,10 +7,10 @@ fn well_formed_trait_decl() {
             trait Clone { }
             trait Copy where Self: Clone { }
 
-            struct i32 { }
+            struct Foo { }
 
-            impl Clone for i32 { }
-            impl Copy for i32 { }
+            impl Clone for Foo { }
+            impl Copy for Foo { }
         }
     }
 }
@@ -22,9 +22,9 @@ fn ill_formed_trait_decl() {
             trait Clone { }
             trait Copy where Self: Clone { }
 
-            struct i32 { }
+            struct Foo { }
 
-            impl Copy for i32 { }
+            impl Copy for Foo { }
         } error_msg {
             "trait impl for `Copy` does not meet well-formedness requirements"
         }
@@ -94,15 +94,15 @@ fn ill_formed_assoc_ty() {
             trait Foo { }
             struct OnlyFoo<T> where T: Foo { }
 
-            struct i32 { }
+            struct MyType { }
 
             trait Bar {
                 type Value;
             }
 
-            impl Bar for i32 {
-                // `OnlyFoo<i32>` is ill-formed because `i32: Foo` does not hold.
-                type Value = OnlyFoo<i32>;
+            impl Bar for MyType {
+                // `OnlyFoo<MyType>` is ill-formed because `MyType: Foo` does not hold.
+                type Value = OnlyFoo<MyType>;
             }
         } error_msg {
             "trait impl for `Bar` does not meet well-formedness requirements"
@@ -442,9 +442,9 @@ fn higher_ranked_trait_bounds() {
         program {
             trait Foo<'a> { }
             trait Bar where forall<'a> Self: Foo<'a> { }
-            struct i32 { }
+            struct Baz { }
 
-            impl Bar for i32 { }
+            impl Bar for Baz { }
         } error_msg {
             "trait impl for `Bar` does not meet well-formedness requirements"
         }
@@ -454,10 +454,10 @@ fn higher_ranked_trait_bounds() {
         program {
             trait Foo<'a> { }
             trait Bar where forall<'a> Self: Foo<'a> { }
-            struct i32 { }
+            struct Baz { }
 
-            impl<'a> Foo<'a> for i32 { }
-            impl Bar for i32 { }
+            impl<'a> Foo<'a> for Baz { }
+            impl Bar for Baz { }
         }
     }
 }
@@ -467,13 +467,13 @@ fn higher_ranked_trait_bound_on_gat() {
     lowering_success! {
         program {
             trait Foo<'a> { }
-            struct i32 { }
+            struct Baz { }
 
             trait Bar<'a> {
                 type Item<V>: Foo<'a> where forall<'b> V: Foo<'b>;
             }
 
-            impl<'a> Bar<'a> for i32 {
+            impl<'a> Bar<'a> for Baz {
                 type Item<V> = V;
             }
         }
@@ -524,7 +524,7 @@ fn higher_ranked_inline_bound_on_gat() {
         program {
             trait Fn<T> { }
             struct Ref<'a, T> { }
-            struct i32 {}
+            struct Val {}
 
             struct fun<T> { }
 
@@ -534,7 +534,7 @@ fn higher_ranked_inline_bound_on_gat() {
                 type Item<T>: forall<'a> Fn<Ref<'a, T>>;
             }
 
-            impl Bar for i32 {
+            impl Bar for Val {
                 type Item<T> = for<'a> fn(fun<Ref<'a, T>>);
             }
         }
@@ -543,7 +543,7 @@ fn higher_ranked_inline_bound_on_gat() {
     lowering_error! {
         program {
             trait Fn<T, U> { }
-            struct i32 {}
+            struct Val {}
 
             struct fun<T, U> { }
 
@@ -553,8 +553,8 @@ fn higher_ranked_inline_bound_on_gat() {
                 type Item<T>: forall<U> Fn<T, U>;
             }
 
-            impl Bar for i32 {
-                type Item<T> = fun<T, i32>;
+            impl Bar for Val {
+                type Item<T> = fun<T, Val>;
             }
         } error_msg {
             "trait impl for `Bar` does not meet well-formedness requirements"
@@ -575,10 +575,9 @@ fn assoc_type_recursive_bound() {
                 type Item: Sized where <Self as Foo>::Item: Sized;
             }
 
-            struct i32 { }
-            struct str { } // not sized
+            struct Number { }
 
-            impl Foo for i32 {
+            impl Foo for Number {
                 // Well-formedness checks require that the following
                 // goal is true:
                 // ```
@@ -628,7 +627,7 @@ fn assoc_type_recursive_bound() {
             // }
 
             // fn main() {
-            //     bar::<i32>() // ok, `Implemented(i32: Bar)` hold
+            //     bar::<Number>() // ok, `Implemented(Number: Bar)` hold
             // }
             // ```
         } error_msg {

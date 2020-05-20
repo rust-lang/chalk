@@ -192,10 +192,10 @@ fn overlapping_negative_positive_impls() {
     lowering_error! {
         program {
             trait Send { }
-            struct i32 { }
+            struct MyType { }
 
-            impl Send for i32 { }
-            impl !Send for i32 { }
+            impl Send for MyType { }
+            impl !Send for MyType { }
         } error_msg {
             "overlapping impls of trait `Send`"
         }
@@ -211,10 +211,10 @@ fn overlapping_negative_impls() {
             trait Bar { }
 
             struct Vec<T> { }
-            struct i32 { }
+            struct MyType { }
 
-            impl Foo for i32 { }
-            impl Bar for i32 { }
+            impl Foo for MyType { }
+            impl Bar for MyType { }
 
             impl<T> !Send for Vec<T> where T: Foo { }
             impl<T> !Send for Vec<T> where T: Bar { }
@@ -257,16 +257,15 @@ fn downstream_impl_of_fundamental_43355() {
 
 #[test]
 fn fundamental_traits() {
-    // We want to enable negative reasoning about some traits. For example, consider the str type.
-    // We know that str is never going to be Sized and we have made a decision to allow people to
-    // depend on that. The following two impls are rejected as overlapping despite the fact that we
-    // know that str will never be Sized.
+    // We want to enable negative reasoning about some traits. For example, assume we have some
+    // "Foo" type which we know is never going to be Sized (ex. str). The following two impls are
+    // rejected as overlapping despite the fact that we know that Foo will never be Sized.
     lowering_error! {
         program {
             #[upstream] trait Sized { }
-            #[upstream] struct str { }
+            #[upstream] struct Foo { }
             trait Bar { }
-            impl Bar for str { }
+            impl Bar for Foo { }
             impl<T> Bar for T where T: Sized { }
         } error_msg {
             "overlapping impls of trait `Bar`"
@@ -274,14 +273,14 @@ fn fundamental_traits() {
     }
 
     // If we make Sized fundamental, we're telling the Rust compiler that it can reason negatively
-    // about it. That means that `not { str: Sized }` is provable. With that change, these two
-    // impls are now valid.
+    // about it. That means that `not { Foo: Sized }` is provable. With that change, these two impls
+    // are now valid.
     lowering_success! {
         program {
             #[upstream] #[fundamental] trait Sized { }
-            #[upstream] struct str { }
+            #[upstream] struct Foo { }
             trait Bar { }
-            impl Bar for str { }
+            impl Bar for Foo { }
             impl<T> Bar for T where T: Sized { }
         }
     }
@@ -365,17 +364,17 @@ fn orphan_check() {
         program {
             #[auto] #[upstream] trait Send { }
             #[upstream] trait TheTrait<T> { }
-            #[upstream] struct isize { }
-            #[upstream] struct usize { }
+            #[upstream] struct TypeA { }
+            #[upstream] struct TypeB { }
 
             struct TheType { }
 
             // These impls should be fine because they contain the local type
-            impl TheTrait<TheType> for isize { }
-            impl TheTrait<isize> for TheType { }
+            impl TheTrait<TheType> for TypeA { }
+            impl TheTrait<TypeA> for TheType { }
 
             // This impl should fail because it contains only upstream type
-            impl TheTrait<usize> for isize { }
+            impl TheTrait<TypeB> for TypeA { }
         } error_msg {
             "impl for trait `TheTrait` violates the orphan rules"
         }
@@ -385,9 +384,9 @@ fn orphan_check() {
         program {
             #[auto] #[upstream] trait Send { }
             #[upstream] struct Vec<T> { }
-            #[upstream] struct isize { }
+            #[upstream] struct TypeA { }
 
-            impl !Send for Vec<isize> { }
+            impl !Send for Vec<TypeA> { }
         } error_msg {
             "impl for trait `Send` violates the orphan rules"
         }
@@ -410,11 +409,11 @@ fn orphan_check() {
         program {
             #[upstream] trait Remote1<T> { }
             #[upstream] struct Pair<T, U> { }
-            #[upstream] struct i32 { }
+            #[upstream] struct TypeA { }
 
             struct Local<T> { }
 
-            impl<T, U> Remote1<Pair<T, Local<U>>> for i32 { }
+            impl<T, U> Remote1<Pair<T, Local<U>>> for TypeA { }
         } error_msg {
             "impl for trait `Remote1` violates the orphan rules"
         }

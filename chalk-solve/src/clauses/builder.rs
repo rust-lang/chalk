@@ -1,10 +1,11 @@
+use std::iter;
+use std::marker::PhantomData;
+
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
-use chalk_rust_ir::*;
-use std::marker::PhantomData;
 
 /// The "clause builder" is a useful tool for building up sets of
 /// program clauses. It takes ownership of the output vector while it
@@ -13,8 +14,8 @@ use std::marker::PhantomData;
 pub struct ClauseBuilder<'me, I: Interner> {
     pub db: &'me dyn RustIrDatabase<I>,
     clauses: &'me mut Vec<ProgramClause<I>>,
-    binders: Vec<ParameterKind<()>>,
-    parameters: Vec<Parameter<I>>,
+    binders: Vec<VariableKind<I>>,
+    parameters: Vec<GenericArg<I>>,
 }
 
 impl<'me, I: Interner> ClauseBuilder<'me, I> {
@@ -82,7 +83,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         } else {
             self.clauses.push(
                 ProgramClauseData::ForAll(Binders::new(
-                    ParameterKinds::from(interner, self.binders.clone()),
+                    VariableKinds::from(interner, self.binders.clone()),
                     clause,
                 ))
                 .intern(interner),
@@ -93,7 +94,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     }
 
     /// Accesses the placeholders for the current list of parameters in scope.
-    pub fn placeholders_in_scope(&self) -> &[Parameter<I>] {
+    pub fn placeholders_in_scope(&self) -> &[GenericArg<I>] {
         &self.parameters
     }
 
@@ -128,7 +129,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .binders
                 .iter(interner)
                 .zip(old_len..)
-                .map(|p| p.to_parameter(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         );
 
         let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
@@ -148,7 +149,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
         let binders = Binders::new(
-            ParameterKinds::from(interner, vec![ParameterKind::Ty(())]),
+            VariableKinds::from(interner, iter::once(VariableKind::Ty)),
             PhantomData::<I>,
         );
         self.push_binders(&binders, |this, PhantomData| {

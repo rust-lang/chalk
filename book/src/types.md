@@ -1,5 +1,23 @@
 # Representing and manipulating Rust types
 
+## Intermediate representations
+
+Intermediate representations (IR) are used to represent parts of Rust programs such as traits and impls.
+
+Chalk contains three levels of IR:
+
+- The **AST**. This is used purely for writing test cases
+  with a Rust-like syntax. This is consumed by **lowering** code, which
+  takes AST and products **Rust IR** (the next bullet point).
+- The **Rust IR**. This is a "HIR-like" notation that defines the
+  interesting properties of things like traits, impls, and structs.
+  It is an input to the **rules** code, which produces
+- The **Chalk IR**. This is most "Prolog-like" of the various IRs. It
+  contains the definition of **types** as well as prolog-like concepts
+  such as goals (things that must be proven true) and clauses (things
+  that are assumed to be true).
+
+
 ## Goal of the chalk-ir crate
 
 To have an ergonomic, flexible library that can abstractly represent
@@ -39,13 +57,11 @@ not been thoroughly discussed by the Rust compiler team as a whole.
 Here is a (partial) list of some things that have to be adapted in
 Chalk as of today to match this document:
 
-* `Parameter<I>` needs to be renamed to `GenericArgument`
-* `Vec<Parameter<I>>` needs to be replaced with `GenericArguments`
 * Extract `TypeName` into something opaque to chalk-ir.
 * Dyn type equality should probably be driven by entailment.
 * Projections need to be renamed to aliases.
-* The variant we use for impl traits should be removed and folded into type aliases. 
+* The variant we use for impl traits should be removed and folded into type aliases.
 * Remove placeholders and projection placeholders from apply and create placeholder types.
 * Move `Error` from a `TypeName` to its own variant.
 * Introduce `GeneratorWitness` into chalk
-* Complete transition from `ForAll` to `Fn` in chalk 
+* Complete transition from `ForAll` to `Fn` in chalk

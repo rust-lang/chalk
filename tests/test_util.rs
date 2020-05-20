@@ -27,8 +27,18 @@ macro_rules! lowering_error {
             chalk_solve::SolverChoice::default(),
         )
         .checked_program()
-        .unwrap_err();
-        let expected = $expected;
-        assert_eq!(error.to_string(), expected.to_string());
+        .unwrap_err()
+        .to_string();
+        let expected = $expected.to_string();
+        crate::test_util::assert_same(&error, &expected);
     };
+}
+
+pub fn assert_same(result: &str, expected: &str) {
+    println!("expected:\n{}", expected);
+    println!("actual:\n{}", result);
+
+    let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
+    let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
+    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
 }

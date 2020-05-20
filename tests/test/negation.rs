@@ -6,19 +6,19 @@ use super::*;
 fn simple_negation() {
     test! {
         program {
-            struct i32 {}
+            struct Bar {}
             trait Foo {}
         }
 
         goal {
-            not { i32: Foo }
+            not { Bar: Foo }
         } yields {
             "Unique"
         }
 
         goal {
             not {
-                not { i32: Foo }
+                not { Bar: Foo }
             }
         } yields {
             "No"
@@ -27,7 +27,7 @@ fn simple_negation() {
         goal {
             not {
                 not {
-                    not { i32: Foo }
+                    not { Bar: Foo }
                 }
             }
         } yields {
@@ -101,8 +101,8 @@ fn deep_negation() {
 fn negation_quantifiers() {
     test! {
         program {
-            struct i32 {}
-            struct u32 {}
+            struct Alice {}
+            struct Bob {}
         }
 
         goal {
@@ -142,10 +142,10 @@ fn negation_free_vars() {
     test! {
         program {
             struct Vec<T> {}
-            struct i32 {}
-            struct u32 {}
+            struct Alice {}
+            struct Bob {}
             trait Foo {}
-            impl Foo for Vec<u32> {}
+            impl Foo for Vec<Bob> {}
         }
 
         goal {
@@ -166,14 +166,14 @@ fn negative_loop() {
         program {
             trait P { }
             trait Q { }
-            struct u32 { }
+            struct Alice { }
 
-            forall<> { u32: P if not { u32: Q } }
-            forall<> { u32: Q if not { u32: P } }
+            forall<> { Alice: P if not { Alice: Q } }
+            forall<> { Alice: Q if not { Alice: P } }
         }
 
         goal {
-            u32: P
+            Alice: P
         } yields_all[SolverChoice::slg(10, None)] {
             // Negative cycle -> panic
             ""
@@ -273,13 +273,13 @@ fn contradiction() {
     test! {
         program {
             trait P { }
-            struct u32 { }
+            struct Alice { }
 
-            forall<> { u32: P if not { u32: P } }
+            forall<> { Alice: P if not { Alice: P } }
         }
 
         goal {
-            u32: P
+            Alice: P
         } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
             ""
@@ -295,14 +295,14 @@ fn negative_answer_ambiguous() {
         program {
             trait P { }
             trait Q { }
-            struct u32 { }
+            struct Alice { }
 
-            forall<> { u32: P if not { u32: Q } }
-            forall<> { u32: Q if not { u32: Q } }
+            forall<> { Alice: P if not { Alice: Q } }
+            forall<> { Alice: Q if not { Alice: Q } }
         }
 
         goal {
-            u32: P
+            Alice: P
         } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
             ""

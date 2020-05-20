@@ -137,7 +137,7 @@ fn merge_into_guidance<I: Interner>(
 
     // Collect the types that the two substitutions have in
     // common.
-    let aggr_parameters: Vec<_> = guidance
+    let aggr_generic_args: Vec<_> = guidance
         .value
         .iter(interner)
         .zip(subst1.iter(interner))
@@ -146,11 +146,11 @@ fn merge_into_guidance<I: Interner>(
             // We have two values for some variable X that
             // appears in the root goal. Find out the universe
             // of X.
-            let universe = root_goal.binders.as_slice(interner)[index].into_inner();
+            let universe = *root_goal.binders.as_slice(interner)[index].skip_kind();
 
             let ty = match value.data(interner) {
-                ParameterKind::Ty(ty) => ty,
-                ParameterKind::Lifetime(_) => {
+                GenericArgData::Ty(ty) => ty,
+                GenericArgData::Lifetime(_) => {
                     // Ignore the lifetimes from the substitution: we're just
                     // creating guidance here anyway.
                     return infer
@@ -172,7 +172,7 @@ fn merge_into_guidance<I: Interner>(
         })
         .collect();
 
-    let aggr_subst = Substitution::from(interner, aggr_parameters);
+    let aggr_subst = Substitution::from(interner, aggr_generic_args);
 
     infer.canonicalize(interner, &aggr_subst).quantified
 }
@@ -183,11 +183,11 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
         .value
         .iter(interner)
         .enumerate()
-        .all(|(index, parameter)| match parameter.data(interner) {
+        .all(|(index, generic_arg)| match generic_arg.data(interner) {
             // All types are mapped to distinct variables.  Since this
             // has been canonicalized, those will also be the first N
             // variables.
-            ParameterKind::Ty(t) => match t.bound(interner) {
+            GenericArgData::Ty(t) => match t.bound(interner) {
                 None => false,
                 Some(bound_var) => {
                     if let Some(index1) = bound_var.index_if_innermost() {
@@ -200,7 +200,7 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
 
             // And no lifetime mappings. (This is too strict, but we never
             // product substs with lifetimes.)
-            ParameterKind::Lifetime(_) => false,
+            GenericArgData::Lifetime(_) => false,
         })
 }
 
@@ -381,22 +381,22 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             substitution1
                 .iter(interner)
                 .zip(substitution2.iter(interner))
-                .map(|(p1, p2)| self.aggregate_parameters(p1, p2)),
+                .map(|(p1, p2)| self.aggregate_generic_args(p1, p2)),
         );
 
         Some((name, substitution))
     }
 
-    fn aggregate_parameters(&mut self, p1: &Parameter<I>, p2: &Parameter<I>) -> Parameter<I> {
+    fn aggregate_generic_args(&mut self, p1: &GenericArg<I>, p2: &GenericArg<I>) -> GenericArg<I> {
         let interner = self.interner;
         match (p1.data(interner), p2.data(interner)) {
-            (ParameterKind::Ty(ty1), ParameterKind::Ty(ty2)) => {
+            (GenericArgData::Ty(ty1), GenericArgData::Ty(ty2)) => {
                 self.aggregate_tys(ty1, ty2).cast(interner)
             }
-            (ParameterKind::Lifetime(l1), ParameterKind::Lifetime(l2)) => {
+            (GenericArgData::Lifetime(l1), GenericArgData::Lifetime(l2)) => {
                 self.aggregate_lifetimes(l1, l2).cast(interner)
             }
-            (ParameterKind::Ty(_), _) | (ParameterKind::Lifetime(_), _) => {
+            (GenericArgData::Ty(_), _) | (GenericArgData::Lifetime(_), _) => {
                 panic!("mismatched parameter kinds: p1={:?} p2={:?}", p1, p2)
             }
         }
@@ -439,7 +439,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 /// Test the equivalent of `Vec<i32>` vs `Vec<u32>`
 #[test]
 fn vec_i32_vs_vec_u32() {
-    use chalk_ir::interner::ChalkIr;
+    use chalk_integration::interner::ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
         infer: &mut infer,
@@ -457,7 +457,7 @@ fn vec_i32_vs_vec_u32() {
 /// Test the equivalent of `Vec<i32>` vs `Vec<i32>`
 #[test]
 fn vec_i32_vs_vec_i32() {
-    use chalk_ir::interner::ChalkIr;
+    use chalk_integration::interner::ChalkIr;
     let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {
@@ -476,7 +476,7 @@ fn vec_i32_vs_vec_i32() {
 /// Test the equivalent of `Vec<X>` vs `Vec<Y>`
 #[test]
 fn vec_x_vs_vec_y() {
-    use chalk_ir::interner::ChalkIr;
+    use chalk_integration::interner::ChalkIr;
     let interner = &ChalkIr;
     let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
     let mut anti_unifier = AntiUnifier {

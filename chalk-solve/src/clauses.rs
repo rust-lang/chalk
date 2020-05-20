@@ -12,6 +12,7 @@ use rustc_hash::FxHashSet;
 
 pub mod builder;
 mod builtin_traits;
+mod dyn_ty;
 mod env_elaborator;
 mod generalize;
 pub mod program_clauses;
@@ -49,15 +50,11 @@ pub mod program_clauses;
 pub fn push_auto_trait_impls<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
-    struct_id: StructId<I>,
+    adt_id: AdtId<I>,
 ) {
-    debug_heading!(
-        "push_auto_trait_impls({:?}, {:?})",
-        auto_trait_id,
-        struct_id
-    );
+    debug_heading!("push_auto_trait_impls({:?}, {:?})", auto_trait_id, adt_id);
 
-    let struct_datum = &builder.db.struct_datum(struct_id);
+    let adt_datum = &builder.db.adt_datum(adt_id);
     let interner = builder.interner();
 
     // Must be an auto trait.
@@ -70,17 +67,17 @@ pub fn push_auto_trait_impls<I: Interner>(
     );
 
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
-    // for Foo<..>`, where `Foo` is the struct we're looking at, then
+    // for Foo<..>`, where `Foo` is the adt we're looking at, then
     // we don't generate our own rules.
-    if builder.db.impl_provided_for(auto_trait_id, struct_id) {
+    if builder.db.impl_provided_for(auto_trait_id, adt_id) {
         debug!("impl provided");
         return;
     }
 
-    let binders = struct_datum.binders.map_ref(|b| &b.fields);
+    let binders = adt_datum.binders.map_ref(|b| &b.fields);
     builder.push_binders(&binders, |builder, fields| {
         let self_ty: Ty<_> = ApplicationTy {
-            name: struct_id.cast(interner),
+            name: adt_id.cast(interner),
             substitution: builder.substitution_in_scope(),
         }
         .intern(interner);
@@ -124,11 +121,17 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     );
     let interner = db.interner();
 
+    // FIXME: change this to use `.chain().filter()`
     let mut vec = vec![];
     vec.extend(db.custom_clauses());
     program_clauses_that_could_match(db, environment, goal, &mut vec)?;
-    program_clauses_for_env(db, environment, &mut vec);
     vec.retain(|c| c.could_match(interner, goal));
+    vec.extend(
+        db.program_clauses_for_env(environment)
+            .iter(interner)
+            .filter(|c| (*c).could_match(interner, goal))
+            .cloned(),
+    );
 
     debug!("vec = {:#?}", vec);
 
@@ -179,11 +182,12 @@ fn program_clauses_that_could_match<I: Interner>(
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
                 match trait_ref.self_type_parameter(interner).data(interner) {
-                    TyData::Apply(apply) => {
-                        if let Some(struct_id) = db.as_struct_id(&apply.name) {
-                            push_auto_trait_impls(builder, trait_id, struct_id);
+                    TyData::Apply(apply) => match &apply.name {
+                        TypeName::Adt(adt_id) => {
+                            push_auto_trait_impls(builder, trait_id, *adt_id);
                         }
-                    }
+                        _ => {}
+                    },
                     TyData::InferenceVar(_) | TyData::BoundVar(_) => {
                         return Err(Floundered);
                     }
@@ -191,76 +195,20 @@ fn program_clauses_that_could_match<I: Interner>(
                 }
             }
 
-            // If the self type `S` is a `dyn trait` type, we wish to generate program-clauses
-            // that indicates that it implements its own traits. For example, a `dyn Write` type
-            // implements `Write` and so on.
+            // If the self type is a `dyn trait` type, generate program-clauses
+            // that indicates that it implements its own traits.
+            // FIXME: This is presently rather wasteful, in that we don't check that the
+            // these program clauses we are generating are actually relevant to the goal
+            // `goal` that we are actually *trying* to prove (though there is some later
+            // code that will screen out irrelevant stuff).
             //
-            // To see how this works, consider as an example the type `dyn Fn(&u8)`. This is
-            // really shorthand for `dyn for<'a> Fn<(&'a u8), Output = ()>`, and we represent
-            // that type as something like this:
-            //
-            // ```
-            // dyn(exists<T> {
-            //     forall<'a> { Implemented(T: Fn<'a>) },
-            //     forall<'a> { AliasEq(<T as Fn<'a>>::Output, ()) },
-            // })
-            // ```
-            //
-            // so what we will do is to generate one program clause
-            // for each of the conditions. Thus we get two program
-            // clauses:
-            //
-            // ```
-            // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
-            // ```
-            //
-            // and
-            //
-            // ```
-            // forall<'a> { AliasEq(<dyn Fn(&u8) as Fn<'a>>::Output, ()) },
-            // ```
-            //
-            // FIXME. This is presently rather wasteful, in that we
-            // don't check that the these program clauses we are
-            // generating are actually relevant to the goal `goal`
-            // that we are actually *trying* to prove (though there is
-            // some later code that will screen out irrelevant
-            // stuff).
-            //
-            // In other words, in our example, if we were trying to
-            // prove `Implemented(dyn Fn(&u8): Clone)`, we would have
-            // generated two clauses that are totally irrelevant to
-            // that goal, because they let us prove other things but
-            // not `Clone`.
+            // In other words, if we were trying to prove `Implemented(dyn
+            // Fn(&u8): Clone)`, we would still generate two clauses that are
+            // totally irrelevant to that goal, because they let us prove other
+            // things but not `Clone`.
             let self_ty = trait_ref.self_type_parameter(interner);
-            if let TyData::Dyn(dyn_ty) = self_ty.data(interner) {
-                // In this arm, `self_ty` is the `dyn Fn(&u8)`,
-                // and `bounded_ty` is the `exists<T> { .. }`
-                // clauses shown above.
-
-                // Turn free BoundVars in the type into new existentials. E.g.
-                // we might get some `dyn Foo<?X>`, and we don't want to return
-                // a clause with a free variable. We can instead return a
-                // slightly more general clause by basically turning this into
-                // `exists<A> dyn Foo<A>`.
-                let generalized_dyn_ty = generalize::Generalize::apply(db.interner(), dyn_ty);
-
-                builder.push_binders(&generalized_dyn_ty, |builder, dyn_ty| {
-                    for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
-                        // Replace the `T` from `exists<T> { .. }` with `self_ty`,
-                        // yielding clases like
-                        //
-                        // ```
-                        // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
-                        // ```
-                        let qwc =
-                            exists_qwc.substitute(interner, &[self_ty.clone().cast(interner)]);
-
-                        builder.push_binders(&qwc, |builder, wc| {
-                            builder.push_fact(wc);
-                        });
-                    }
-                });
+            if let TyData::Dyn(_) = self_ty.data(interner) {
+                dyn_ty::build_dyn_self_ty_clauses(db, builder, self_ty.clone())
             }
 
             match self_ty.data(interner) {
@@ -292,16 +240,21 @@ fn program_clauses_that_could_match<I: Interner>(
                 .opaque_ty_data(opaque_ty.opaque_ty_id)
                 .to_program_clauses(builder),
         },
-        DomainGoal::WellFormed(WellFormed::Trait(trait_predicate)) => {
-            db.trait_datum(trait_predicate.trait_id)
+        DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
+        | DomainGoal::LocalImplAllowed(trait_ref) => {
+            db.trait_datum(trait_ref.trait_id)
                 .to_program_clauses(builder);
+        }
+        DomainGoal::ObjectSafe(trait_id) => {
+            if builder.db.is_object_safe(*trait_id) {
+                builder.push_fact(DomainGoal::ObjectSafe(*trait_id));
+            }
         }
         DomainGoal::WellFormed(WellFormed::Ty(ty))
         | DomainGoal::IsUpstream(ty)
-        | DomainGoal::DownstreamType(ty) => match_ty(builder, environment, ty)?,
-        DomainGoal::IsFullyVisible(ty) | DomainGoal::IsLocal(ty) => {
-            match_ty(builder, environment, ty)?
-        }
+        | DomainGoal::DownstreamType(ty)
+        | DomainGoal::IsFullyVisible(ty)
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {
@@ -339,11 +292,7 @@ fn program_clauses_that_could_match<I: Interner>(
             }
             AliasTy::Opaque(_) => (),
         },
-        DomainGoal::LocalImplAllowed(trait_ref) => db
-            .trait_datum(trait_ref.trait_id)
-            .to_program_clauses(builder),
-        DomainGoal::Compatible(()) => (),
-        DomainGoal::Reveal(()) => (),
+        DomainGoal::Compatible(()) | DomainGoal::Reveal(()) => (),
     };
 
     Ok(())
@@ -366,7 +315,7 @@ fn program_clauses_that_could_match<I: Interner>(
 fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
-    trait_parameters: &[Parameter<I>],
+    trait_parameters: &[GenericArg<I>],
 ) {
     debug_heading!(
         "push_program_clauses_for_associated_type_values_in_impls_of(\
@@ -410,7 +359,7 @@ fn match_ty<I: Interner>(
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
     Ok(match ty.data(interner) {
-        TyData::Apply(application_ty) => match_type_name(builder, application_ty.name),
+        TyData::Apply(application_ty) => match_type_name(builder, interner, application_ty),
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
         }
@@ -436,9 +385,14 @@ fn match_ty<I: Interner>(
     })
 }
 
-fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeName<I>) {
-    match name {
-        TypeName::Struct(struct_id) => match_struct(builder, struct_id),
+/// Lower a Rust IR application type to logic
+fn match_type_name<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    interner: &I,
+    application: &ApplicationTy<I>,
+) {
+    match application.name {
+        TypeName::Adt(adt_id) => match_adt(builder, adt_id),
         TypeName::OpaqueType(opaque_ty_id) => builder
             .db
             .opaque_ty_data(opaque_ty_id)
@@ -447,6 +401,20 @@ fn match_type_name<I: Interner>(builder: &mut ClauseBuilder<'_, I>, name: TypeNa
         TypeName::AssociatedType(type_id) => builder
             .db
             .associated_ty_data(type_id)
+            .to_program_clauses(builder),
+        TypeName::Scalar(_) => {
+            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
+        }
+        TypeName::Str => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
+        TypeName::Tuple(_) => {
+            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
+        }
+        TypeName::Slice => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
+        TypeName::Raw(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
+        TypeName::Ref(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
+        TypeName::FnDef(fn_def_id) => builder
+            .db
+            .fn_def_datum(fn_def_id)
             .to_program_clauses(builder),
     }
 }
@@ -461,27 +429,20 @@ fn match_alias_ty<I: Interner>(builder: &mut ClauseBuilder<'_, I>, alias: &Alias
     }
 }
 
-fn match_struct<I: Interner>(builder: &mut ClauseBuilder<'_, I>, struct_id: StructId<I>) {
-    builder
-        .db
-        .struct_datum(struct_id)
-        .to_program_clauses(builder)
+fn match_adt<I: Interner>(builder: &mut ClauseBuilder<'_, I>, adt_id: AdtId<I>) {
+    builder.db.adt_datum(adt_id).to_program_clauses(builder)
 }
 
-fn program_clauses_for_env<'db, I: Interner>(
+pub fn program_clauses_for_env<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
-    clauses: &mut Vec<ProgramClause<I>>,
-) {
-    clauses.extend(environment.clauses.iter(db.interner()).cloned());
-
-    let mut last_round = FxHashSet::default();
-    elaborate_env_clauses(
-        db,
-        environment.clauses.as_slice(db.interner()),
-        &mut last_round,
-    );
-
+) -> ProgramClauses<I> {
+    let mut last_round = environment
+        .clauses
+        .as_slice(db.interner())
+        .iter()
+        .cloned()
+        .collect::<FxHashSet<_>>();
     let mut closure = last_round.clone();
     let mut next_round = FxHashSet::default();
     while !last_round.is_empty() {
@@ -493,5 +454,5 @@ fn program_clauses_for_env<'db, I: Interner>(
         );
     }
 
-    clauses.extend(closure.drain())
+    ProgramClauses::from(db.interner(), closure)
 }

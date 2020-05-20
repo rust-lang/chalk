@@ -47,8 +47,8 @@ fn basic() {
         program {
             trait Sized { }
 
-            struct i32 { }
-            impl Sized for i32 { }
+            struct Foo { }
+            impl Sized for Foo { }
         }
 
         goal {
@@ -108,8 +108,9 @@ fn only_draw_so_many() {
             struct Vec<T> { }
             impl<T> Sized for Vec<T> where T: Sized { }
 
-            struct i32 { }
-            impl Sized for i32 { }
+            struct Foo { }
+            impl Sized for Foo { }
+
 
             struct Slice<T> { }
             impl<T> Sized for Slice<T> where T: Sized { }
@@ -118,11 +119,11 @@ fn only_draw_so_many() {
         goal {
             exists<T> { T: Sized }
         } yields_first[SolverChoice::slg(10, None)] {
-            "substitution [?0 := i32], lifetime constraints []",
-            "substitution [?0 := Slice<i32>], lifetime constraints []",
-            "substitution [?0 := Vec<i32>], lifetime constraints []",
-            "substitution [?0 := Slice<Slice<i32>>], lifetime constraints []",
-            "substitution [?0 := Vec<Slice<i32>>], lifetime constraints []"
+            "substitution [?0 := Foo], lifetime constraints []",
+            "substitution [?0 := Slice<Foo>], lifetime constraints []",
+            "substitution [?0 := Vec<Foo>], lifetime constraints []",
+            "substitution [?0 := Slice<Slice<Foo>>], lifetime constraints []",
+            "substitution [?0 := Vec<Slice<Foo>>], lifetime constraints []"
         }
 
         goal {
@@ -146,8 +147,8 @@ fn only_draw_so_many_blow_up() {
             impl<T> Sized for Vec<T> where T: Sized { }
             impl<T> Foo for Vec<T> where T: Sized { }
 
-            struct i32 { }
-            impl Sized for i32 { }
+            struct Alice { }
+            impl Sized for Alice { }
 
             struct Slice<T> { }
             impl<T> Sized for Slice<T> where T: Sized { }
@@ -170,7 +171,7 @@ fn subgoal_cycle_uninhabited() {
             trait Foo { }
             struct Box<T> { }
             struct Vec<T> { }
-            struct u32 { }
+            struct Alice { }
             impl<T> Foo for Box<T> where Box<Vec<T>>: Foo { }
         }
 
@@ -198,16 +199,16 @@ fn subgoal_cycle_uninhabited() {
         // However, if we come across a negative goal that exceeds our
         // size threshold, we have a problem.
         goal {
-            exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
+            exists<T> { T = Vec<Alice>, not { Vec<Vec<T>>: Foo } }
         } yields_first[SolverChoice::slg(2, None)] {
             "Floundered"
         }
 
         // Same query with larger threshold works fine, though.
         goal {
-            exists<T> { T = Vec<u32>, not { Vec<Vec<T>>: Foo } }
+            exists<T> { T = Vec<Alice>, not { Vec<Vec<T>>: Foo } }
         } yields_all[SolverChoice::slg(4, None)] {
-            "substitution [?0 := Vec<u32>], lifetime constraints []"
+            "substitution [?0 := Vec<Alice>], lifetime constraints []"
         }
 
         // Here, due to the hypothesis, there does indeed exist a suitable T, `U`.
@@ -227,16 +228,16 @@ fn subgoal_cycle_inhabited() {
             trait Foo { }
             struct Box<T> { }
             struct Vec<T> { }
-            struct u32 { }
+            struct Alice { }
             impl<T> Foo for Box<T> where Box<Vec<T>>: Foo { }
-            impl Foo for u32 { }
+            impl Foo for Alice { }
         }
 
         // Exceeds size threshold -> flounder
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(3, None)] {
-            "substitution [?0 := u32], lifetime constraints []",
+            "substitution [?0 := Alice], lifetime constraints []",
             "Floundered"
         }
     }
@@ -248,14 +249,17 @@ fn basic_region_constraint_from_positive_impl() {
         program {
             trait Foo { }
             struct Ref<'a, 'b, T> { }
-            struct u32 { }
+            struct Bar { }
             impl<'x, T> Foo for Ref<'x, 'x, T> { }
         }
 
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
         } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_1 == '!1_0 }]"
+            "substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }\
+            ]"
         }
     }
 }

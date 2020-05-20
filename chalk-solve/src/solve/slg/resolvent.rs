@@ -314,7 +314,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         &mut self,
         interner: &I,
         answer_var: BoundVar,
-        pending: ParameterKind<&Ty<I>, &Lifetime<I>>,
+        pending: GenericArgData<I>,
     ) -> Fallible<bool> {
         let answer_index = match answer_var.index_if_bound_at(self.outer_binder) {
             Some(index) => index,
@@ -341,7 +341,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
                 interner,
                 &self.environment,
                 answer_param,
-                &Parameter::new(interner, pending_shifted),
+                &GenericArg::new(interner, pending_shifted),
             )?,
             self.ex_clause,
         );
@@ -395,7 +395,11 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
         if let TyData::BoundVar(answer_depth) = answer.data(interner) {
-            if self.unify_free_answer_var(interner, *answer_depth, ParameterKind::Ty(pending))? {
+            if self.unify_free_answer_var(
+                interner,
+                *answer_depth,
+                GenericArgData::Ty(pending.clone()),
+            )? {
                 return Ok(());
             }
         }
@@ -451,7 +455,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             if self.unify_free_answer_var(
                 interner,
                 *answer_depth,
-                ParameterKind::Lifetime(pending),
+                GenericArgData::Lifetime(pending.clone()),
             )? {
                 return Ok(());
             }

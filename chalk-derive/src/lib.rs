@@ -1,7 +1,8 @@
 extern crate proc_macro;
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
+use quote::ToTokens;
 use syn::{parse_quote, DeriveInput, GenericParam, Ident, TypeParamBound};
 
 use synstructure::decl_derive;
@@ -120,6 +121,7 @@ decl_derive!([HasInterner, attributes(has_interner)] => derive_has_interner);
 decl_derive!([Visit, attributes(has_interner)] => derive_visit);
 decl_derive!([SuperVisit, attributes(has_interner)] => derive_super_visit);
 decl_derive!([Fold, attributes(has_interner)] => derive_fold);
+decl_derive!([Zip, attributes(has_interner)] => derive_zip);
 
 fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
     let (interner, _) = find_interner(&mut s);
@@ -190,6 +192,66 @@ fn derive_any_visit(
                 }
                 return result;
             }
+        },
+    )
+}
+
+fn each_variant_pair<F, R>(
+    a: &mut synstructure::Structure,
+    b: &mut synstructure::Structure,
+    mut f: F,
+) -> TokenStream
+where
+    F: FnMut(&synstructure::VariantInfo<'_>, &synstructure::VariantInfo<'_>) -> R,
+    R: ToTokens,
+{
+    let mut t = TokenStream::new();
+    for (v_a, v_b) in a.variants_mut().iter_mut().zip(b.variants_mut().iter_mut()) {
+        v_a.binding_name(|_, i| Ident::new(&format!("a_{}", i), Span::call_site()));
+        v_b.binding_name(|_, i| Ident::new(&format!("b_{}", i), Span::call_site()));
+
+        let pat_a = v_a.pat();
+        let pat_b = v_b.pat();
+        let body = f(v_a, v_b);
+
+        quote!((#pat_a, #pat_b)  => {#body}).to_tokens(&mut t);
+    }
+    t
+}
+
+fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
+    let (interner, _) = find_interner(&mut s);
+
+    let mut a = s.clone();
+    let mut b = s.clone();
+
+    let mut body = each_variant_pair(&mut a, &mut b, |v_a, v_b| {
+        let mut t = TokenStream::new();
+        for (b_a, b_b) in v_a.bindings().iter().zip(v_b.bindings().iter()) {
+            quote!(chalk_ir::zip::Zip::zip_with(zipper, #b_a, #b_b)?;).to_tokens(&mut t);
+        }
+        quote!(Ok(())).to_tokens(&mut t);
+        t
+    });
+
+    // when the two variants are different
+    quote!((_, _)  => Err(::chalk_engine::fallible::NoSolution)).to_tokens(&mut body);
+
+    s.add_bounds(synstructure::AddBounds::None);
+    s.bound_impl(
+        quote!(::chalk_ir::zip::Zip<#interner>),
+        quote! {
+
+            fn zip_with<'i, Z: ::chalk_ir::zip::Zipper<'i, #interner>>(
+                zipper: &mut Z,
+                 a: &Self,
+                 b: &Self,
+            ) -> ::chalk_engine::fallible::Fallible<()>
+            where
+                #interner: 'i,
+                {
+                    match (a, b) { #body }
+                }
         },
     )
 }

@@ -95,13 +95,6 @@ This is true for all `A, B`
 * When all subgoals have been tested, and there are remaining delayed co-inductive subgoals, this is propogated up, marking the current `Strand` as co-inductive
 * When the co-inductive `Strand`s reach the root table, we only then pursue an answer
 
-### Failing tests
-
-* Tests were added for the tricky cases above:
-    * [First](https://github.com/rust-lang/chalk/pull/272/commits/7be2d42c6ea36dd4416774d6872c43e3988f05bd#diff-721709466568566f24fc2e8634c40dcbR140)
-    * [Second](https://github.com/rust-lang/chalk/pull/272/commits/7be2d42c6ea36dd4416774d6872c43e3988f05bd#diff-721709466568566f24fc2e8634c40dcbR171)
-* Both *are* provable to have no solutions, but are returned as ambiguous
-
 ## Niko's proposed solution
 
 ### High-level idea
