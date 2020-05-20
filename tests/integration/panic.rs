@@ -1,31 +1,7 @@
 use chalk_ir::interner::{ChalkIr, RawId};
-use chalk_ir::ApplicationTy;
-use chalk_ir::AssocTypeId;
-use chalk_ir::Binders;
-use chalk_ir::ImplId;
-use chalk_ir::OpaqueTyId;
-use chalk_ir::Parameter;
-use chalk_ir::ParameterKinds;
-use chalk_ir::ProgramClause;
-use chalk_ir::StructId;
-use chalk_ir::Substitution;
-use chalk_ir::TraitId;
-use chalk_ir::TraitRef;
-use chalk_ir::Ty;
-use chalk_ir::TypeName;
-use chalk_rust_ir::AssociatedTyDatum;
-use chalk_rust_ir::AssociatedTyValue;
-use chalk_rust_ir::AssociatedTyValueId;
-use chalk_rust_ir::ImplDatum;
-use chalk_rust_ir::ImplDatumBound;
-use chalk_rust_ir::ImplType;
-use chalk_rust_ir::OpaqueTyDatum;
-use chalk_rust_ir::Polarity;
-use chalk_rust_ir::StructDatum;
-use chalk_rust_ir::TraitDatum;
-use chalk_rust_ir::WellKnownTrait;
-use chalk_solve::RustIrDatabase;
-use chalk_solve::SolverChoice;
+use chalk_ir::*;
+use chalk_rust_ir::*;
+use chalk_solve::{RustIrDatabase, SolverChoice};
 use std::sync::Arc;
 
 #[derive(Debug, Default)]
