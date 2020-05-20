@@ -1,4 +1,4 @@
-use chalk_ir::interner::{ChalkIr, RawId};
+use chalk_integration::interner::{ChalkIr, RawId};
 use chalk_ir::*;
 use chalk_rust_ir::*;
 use chalk_solve::{RustIrDatabase, SolverChoice};
@@ -27,13 +27,13 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         assert_eq!(id.0.index, 0);
         Arc::new(chalk_rust_ir::TraitDatum {
             id,
-            binders: chalk_ir::Binders::new(
-                chalk_ir::ParameterKinds::new(&ChalkIr),
-                chalk_rust_ir::TraitDatumBound {
+            binders: Binders::new(
+                VariableKinds::new(&ChalkIr),
+                TraitDatumBound {
                     where_clauses: vec![],
                 },
             ),
-            flags: chalk_rust_ir::TraitFlags {
+            flags: TraitFlags {
                 auto: false,
                 marker: false,
                 upstream: false,
@@ -52,13 +52,13 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         let substitution = Ty::new(
             &ChalkIr,
             ApplicationTy {
-                name: TypeName::Struct(StructId(RawId { index: 1 })),
+                name: TypeName::Adt(AdtId(RawId { index: 1 })),
                 substitution: Substitution::empty(&ChalkIr),
             },
         );
 
         let binders = Binders::new(
-            ParameterKinds::new(&ChalkIr),
+            VariableKinds::new(&ChalkIr),
             ImplDatumBound {
                 trait_ref: TraitRef {
                     trait_id: TraitId(RawId { index: 0 }),
@@ -87,18 +87,18 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
-    fn struct_datum(&self, id: StructId<ChalkIr>) -> Arc<StructDatum<ChalkIr>> {
+    fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         unimplemented!()
     }
 
-    fn as_struct_id(&self, type_name: &TypeName<ChalkIr>) -> Option<StructId<ChalkIr>> {
+    fn fn_def_datum(&self, fn_def_id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
         unimplemented!()
     }
 
     fn impls_for_trait(
         &self,
         trait_id: TraitId<ChalkIr>,
-        parameters: &[Parameter<ChalkIr>],
+        parameters: &[GenericArg<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
         assert_eq!(trait_id.0.index, 0);
         vec![ImplId(RawId { index: 1 })]
@@ -111,7 +111,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn impl_provided_for(
         &self,
         auto_trait_id: TraitId<ChalkIr>,
-        struct_id: StructId<ChalkIr>,
+        struct_id: AdtId<ChalkIr>,
     ) -> bool {
         unimplemented!()
     }
@@ -120,14 +120,26 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
+    fn program_clauses_for_env(
+        &self,
+        environment: &Environment<ChalkIr>,
+    ) -> ProgramClauses<ChalkIr> {
+        ProgramClauses::new(&ChalkIr)
+    }
+
     fn interner(&self) -> &ChalkIr {
         &ChalkIr
+    }
+
+    fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
+        unimplemented!()
     }
 }
 
 #[test]
 fn unwind_safety() {
     use self::MockDatabase;
+    use chalk_integration::interner::{self, ChalkIr};
     use chalk_ir::*;
     use std::panic;
 
@@ -155,14 +167,13 @@ fn unwind_safety() {
                     trait_id: TraitId(interner::RawId { index: 0 }),
                     substitution: Substitution::from1(
                         &ChalkIr,
-                        ParameterKind::Ty(
-                            TyData::Apply(ApplicationTy {
-                                name: TypeName::Struct(StructId(interner::RawId { index: 1 })),
+                        Ty::new(
+                            &ChalkIr,
+                            ApplicationTy {
+                                name: TypeName::Adt(AdtId(interner::RawId { index: 1 })),
                                 substitution: Substitution::empty(&ChalkIr),
-                            })
-                            .intern(&ChalkIr),
-                        )
-                        .intern(&ChalkIr),
+                            },
+                        ),
                     ),
                 })))
                 .intern(&ChalkIr),
