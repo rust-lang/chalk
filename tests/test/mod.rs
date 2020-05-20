@@ -308,6 +308,7 @@ mod impls;
 mod misc;
 mod negation;
 mod object_safe;
+mod opaque_types;
 mod projection;
 mod refs;
 mod scalars;
