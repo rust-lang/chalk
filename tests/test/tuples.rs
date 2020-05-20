@@ -82,6 +82,30 @@ fn tuples_are_sized() {
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
+
+        goal {
+            exists<T> { (T, u8): Sized }
+        } yields {
+            "Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"
+        }
+
+        goal {
+            forall<T> { (T, u8): Sized }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<T> { (u8, T): Sized }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> { if (T: Sized) { (u8, T): Sized } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
     }
 }
 
@@ -89,6 +113,10 @@ fn tuples_are_sized() {
 fn tuples_are_copy() {
     test! {
         program {
+            // FIXME: If we don't declare Copy non-enumerable, `exists<T> { T:
+            // Copy }` gives wrong results, because it doesn't consider the
+            // built-in impls.
+            #[non_enumerable]
             #[lang(copy)]
             trait Copy { }
 
@@ -132,6 +160,18 @@ fn tuples_are_copy() {
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
+
+        goal {
+            exists<T> { (T, u8): Copy }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            forall<T> { if (T: Copy) { (T, u8): Copy } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
     }
 }
 
@@ -139,6 +179,7 @@ fn tuples_are_copy() {
 fn tuples_are_clone() {
     test! {
         program {
+            #[non_enumerable] // see above
             #[lang(clone)]
             trait Clone { }
 
@@ -179,6 +220,18 @@ fn tuples_are_clone() {
 
         goal {
             (u8, u8): Clone
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            exists<T> { (T, u8): Clone }
+        } yields {
+            "Ambiguous"
+        }
+
+        goal {
+            forall<T> { if (T: Clone) { (T, u8): Clone } }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }

@@ -1,6 +1,6 @@
-use super::builder::ClauseBuilder;
+use super::{builder::ClauseBuilder, generalize};
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{Substitution, Ty, TyData};
+use chalk_ir::{Substitution, Ty};
 
 mod clone;
 mod copy;
@@ -13,22 +13,35 @@ pub fn add_builtin_program_clauses<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     well_known: WellKnownTrait,
     trait_ref: &TraitRef<I>,
-    ty: &TyData<I>,
 ) {
-    if let Some(force_impl) = db.force_impl_for(well_known, ty) {
-        if force_impl {
-            builder.push_fact(trait_ref.clone());
-        }
-        return;
-    }
+    // If `trait_ref` contains bound vars, we want to universally quantify them.
+    // `Generalize` collects them for us.
+    let generalized = generalize::Generalize::apply(db.interner(), trait_ref);
 
-    match well_known {
-        WellKnownTrait::SizedTrait => sized::add_sized_program_clauses(db, builder, trait_ref, ty),
-        WellKnownTrait::CopyTrait => copy::add_copy_program_clauses(db, builder, trait_ref, ty),
-        WellKnownTrait::CloneTrait => clone::add_clone_program_clauses(db, builder, trait_ref, ty),
-        // Drop impls are provided explicitly
-        WellKnownTrait::DropTrait => (),
-    }
+    builder.push_binders(&generalized, |builder, trait_ref| {
+        let self_ty = trait_ref.self_type_parameter(db.interner());
+        let ty = self_ty.data(db.interner());
+        if let Some(force_impl) = db.force_impl_for(well_known, ty) {
+            if force_impl {
+                builder.push_fact(trait_ref.clone());
+            }
+            return;
+        }
+
+        match well_known {
+            WellKnownTrait::SizedTrait => {
+                sized::add_sized_program_clauses(db, builder, &trait_ref, ty)
+            }
+            WellKnownTrait::CopyTrait => {
+                copy::add_copy_program_clauses(db, builder, &trait_ref, ty)
+            }
+            WellKnownTrait::CloneTrait => {
+                clone::add_clone_program_clauses(db, builder, &trait_ref, ty)
+            }
+            // Drop impls are provided explicitly
+            WellKnownTrait::DropTrait => (),
+        }
+    });
 }
 
 /// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form
