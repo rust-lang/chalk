@@ -235,9 +235,22 @@ fn program_clauses_that_could_match<I: Interner>(
             }
         }
         DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => match &alias_eq.alias {
-            AliasTy::Projection(proj) => db
-                .associated_ty_data(proj.associated_ty_id)
-                .to_program_clauses(builder),
+            AliasTy::Projection(proj) => {
+                let trait_self_ty = db
+                    .trait_ref_from_projection(proj)
+                    .self_type_parameter(interner);
+
+                if let TyData::Apply(ApplicationTy {
+                    name: TypeName::OpaqueType(opaque_ty_id),
+                    ..
+                }) = trait_self_ty.data(interner)
+                {
+                    db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder)
+                }
+
+                db.associated_ty_data(proj.associated_ty_id)
+                    .to_program_clauses(builder)
+            }
             AliasTy::Opaque(opaque_ty) => db
                 .opaque_ty_data(opaque_ty.opaque_ty_id)
                 .to_program_clauses(builder),
