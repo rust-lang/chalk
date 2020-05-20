@@ -29,10 +29,7 @@ impl<C: Context> Tables<C> {
         }
     }
 
-    pub(super) fn insert(
-        &mut self,
-        table: Table<C>,
-    ) -> TableIndex {
+    pub(super) fn insert(&mut self, table: Table<C>) -> TableIndex {
         let goal = table.table_goal.clone();
         let index = self.next_index();
         self.tables.push(table);

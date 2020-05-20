@@ -238,11 +238,23 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, this corresponds to the *Program
     /// Clause Resolution* step being applied eagerly, as many times
     /// as possible.
-    fn push_initial_strands(context: &impl ContextOps<C>, table_idx: TableIndex, table: &mut Table<C>) {
+    fn push_initial_strands(
+        context: &impl ContextOps<C>,
+        table_idx: TableIndex,
+        table: &mut Table<C>,
+    ) {
         // Instantiate the table goal with fresh inference variables.
         let table_goal = table.table_goal.clone();
         let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
-        Self::push_initial_strands_instantiated(context, table_idx, table, infer, subst, environment, goal);
+        Self::push_initial_strands_instantiated(
+            context,
+            table_idx,
+            table,
+            infer,
+            subst,
+            environment,
+            goal,
+        );
     }
 
     fn push_initial_strands_instantiated(
