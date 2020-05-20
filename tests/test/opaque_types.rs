@@ -45,3 +45,56 @@ fn opaque_reveal() {
         }
     }
 }
+
+#[test]
+fn opaque_generics_simple() {
+    test! {
+        program {
+            trait Iterator { type Item; }
+
+            struct Vec<T> { }
+            struct Bar { }
+            impl<T> Iterator for Vec<T> {
+                type Item = u32;
+            }
+
+            opaque type Foo<X>: Iterator = Vec<X>;
+        }
+
+        goal {
+            Foo<Bar>: Iterator
+        } yields {
+            "Unique; substitution []"
+        }
+
+    }
+}
+
+#[test]
+fn opaque_generics() {
+    test! {
+        program {
+            trait Iterator { type Item; }
+
+            struct Vec<T> { }
+            struct Bar { }
+
+            opaque type Foo<X>: Iterator<Item = X> = Vec<X>;
+        }
+
+        goal {
+            Foo<Bar>: Iterator<Item = Bar>
+        } yields {
+            "Unique; substitution []"
+        }
+
+        goal {
+            forall<T> {
+                Foo<T>: Iterator<Item = T>
+            }
+        } yields {
+            "Unique; substitution []"
+        }
+
+    }
+}
