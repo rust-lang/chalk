@@ -41,8 +41,8 @@ and impls, into *logical predicates*. This process is called "lowering", and you
 can learn more about in the [*Lowering to Logic*][lowering-to-logic] and
 [*Lowering Rules*][lowering-rules]) sections.
 
-[lowering-rules]: /clauses/lowering_rules.html
-[lowering-to-logic]: /clauses.html
+[lowering-rules]: ./clauses/lowering_rules.html
+[lowering-to-logic]: ./clauses.html
 
 After lowering to logical predicates, Chalk then deploys a *logical solver* to
 find the answer to the original query; this solver is similar to a Prolog
