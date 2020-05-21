@@ -178,14 +178,14 @@ Likewise, lowering tests use the [`lowering_success!` and
 ## More Resources
 
 * [Chalk Source Code](https://github.com/rust-lang/chalk)
-* [Chalk Glossary](/glossary.md)
+* [Chalk Glossary](../glossary.md)
 
-[goals-and-clauses]: /clauses/goals_and_clauses.html
+[goals-and-clauses]: ../clauses/goals_and_clauses.html
 [HIR]: https://rustc-dev-guide.rust-lang.org/hir.html
-[lowering-forall]: /clauses.html#type-checking-generic-functions-beyond-horn-clauses
-[lowering-rules]: /clauses/lowering_rules.html
-[slg]: /engine/slg.html
-[wf-checking]: /clauses/wf.html
+[lowering-forall]: ../clauses.html#type-checking-generic-functions-beyond-horn-clauses
+[lowering-rules]: ../clauses/lowering_rules.html
+[slg]: ../engine/slg.html
+[wf-checking]: ../clauses/wf.html
 
 [ast]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
 [chalk]: https://github.com/rust-lang/chalk
