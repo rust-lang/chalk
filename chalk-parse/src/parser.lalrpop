@@ -239,7 +239,7 @@ TyWithoutId: Ty = {
     "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
     "&" <l: Lifetime> <t:Ty> => Ty::Ref{ mutability: Mutability::Not, lifetime: l, ty: Box::new(t) },
     "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) }, 
-    "[" <t:Ty> ";" <len:GenericArg> "]" => Ty::Array { ty: Box::new(t), len: Box::new(len) },
+    "[" <t:Ty> ";" <len:Const> "]" => Ty::Array { ty: Box::new(t), len },
 };
 
 ScalarType: ScalarType = {
@@ -281,11 +281,20 @@ Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
 };
 
+ConstWithoutId: Const = {
+    ConstValue => Const::Value(<>),
+};
+
+Const : Const = {
+    Id => Const::Id(<>),
+    ConstWithoutId,
+};
+
 GenericArg: GenericArg = {
     TyWithoutId => GenericArg::Ty(<>),
     Lifetime => GenericArg::Lifetime(<>),
     Id => GenericArg::Id(<>),
-    ConstValue => GenericArg::ConstValue(<>),
+    ConstWithoutId => GenericArg::Const(<>),
 };
 
 ProjectionTy: ProjectionTy = {

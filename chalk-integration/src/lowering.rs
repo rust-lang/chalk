@@ -1460,6 +1460,36 @@ impl LowerTy for Ty {
     }
 }
 
+trait LowerConst {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>>;
+}
+
+impl LowerConst for Const {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>> {
+        let interner = env.interner();
+        match self {
+            Const::Id(name) => {
+                let parameter = env.lookup_generic_arg(name)?;
+                parameter
+                    .constant(interner)
+                    .ok_or_else(|| RustIrError::IncorrectParameterKind {
+                        identifier: name.clone(),
+                        expected: Kind::Const,
+                        actual: parameter.kind(),
+                    })
+                    .map(|c| c.clone())
+            }
+            Const::Value(value) => Ok(chalk_ir::ConstData {
+                ty: get_type_of_u32(),
+                value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst {
+                    interned: value.clone(),
+                }),
+            }
+            .intern(interner)),
+        }
+    }
+}
+
 trait LowerGenericArg {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::GenericArg<ChalkIr>>;
 }
@@ -1471,14 +1501,7 @@ impl LowerGenericArg for GenericArg {
             GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
             GenericArg::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
             GenericArg::Id(name) => env.lookup_generic_arg(&name),
-            GenericArg::ConstValue(value) => Ok(chalk_ir::ConstData {
-                ty: get_type_of_u32(),
-                value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst {
-                    interned: value.clone(),
-                }),
-            }
-            .intern(interner)
-            .cast(interner)),
+            GenericArg::Const(c) => Ok(c.lower(env)?.cast(interner)),
         }
     }
 }

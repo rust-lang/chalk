@@ -109,7 +109,13 @@ pub enum GenericArg {
     Ty(Ty),
     Lifetime(Lifetime),
     Id(Identifier),
-    ConstValue(u32),
+    Const(Const),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Const {
+    Id(Identifier),
+    Value(u32),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -214,7 +220,7 @@ pub enum Ty {
     },
     Array {
         ty: Box<Ty>,
-        len: Box<GenericArg>,
+        len: Const,
     },
     Raw {
         mutability: Mutability,
