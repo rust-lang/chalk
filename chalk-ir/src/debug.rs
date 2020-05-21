@@ -168,6 +168,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Raw(mutability) => write!(fmt, "{:?}", mutability),
             TypeName::Ref(mutability) => write!(fmt, "{:?}", mutability),
             TypeName::Never => write!(fmt, "Never"),
+            TypeName::Array => write!(fmt, "{{array}}"),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }

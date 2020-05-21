@@ -421,6 +421,7 @@ fn match_type_name<I: Interner>(
         | TypeName::Slice
         | TypeName::Raw(_)
         | TypeName::Ref(_)
+        | TypeName::Array
         | TypeName::Never => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
