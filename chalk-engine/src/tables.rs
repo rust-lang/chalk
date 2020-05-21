@@ -29,13 +29,10 @@ impl<C: Context> Tables<C> {
         }
     }
 
-    pub(super) fn insert(
-        &mut self,
-        goal: C::UCanonicalGoalInEnvironment,
-        coinductive_goal: bool,
-    ) -> TableIndex {
+    pub(super) fn insert(&mut self, table: Table<C>) -> TableIndex {
+        let goal = table.table_goal.clone();
         let index = self.next_index();
-        self.tables.push(Table::new(goal.clone(), coinductive_goal));
+        self.tables.push(table);
         self.table_indices.insert(goal, index);
         index
     }

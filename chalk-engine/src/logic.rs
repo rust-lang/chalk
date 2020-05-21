@@ -6,7 +6,7 @@ use crate::forest::Forest;
 use crate::hh::HhGoal;
 use crate::stack::{Stack, StackIndex};
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
-use crate::table::AnswerIndex;
+use crate::table::{AnswerIndex, Table};
 use crate::{
     Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
@@ -221,10 +221,8 @@ impl<C: Context> Forest<C> {
             self.tables.next_index(),
             goal
         );
-        let coinductive_goal = context.is_coinductive(&goal);
-        let table = self.tables.insert(goal, coinductive_goal);
-        self.push_initial_strands(context, table);
-        table
+        let table = Self::build_table(context, self.tables.next_index(), goal);
+        self.tables.insert(table)
     }
 
     /// When a table is first created, this function is invoked to
@@ -238,23 +236,13 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, this corresponds to the *Program
     /// Clause Resolution* step being applied eagerly, as many times
     /// as possible.
-    fn push_initial_strands(&mut self, context: &impl ContextOps<C>, table: TableIndex) {
-        // Instantiate the table goal with fresh inference variables.
-        let table_goal = self.tables[table].table_goal.clone();
-        let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
-        self.push_initial_strands_instantiated(context, table, infer, subst, environment, goal);
-    }
-
-    fn push_initial_strands_instantiated(
-        &mut self,
+    fn build_table(
         context: &impl ContextOps<C>,
-        table: TableIndex,
-        mut infer: C::InferenceTable,
-        subst: C::Substitution,
-        environment: C::Environment,
-        goal: C::Goal,
-    ) {
-        let table_ref = &mut self.tables[table];
+        table_idx: TableIndex,
+        goal: C::UCanonicalGoalInEnvironment,
+    ) -> Table<C> {
+        let mut table = Table::new(goal.clone(), context.is_coinductive(&goal));
+        let (mut infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&goal);
         match context.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
@@ -277,13 +265,13 @@ impl<C: Context> Forest<C> {
                                     last_pursued_time: TimeStamp::default(),
                                 };
                                 let canonical_strand = Self::canonicalize_strand(context, strand);
-                                table_ref.enqueue_strand(canonical_strand);
+                                table.enqueue_strand(canonical_strand);
                             }
                         }
                     }
                     Err(Floundered) => {
-                        debug!("Marking table {:?} as floundered!", table);
-                        table_ref.mark_floundered();
+                        debug!("Marking table {:?} as floundered!", table_idx);
+                        table.mark_floundered();
                     }
                 }
             }
@@ -311,10 +299,12 @@ impl<C: Context> Forest<C> {
                         last_pursued_time: TimeStamp::default(),
                     };
                     let canonical_strand = Self::canonicalize_strand(context, strand);
-                    table_ref.enqueue_strand(canonical_strand);
+                    table.enqueue_strand(canonical_strand);
                 }
             }
         }
+
+        table
     }
 
     /// Given a selected positive subgoal, applies the subgoal
