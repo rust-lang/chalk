@@ -31,6 +31,7 @@ struct MockDatabase {
 /// struct Foo { }
 /// trait Bar { }
 /// impl Bar for Foo { }
+// FIXME: Check if items returned from functions of this struct can be simplified
 #[allow(unused_variables)]
 impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {

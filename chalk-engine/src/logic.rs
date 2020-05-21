@@ -241,30 +241,8 @@ impl<C: Context> Forest<C> {
         table_idx: TableIndex,
         goal: C::UCanonicalGoalInEnvironment,
     ) -> Table<C> {
-        // Instantiate the table goal with fresh inference variables.
-        let table = Table::<C>::new(goal.clone(), context.is_coinductive(&goal));
-        let table_goal = table.table_goal.clone();
-        let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
-        Self::push_initial_strands_instantiated(
-            context,
-            table_idx,
-            table,
-            infer,
-            subst,
-            environment,
-            goal,
-        )
-    }
-
-    fn push_initial_strands_instantiated(
-        context: &impl ContextOps<C>,
-        table_idx: TableIndex,
-        mut table: Table<C>,
-        mut infer: C::InferenceTable,
-        subst: C::Substitution,
-        environment: C::Environment,
-        goal: C::Goal,
-    ) -> Table<C> {
+        let mut table = Table::new(goal.clone(), context.is_coinductive(&goal));
+        let (mut infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&goal);
         match context.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
