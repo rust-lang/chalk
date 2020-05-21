@@ -471,10 +471,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             // for sure what `T` must be (it could be either `Foo<Bar>` or
             // `Foo<Baz>`, but we *can* say for sure that it must be of the
             // form `Foo<?0>`.
-            let subst = self
-                .infer
-                .canonicalize(self.solver.program.interner(), &subst);
-            Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
+            Ok(Solution::Ambig(Guidance::Definite(
+                canonical_subst.quantified,
+            )))
         }
     }
 
