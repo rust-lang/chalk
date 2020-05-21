@@ -175,6 +175,9 @@ pub enum TypeName<I: Interner> {
     /// the string primitive type
     Str,
 
+    /// the never type `!`
+    Never,
+
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
     Error,

@@ -404,20 +404,19 @@ fn match_type_name<I: Interner>(
             .db
             .associated_ty_data(type_id)
             .to_program_clauses(builder),
-        TypeName::Scalar(_) => {
-            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
-        }
-        TypeName::Str => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
-        TypeName::Tuple(_) => {
-            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
-        }
-        TypeName::Slice => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
-        TypeName::Raw(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
-        TypeName::Ref(_) => builder.push_fact(WellFormed::Ty(application.clone().intern(interner))),
         TypeName::FnDef(fn_def_id) => builder
             .db
             .fn_def_datum(fn_def_id)
             .to_program_clauses(builder),
+        TypeName::Tuple(_)
+        | TypeName::Scalar(_)
+        | TypeName::Str
+        | TypeName::Slice
+        | TypeName::Raw(_)
+        | TypeName::Ref(_)
+        | TypeName::Never => {
+            builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
+        }
     }
 }
 
