@@ -4,26 +4,53 @@ use chalk_rust_ir::*;
 use chalk_solve::{RustIrDatabase, SolverChoice};
 use std::sync::Arc;
 
-#[derive(Debug, Default)]
-struct MockDatabase {
-    panic: bool,
+#[derive(Debug)]
+enum PanickingMethod {
+    NoPanic,
+    CustomClauses,
+    TraitDatum,
+    ImplDatum,
+    ImplsForTrait,
+    ProgramClausesForEnv,
+    Interner,
 }
 
+impl Default for PanickingMethod {
+    fn default() -> Self {
+        Self::NoPanic
+    }
+}
+
+#[derive(Debug, Default)]
+struct MockDatabase {
+    panicking_method: PanickingMethod,
+}
+
+/// This DB is representint lowered program:
+///
+/// struct Foo { }
+/// trait Bar { }
+/// impl Bar for Foo { }
 #[allow(unused_variables)]
 impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
-        if self.panic {
-            panic!("test panic");
-        } else {
-            vec![]
+        if let PanickingMethod::CustomClauses = self.panicking_method {
+            panic!("custom_clauses panic");
         }
+
+        vec![]
     }
 
     fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         unimplemented!()
     }
 
+    // `trait Bar`, id `0`
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
+        if let PanickingMethod::TraitDatum = self.panicking_method {
+            panic!("trait_datum panic");
+        }
+
         assert_eq!(id.0.index, 0);
         Arc::new(chalk_rust_ir::TraitDatum {
             id,
@@ -46,7 +73,12 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         })
     }
 
+    // `impl Bar for Foo`, id `1`
     fn impl_datum(&self, id: ImplId<ChalkIr>) -> Arc<ImplDatum<ChalkIr>> {
+        if let PanickingMethod::ImplDatum = self.panicking_method {
+            panic!("impl_datum panic");
+        }
+
         assert_eq!(id.0.index, 1);
 
         let substitution = Ty::new(
@@ -95,11 +127,16 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
+    // All `Bar` impls
     fn impls_for_trait(
         &self,
         trait_id: TraitId<ChalkIr>,
         parameters: &[GenericArg<ChalkIr>],
     ) -> Vec<ImplId<ChalkIr>> {
+        if let PanickingMethod::ImplsForTrait = self.panicking_method {
+            panic!("impls_for_trait panic");
+        }
+
         assert_eq!(trait_id.0.index, 0);
         vec![ImplId(RawId { index: 1 })]
     }
@@ -124,10 +161,18 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         &self,
         environment: &Environment<ChalkIr>,
     ) -> ProgramClauses<ChalkIr> {
+        if let PanickingMethod::ProgramClausesForEnv = self.panicking_method {
+            panic!("program_clauses_for_env panic")
+        }
+
         ProgramClauses::new(&ChalkIr)
     }
 
     fn interner(&self) -> &ChalkIr {
+        if let PanickingMethod::Interner = self.panicking_method {
+            panic!("interner panic")
+        }
+
         &ChalkIr
     }
 
@@ -136,29 +181,14 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     }
 }
 
-#[test]
-fn unwind_safety() {
-    use self::MockDatabase;
-    use chalk_integration::interner::{self, ChalkIr};
+fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
+    use chalk_integration::interner;
     use chalk_ir::*;
-    use std::panic;
 
-    // lower program
-    /*
-    let mut db = lower_program_with_db! {
-        program {
-            struct Foo { }
-            trait Bar { }
-            impl Bar for Foo { }
-        }
-        database MockDatabase
-    };
-
-    let program = db.chalk_db.checked_program().unwrap();
-    */
-    let mut db = MockDatabase { panic: false };
-
-    let peeled_goal: UCanonical<InEnvironment<Goal<ChalkIr>>> = UCanonical {
+    // Goal:
+    //
+    // Foo: Bar
+    UCanonical {
         canonical: Canonical {
             binders: CanonicalVarKinds::new(&ChalkIr),
             value: InEnvironment {
@@ -180,17 +210,131 @@ fn unwind_safety() {
             },
         },
         universes: 1,
-    };
+    }
+}
 
+#[test]
+fn custom_clauses_panics() {
+    use std::panic;
+
+    let peeled_goal = prepare_goal();
     let mut solver = SolverChoice::slg_default().into_solver();
+
     // solve goal but this will panic
-    db.panic = true;
+    let mut db = MockDatabase {
+        panicking_method: PanickingMethod::CustomClauses,
+    };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
     }));
     assert!(result.is_err());
 
     // solve again but without panicking this time
-    db.panic = false;
+    db.panicking_method = PanickingMethod::NoPanic;
+    assert!(solver.solve(&db, &peeled_goal).is_some());
+}
+
+#[test]
+fn trait_datum_panics() {
+    use std::panic;
+
+    let peeled_goal = prepare_goal();
+    let mut solver = SolverChoice::slg_default().into_solver();
+
+    // solve goal but this will panic
+    let mut db = MockDatabase {
+        panicking_method: PanickingMethod::TraitDatum,
+    };
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        solver.solve(&db, &peeled_goal);
+    }));
+    assert!(result.is_err());
+
+    // solve again but without panicking this time
+    db.panicking_method = PanickingMethod::NoPanic;
+    assert!(solver.solve(&db, &peeled_goal).is_some());
+}
+
+#[test]
+fn impl_datum_panics() {
+    use std::panic;
+
+    let peeled_goal = prepare_goal();
+    let mut solver = SolverChoice::slg_default().into_solver();
+
+    // solve goal but this will panic
+    let mut db = MockDatabase {
+        panicking_method: PanickingMethod::ImplDatum,
+    };
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        solver.solve(&db, &peeled_goal);
+    }));
+    assert!(result.is_err());
+
+    // solve again but without panicking this time
+    db.panicking_method = PanickingMethod::NoPanic;
+    assert!(solver.solve(&db, &peeled_goal).is_some());
+}
+
+#[test]
+fn impls_for_trait() {
+    use std::panic;
+
+    let peeled_goal = prepare_goal();
+    let mut solver = SolverChoice::slg_default().into_solver();
+
+    // solve goal but this will panic
+    let mut db = MockDatabase {
+        panicking_method: PanickingMethod::ImplsForTrait,
+    };
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        solver.solve(&db, &peeled_goal);
+    }));
+    assert!(result.is_err());
+
+    // solve again but without panicking this time
+    db.panicking_method = PanickingMethod::NoPanic;
+    assert!(solver.solve(&db, &peeled_goal).is_some());
+}
+
+#[test]
+fn program_clauses_for_env() {
+    use std::panic;
+
+    let peeled_goal = prepare_goal();
+    let mut solver = SolverChoice::slg_default().into_solver();
+
+    // solve goal but this will panic
+    let mut db = MockDatabase {
+        panicking_method: PanickingMethod::ProgramClausesForEnv,
+    };
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        solver.solve(&db, &peeled_goal);
+    }));
+    assert!(result.is_err());
+
+    // solve again but without panicking this time
+    db.panicking_method = PanickingMethod::NoPanic;
+    assert!(solver.solve(&db, &peeled_goal).is_some());
+}
+
+#[test]
+fn interner() {
+    use std::panic;
+
+    let peeled_goal = prepare_goal();
+    let mut solver = SolverChoice::slg_default().into_solver();
+
+    // solve goal but this will panic
+    let mut db = MockDatabase {
+        panicking_method: PanickingMethod::Interner,
+    };
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        solver.solve(&db, &peeled_goal);
+    }));
+    assert!(result.is_err());
+
+    // solve again but without panicking this time
+    db.panicking_method = PanickingMethod::NoPanic;
     assert!(solver.solve(&db, &peeled_goal).is_some());
 }

@@ -221,9 +221,7 @@ impl<C: Context> Forest<C> {
             self.tables.next_index(),
             goal
         );
-        let coinductive_goal = context.is_coinductive(&goal);
-        let mut table = Table::new(goal.clone(), coinductive_goal);
-        Self::push_initial_strands(context, self.tables.next_index(), &mut table);
+        let table = Self::build_table(context, self.tables.next_index(), goal);
         self.tables.insert(table)
     }
 
@@ -238,12 +236,13 @@ impl<C: Context> Forest<C> {
     /// In terms of the NFTD paper, this corresponds to the *Program
     /// Clause Resolution* step being applied eagerly, as many times
     /// as possible.
-    fn push_initial_strands(
+    fn build_table(
         context: &impl ContextOps<C>,
         table_idx: TableIndex,
-        table: &mut Table<C>,
-    ) {
+        goal: C::UCanonicalGoalInEnvironment,
+    ) -> Table<C> {
         // Instantiate the table goal with fresh inference variables.
+        let table = Table::<C>::new(goal.clone(), context.is_coinductive(&goal));
         let table_goal = table.table_goal.clone();
         let (infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&table_goal);
         Self::push_initial_strands_instantiated(
@@ -254,18 +253,18 @@ impl<C: Context> Forest<C> {
             subst,
             environment,
             goal,
-        );
+        )
     }
 
     fn push_initial_strands_instantiated(
         context: &impl ContextOps<C>,
         table_idx: TableIndex,
-        table: &mut Table<C>,
+        mut table: Table<C>,
         mut infer: C::InferenceTable,
         subst: C::Substitution,
         environment: C::Environment,
         goal: C::Goal,
-    ) {
+    ) -> Table<C> {
         match context.into_hh_goal(goal) {
             HhGoal::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
@@ -326,6 +325,8 @@ impl<C: Context> Forest<C> {
                 }
             }
         }
+
+        table
     }
 
     /// Given a selected positive subgoal, applies the subgoal
