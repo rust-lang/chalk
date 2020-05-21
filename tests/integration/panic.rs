@@ -4,6 +4,8 @@ use chalk_rust_ir::*;
 use chalk_solve::{RustIrDatabase, SolverChoice};
 use std::sync::Arc;
 
+// FIXME: some of these are probably redundant, so we should figure out which panic in the same place in `chalk-engine`
+
 #[derive(Debug)]
 enum PanickingMethod {
     NoPanic,
@@ -26,12 +28,11 @@ struct MockDatabase {
     panicking_method: PanickingMethod,
 }
 
-/// This DB is representint lowered program:
+/// This DB represents the following lowered program:
 ///
 /// struct Foo { }
 /// trait Bar { }
 /// impl Bar for Foo { }
-// FIXME: Check if items returned from functions of this struct can be simplified
 #[allow(unused_variables)]
 impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
