@@ -1395,6 +1395,18 @@ impl LowerTy for Ty {
             })
             .intern(interner)),
 
+            Ty::Array { ty, len } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Array,
+                substitution: chalk_ir::Substitution::from(
+                    interner,
+                    &[
+                        ty.lower(env)?.cast(interner),
+                        len.lower(env)?.cast(interner),
+                    ],
+                ),
+            })
+            .intern(interner)),
+
             Ty::Slice { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Slice,
                 substitution: chalk_ir::Substitution::from_fallible(

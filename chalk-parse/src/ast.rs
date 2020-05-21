@@ -212,6 +212,10 @@ pub enum Ty {
     Slice {
         ty: Box<Ty>,
     },
+    Array {
+        ty: Box<Ty>,
+        len: Box<GenericArg>,
+    },
     Raw {
         mutability: Mutability,
         ty: Box<Ty>,

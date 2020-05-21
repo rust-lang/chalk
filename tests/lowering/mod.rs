@@ -584,3 +584,15 @@ fn fn_defs() {
         }
     }
 }
+
+#[test]
+fn arrays() {
+    lowering_success! {
+        program {
+            struct Baz { }
+            fn foo(bar: [Baz; 3]);
+
+            fn bar<const N>(baz: [Baz; N]);
+        }
+    }
+}

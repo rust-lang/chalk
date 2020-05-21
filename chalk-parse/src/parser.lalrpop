@@ -239,6 +239,7 @@ TyWithoutId: Ty = {
     "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
     "&" <l: Lifetime> <t:Ty> => Ty::Ref{ mutability: Mutability::Not, lifetime: l, ty: Box::new(t) },
     "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) }, 
+    "[" <t:Ty> ";" <len:GenericArg> "]" => Ty::Array { ty: Box::new(t), len: Box::new(len) },
 };
 
 ScalarType: ScalarType = {
