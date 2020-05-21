@@ -224,6 +224,7 @@ TyWithoutId: Ty = {
     },
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,
+    "!" => Ty::Never,
     "fn" "(" <t:Ty> ")" => Ty::ForAll {
         lifetime_names: vec![],
         ty: Box::new(t)

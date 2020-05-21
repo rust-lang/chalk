@@ -1427,6 +1427,12 @@ impl LowerTy for Ty {
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
+
+            Ty::Never => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Never,
+                substitution: chalk_ir::Substitution::empty(interner),
+            })
+            .intern(interner)),
         }
     }
 }
