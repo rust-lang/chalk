@@ -515,3 +515,43 @@ fn non_enumerable_traits_reorder() {
         }
     }
 }
+
+#[test]
+fn builtin_impl_enumeration() {
+    test! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(sized)]
+            trait Sized { }
+
+            #[lang(clone)]
+            trait Clone { }
+
+            impl Copy for u8 {}
+            impl Clone for u8 {}
+        }
+
+        goal {
+            exists<T> { T: Copy }
+        } yields {
+            // FIXME: wrong, e.g. &u8 is also Copy
+            "Unique; substitution [?0 := Uint(U8)]"
+        }
+
+        goal {
+            exists<T> { T: Clone }
+        } yields {
+            // FIXME: wrong, e.g. &u8 is also Clone
+            "Unique; substitution [?0 := Uint(U8)]"
+        }
+
+        goal {
+            exists<T> { T: Sized }
+        } yields {
+            // FIXME: wrong, most of the built-in types are Sized
+            "No possible solution"
+        }
+    }
+}
