@@ -1314,9 +1314,9 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
             return None;
         }
 
-        let table = self.stack.top().table;
         let table_goal = &self.forest.tables[table].table_goal;
 
+        //FIXME: Avoid double canonicalization
         let filtered_delayed_subgoals = delayed_subgoals
             .into_iter()
             .filter(|delayed_subgoal| {
