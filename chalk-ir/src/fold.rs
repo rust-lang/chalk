@@ -267,12 +267,13 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
+        kind: TyKind,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<TI>> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            Ok(var.to_ty(self.target_interner()))
+            Ok(var.to_ty(self.target_interner(), kind))
         }
     }
 
@@ -416,7 +417,7 @@ where
             }
             TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, outer_binder)?)
                 .intern(folder.target_interner())),
-            TyData::InferenceVar(var) => folder.fold_inference_ty(*var, outer_binder),
+            TyData::InferenceVar(var, kind) => folder.fold_inference_ty(*var, *kind, outer_binder),
             TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, outer_binder)?)
                 .intern(folder.target_interner())),
             TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, outer_binder)?),

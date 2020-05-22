@@ -70,7 +70,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
             // bounds story around `dyn Trait` types.
             TyData::Dyn(_) => (),
 
-            TyData::Function(_) | TyData::BoundVar(_) | TyData::InferenceVar(_) => (),
+            TyData::Function(_) | TyData::BoundVar(_) | TyData::InferenceVar(_, _) => (),
         }
     }
 

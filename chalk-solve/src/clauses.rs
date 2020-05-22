@@ -260,7 +260,7 @@ fn program_clauses_that_could_match<I: Interner>(
                         }
                         _ => {}
                     },
-                    TyData::InferenceVar(_) | TyData::BoundVar(_) => {
+                    TyData::InferenceVar(_, _) | TyData::BoundVar(_) => {
                         return Err(Floundered);
                     }
                     _ => {}
@@ -459,7 +459,7 @@ fn match_ty<I: Interner>(
                 .map(|ty| match_ty(builder, environment, &ty))
                 .collect::<Result<_, Floundered>>()?;
         }
-        TyData::BoundVar(_) | TyData::InferenceVar(_) => return Err(Floundered),
+        TyData::BoundVar(_) | TyData::InferenceVar(_, _) => return Err(Floundered),
         TyData::Dyn(_) => {}
     })
 }

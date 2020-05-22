@@ -201,6 +201,7 @@ VariableKind: VariableKind = {
     Id => VariableKind::Ty(<>),
     LifetimeId => VariableKind::Lifetime(<>),
     "const" <id:Id> => VariableKind::Const(id),
+    "int" <id:Id> => VariableKind::IntegerTy(id),
 };
 
 AssocTyValue: AssocTyValue = {

@@ -47,6 +47,7 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
+        kind: TyKind,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner;
@@ -55,7 +56,7 @@ where
                 .assert_ty_ref(interner)
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)), // FIXME shift
-            None => Ok(var.to_ty(interner)),
+            None => Ok(var.to_ty(interner, kind)),
         }
     }
 

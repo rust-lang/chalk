@@ -101,7 +101,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
         match (a.data(interner), b.data(interner)) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
-            (&TyData::InferenceVar(var1), &TyData::InferenceVar(var2)) => {
+            (
+                &TyData::InferenceVar(var1, kind1),
+                &TyData::InferenceVar(var2, kind2),
+            ) if kind1 == kind2 => {
                 debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
@@ -112,16 +115,38 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            // Unifying an inference variables with a non-inference variable.
-            (&TyData::InferenceVar(var), &TyData::Apply(_))
-            | (&TyData::InferenceVar(var), &TyData::Placeholder(_))
-            | (&TyData::InferenceVar(var), &TyData::Dyn(_))
-            | (&TyData::InferenceVar(var), &TyData::Function(_)) => self.unify_var_ty(var, b),
+            // Tried to unify mis-matching inference variables (not caught by prior match arm)
+            (
+                &TyData::InferenceVar(_, kind1),
+                &TyData::InferenceVar(_, kind2),
+            ) => {
+                debug!(
+                    "Tried to unify mis-matching inference variables: {:?} and {:?}",
+                    kind1, kind2
+                );
+                Err(NoSolution)
+            }
 
-            (&TyData::Apply(_), &TyData::InferenceVar(var))
-            | (&TyData::Placeholder(_), &TyData::InferenceVar(var))
-            | (&TyData::Dyn(_), &TyData::InferenceVar(var))
-            | (&TyData::Function(_), &TyData::InferenceVar(var)) => self.unify_var_ty(var, a),
+            // Unifying an inference variable with a non-inference variable.
+            (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Apply(_))
+            | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Placeholder(_))
+            | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Dyn(_))
+            | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Function(_))
+            // The reflexive matches
+            | (ty_data @ &TyData::Apply(_), &TyData::InferenceVar(var, kind))
+            | (ty_data @ &TyData::Placeholder(_), &TyData::InferenceVar(var, kind))
+            | (ty_data @ &TyData::Dyn(_), &TyData::InferenceVar(var, kind))
+            | (ty_data @ &TyData::Function(_), &TyData::InferenceVar(var, kind))
+            => {
+                let ty = ty_data.clone().intern(interner);
+
+                match (kind, ty.is_integer(interner)) {
+                    (TyKind::General, _)
+                    // Integer inference variables can only unify with integer types
+                    | (TyKind::Integer, true) => self.unify_var_ty(var, &ty),
+                    _ => Err(NoSolution),
+                }
+            }
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::Function(ref fn1), &TyData::Function(ref fn2)) => {
@@ -135,9 +160,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&TyData::Function(_), &TyData::Placeholder(_))
             | (&TyData::Apply(_), &TyData::Function(_))
             | (&TyData::Placeholder(_), &TyData::Function(_))
-            | (&TyData::Dyn(_), &TyData::Function(_)) => {
-                return Err(NoSolution);
-            }
+            | (&TyData::Dyn(_), &TyData::Function(_)) => Err(NoSolution),
 
             (&TyData::Placeholder(ref p1), &TyData::Placeholder(ref p2)) => {
                 Zip::zip_with(self, p1, p2)
@@ -149,17 +172,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // Cannot unify (e.g.) some struct type `Foo` and a placeholder like `T`
             (&TyData::Apply(_), &TyData::Placeholder(_))
-            | (&TyData::Placeholder(_), &TyData::Apply(_)) => {
-                return Err(NoSolution);
-            }
+            | (&TyData::Placeholder(_), &TyData::Apply(_)) => Err(NoSolution),
 
             // Cannot unify `dyn Trait` with things like structs or placeholders
             (&TyData::Placeholder(_), &TyData::Dyn(_))
             | (&TyData::Dyn(_), &TyData::Placeholder(_))
             | (&TyData::Apply(_), &TyData::Dyn(_))
-            | (&TyData::Dyn(_), &TyData::Apply(_)) => {
-                return Err(NoSolution);
-            }
+            | (&TyData::Dyn(_), &TyData::Apply(_)) => Err(NoSolution),
 
             // Unifying two dyn is possible if they have the same bounds.
             (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
@@ -168,14 +187,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (&TyData::Apply(_), &TyData::Alias(ref alias))
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
-            | (&TyData::InferenceVar(_), &TyData::Alias(ref alias))
+            | (&TyData::InferenceVar(_, _), &TyData::Alias(ref alias))
             | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_alias_ty(alias, a),
 
             (&TyData::Alias(ref alias), &TyData::Alias(_))
             | (&TyData::Alias(ref alias), &TyData::Apply(_))
             | (&TyData::Alias(ref alias), &TyData::Placeholder(_))
             | (&TyData::Alias(ref alias), &TyData::Function(_))
-            | (&TyData::Alias(ref alias), &TyData::InferenceVar(_))
+            | (&TyData::Alias(ref alias), &TyData::InferenceVar(_, _))
             | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_alias_ty(alias, b),
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
@@ -549,6 +568,7 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
+        kind: TyKind,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner();
@@ -584,7 +604,7 @@ where
                         .unwrap();
                 }
 
-                Ok(var.to_ty(interner))
+                Ok(var.to_ty(interner, kind))
             }
         }
     }

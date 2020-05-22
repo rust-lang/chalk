@@ -388,7 +388,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 true
             }
 
-            (TyData::InferenceVar(_), _) | (_, TyData::InferenceVar(_)) => {
+            (TyData::InferenceVar(_, _), _) | (_, TyData::InferenceVar(_, _)) => {
                 panic!(
                     "unexpected free inference variable in may-invalidate: {:?} vs {:?}",
                     new, current,

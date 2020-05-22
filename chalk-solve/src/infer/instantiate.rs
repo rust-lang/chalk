@@ -95,7 +95,7 @@ impl<I: Interner> InferenceTable<I> {
                         let lt = placeholder_idx.to_lifetime(interner);
                         lt.cast(interner)
                     }
-                    VariableKind::Ty => placeholder_idx.to_ty(interner).cast(interner),
+                    VariableKind::Ty(_) => placeholder_idx.to_ty(interner).cast(interner),
                     VariableKind::Const(ty) => {
                         placeholder_idx.to_const(interner, ty).cast(interner)
                     }

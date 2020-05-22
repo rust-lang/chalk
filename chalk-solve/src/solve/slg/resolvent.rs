@@ -415,7 +415,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 Ok(())
             }
 
-            (TyData::InferenceVar(_), _) | (_, TyData::InferenceVar(_)) => panic!(
+            (TyData::InferenceVar(_, _), _) | (_, TyData::InferenceVar(_, _)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
             ),
