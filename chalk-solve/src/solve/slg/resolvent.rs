@@ -236,10 +236,6 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
             .infer
             .instantiate_canonical(interner, &canonical_answer_subst);
 
-        let table_goal = self
-            .infer
-            .instantiate_canonical(interner, &answer_table_goal);
-
         AnswerSubstitutor::substitute(
             interner,
             &mut self.infer,
@@ -250,18 +246,9 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
             selected_goal,
         )?;
         ex_clause.constraints.extend(answer_constraints);
-
-        for delayed_subgoal in delayed_subgoals {
-            // FIXME: is this always valid or would we ever run
-            // into an issue with normalization? (Would this even
-            // be a "trivial self-cycle"?)
-            // Only add the delayed_subgoals to the ex-clause if
-            // it isn't a trivial self-cycle
-            if delayed_subgoal.goal != table_goal.goal {
-                ex_clause.delayed_subgoals.push(delayed_subgoal);
-            }
-        }
-
+        // at that point we should only have goals that stemmed
+        // from non trivial self cycles
+        ex_clause.delayed_subgoals.extend(delayed_subgoals);
         Ok(())
     }
 }

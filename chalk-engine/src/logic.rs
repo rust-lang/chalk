@@ -909,14 +909,9 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
                         // we might have to build on it (see the
                         // Delayed Trivial Self Cycle, Variant 3
                         // example).
-                        let (_, _, _, table_goal) = self
-                            .context
-                            .instantiate_ucanonical_goal(&self.forest.tables[table].table_goal);
 
                         let answer = self.forest.answer(table, answer_index);
-                        if let Some(strand) =
-                            self.create_refinement_strand(table, answer, table_goal)
-                        {
+                        if let Some(strand) = self.create_refinement_strand(table, answer) {
                             self.forest.tables[table].enqueue_strand(strand);
                         }
 
@@ -964,7 +959,6 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
         &self,
         table: TableIndex,
         answer: &Answer<C>,
-        table_goal: C::Goal,
     ) -> Option<CanonicalStrand<C>> {
         // If there are no delayed subgoals, then there is no need for
         // a refinement strand.
@@ -977,16 +971,8 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
             .context
             .instantiate_answer_subst(num_universes, &answer.subst);
 
-        // FIXME: it would be nice if these delayed subgoals didn't get added to the answer
-        // at all. However, we can't compare the delayed subgoals with the table goal until
-        // we call `canonicalize_answer_subst` in `pursue_answer`. However, at this point,
-        // it's a bit late since `pursue_answer` doesn't know about the table goal. This could
-        // be refactored a bit.
-        let filtered_delayed_subgoals = delayed_subgoals
+        let delayed_subgoals = delayed_subgoals
             .into_iter()
-            .filter(|delayed_subgoal| {
-                *C::goal_from_goal_in_environment(delayed_subgoal) != table_goal
-            })
             .map(Literal::Positive)
             .collect();
 
@@ -996,7 +982,7 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
                 subst,
                 ambiguous: answer.ambiguous,
                 constraints,
-                subgoals: filtered_delayed_subgoals,
+                subgoals: delayed_subgoals,
                 delayed_subgoals: Vec::new(),
                 answer_time: TimeStamp::default(),
                 floundered_subgoals: Vec::new(),
@@ -1328,11 +1314,23 @@ impl<'forest, C: Context + 'forest, CO: ContextOps<C> + 'forest> SolveState<'for
             return None;
         }
 
+        let table = self.stack.top().table;
+        let table_goal = &self.forest.tables[table].table_goal;
+
+        let filtered_delayed_subgoals = delayed_subgoals
+            .into_iter()
+            .filter(|delayed_subgoal| {
+                let (canonicalized, _) =
+                    infer.fully_canonicalize_goal(self.context.interner(), delayed_subgoal);
+                *table_goal != canonicalized
+            })
+            .collect();
+
         let subst = infer.canonicalize_answer_subst(
             self.context.interner(),
             subst,
             constraints,
-            delayed_subgoals,
+            filtered_delayed_subgoals,
         );
         debug!("answer: table={:?}, subst={:?}", table, subst);
 
