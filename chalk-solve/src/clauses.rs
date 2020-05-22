@@ -104,6 +104,69 @@ pub fn push_auto_trait_impls<I: Interner>(
     });
 }
 
+/// Leak auto traits for opaque types, just like `push_auto_trait_impls` does for structs.
+///
+/// For example, given the following program:
+///
+/// ```notrust
+/// #[auto] trait Send { }
+/// trait Trait { }
+/// struct Bar { }
+/// opaque type Foo: Trait = Bar
+/// ```
+/// Checking the goal `Foo: Send` would generate the following:
+///
+/// ```notrust
+/// Foo: Send :- Bar: Send
+/// ```
+pub fn push_auto_trait_impls_opaque<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    auto_trait_id: TraitId<I>,
+    opaque_id: OpaqueTyId<I>,
+) {
+    debug_heading!(
+        "push_auto_trait_impls_opaque({:?}, {:?})",
+        auto_trait_id,
+        opaque_id
+    );
+
+    let opaque_ty_datum = &builder.db.opaque_ty_data(opaque_id);
+    let interner = builder.interner();
+
+    // Must be an auto trait.
+    assert!(builder.db.trait_datum(auto_trait_id).is_auto_trait());
+
+    // Auto traits never have generic parameters of their own (apart from `Self`).
+    assert_eq!(
+        builder.db.trait_datum(auto_trait_id).binders.len(interner),
+        1
+    );
+
+    let binders = opaque_ty_datum.bound.map_ref(|b| &b.hidden_ty);
+    builder.push_binders(&binders, |builder, hidden_ty| {
+        let self_ty: Ty<_> = ApplicationTy {
+            name: opaque_id.cast(interner),
+            substitution: builder.substitution_in_scope(),
+        }
+        .intern(interner);
+
+        // trait_ref = `OpaqueType<...>: MyAutoTrait`
+        let auto_trait_ref = TraitRef {
+            trait_id: auto_trait_id,
+            substitution: Substitution::from1(interner, self_ty),
+        };
+
+        // OpaqueType<...>: MyAutoTrait :- HiddenType: MyAutoTrait
+        builder.push_clause(
+            auto_trait_ref,
+            std::iter::once(TraitRef {
+                trait_id: auto_trait_id,
+                substitution: Substitution::from1(interner, hidden_ty.clone()),
+            }),
+        );
+    });
+}
+
 /// Given some goal `goal` that must be proven, along with
 /// its `environment`, figures out the program clauses that apply
 /// to this goal from the Rust program. So for example if the goal
@@ -161,7 +224,10 @@ fn program_clauses_that_could_match<I: Interner>(
 
             if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
                 let self_ty = trait_ref.self_type_parameter(interner);
-                if self_ty.bound_var(interner).is_some()
+
+                if let TyData::Alias(AliasTy::Opaque(opaque_ty)) = self_ty.data(interner) {
+                    push_auto_trait_impls_opaque(builder, trait_id, opaque_ty.opaque_ty_id)
+                } else if self_ty.bound_var(interner).is_some()
                     || self_ty.inference_var(interner).is_some()
                 {
                     return Err(Floundered);

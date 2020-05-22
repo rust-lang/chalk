@@ -98,3 +98,34 @@ fn opaque_generics() {
 
     }
 }
+
+#[test]
+fn opaque_auto_traits() {
+    test! {
+        program {
+            struct Bar { }
+            struct Baz { }
+            trait Trait { }
+
+            #[auto]
+            trait Send { }
+
+            impl !Send for Baz { }
+
+            opaque type Opaque1: Trait = Bar;
+            opaque type Opaque2: Trait = Baz;
+        }
+
+        goal {
+            Opaque1: Send
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Opaque2: Send
+        } yields {
+            "No possible solution"
+        }
+    }
+}
