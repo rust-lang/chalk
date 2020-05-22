@@ -222,6 +222,7 @@ pub enum Ty {
         ty: Box<Ty>,
     },
     Str,
+    Never,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]

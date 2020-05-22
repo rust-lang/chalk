@@ -307,6 +307,7 @@ mod implied_bounds;
 mod impls;
 mod misc;
 mod negation;
+mod never;
 mod object_safe;
 mod opaque_types;
 mod projection;
