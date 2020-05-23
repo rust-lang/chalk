@@ -8,7 +8,7 @@ use chalk_ir::cast::Cast;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
-use chalk_engine::context::{self, AnswerResult, Context, ContextOps};
+use chalk_engine::context::{self, AnswerResult, ContextOps};
 use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
@@ -97,7 +97,7 @@ impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, 
             };
             subst = merge_into_guidance(
                 interner,
-                SlgContext::canonical(root_goal),
+                &root_goal.canonical,
                 subst,
                 &new_subst,
             );

@@ -45,38 +45,6 @@ pub trait Context<I: Interner>: Clone + Debug {
     /// the equality relation.
     type Variance;
 
-    /// Given an environment and a goal, glue them together to create
-    /// a `GoalInEnvironment`.
-    fn goal_in_environment(
-        environment: &Environment<I>,
-        goal: Goal<I>,
-    ) -> InEnvironment<Goal<I>>;
-
-    /// Extracts the inner normalized substitution from a canonical ex-clause.
-    fn inference_normalized_subst_from_ex_clause(
-        canon_ex_clause: &Canonical<ExClause<I>>,
-    ) -> &Substitution<I>;
-
-    /// Extracts the inner normalized substitution from a canonical constraint subst.
-    fn inference_normalized_subst_from_subst(
-        canon_ex_clause: &Canonical<AnswerSubst<I>>,
-    ) -> &Substitution<I>;
-
-    /// True if this solution has no region constraints.
-    fn empty_constraints(ccs: &Canonical<AnswerSubst<I>>) -> bool;
-
-    fn canonical(u_canon: &UCanonical<InEnvironment<Goal<I>>>) -> &Canonical<InEnvironment<Goal<I>>>;
-
-    fn has_delayed_subgoals(canonical_subst: &Canonical<AnswerSubst<I>>) -> bool;
-
-    fn num_universes(_: &UCanonical<InEnvironment<Goal<I>>>) -> usize;
-
-    fn canonical_constrained_subst_from_canonical_constrained_answer(
-        canonical_subst: &Canonical<AnswerSubst<I>>,
-    ) -> Canonical<ConstrainedSubst<I>>;
-
-    fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<I>>) -> &Goal<I>;
-
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<I>) -> usize;
@@ -137,12 +105,6 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
         Vec<InEnvironment<Constraint<I>>>,
         Vec<InEnvironment<Goal<I>>>,
     );
-
-    /// returns unique solution from answer
-    fn constrained_subst_from_answer(
-        &self,
-        answer: CompleteAnswer<I>,
-    ) -> Canonical<ConstrainedSubst<I>>;
 
     /// Returns a identity substitution.
     fn identity_constrained_subst(

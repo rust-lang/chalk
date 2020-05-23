@@ -5,7 +5,7 @@ use crate::{ExClause, Literal, TimeStamp};
 use chalk_base::results::Fallible;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Environment, Substitution};
+use chalk_ir::{Environment, InEnvironment, Substitution};
 
 impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// Simplifies an HH goal into a series of positive domain goals
@@ -55,10 +55,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 HhGoal::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(C::goal_in_environment(
-                            &environment,
-                            subgoal,
-                        )));
+                        .push(Literal::Negative(InEnvironment::new(&environment, subgoal)));
                 }
                 HhGoal::Unify(variance, a, b) => infer.unify_generic_args_into_ex_clause(
                     context.interner(),
@@ -71,10 +68,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 HhGoal::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(C::goal_in_environment(
-                            &environment,
-                            context.into_goal(domain_goal),
-                        )));
+                        .push(Literal::Positive(InEnvironment::new(&environment, context.into_goal(domain_goal))));
                 }
                 HhGoal::CannotProve => {
                     ex_clause.ambiguous = true;

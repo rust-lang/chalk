@@ -69,54 +69,6 @@ impl<I: Interner> context::Context<I> for SlgContext<I> {
     type InferenceTable = TruncatingInferenceTable<I>;
     type Variance = ();
 
-    fn goal_in_environment(environment: &Environment<I>, goal: Goal<I>) -> InEnvironment<Goal<I>> {
-        InEnvironment::new(environment, goal)
-    }
-
-    fn inference_normalized_subst_from_ex_clause(
-        canon_ex_clause: &Canonical<ExClause<I>>,
-    ) -> &Substitution<I> {
-        &canon_ex_clause.value.subst
-    }
-
-    fn empty_constraints(ccs: &Canonical<AnswerSubst<I>>) -> bool {
-        ccs.value.constraints.is_empty()
-    }
-
-    fn inference_normalized_subst_from_subst(ccs: &Canonical<AnswerSubst<I>>) -> &Substitution<I> {
-        &ccs.value.subst
-    }
-
-    fn canonical(
-        u_canon: &UCanonical<InEnvironment<Goal<I>>>,
-    ) -> &Canonical<InEnvironment<Goal<I>>> {
-        &u_canon.canonical
-    }
-
-    fn has_delayed_subgoals(canonical_subst: &Canonical<AnswerSubst<I>>) -> bool {
-        !canonical_subst.value.delayed_subgoals.is_empty()
-    }
-
-    fn num_universes(u_canon: &UCanonical<InEnvironment<Goal<I>>>) -> usize {
-        u_canon.universes
-    }
-
-    fn canonical_constrained_subst_from_canonical_constrained_answer(
-        canonical_subst: &Canonical<AnswerSubst<I>>,
-    ) -> Canonical<ConstrainedSubst<I>> {
-        Canonical {
-            binders: canonical_subst.binders.clone(),
-            value: ConstrainedSubst {
-                subst: canonical_subst.value.subst.clone(),
-                constraints: canonical_subst.value.constraints.clone(),
-            },
-        }
-    }
-
-    fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<I>>) -> &Goal<I> {
-        &goal.goal
-    }
-
     // Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<I>) -> usize {
         // For now, we always pick the last subgoal in the
@@ -220,14 +172,6 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         ) = InferenceTable::from_canonical(self.program.interner(), num_universes, answer);
         let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
         (infer_table, subst, constraints, delayed_subgoals)
-    }
-
-    fn constrained_subst_from_answer(
-        &self,
-        answer: CompleteAnswer<I>,
-    ) -> Canonical<ConstrainedSubst<I>> {
-        let CompleteAnswer { subst, .. } = answer;
-        subst
     }
 
     fn identity_constrained_subst(

@@ -90,9 +90,9 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             let subst = match answers.next_answer(|| true) {
                 AnswerResult::Answer(answer) => {
                     if !answer.ambiguous {
-                        SubstitutionResult::Definite(context.constrained_subst_from_answer(answer))
+                        SubstitutionResult::Definite(answer.subst)
                     } else {
-                        SubstitutionResult::Ambiguous(context.constrained_subst_from_answer(answer))
+                        SubstitutionResult::Ambiguous(answer.subst)
                     }
                 }
                 AnswerResult::Floundered => SubstitutionResult::Floundered,

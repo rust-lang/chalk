@@ -12,7 +12,7 @@ use crate::{
 use chalk_base::results::{Floundered, NoSolution};
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical, UniverseMap};
+use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical, UniverseMap};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -93,14 +93,17 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             Ok(()) => {
                 assert!(state.stack.is_empty());
                 let answer = state.forest.answer(table, answer_index);
-                let has_delayed_subgoals = C::has_delayed_subgoals(&answer.subst);
-                if has_delayed_subgoals {
+                if !answer.subst.value.delayed_subgoals.is_empty() {
                     return Err(RootSearchFail::InvalidAnswer);
                 }
                 Ok(CompleteAnswer {
-                    subst: C::canonical_constrained_subst_from_canonical_constrained_answer(
-                        &answer.subst,
-                    ),
+                    subst: Canonical {
+                        binders: answer.subst.binders.clone(),
+                        value: ConstrainedSubst {
+                            subst: answer.subst.value.subst.clone(),
+                            constraints: answer.subst.value.constraints.clone(),
+                        },
+                    },
                     ambiguous: answer.ambiguous,
                 })
             }
@@ -116,13 +119,11 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
-            return test(C::inference_normalized_subst_from_subst(&answer.subst));
+            return test(&answer.subst.value.subst);
         }
 
         self.tables[table].strands().any(|strand| {
-            test(C::inference_normalized_subst_from_ex_clause(
-                &strand.canonical_ex_clause,
-            ))
+            test(&strand.canonical_ex_clause.value.subst)
         })
     }
 
@@ -465,7 +466,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 self.forest.tables[table]
                     .dequeue_next_strand_if(|strand| strand.last_pursued_time < clock)
                     .map(|canonical_strand| {
-                        let num_universes = C::num_universes(&self.forest.tables[table].table_goal);
+                        let num_universes = self.forest.tables[table].table_goal.universes;
                         let CanonicalStrand {
                             canonical_ex_clause,
                             selected_subgoal,
@@ -568,7 +569,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 } = selected_subgoal;
                 let table_goal = &self.context.map_goal_from_canonical(
                     &universe_map,
-                    &C::canonical(&self.forest.tables[subgoal_table].table_goal),
+                    &self.forest.tables[subgoal_table].table_goal.canonical,
                 );
                 let answer_subst = &self.context.map_subst_from_canonical(
                     &universe_map,
@@ -636,7 +637,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 // need to permit `not { L }` where `L` is a
                 // coinductive goal. We could improve this if needed,
                 // but it keeps things simple.
-                if C::has_delayed_subgoals(&answer.subst) {
+                if !answer.subst.value.delayed_subgoals.is_empty() {
                     panic!("Negative subgoal had delayed_subgoals");
                 }
 
@@ -965,11 +966,11 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     ) -> Option<CanonicalStrand<I>> {
         // If there are no delayed subgoals, then there is no need for
         // a refinement strand.
-        if !C::has_delayed_subgoals(&answer.subst) {
+        if answer.subst.value.delayed_subgoals.is_empty() {
             return None;
         }
 
-        let num_universes = C::num_universes(&self.forest.tables[table].table_goal);
+        let num_universes = self.forest.tables[table].table_goal.universes;
         let (table, subst, constraints, delayed_subgoals) = self
             .context
             .instantiate_answer_subst(num_universes, &answer.subst);
@@ -1402,7 +1403,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 && self
                     .context
                     .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
-                && C::empty_constraints(&answer.subst)
+                && answer.subst.value.constraints.is_empty()
         };
 
         if let Some(answer_index) = self.forest.tables[table].push_answer(answer) {
