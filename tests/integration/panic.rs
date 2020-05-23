@@ -1,6 +1,6 @@
 use chalk_integration::interner::{ChalkIr, RawId};
 use chalk_ir::*;
-use chalk_rust_ir::*;
+use chalk_solve::rust_ir::*;
 use chalk_solve::{RustIrDatabase, SolverChoice};
 use std::sync::Arc;
 
@@ -54,7 +54,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         }
 
         assert_eq!(id.0.index, 0);
-        Arc::new(chalk_rust_ir::TraitDatum {
+        Arc::new(TraitDatum {
             id,
             binders: Binders::new(
                 VariableKinds::new(&ChalkIr),
