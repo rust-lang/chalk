@@ -1328,7 +1328,8 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         // to return.
         let is_trivial_answer = self
             .context
-            .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst);
+            .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
+            && C::empty_constraints(&answer.subst);
 
         if is_trivial_answer {
             None
