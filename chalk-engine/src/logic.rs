@@ -2,7 +2,6 @@ use crate::context::{
     Context, ContextOps, InferenceTable, ResolventOps, TruncateOps, UnificationOps,
 };
 use crate::forest::Forest;
-use crate::hh::HhGoal;
 use crate::stack::{Stack, StackIndex};
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{AnswerIndex, Table};
@@ -12,7 +11,7 @@ use crate::{
 use chalk_base::results::{Floundered, NoSolution};
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical, UniverseMap};
+use chalk_ir::{Canonical, ConstrainedSubst, Goal, GoalData, InEnvironment, Substitution, UCanonical, UniverseMap};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -234,7 +233,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// domain goal, these strands are created from the program
     /// clauses as well as the clauses found in the environment.  If
     /// the table represents a non-domain goal, such as `for<T> G`
-    /// etc, then `simplify_hh_goal` is invoked to create a strand
+    /// etc, then `simplify_goal` is invoked to create a strand
     /// that breaks the goal down.
     ///
     /// In terms of the NFTD paper, this corresponds to the *Program
@@ -247,8 +246,8 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
     ) -> Table<I> {
         let mut table = Table::new(goal.clone(), context.is_coinductive(&goal));
         let (mut infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&goal);
-        match context.into_hh_goal(goal) {
-            HhGoal::DomainGoal(domain_goal) => {
+        match goal.data(context.interner()) {
+            GoalData::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
                     Ok(clauses) => {
                         for clause in clauses {
@@ -280,7 +279,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 }
             }
 
-            hh_goal => {
+            _ => {
                 // `canonical_goal` is an HH goal. We can simplify it
                 // into a series of *literals*, all of which must be
                 // true. Thus, in EWFS terms, we are effectively
@@ -290,7 +289,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 // applying built-in "meta program clauses" that
                 // reduce HH goals into Domain goals.
                 if let Ok(ex_clause) =
-                    Self::simplify_hh_goal(context, &mut infer, subst, environment, hh_goal)
+                    Self::simplify_goal(context, &mut infer, subst, environment, goal)
                 {
                     info!(
                         "pushing initial strand with ex-clause: {:#?}",

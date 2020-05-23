@@ -9,8 +9,7 @@ use crate::RustIrDatabase;
 use chalk_base::results::{Fallible, Floundered};
 use chalk_derive::HasInterner;
 use chalk_engine::context;
-use chalk_engine::hh::HhGoal;
-use chalk_engine::{CompleteAnswer, ExClause, Literal};
+use chalk_engine::{ExClause, Literal};
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::interner::Interner;
@@ -67,7 +66,6 @@ pub struct TruncatingInferenceTable<I: Interner> {
 impl<I: Interner> context::Context<I> for SlgContext<I> {
     type Solution = Solution<I>;
     type InferenceTable = TruncatingInferenceTable<I>;
-    type Variance = ();
 
     // Used by: logic
     fn next_subgoal_index(ex_clause: &ExClause<I>) -> usize {
@@ -210,24 +208,6 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         let interner = self.interner();
         u_canon.is_trivial_substitution(interner, canonical_subst)
     }
-
-    fn into_hh_goal(&self, goal: Goal<I>) -> HhGoal<I, SlgContext<I>> {
-        let interner = self.interner();
-        match goal.data(interner).clone() {
-            GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
-                HhGoal::ForAll(binders_goal)
-            }
-            GoalData::Quantified(QuantifierKind::Exists, binders_goal) => {
-                HhGoal::Exists(binders_goal)
-            }
-            GoalData::Implies(dg, subgoal) => HhGoal::Implies(dg, subgoal),
-            GoalData::All(goals) => HhGoal::All(goals.iter(interner).cloned().collect()),
-            GoalData::Not(g1) => HhGoal::Not(g1),
-            GoalData::EqGoal(EqGoal { a, b }) => HhGoal::Unify((), a, b),
-            GoalData::DomainGoal(domain_goal) => HhGoal::DomainGoal(domain_goal),
-            GoalData::CannotProve(()) => HhGoal::CannotProve,
-        }
-    }
 }
 
 impl<I: Interner> TruncatingInferenceTable<I> {
@@ -332,7 +312,6 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         &mut self,
         interner: &I,
         environment: &Environment<I>,
-        _: (),
         a: &GenericArg<I>,
         b: &GenericArg<I>,
         ex_clause: &mut ExClause<I>,

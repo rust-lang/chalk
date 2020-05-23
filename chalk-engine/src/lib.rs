@@ -66,7 +66,6 @@ mod boring_impls;
 pub mod context;
 mod derived;
 pub mod forest;
-pub mod hh;
 mod logic;
 mod simplify;
 mod stack;

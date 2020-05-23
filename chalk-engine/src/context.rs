@@ -5,7 +5,6 @@
 //! `DomainGoal` type, add arena lifetime parameters, and more. See
 //! [`Context`] trait for a list of types.
 
-use crate::hh::HhGoal;
 use crate::{CompleteAnswer, ExClause};
 use chalk_base::results::{Fallible, Floundered};
 use chalk_ir::interner::Interner;
@@ -39,11 +38,6 @@ pub trait Context<I: Interner>: Clone + Debug {
 
     /// Represents an inference table.
     type InferenceTable: InferenceTable<I, Self> + Clone;
-
-    /// How to relate two kinds when unifying: for example in rustc, we
-    /// may want to unify parameters either for the sub-typing relation or for
-    /// the equality relation.
-    type Variance;
 
     /// Selects the next appropriate subgoal index for evaluation.
     /// Used by: logic
@@ -141,16 +135,6 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
         u_canon: &UCanonical<InEnvironment<Goal<I>>>,
         canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool;
-
-    /// Convert the context's goal type into the `HhGoal` type that
-    /// the SLG solver understands. The expectation is that the
-    /// context's goal type has the same set of variants, but with
-    /// different names and a different setup. If you inspect
-    /// `HhGoal`, you will see that this is a "shallow" or "lazy"
-    /// conversion -- that is, we convert the outermost goal into an
-    /// `HhGoal`, but the goals contained within are left as context
-    /// goals.
-    fn into_hh_goal(&self, goal: Goal<I>) -> HhGoal<I, C>;
 }
 
 /// Methods for combining solutions to yield an aggregate solution.
@@ -238,7 +222,6 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
         &mut self,
         interner: &I,
         environment: &Environment<I>,
-        variance: C::Variance,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
         ex_clause: &mut ExClause<I>,
