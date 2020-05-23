@@ -725,6 +725,10 @@ impl LowerVariableKind for VariableKind {
                 chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Integer),
                 n.str.clone(),
             ),
+            VariableKind::FloatTy(n) => chalk_ir::WithKind::new(
+                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Float),
+                n.str.clone(),
+            ),
             VariableKind::Lifetime(n) => {
                 chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, n.str.clone())
             }
@@ -1826,6 +1830,7 @@ impl Kinded for VariableKind {
         match *self {
             VariableKind::Ty(_) => Kind::Ty,
             VariableKind::IntegerTy(_) => Kind::Ty,
+            VariableKind::FloatTy(_) => Kind::Ty,
             VariableKind::Lifetime(_) => Kind::Lifetime,
             VariableKind::Const(_) => Kind::Const,
         }

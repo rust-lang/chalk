@@ -140,10 +140,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
             => {
                 let ty = ty_data.clone().intern(interner);
 
-                match (kind, ty.is_integer(interner)) {
-                    (TyKind::General, _)
+                match (kind, ty.is_integer(interner), ty.is_float(interner)) {
+                    // General inference variables can unify with any type
+                    (TyKind::General, _, _)
                     // Integer inference variables can only unify with integer types
-                    | (TyKind::Integer, true) => self.unify_var_ty(var, &ty),
+                    | (TyKind::Integer, true, _)
+                    // Float inference variables can only unify with float types
+                    | (TyKind::Float, _, true) => self.unify_var_ty(var, &ty),
                     _ => Err(NoSolution),
                 }
             }

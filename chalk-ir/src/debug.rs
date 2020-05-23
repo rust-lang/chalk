@@ -181,6 +181,7 @@ impl<I: Interner> Debug for TyData<I> {
             TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
             TyData::InferenceVar(var, TyKind::General) => write!(fmt, "{:?}", var),
             TyData::InferenceVar(var, TyKind::Integer) => write!(fmt, "{:?}i", var),
+            TyData::InferenceVar(var, TyKind::Float) => write!(fmt, "{:?}f", var),
             TyData::Apply(apply) => write!(fmt, "{:?}", apply),
             TyData::Alias(alias) => write!(fmt, "{:?}", alias),
             TyData::Placeholder(index) => write!(fmt, "{:?}", index),
@@ -279,6 +280,7 @@ impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
             match binder {
                 VariableKind::Ty(TyKind::General) => write!(fmt, "type")?,
                 VariableKind::Ty(TyKind::Integer) => write!(fmt, "integer type")?,
+                VariableKind::Ty(TyKind::Float) => write!(fmt, "float type")?,
                 VariableKind::Lifetime => write!(fmt, "lifetime")?,
                 VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty)?,
             }
@@ -769,6 +771,7 @@ impl<I: Interner> Debug for VariableKind<I> {
         match self {
             VariableKind::Ty(TyKind::General) => write!(fmt, "type"),
             VariableKind::Ty(TyKind::Integer) => write!(fmt, "integer type"),
+            VariableKind::Ty(TyKind::Float) => write!(fmt, "float type"),
             VariableKind::Lifetime => write!(fmt, "lifetime"),
             VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty),
         }
@@ -781,6 +784,7 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
         match &self.kind {
             VariableKind::Ty(TyKind::General) => write!(fmt, "{:?} with kind type", value),
             VariableKind::Ty(TyKind::Integer) => write!(fmt, "{:?} with kind integer type", value),
+            VariableKind::Ty(TyKind::Float) => write!(fmt, "{:?} with kind float type", value),
             VariableKind::Lifetime => write!(fmt, "{:?} with kind lifetime", value),
             VariableKind::Const(ty) => write!(fmt, "{:?} with kind {:?}", value, ty),
         }

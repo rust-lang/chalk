@@ -101,6 +101,7 @@ pub struct OpaqueTyDefn {
 pub enum VariableKind {
     Ty(Identifier),
     IntegerTy(Identifier),
+    FloatTy(Identifier),
     Lifetime(Identifier),
     Const(Identifier),
 }

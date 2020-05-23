@@ -357,6 +357,17 @@ impl<I: Interner> Ty<I> {
         }
     }
 
+    /// Returns true if this is a `FloatTy`
+    pub fn is_float(&self, interner: &I) -> bool {
+        match self.data(interner) {
+            TyData::Apply(ApplicationTy {
+                name: TypeName::Scalar(Scalar::Float(_)),
+                ..
+            }) => true,
+            _ => false,
+        }
+    }
+
     /// True if this type contains "bound" types/lifetimes, and hence
     /// needs to be shifted across binders. This is a very inefficient
     /// check, intended only for debug assertions, because I am lazy.
@@ -925,7 +936,7 @@ impl<I: Interner> ApplicationTy<I> {
     }
 }
 
-/// Represents some extra knowledge we may have about the variable.
+/// Represents some extra knowledge we may have about the type variable.
 /// ```ignore
 /// let x: &[u32];
 /// let i = 1;
@@ -939,6 +950,7 @@ impl<I: Interner> ApplicationTy<I> {
 pub enum TyKind {
     General,
     Integer,
+    Float,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

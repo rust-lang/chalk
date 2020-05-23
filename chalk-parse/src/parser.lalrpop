@@ -202,6 +202,7 @@ VariableKind: VariableKind = {
     LifetimeId => VariableKind::Lifetime(<>),
     "const" <id:Id> => VariableKind::Const(id),
     "int" <id:Id> => VariableKind::IntegerTy(id),
+    "float" <id:Id> => VariableKind::FloatTy(id),
 };
 
 AssocTyValue: AssocTyValue = {

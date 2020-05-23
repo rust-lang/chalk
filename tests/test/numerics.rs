@@ -55,3 +55,25 @@ fn integer_kind_trait() {
         }
     }
 }
+
+/// The `integer_kind_trait` test, but for floats
+#[test]
+fn float_kind_trait() {
+    test! {
+        program {
+            trait Foo {}
+            struct Bar {}
+
+            impl Foo for f32 {}
+            impl Foo for Bar {}
+        }
+
+        goal {
+            exists<float N> {
+                N: Foo
+            }
+        } yields {
+            "Unique; substitution [?0 := Float(F32)]"
+        }
+    }
+}
