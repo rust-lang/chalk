@@ -1,4 +1,4 @@
-use chalk_engine::fallible::*;
+use chalk_base::results::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};

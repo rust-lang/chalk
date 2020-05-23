@@ -3,7 +3,7 @@ use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::split::Split;
 use crate::RustIrDatabase;
-use chalk_engine::context::Floundered;
+use chalk_base::results::Floundered;
 use chalk_ir::cast::Cast;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;

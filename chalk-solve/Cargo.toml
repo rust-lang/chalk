@@ -15,11 +15,16 @@ itertools = "0.9.0"
 petgraph = "0.5.0"
 rustc-hash = { version = "1.0.0" }
 
-chalk-macros = { version = "0.10.1-dev", path = "../chalk-macros" }
+chalk-base = { version = "0.10.1-dev", path = "../chalk-base" }
 chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
-chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine" }
-chalk-ir = { version = "0.10.1-dev", path = "../chalk-ir" }
-chalk-rust-ir = { version = "0.10.1-dev", path = "../chalk-rust-ir" }
+chalk-engine = { version = "0.10.1-dev", path = "../chalk-engine", optional = true }
+chalk-ir = { version = "0.10.1-dev", path = "../chalk-ir", default-features = false }
 
 [dev-dependencies]
 chalk-integration = { version = "0.10.1-dev", path = "../chalk-integration" }
+
+[features]
+default = ["slg-solver", "recursive-solver"]
+
+slg-solver = ["chalk-engine", "chalk-ir/slg-solver"]
+recursive-solver = []

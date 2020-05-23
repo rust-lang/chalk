@@ -1,5 +1,3 @@
-use super::*;
-
 mod fulfill;
 mod search_graph;
 mod stack;
@@ -7,11 +5,15 @@ mod stack;
 use self::fulfill::Fulfill;
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
-use chalk_engine::{
-    context::Floundered,
-    fallible::{Fallible, NoSolution},
+use crate::clauses::program_clauses_for_goal;
+use crate::{Guidance, RustIrDatabase, Solution};
+use chalk_base::results::{Fallible, Floundered, NoSolution};
+use chalk_ir::interner::Interner;
+use chalk_ir::{
+    Binders, Canonical, ClausePriority, ConstrainedSubst, DomainGoal, Environment, GenericArg,
+    Goal, GoalData, InEnvironment, ProgramClause, ProgramClauseData, ProgramClauseImplication,
+    UCanonical, VariableKinds,
 };
-use clauses::program_clauses_for_goal;
 use rustc_hash::FxHashMap;
 
 type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;

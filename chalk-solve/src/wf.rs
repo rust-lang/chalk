@@ -2,6 +2,7 @@ use std::{fmt, iter};
 
 use crate::ext::*;
 use crate::goal_builder::GoalBuilder;
+use crate::rust_ir::*;
 use crate::solve::SolverChoice;
 use crate::split::Split;
 use crate::RustIrDatabase;
@@ -10,7 +11,6 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
-use chalk_rust_ir::*;
 
 #[derive(Debug)]
 pub enum WfError<I: Interner> {

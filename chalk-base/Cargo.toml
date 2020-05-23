@@ -1,7 +1,7 @@
 [package]
-name = "chalk-macros"
+name = "chalk-base"
 version = "0.10.1-dev"
-description = "Macros for Chalk"
+description = "Base types for Chalk logic engines"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"

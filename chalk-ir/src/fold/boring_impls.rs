@@ -6,10 +6,11 @@
 
 use crate::interner::TargetInterner;
 use crate::*;
-use chalk_engine::context::Context;
-use chalk_engine::{ExClause, FlounderedSubgoal, Literal};
 use std::marker::PhantomData;
 use std::sync::Arc;
+
+#[cfg(feature = "slg-solver")]
+use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
 
 impl<'a, T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a T {
     type Result = T::Result;
@@ -224,7 +225,7 @@ macro_rules! copy_fold {
                 &self,
                 _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
                 _outer_binder: DebruijnIndex,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+            ) -> ::chalk_base::results::Fallible<Self::Result>
             where
                 I: 'i,
                 TI: 'i,
@@ -240,8 +241,6 @@ copy_fold!(usize);
 copy_fold!(PlaceholderIndex);
 copy_fold!(QuantifierKind);
 copy_fold!(DebruijnIndex);
-copy_fold!(chalk_engine::TableIndex);
-copy_fold!(chalk_engine::TimeStamp);
 copy_fold!(());
 copy_fold!(UintTy);
 copy_fold!(IntTy);
@@ -249,6 +248,11 @@ copy_fold!(FloatTy);
 copy_fold!(Scalar);
 copy_fold!(ClausePriority);
 copy_fold!(Mutability);
+
+#[cfg(feature = "slg-solver")]
+copy_fold!(chalk_engine::TableIndex);
+#[cfg(feature = "slg-solver")]
+copy_fold!(chalk_engine::TimeStamp);
 
 #[macro_export]
 macro_rules! id_fold {
@@ -263,7 +267,7 @@ macro_rules! id_fold {
                 &self,
                 _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
                 _outer_binder: DebruijnIndex,
-            ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+            ) -> ::chalk_base::results::Fallible<Self::Result>
             where
                 I: 'i,
                 TI: 'i,
@@ -288,7 +292,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
-    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    ) -> ::chalk_base::results::Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
@@ -309,7 +313,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
-    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    ) -> ::chalk_base::results::Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
@@ -328,7 +332,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
         &self,
         _folder: &mut dyn Folder<'i, I, TI>,
         _outer_binder: DebruijnIndex,
-    ) -> ::chalk_engine::fallible::Fallible<Self::Result>
+    ) -> ::chalk_base::results::Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
@@ -337,6 +341,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ExClause<C>
 where
     C: Context,
@@ -377,6 +382,7 @@ where
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FlounderedSubgoal<C>
 where
     C: Context,
@@ -407,6 +413,7 @@ where
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Literal<C>
 where
     C: Context,

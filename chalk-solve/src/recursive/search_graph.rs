@@ -6,7 +6,7 @@ use std::usize;
 use super::stack::StackDepth;
 use super::{Minimums, UCanonicalGoal};
 use crate::Solution;
-use chalk_engine::fallible::{Fallible, NoSolution};
+use chalk_base::results::{Fallible, NoSolution};
 use chalk_ir::{interner::Interner, ClausePriority};
 use rustc_hash::FxHashMap;
 

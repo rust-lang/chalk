@@ -1,7 +1,7 @@
+use crate::rust_ir::*;
 use crate::RustIrDatabase;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
-use chalk_rust_ir::*;
 use std::sync::Arc;
 
 /// Methods for splitting up the projections for associated types from

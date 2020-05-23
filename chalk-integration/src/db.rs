@@ -1,36 +1,21 @@
-use crate::error::ChalkError;
-use crate::interner::ChalkIr;
-use crate::lowering::LowerGoal;
-use crate::program::Program;
-use crate::query::{Lowering, LoweringDatabase};
-use crate::tls;
+use crate::{
+    error::ChalkError,
+    interner::ChalkIr,
+    lowering::LowerGoal,
+    program::Program,
+    query::{Lowering, LoweringDatabase},
+    tls,
+};
 use chalk_engine::forest::SubstitutionResult;
-use chalk_ir::AdtId;
-use chalk_ir::AssocTypeId;
-use chalk_ir::Canonical;
-use chalk_ir::ConstrainedSubst;
-use chalk_ir::Environment;
-use chalk_ir::FnDefId;
-use chalk_ir::GenericArg;
-use chalk_ir::Goal;
-use chalk_ir::ImplId;
-use chalk_ir::InEnvironment;
-use chalk_ir::OpaqueTyId;
-use chalk_ir::ProgramClause;
-use chalk_ir::TraitId;
-use chalk_ir::{ProgramClauses, UCanonical};
-use chalk_rust_ir::AdtDatum;
-use chalk_rust_ir::AssociatedTyDatum;
-use chalk_rust_ir::AssociatedTyValue;
-use chalk_rust_ir::AssociatedTyValueId;
-use chalk_rust_ir::FnDefDatum;
-use chalk_rust_ir::ImplDatum;
-use chalk_rust_ir::OpaqueTyDatum;
-use chalk_rust_ir::TraitDatum;
-use chalk_rust_ir::WellKnownTrait;
-use chalk_solve::RustIrDatabase;
-use chalk_solve::Solution;
-use chalk_solve::SolverChoice;
+use chalk_ir::{
+    AdtId, AssocTypeId, Canonical, ConstrainedSubst, Environment, FnDefId, GenericArg, Goal,
+    ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, UCanonical,
+};
+use chalk_solve::rust_ir::{
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
+    OpaqueTyDatum, TraitDatum, WellKnownTrait,
+};
+use chalk_solve::{RustIrDatabase, Solution, SolverChoice};
 use salsa::Database;
 use std::sync::Arc;
 

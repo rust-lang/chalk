@@ -1,10 +1,18 @@
-use crate::solve::slg::SlgContext;
-use crate::{recursive::RecursiveContext, RustIrDatabase};
-use chalk_engine::forest::{Forest, SubstitutionResult};
+use crate::RustIrDatabase;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt;
 
+#[cfg(feature = "slg-solver")]
+use {
+    crate::solve::slg::SlgContext,
+    chalk_engine::forest::{Forest, SubstitutionResult},
+};
+
+#[cfg(feature = "recursive-solver")]
+use crate::recursive::RecursiveContext;
+
+#[cfg(feature = "slg-solver")]
 mod slg;
 pub(crate) mod truncate;
 
@@ -179,11 +187,13 @@ impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub enum SolverChoice {
     /// Run the SLG solver, producing a Solution.
+    #[cfg(feature = "slg-solver")]
     SLG {
         max_size: usize,
         expected_answers: Option<usize>,
     },
     /// Run the recursive solver.
+    #[cfg(feature = "recursive-solver")]
     Recursive {
         overflow_depth: usize,
         caching_enabled: bool,
@@ -192,6 +202,7 @@ pub enum SolverChoice {
 
 impl SolverChoice {
     /// Returns specific SLG parameters.
+    #[cfg(feature = "slg-solver")]
     pub fn slg(max_size: usize, expected_answers: Option<usize>) -> Self {
         SolverChoice::SLG {
             max_size,
@@ -200,11 +211,13 @@ impl SolverChoice {
     }
 
     /// Returns the default SLG parameters.
+    #[cfg(feature = "slg-solver")]
     pub fn slg_default() -> Self {
         SolverChoice::slg(10, None)
     }
 
     /// Returns the default recursive solver setup.
+    #[cfg(feature = "recursive-solver")]
     pub fn recursive() -> Self {
         SolverChoice::Recursive {
             overflow_depth: 100,
@@ -215,12 +228,14 @@ impl SolverChoice {
     /// Creates a solver state.
     pub fn into_solver<I: Interner>(self) -> Solver<I> {
         match self {
+            #[cfg(feature = "slg-solver")]
             SolverChoice::SLG {
                 max_size,
                 expected_answers,
             } => Solver(SolverImpl::Slg {
                 forest: Box::new(Forest::new(SlgContext::new(max_size, expected_answers))),
             }),
+            #[cfg(feature = "recursive-solver")]
             SolverChoice::Recursive {
                 overflow_depth,
                 caching_enabled,
@@ -232,10 +247,17 @@ impl SolverChoice {
     }
 }
 
+#[cfg(feature = "slg-solver")]
 impl Default for SolverChoice {
     fn default() -> Self {
-        // SolverChoice::recursive()
-        SolverChoice::slg(10, None)
+        SolverChoice::slg_default()
+    }
+}
+
+#[cfg(all(not(feature = "slg-solver"), feature = "recursive-solver"))]
+impl Default for SolverChoice {
+    fn default() -> Self {
+        SolverChoice::recursive()
     }
 }
 
@@ -246,7 +268,9 @@ impl Default for SolverChoice {
 pub struct Solver<I: Interner>(SolverImpl<I>);
 
 enum SolverImpl<I: Interner> {
+    #[cfg(feature = "slg-solver")]
     Slg { forest: Box<Forest<SlgContext<I>>> },
+    #[cfg(feature = "recursive-solver")]
     Recursive(Box<RecursiveContext<I>>),
 }
 
@@ -275,10 +299,12 @@ impl<I: Interner> Solver<I> {
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> Option<Solution<I>> {
         match &mut self.0 {
+            #[cfg(feature = "slg-solver")]
             SolverImpl::Slg { forest } => {
                 let ops = forest.context().ops(program);
                 forest.solve(&ops, goal, || true)
             }
+            #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(ctx) => ctx.solver(program).solve_root_goal(goal).ok(),
         }
     }
@@ -312,10 +338,12 @@ impl<I: Interner> Solver<I> {
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
         match &mut self.0 {
+            #[cfg(feature = "slg-solver")]
             SolverImpl::Slg { forest } => {
                 let ops = forest.context().ops(program);
                 forest.solve(&ops, goal, should_continue)
             }
+            #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(ctx) => {
                 // TODO support should_continue in recursive solver
                 ctx.solver(program).solve_root_goal(goal).ok()
@@ -345,6 +373,7 @@ impl<I: Interner> Solver<I> {
     ///
     /// - `true` all solutions were processed with the function.
     /// - `false` the function returned `false` and solutions were interrupted.
+    #[cfg(feature = "slg-solver")]
     pub fn solve_multiple(
         &mut self,
         program: &dyn RustIrDatabase<I>,
@@ -356,6 +385,7 @@ impl<I: Interner> Solver<I> {
                 let ops = forest.context().ops(program);
                 forest.solve_multiple(&ops, goal, f)
             }
+            #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(_ctx) => unimplemented!(),
         }
     }

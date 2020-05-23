@@ -122,13 +122,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "chalk"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
  "chalk-integration 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
- "chalk-macros 0.10.1-dev",
  "chalk-parse 0.10.1-dev",
- "chalk-rust-ir 0.10.1-dev",
  "chalk-solve 0.10.1-dev",
  "docopt 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -136,6 +135,13 @@ dependencies = [
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.110 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "chalk-base"
+version = "0.10.1-dev"
+dependencies = [
+ "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -152,7 +158,7 @@ dependencies = [
 name = "chalk-engine"
 version = "0.10.1-dev"
 dependencies = [
- "chalk-macros 0.10.1-dev",
+ "chalk-base 0.10.1-dev",
  "rustc-hash 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -160,12 +166,11 @@ dependencies = [
 name = "chalk-integration"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
- "chalk-macros 0.10.1-dev",
  "chalk-parse 0.10.1-dev",
- "chalk-rust-ir 0.10.1-dev",
  "chalk-solve 0.10.1-dev",
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "string_cache 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -175,16 +180,9 @@ dependencies = [
 name = "chalk-ir"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
- "chalk-macros 0.10.1-dev",
-]
-
-[[package]]
-name = "chalk-macros"
-version = "0.10.1-dev"
-dependencies = [
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -198,25 +196,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "chalk-rust-ir"
-version = "0.10.1-dev"
-dependencies = [
- "chalk-derive 0.10.1-dev",
- "chalk-engine 0.10.1-dev",
- "chalk-ir 0.10.1-dev",
- "chalk-macros 0.10.1-dev",
-]
-
-[[package]]
 name = "chalk-solve"
 version = "0.10.1-dev"
 dependencies = [
+ "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
  "chalk-engine 0.10.1-dev",
  "chalk-integration 0.10.1-dev",
  "chalk-ir 0.10.1-dev",
- "chalk-macros 0.10.1-dev",
- "chalk-rust-ir 0.10.1-dev",
  "ena 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "petgraph 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",

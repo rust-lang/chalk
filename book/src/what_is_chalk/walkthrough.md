@@ -44,10 +44,10 @@ impls, and struct definitions. Parsing is often the first "phase" of
 transformation that a program goes through in order to become a format that
 chalk can understand.
 
-### Rust Intermediate Representation ([chalk_rust_ir])
+### Rust Intermediate Representation ([chalk_solve::rust_ir])
 
 After getting the AST we convert it to a more convenient intermediate
-representation called [`chalk_rust_ir`][chalk_rust_ir]. This is sort of
+representation called `chalk_rust_ir`. This is sort of
 analogous to the [HIR] in Rust. The process of converting to IR is called
 *lowering*.
 
@@ -133,12 +133,12 @@ queries is called the *solver*.
 
 Chalk's functionality is broken up into the following crates:
 - [**chalk_engine**][chalk_engine]: Defines the core [SLG solver][slg].
-- [**chalk_rust_ir**][chalk_rust_ir], containing the "HIR-like" form of the AST
 - [**chalk_ir**][chalk_ir]: Defines chalk's internal representation of
   types, lifetimes, and goals.
 - [**chalk_solve**][chalk_solve]: Combines `chalk_ir` and `chalk_engine`,
   effectively, which implements logic rules converting `chalk_rust_ir` to
   `chalk_ir`
+  - Contains the `rust_ir` module, which defines the "HIR-like" Rust IR
   - Defines the `coherence` module, which implements coherence rules
   - [`chalk_engine::context`][engine-context] provides the necessary hooks.
 - [**chalk_parse**][chalk_parse]: Defines the raw AST and a parser.
@@ -197,7 +197,7 @@ Likewise, lowering tests use the [`lowering_success!` and
 [chalk_ir]: https://rust-lang.github.io/chalk/chalk_ir/index.html
 [chalk_parse]: https://rust-lang.github.io/chalk/chalk_parse/index.html
 [chalk_solve]: https://rust-lang.github.io/chalk/chalk_solve/index.html
-[chalk_rust_ir]: https://rust-lang.github.io/chalk/chalk_rust_ir/index.html
+[chalk_solve::rust_ir]: https://rust-lang.github.io/chalk/chalk_solve/rust_ir/index.html
 [doc-chalk]: https://rust-lang.github.io/chalk/chalk/index.html
 [engine-context]: https://rust-lang.github.io/chalk/chalk_engine/context/index.html
 [chalk-program]: https://rust-lang.github.io/chalk/chalk_integration/program/struct.Program.html
@@ -211,7 +211,7 @@ Likewise, lowering tests use the [`lowering_success!` and
 [chalki]: https://github.com/rust-lang/chalk/blob/master/src/main.rs
 [clause]: https://github.com/rust-lang/chalk/blob/master/GLOSSARY.md#clause
 [coherence-src]: https://rust-lang.github.io/chalk/chalk_solve/coherence/index.html
-[ir-code]: https://rust-lang.github.io/chalk/chalk_rust_ir/
+[ir-code]: https://rust-lang.github.io/chalk/chalk_solve/rust_ir/
 [solve-wf-src]: https://rust-lang.github.io/chalk/chalk_solve/wf/index.html
 [solve_goal]: https://github.com/rust-lang/chalk/blob/4bce000801de31bf45c02f742a5fce335c9f035f/src/test.rs#L85
 [test-lowering-macros]: https://github.com/rust-lang/chalk/blob/4bce000801de31bf45c02f742a5fce335c9f035f/src/test_util.rs#L21-L54

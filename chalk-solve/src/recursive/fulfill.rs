@@ -1,19 +1,23 @@
-use super::*;
-use crate::solve::truncate;
-use cast::Cast;
-use chalk_engine::fallible::NoSolution;
-use fold::Fold;
-use infer::{
+use crate::infer::{
     canonicalize::Canonicalized,
     instantiate::IntoBindersAndValue,
     ucanonicalize::{UCanonicalized, UniverseMap},
     unify::UnificationResult,
     InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
 };
-use interner::HasInterner;
+use crate::recursive::{Minimums, Solver};
+use crate::solve::{truncate, Guidance, Solution};
+use chalk_base::results::{Fallible, NoSolution};
+use chalk_ir::cast::Cast;
+use chalk_ir::fold::Fold;
+use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::zip::Zip;
+use chalk_ir::{
+    Canonical, ConstrainedSubst, Constraint, Environment, EqGoal, Goal, GoalData, InEnvironment,
+    QuantifierKind, Substitution, UCanonical,
+};
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
-use zip::Zip;
 
 enum Outcome {
     Complete,

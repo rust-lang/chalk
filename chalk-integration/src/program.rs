@@ -7,7 +7,7 @@ use chalk_ir::{
     Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
     ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
-use chalk_rust_ir::{
+use chalk_solve::rust_ir::{
     AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
     ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };

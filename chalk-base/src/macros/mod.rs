@@ -1,9 +1,5 @@
 use std::cell::RefCell;
 
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
 mod index;
 
 lazy_static! {

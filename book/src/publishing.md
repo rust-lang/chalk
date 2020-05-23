@@ -3,11 +3,10 @@
 **Note: this is mostly only useful for maintainers**
 
 The following crates get published to crates.io:
-- `chalk-macros`
+- `chalk-base`
 - `chalk-derive`
 - `chalk-engine`
 - `chalk-ir`
-- `chalk-rust-ir`
 - `chalk-solve`
 
 The following crates get versioned without publishing:
