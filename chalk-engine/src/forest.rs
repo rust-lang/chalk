@@ -9,7 +9,6 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
 
 pub struct Forest<I: Interner, C: Context<I>> {
-    context: C,
     pub(crate) tables: Tables<I>,
 
     /// This is a clock which always increases. It is
@@ -17,25 +16,16 @@ pub struct Forest<I: Interner, C: Context<I>> {
     /// This effectively gives us way to track what depth
     /// and loop a table or strand was last followed.
     pub(crate) clock: TimeStamp,
+    _context: std::marker::PhantomData<C>,
 }
 
 impl<I: Interner, C: Context<I>> Forest<I, C> {
-    pub fn new(context: C) -> Self {
+    pub fn new() -> Self {
         Forest {
-            context,
             tables: Tables::new(),
             clock: TimeStamp::default(),
+            _context: std::marker::PhantomData,
         }
-    }
-
-    /// Gives access to `self.context`. In fact, the SLG solver
-    /// doesn't ever use `self.context` for anything, and only cares
-    /// about the associated types and methods defined on it.  But the
-    /// creator of the forest can use the context field to store
-    /// configuration info (e.g., in chalk, we store the max size of a
-    /// term in here).
-    pub fn context(&self) -> &C {
-        &self.context
     }
 
     // Gets the next clock TimeStamp. This will never decrease.
@@ -52,7 +42,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         &'f mut self,
         context: &'f impl ContextOps<I, C>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-    ) -> impl AnswerStream<I, C> + 'f {
+    ) -> impl AnswerStream<I> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
         let answer = AnswerIndex::ZERO;
         ForestSolver {
@@ -60,6 +50,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             context,
             table,
             answer,
+            _context: std::marker::PhantomData::<C>,
         }
     }
 
@@ -148,9 +139,10 @@ struct ForestSolver<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> {
     context: &'me CO,
     table: TableIndex,
     answer: AnswerIndex,
+    _context: std::marker::PhantomData<C>,
 }
 
-impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I, C>
+impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
     for ForestSolver<'me, I, C, CO>
 {
     /// # Panics

@@ -23,31 +23,7 @@ mod resolvent;
 
 #[derive(Clone, Debug, HasInterner)]
 pub(crate) struct SlgContext<I: Interner> {
-    max_size: usize,
-    /// The expected number of answers for a solution.
-    /// Only really sseful for tests, since `make_solution`
-    /// will panic if the number of cached answers does not
-    /// equal this when a solution is made.
-    expected_answers: Option<usize>,
     phantom: PhantomData<I>,
-}
-
-impl<I: Interner> SlgContext<I> {
-    pub(crate) fn new(max_size: usize, expected_answers: Option<usize>) -> SlgContext<I> {
-        SlgContext {
-            max_size,
-            expected_answers,
-            phantom: PhantomData,
-        }
-    }
-
-    pub(crate) fn ops<'p>(&self, program: &'p dyn RustIrDatabase<I>) -> SlgContextOps<'p, I> {
-        SlgContextOps {
-            program,
-            max_size: self.max_size,
-            expected_answers: self.expected_answers,
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -55,6 +31,20 @@ pub(crate) struct SlgContextOps<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     max_size: usize,
     expected_answers: Option<usize>,
+}
+
+impl<I: Interner> SlgContextOps<'_, I> {
+    pub(crate) fn new<'p>(
+        program: &'p dyn RustIrDatabase<I>,
+        max_size: usize,
+        expected_answers: Option<usize>,
+    ) -> SlgContextOps<'p, I> {
+        SlgContextOps {
+            program,
+            max_size,
+            expected_answers,
+        }
+    }
 }
 
 #[derive(Clone)]

@@ -148,7 +148,7 @@ pub trait AggregateOps<I: Interner, C: Context<I>> {
     fn make_solution(
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,
-        answers: impl AnswerStream<I, C>,
+        answers: impl AnswerStream<I>,
         should_continue: impl Fn() -> bool,
     ) -> Option<C::Solution>;
 }
@@ -330,7 +330,7 @@ impl<I: Interner> Debug for AnswerResult<I> {
     }
 }
 
-pub trait AnswerStream<I: Interner, C: Context<I>> {
+pub trait AnswerStream<I: Interner> {
     /// Gets the next answer for a given goal, but doesn't increment the answer index.
     /// Calling this or `next_answer` again will give the same answer.
     fn peek_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<I>;

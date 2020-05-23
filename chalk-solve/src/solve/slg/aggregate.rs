@@ -18,7 +18,7 @@ impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, 
     fn make_solution(
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,
-        mut answers: impl context::AnswerStream<I, SlgContext<I>>,
+        mut answers: impl context::AnswerStream<I>,
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
         let interner = self.program.interner();
