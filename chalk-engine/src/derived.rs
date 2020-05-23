@@ -9,8 +9,8 @@ use std::mem;
 
 ///////////////////////////////////////////////////////////////////////////
 
-impl<C: Context> PartialEq for Literal<C> {
-    fn eq(&self, other: &Literal<C>) -> bool {
+impl<I: Interner> PartialEq for Literal<I> {
+    fn eq(&self, other: &Literal<I>) -> bool {
         match (self, other) {
             (Literal::Positive(goal1), Literal::Positive(goal2))
             | (Literal::Negative(goal1), Literal::Negative(goal2)) => goal1 == goal2,
@@ -20,9 +20,9 @@ impl<C: Context> PartialEq for Literal<C> {
     }
 }
 
-impl<C: Context> Eq for Literal<C> {}
+impl<I: Interner> Eq for Literal<I> {}
 
-impl<C: Context> Hash for Literal<C> {
+impl<I: Interner> Hash for Literal<I> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         mem::discriminant(self).hash(state);
         match self {

@@ -4,17 +4,20 @@ use crate::hh::HhGoal;
 use crate::{ExClause, Literal, TimeStamp};
 use chalk_base::results::Fallible;
 
-impl<C: Context> Forest<C> {
+use chalk_ir::interner::Interner;
+use chalk_ir::{Environment, Substitution};
+
+impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// Simplifies an HH goal into a series of positive domain goals
     /// and negative HH goals. This operation may fail if the HH goal
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_hh_goal(
-        context: &impl ContextOps<C>,
-        infer: &mut dyn InferenceTable<C>,
-        subst: C::Substitution,
-        initial_environment: C::Environment,
-        initial_hh_goal: HhGoal<C>,
-    ) -> Fallible<ExClause<C>> {
+        context: &impl ContextOps<I, C>,
+        infer: &mut dyn InferenceTable<I, C>,
+        subst: Substitution<I>,
+        initial_environment: Environment<I>,
+        initial_hh_goal: HhGoal<I, C>,
+    ) -> Fallible<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,
             ambiguous: false,

@@ -3,14 +3,16 @@ use crate::strand::Strand;
 use crate::{Minimums, TableIndex, TimeStamp};
 use std::ops::{Index, IndexMut, Range};
 
+use chalk_ir::interner::Interner;
+
 /// See `Forest`.
 #[derive(Debug)]
-pub(crate) struct Stack<C: Context> {
+pub(crate) struct Stack<I: Interner, C: Context<I>> {
     /// Stack: as described above, stores the in-progress goals.
-    stack: Vec<StackEntry<C>>,
+    stack: Vec<StackEntry<I, C>>,
 }
 
-impl<C: Context> Default for Stack<C> {
+impl<I: Interner, C: Context<I>> Default for Stack<I, C> {
     fn default() -> Self {
         Stack { stack: vec![] }
     }
@@ -27,7 +29,7 @@ index_struct! {
 }
 
 #[derive(Debug)]
-pub(crate) struct StackEntry<C: Context> {
+pub(crate) struct StackEntry<I: Interner, C: Context<I>> {
     /// The goal G from the stack entry `A :- G` represented here.
     pub(super) table: TableIndex,
 
@@ -39,10 +41,10 @@ pub(crate) struct StackEntry<C: Context> {
     // FIXME: should store this as an index.
     // This would mean that if we unwind,
     // we don't need to worry about losing a strand
-    pub(super) active_strand: Option<Strand<C>>,
+    pub(super) active_strand: Option<Strand<I, C>>,
 }
 
-impl<C: Context> Stack<C> {
+impl<I: Interner, C: Context<I>> Stack<I, C> {
     pub(super) fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
@@ -94,7 +96,7 @@ impl<C: Context> Stack<C> {
     /// Pops the top-most entry from the stack, which should have the depth `*depth`:
     /// * If the stack is now empty, returns None.
     /// * Otherwise, `take`s the active strand from the new top and returns it.
-    pub(super) fn pop_and_take_caller_strand(&mut self) -> Option<Strand<C>> {
+    pub(super) fn pop_and_take_caller_strand(&mut self) -> Option<Strand<I, C>> {
         if self.pop_and_adjust_depth() {
             Some(self.top().active_strand.take().unwrap())
         } else {
@@ -105,7 +107,7 @@ impl<C: Context> Stack<C> {
     /// Pops the top-most entry from the stack, which should have the depth `*depth`:
     /// * If the stack is now empty, returns None.
     /// * Otherwise, borrows the active strand (mutably) from the new top and returns it.
-    pub(super) fn pop_and_borrow_caller_strand(&mut self) -> Option<&mut Strand<C>> {
+    pub(super) fn pop_and_borrow_caller_strand(&mut self) -> Option<&mut Strand<I, C>> {
         if self.pop_and_adjust_depth() {
             Some(self.top().active_strand.as_mut().unwrap())
         } else {
@@ -113,21 +115,21 @@ impl<C: Context> Stack<C> {
         }
     }
 
-    pub(super) fn top(&mut self) -> &mut StackEntry<C> {
+    pub(super) fn top(&mut self) -> &mut StackEntry<I, C> {
         self.stack.last_mut().unwrap()
     }
 }
 
-impl<C: Context> Index<StackIndex> for Stack<C> {
-    type Output = StackEntry<C>;
+impl<I: Interner, C: Context<I>> Index<StackIndex> for Stack<I, C> {
+    type Output = StackEntry<I, C>;
 
-    fn index(&self, index: StackIndex) -> &StackEntry<C> {
+    fn index(&self, index: StackIndex) -> &StackEntry<I, C> {
         &self.stack[index.value]
     }
 }
 
-impl<C: Context> IndexMut<StackIndex> for Stack<C> {
-    fn index_mut(&mut self, index: StackIndex) -> &mut StackEntry<C> {
+impl<I: Interner, C: Context<I>> IndexMut<StackIndex> for Stack<I, C> {
+    fn index_mut(&mut self, index: StackIndex) -> &mut StackEntry<I, C> {
         &mut self.stack[index.value]
     }
 }

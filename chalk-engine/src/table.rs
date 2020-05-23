@@ -6,10 +6,13 @@ use std::collections::hash_map::Entry;
 use std::collections::VecDeque;
 use std::mem;
 
-pub(crate) struct Table<C: Context> {
+use chalk_ir::interner::Interner;
+use chalk_ir::{Goal, InEnvironment, UCanonical};
+
+pub(crate) struct Table<I: Interner, C: Context<I>> {
     /// The goal this table is trying to solve (also the key to look
     /// it up).
-    pub(crate) table_goal: C::UCanonicalGoalInEnvironment,
+    pub(crate) table_goal: UCanonical<InEnvironment<Goal<I>>>,
 
     /// A goal is coinductive if it can assume itself to be true, more
     /// or less. This is true for auto traits.
@@ -21,7 +24,7 @@ pub(crate) struct Table<C: Context> {
 
     /// Stores the answers that we have found thus far. When we get a request
     /// for an answer N, we will first check this vector.
-    answers: Vec<Answer<C>>,
+    answers: Vec<Answer<I, C>>,
 
     /// An alternative storage for the answers we have so far, used to
     /// detect duplicates. Not every answer in `answers` will be
@@ -37,7 +40,7 @@ pub(crate) struct Table<C: Context> {
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
-    strands: VecDeque<CanonicalStrand<C>>,
+    strands: VecDeque<CanonicalStrand<I, C>>,
 }
 
 index_struct! {
@@ -46,11 +49,11 @@ index_struct! {
     }
 }
 
-impl<C: Context> Table<C> {
+impl<I: Interner, C: Context<I>> Table<I, C> {
     pub(crate) fn new(
-        table_goal: C::UCanonicalGoalInEnvironment,
+        table_goal: UCanonical<InEnvironment<Goal<I>>>,
         coinductive_goal: bool,
-    ) -> Table<C> {
+    ) -> Table<I, C> {
         Table {
             table_goal,
             coinductive_goal,
@@ -62,19 +65,19 @@ impl<C: Context> Table<C> {
     }
 
     /// Push a strand to the back of the queue of strands to be processed.
-    pub(crate) fn enqueue_strand(&mut self, strand: CanonicalStrand<C>) {
+    pub(crate) fn enqueue_strand(&mut self, strand: CanonicalStrand<I, C>) {
         self.strands.push_back(strand);
     }
 
-    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<C>> {
+    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<I, C>> {
         self.strands.iter_mut()
     }
 
-    pub(crate) fn strands(&self) -> impl Iterator<Item = &CanonicalStrand<C>> {
+    pub(crate) fn strands(&self) -> impl Iterator<Item = &CanonicalStrand<I, C>> {
         self.strands.iter()
     }
 
-    pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<C>> {
+    pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<I, C>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
@@ -82,8 +85,8 @@ impl<C: Context> Table<C> {
     /// given criteria.
     pub(crate) fn dequeue_next_strand_if(
         &mut self,
-        test: impl Fn(&CanonicalStrand<C>) -> bool,
-    ) -> Option<CanonicalStrand<C>> {
+        test: impl Fn(&CanonicalStrand<I, C>) -> bool,
+    ) -> Option<CanonicalStrand<I, C>> {
         let strand = self.strands.pop_front();
         if let Some(strand) = strand {
             if test(&strand) {
@@ -117,7 +120,7 @@ impl<C: Context> Table<C> {
     /// tests trigger this case, and assumptions upstream assume that when
     /// `true` is returned here, that a *new* answer was added (instead of an)
     /// existing answer replaced.
-    pub(super) fn push_answer(&mut self, answer: Answer<C>) -> Option<AnswerIndex> {
+    pub(super) fn push_answer(&mut self, answer: Answer<I, C>) -> Option<AnswerIndex> {
         assert!(!self.floundered);
 
         debug_heading!("push_answer(answer={:?})", answer);
@@ -154,7 +157,7 @@ impl<C: Context> Table<C> {
         Some(AnswerIndex::from(index))
     }
 
-    pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<C>> {
+    pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<I, C>> {
         self.answers.get(index.value)
     }
 
