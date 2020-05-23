@@ -103,18 +103,22 @@ trait [a-zA-Z0-9_-]+ \{
 
 #[test]
 fn test_name_disambiguation() {
-    // we can't actually test different structs or traits with the same name in
-    // Chalk - but luckily our implementation ignores types for name
-    // disambiguation, so we can test it indirectly by using a struct and trait
-    // of the same name
+    // we don't have modules in chalk so we can't actually test different
+    // structs or traits with the same name in Chalk - but luckily our
+    // implementation ignores types for name disambiguation, so we can test it
+    // indirectly by using a opaque type and trait of the same name.
     reparse_into_different_test(
         "
-        struct Baz {}
+        struct Foo {}
         trait Baz {}
+        impl Baz for Foo {}
+        opaque type Baz: Baz = Foo;
         ",
         "
-        struct Baz {}
-        trait Baz_1 {}
+        struct Foo {}
+        trait Baz {}
+        impl Baz for Foo {}
+        opaque type Baz_1: Baz = Foo;
         ",
     );
 }

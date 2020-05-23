@@ -473,8 +473,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.trait_kinds.get(&trait_id).unwrap().name.to_string()
     }
 
-    fn struct_name(&self, struct_id: StructId<ChalkIr>) -> String {
-        self.struct_kinds.get(&struct_id).unwrap().name.to_string()
+    fn adt_name(&self, struct_id: AdtId<ChalkIr>) -> String {
+        self.adt_kinds.get(&struct_id).unwrap().name.to_string()
     }
 
     fn assoc_type_name(&self, assoc_type_id: AssocTypeId<ChalkIr>) -> String {

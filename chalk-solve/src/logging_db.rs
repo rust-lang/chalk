@@ -5,8 +5,8 @@ use std::{
     sync::Mutex,
 };
 
-use chalk_ir::{interner::Interner, AssocTypeId, ImplId, OpaqueTyId, StructId, TraitId};
-use chalk_rust_ir::{ImplDatum, OpaqueTyDatum, StructDatum, TraitDatum};
+use crate::rust_ir::*;
+use chalk_ir::{interner::Interner, *};
 
 use crate::{display, RustIrDatabase};
 /// Wraps another `RustIrDatabase` (`DB`) and records which definitions are used.
@@ -78,7 +78,7 @@ where
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocTypeId<I>,
-    ) -> Arc<chalk_rust_ir::AssociatedTyDatum<I>> {
+    ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         let ty_datum = self.db.associated_ty_data(ty);
         self.record(ty_datum.trait_id);
         ty_datum
@@ -87,9 +87,9 @@ where
         self.record(trait_id);
         self.db.trait_datum(trait_id)
     }
-    fn struct_datum(&self, struct_id: StructId<I>) -> Arc<StructDatum<I>> {
-        self.record(struct_id);
-        self.db.struct_datum(struct_id)
+    fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
+        self.record(adt_id);
+        self.db.adt_datum(adt_id)
     }
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.record(impl_id);
@@ -97,8 +97,8 @@ where
     }
     fn associated_ty_value(
         &self,
-        id: chalk_rust_ir::AssociatedTyValueId<I>,
-    ) -> Arc<chalk_rust_ir::AssociatedTyValue<I>> {
+        id: crate::rust_ir::AssociatedTyValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
         let value = self.db.associated_ty_value(id);
         self.record(value.impl_id);
         value
@@ -110,7 +110,7 @@ where
     fn impls_for_trait(
         &self,
         trait_id: TraitId<I>,
-        parameters: &[chalk_ir::Parameter<I>],
+        parameters: &[chalk_ir::GenericArg<I>],
     ) -> Vec<ImplId<I>> {
         self.record(trait_id);
         let impl_ids = self.db.impls_for_trait(trait_id, parameters);
@@ -121,14 +121,14 @@ where
         self.record(trait_id);
         self.db.local_impls_to_coherence_check(trait_id)
     }
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, struct_id: StructId<I>) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
         self.record(auto_trait_id);
-        self.record(struct_id);
-        self.db.impl_provided_for(auto_trait_id, struct_id)
+        self.record(adt_id);
+        self.db.impl_provided_for(auto_trait_id, adt_id)
     }
     fn well_known_trait_id(
         &self,
-        well_known_trait: chalk_rust_ir::WellKnownTrait,
+        well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
         let trait_id = self.db.well_known_trait_id(well_known_trait);
         trait_id.map(|id| self.record(id));
@@ -146,8 +146,8 @@ where
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
         self.db.trait_name(trait_id)
     }
-    fn struct_name(&self, struct_id: StructId<I>) -> String {
-        self.db.struct_name(struct_id)
+    fn adt_name(&self, adt_id: AdtId<I>) -> String {
+        self.db.adt_name(adt_id)
     }
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
         self.db.assoc_type_name(assoc_ty_id)
@@ -158,6 +158,9 @@ where
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.record(trait_id);
         self.db.is_object_safe(trait_id)
+    }
+    fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
+        todo!()
     }
 }
 
@@ -232,22 +235,22 @@ where
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocTypeId<I>,
-    ) -> Arc<chalk_rust_ir::AssociatedTyDatum<I>> {
+    ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         self.db.associated_ty_data(ty)
     }
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.db.trait_datum(trait_id)
     }
-    fn struct_datum(&self, struct_id: StructId<I>) -> Arc<StructDatum<I>> {
-        self.db.struct_datum(struct_id)
+    fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
+        self.db.adt_datum(adt_id)
     }
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.db.impl_datum(impl_id)
     }
     fn associated_ty_value(
         &self,
-        id: chalk_rust_ir::AssociatedTyValueId<I>,
-    ) -> Arc<chalk_rust_ir::AssociatedTyValue<I>> {
+        id: crate::rust_ir::AssociatedTyValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
         self.db.associated_ty_value(id)
     }
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
@@ -256,19 +259,19 @@ where
     fn impls_for_trait(
         &self,
         trait_id: TraitId<I>,
-        parameters: &[chalk_ir::Parameter<I>],
+        parameters: &[chalk_ir::GenericArg<I>],
     ) -> Vec<ImplId<I>> {
         self.db.impls_for_trait(trait_id, parameters)
     }
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {
         self.db.local_impls_to_coherence_check(trait_id)
     }
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, struct_id: StructId<I>) -> bool {
-        self.db.impl_provided_for(auto_trait_id, struct_id)
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
+        self.db.impl_provided_for(auto_trait_id, adt_id)
     }
     fn well_known_trait_id(
         &self,
-        well_known_trait: chalk_rust_ir::WellKnownTrait,
+        well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
         self.db.well_known_trait_id(well_known_trait)
     }
@@ -287,8 +290,8 @@ where
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
         self.db.trait_name(trait_id)
     }
-    fn struct_name(&self, struct_id: StructId<I>) -> String {
-        self.db.struct_name(struct_id)
+    fn adt_name(&self, adt_id: AdtId<I>) -> String {
+        self.db.adt_name(adt_id)
     }
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
         self.db.assoc_type_name(assoc_ty_id)
@@ -296,19 +299,22 @@ where
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
         self.db.opaque_type_name(opaque_ty_id)
     }
+    fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
+        todo!()
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum RecordedItemId<I: Interner> {
-    Struct(StructId<I>),
+    Adt(AdtId<I>),
     Trait(TraitId<I>),
     Impl(ImplId<I>),
     OpaqueTy(OpaqueTyId<I>),
 }
 
-impl<I: Interner> From<StructId<I>> for RecordedItemId<I> {
-    fn from(v: StructId<I>) -> Self {
-        RecordedItemId::Struct(v)
+impl<I: Interner> From<AdtId<I>> for RecordedItemId<I> {
+    fn from(v: AdtId<I>) -> Self {
+        RecordedItemId::Adt(v)
     }
 }
 impl<I: Interner> From<TraitId<I>> for RecordedItemId<I> {
@@ -328,16 +334,23 @@ impl<I: Interner> From<OpaqueTyId<I>> for RecordedItemId<I> {
     }
 }
 
+/// Utility for implementing Ord for RecordedItemId.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+enum OrderedItemId<'a, DefId, AdtId> {
+    DefId(&'a DefId),
+    AdtId(&'a AdtId),
+}
+
 impl<I: Interner> RecordedItemId<I> {
     /// Extract internal identifier. Allows for absolute ordering matching the
     /// order in which chalk saw things (and thus reproducing that order in
     /// printed programs)
-    fn def_id(&self) -> &I::DefId {
+    fn ordered_item_id(&self) -> OrderedItemId<'_, I::DefId, I::InternedAdtId> {
         match self {
             RecordedItemId::Trait(TraitId(x))
-            | RecordedItemId::Struct(StructId(x))
             | RecordedItemId::Impl(ImplId(x))
-            | RecordedItemId::OpaqueTy(OpaqueTyId(x)) => x,
+            | RecordedItemId::OpaqueTy(OpaqueTyId(x)) => OrderedItemId::DefId(x),
+            RecordedItemId::Adt(AdtId(x)) => OrderedItemId::AdtId(x),
         }
     }
 }
@@ -347,8 +360,9 @@ impl<I: Interner> PartialOrd for RecordedItemId<I> {
         Some(self.cmp(other))
     }
 }
+
 impl<I: Interner> Ord for RecordedItemId<I> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.def_id().cmp(other.def_id())
+        self.ordered_item_id().cmp(&other.ordered_item_id())
     }
 }

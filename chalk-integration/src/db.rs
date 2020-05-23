@@ -202,8 +202,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().trait_name(trait_id)
     }
 
-    fn struct_name(&self, struct_id: StructId<ChalkIr>) -> String {
-        self.program_ir().unwrap().struct_name(struct_id)
+    fn adt_name(&self, struct_id: AdtId<ChalkIr>) -> String {
+        self.program_ir().unwrap().adt_name(struct_id)
     }
 
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<ChalkIr>) -> String {

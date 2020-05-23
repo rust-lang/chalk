@@ -2,20 +2,13 @@ use std::{
     cell::RefCell,
     collections::BTreeMap,
     fmt::{Display, Formatter, Result},
+    ops::Fn as StdFn,
     rc::Rc,
     sync::Arc,
 };
 
-use chalk_ir::{
-    interner::Interner, AliasEq, AliasTy, ApplicationTy, AssocTypeId, BoundVar, Fn as ChalkFn,
-    Lifetime, LifetimeData, Mutability, OpaqueTy, OpaqueTyId, Parameter, ParameterData,
-    ParameterKind, ParameterKinds, ProjectionTy, QuantifiedWhereClause, Scalar, StructId, TraitId,
-    TraitRef, Ty, TyData, TypeName, WhereClause,
-};
-use chalk_rust_ir::{
-    AliasEqBound, AssociatedTyDatum, AssociatedTyValue, ImplDatum, InlineBound, OpaqueTyDatum,
-    Polarity, QuantifiedInlineBound, StructDatum, TraitBound, TraitDatum,
-};
+use crate::rust_ir::*;
+use chalk_ir::{interner::Interner, *};
 use itertools::Itertools;
 
 use crate::{logging_db::RecordedItemId, split::Split, RustIrDatabase};
@@ -45,8 +38,8 @@ where
                 let v = db.impl_datum(id);
                 write_top_level(f, ws, &*v)?;
             }
-            RecordedItemId::Struct(id) => {
-                let v = db.struct_datum(id);
+            RecordedItemId::Adt(id) => {
+                let v = db.adt_datum(id);
                 write_top_level(f, ws, &*v)?;
             }
             RecordedItemId::Trait(id) => {
@@ -76,10 +69,10 @@ impl<I: Interner, T: RenderAsRust<I>> Display for DisplayRenderAsRust<'_, I, T> 
     }
 }
 
-fn as_display<F: Fn(&mut Formatter<'_>) -> Result>(f: F) -> impl Display {
-    struct ClosureDisplay<F: Fn(&mut Formatter<'_>) -> Result>(F);
+fn as_display<F: StdFn(&mut Formatter<'_>) -> Result>(f: F) -> impl Display {
+    struct ClosureDisplay<F: StdFn(&mut Formatter<'_>) -> Result>(F);
 
-    impl<F: Fn(&mut Formatter<'_>) -> Result> Display for ClosureDisplay<F> {
+    impl<F: StdFn(&mut Formatter<'_>) -> Result> Display for ClosureDisplay<F> {
         fn fmt(&self, f: &mut Formatter<'_>) -> Result {
             self.0(f)
         }
@@ -247,19 +240,19 @@ impl<I: Interner> RenderAsRust<I> for Lifetime<I> {
         self.data(s.db.interner()).fmt(s, f)
     }
 }
-impl<I: Interner> RenderAsRust<I> for Parameter<I> {
+impl<I: Interner> RenderAsRust<I> for GenericArg<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to ParameterData
         self.data(s.db.interner()).fmt(s, f)
     }
 }
-impl<I: Interner> RenderAsRust<I> for StructId<I> {
+impl<I: Interner> RenderAsRust<I> for AdtId<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // TODO: use debug methods?
         write!(
             f,
             "{}",
-            s.alias_for_id_name(self.0, s.db.struct_name(*self))
+            s.alias_for_adt_id_name(self.0, s.db.adt_name(*self))
         )
     }
 }
@@ -416,7 +409,7 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for ChalkFn<I> {
+impl<I: Interner> RenderAsRust<I> for Fn<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         let s = &s.add_debrujin_index(None);
@@ -447,7 +440,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         match self.name {
-            TypeName::Struct(sid) => {
+            TypeName::Adt(sid) => {
                 write!(f, "{}", sid.display(s))?;
                 let parameters = self.substitution.parameters(interner);
                 let parameters = parameters.iter().map(|param| param.display(s));
@@ -529,6 +522,8 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                 )?;
             }
             TypeName::Error => write!(f, "{{error}}")?,
+            TypeName::Never => todo!("never type"),
+            TypeName::FnDef(_) => todo!("fn def type"),
         }
         Ok(())
     }
@@ -581,11 +576,12 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for ParameterData<I> {
+impl<I: Interner> RenderAsRust<I> for GenericArgData<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
-            ParameterKind::Ty(ty) => write!(f, "{}", ty.display(s)),
-            ParameterKind::Lifetime(lt) => write!(f, "{}", lt.display(s)),
+            GenericArgData::Ty(ty) => write!(f, "{}", ty.display(s)),
+            GenericArgData::Lifetime(lt) => write!(f, "{}", lt.display(s)),
+            GenericArgData::Const(_) => todo!(""),
         }
     }
 }
@@ -653,7 +649,7 @@ impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
 fn display_trait_with_generics<'a, I: Interner>(
     s: &'a WriterState<'a, I>,
     trait_name: impl RenderAsRust<I> + 'a,
-    trait_params: impl IntoIterator<Item = &'a Parameter<I>> + 'a,
+    trait_params: impl IntoIterator<Item = &'a GenericArg<I>> + 'a,
 ) -> impl Display + 'a {
     use std::fmt::Write;
     let trait_params = trait_params.into_iter().map(|param| param.display(s));
@@ -686,8 +682,8 @@ impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
 fn display_trait_with_assoc_ty_value<'a, I: Interner>(
     s: &'a WriterState<'a, I>,
     assoc_ty_datum: Arc<AssociatedTyDatum<I>>,
-    trait_params: &'a [Parameter<I>],
-    assoc_ty_params: &'a [Parameter<I>],
+    trait_params: &'a [GenericArg<I>],
+    assoc_ty_params: &'a [GenericArg<I>],
     assoc_ty_value: &'a Ty<I>,
 ) -> impl Display + 'a {
     as_display(move |f| {
@@ -856,7 +852,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
             "\n{}\n",
             self.associated_ty_ids.iter().map(|assoc_ty_id| {
                 let assoc_ty_data = s.db.associated_ty_data(*assoc_ty_id);
-                format!("{}{}", s.indent(), assoc_ty_data.display(s))
+                format!("{}{}", s.indent(), (*assoc_ty_data).display(s))
             }),
             "\n"
         )?;
@@ -865,7 +861,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for StructDatum<I> {
+impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // When support for Self in structs is added, self_binding should be
         // changed to Some(0)
@@ -937,15 +933,15 @@ impl Display for InvertedBoundVar {
 }
 
 #[derive(Debug)]
-struct DefIdAliases<I: Interner> {
+struct DefIdAliases<T: Ord> {
     /// Map from the DefIds we've encountered to a u32 alias id unique to all ids
     /// the same name.
-    aliases: BTreeMap<I::DefId, u32>,
+    aliases: BTreeMap<T, u32>,
     /// Map from each name to the next unused u32 alias id.
     next_unused_for_name: BTreeMap<String, u32>,
 }
 
-impl<I: Interner> Default for DefIdAliases<I> {
+impl<T: Ord> Default for DefIdAliases<T> {
     fn default() -> Self {
         DefIdAliases {
             aliases: BTreeMap::default(),
@@ -954,8 +950,8 @@ impl<I: Interner> Default for DefIdAliases<I> {
     }
 }
 
-impl<I: Interner> DefIdAliases<I> {
-    fn alias_for_id_name(&mut self, id: I::DefId, name: String) -> String {
+impl<T: Copy + Ord> DefIdAliases<T> {
+    fn alias_for_id_name(&mut self, id: T, name: String) -> String {
         let next_unused_for_name = &mut self.next_unused_for_name;
         let alias = *self.aliases.entry(id).or_insert_with(|| {
             let next_unused: &mut u32 =
@@ -983,7 +979,8 @@ pub struct WriterState<'a, I: Interner> {
     remapping: Rc<BTreeMap<InvertedBoundVar, InvertedBoundVar>>,
     // the inverted_bound_var which maps to "Self"
     self_mapping: Option<InvertedBoundVar>,
-    def_id_aliases: Rc<RefCell<DefIdAliases<I>>>,
+    def_id_aliases: Rc<RefCell<DefIdAliases<I::DefId>>>,
+    adt_id_aliases: Rc<RefCell<DefIdAliases<I::InternedAdtId>>>,
 }
 type IndexWithinBinding = usize;
 impl<'a, I: Interner> WriterState<'a, I> {
@@ -995,6 +992,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             remapping: Rc::new(BTreeMap::new()),
             self_mapping: None,
             def_id_aliases: Default::default(),
+            adt_id_aliases: Default::default(),
         }
     }
 
@@ -1011,6 +1009,10 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
     fn alias_for_id_name(&self, id: I::DefId, name: String) -> impl Display {
         self.def_id_aliases.borrow_mut().alias_for_id_name(id, name)
+    }
+
+    fn alias_for_adt_id_name(&self, id: I::InternedAdtId, name: String) -> impl Display {
+        self.adt_id_aliases.borrow_mut().alias_for_id_name(id, name)
     }
 
     /// Adds a level of debrujin index, and possibly a "Self" parameter.
@@ -1052,8 +1054,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
         WriterState {
             remapping: Rc::new(remapping),
-            def_id_aliases: self.def_id_aliases.clone(),
-            ..*self
+            ..self.clone()
         }
     }
 
@@ -1101,7 +1102,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
     fn binder_var_indices<'b>(
         &'b self,
-        binders: &'b ParameterKinds<I>,
+        binders: &'b VariableKinds<I>,
     ) -> impl Iterator<Item = InvertedBoundVar> + 'b {
         binders
             .iter(self.db.interner())
@@ -1111,14 +1112,15 @@ impl<'a, I: Interner> WriterState<'a, I> {
 
     fn binder_var_display<'b>(
         &'b self,
-        binders: &'b ParameterKinds<I>,
+        binders: &'b VariableKinds<I>,
     ) -> impl Iterator<Item = String> + 'b {
         binders
             .iter(self.db.interner())
             .zip(self.binder_var_indices(binders))
             .map(move |(parameter, var)| match parameter {
-                ParameterKind::Ty(_) => format!("{}", self.apply_mappings(var)),
-                ParameterKind::Lifetime(_) => format!("'{}", self.apply_mappings(var)),
+                VariableKind::Ty => format!("{}", self.apply_mappings(var)),
+                VariableKind::Lifetime => format!("'{}", self.apply_mappings(var)),
+                VariableKind::Const(_) => todo!("const variable kinds"),
             })
     }
 }

@@ -18,7 +18,7 @@ mod where_clauses;
 fn write_program(program: &Program) -> String {
     let mut out = String::new();
     let ws = &WriterState::new(program);
-    for datum in program.struct_data.values() {
+    for datum in program.adt_data.values() {
         display::write_top_level(&mut out, ws, &**datum).unwrap();
     }
     for datum in program.trait_data.values() {

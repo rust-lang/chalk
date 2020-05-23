@@ -147,7 +147,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn trait_name(&self, trait_id: TraitId<I>) -> String;
 
     /// Retrieves a struct's original name. No uniqueness guarantees.
-    fn struct_name(&self, struct_id: StructId<I>) -> String;
+    fn adt_name(&self, struct_id: AdtId<I>) -> String;
 
     /// Retrieves the name of an associated type.
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String;
