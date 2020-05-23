@@ -95,12 +95,7 @@ impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, 
                     break Guidance::Suggested(subst);
                 }
             };
-            subst = merge_into_guidance(
-                interner,
-                &root_goal.canonical,
-                subst,
-                &new_subst,
-            );
+            subst = merge_into_guidance(interner, &root_goal.canonical, subst, &new_subst);
             num_answers += 1;
         };
 

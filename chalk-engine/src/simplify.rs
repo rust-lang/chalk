@@ -4,7 +4,7 @@ use crate::{ExClause, Literal, TimeStamp};
 use chalk_base::results::Fallible;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Environment, InEnvironment, Goal, GoalData, Substitution, QuantifierKind};
+use chalk_ir::{Environment, Goal, GoalData, InEnvironment, QuantifierKind, Substitution};
 
 impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// Simplifies an HH goal into a series of positive domain goals
@@ -54,21 +54,25 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 GoalData::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(InEnvironment::new(&environment, subgoal.clone())));
+                        .push(Literal::Negative(InEnvironment::new(
+                            &environment,
+                            subgoal.clone(),
+                        )));
                 }
-                GoalData::EqGoal(goal) => {
-                    infer.unify_generic_args_into_ex_clause(
-                        context.interner(),
-                        &environment,
-                        &goal.a,
-                        &goal.b,
-                        &mut ex_clause,
-                    )?
-                },
+                GoalData::EqGoal(goal) => infer.unify_generic_args_into_ex_clause(
+                    context.interner(),
+                    &environment,
+                    &goal.a,
+                    &goal.b,
+                    &mut ex_clause,
+                )?,
                 GoalData::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(InEnvironment::new(&environment, context.into_goal(domain_goal.clone()))));
+                        .push(Literal::Positive(InEnvironment::new(
+                            &environment,
+                            context.into_goal(domain_goal.clone()),
+                        )));
                 }
                 GoalData::CannotProve(()) => {
                     ex_clause.ambiguous = true;

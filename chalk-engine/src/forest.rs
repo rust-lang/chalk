@@ -150,7 +150,9 @@ struct ForestSolver<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> {
     answer: AnswerIndex,
 }
 
-impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I, C> for ForestSolver<'me, I, C, CO> {
+impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I, C>
+    for ForestSolver<'me, I, C, CO>
+{
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.

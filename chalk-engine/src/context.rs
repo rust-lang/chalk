@@ -8,7 +8,11 @@
 use crate::{CompleteAnswer, ExClause};
 use chalk_base::results::{Fallible, Floundered};
 use chalk_ir::interner::Interner;
-use chalk_ir::{AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses, Substitution, UCanonical, UniverseMap};
+use chalk_ir::{
+    AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment,
+    GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses, Substitution, UCanonical,
+    UniverseMap,
+};
 use std::fmt::Debug;
 
 /// The "context" in which the SLG solver operates. It defines all the
@@ -44,7 +48,9 @@ pub trait Context<I: Interner>: Clone + Debug {
     fn next_subgoal_index(ex_clause: &ExClause<I>) -> usize;
 }
 
-pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + AggregateOps<I, C> {
+pub trait ContextOps<I: Interner, C: Context<I>>:
+    Sized + Clone + Debug + AggregateOps<I, C>
+{
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<I>>>) -> bool;
 
@@ -149,16 +155,15 @@ pub trait AggregateOps<I: Interner, C: Context<I>> {
 
 /// An "inference table" contains the state to support unification and
 /// other operations on terms.
-pub trait InferenceTable<I: Interner, C: Context<I>>: ResolventOps<I, C> + TruncateOps<I, C> + UnificationOps<I, C> {}
+pub trait InferenceTable<I: Interner, C: Context<I>>:
+    ResolventOps<I, C> + TruncateOps<I, C> + UnificationOps<I, C>
+{
+}
 
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<I: Interner, C: Context<I>> {
     // Used by: simplify
-    fn instantiate_binders_universally(
-        &mut self,
-        interner: &I,
-        arg: &Binders<Goal<I>>,
-    ) -> Goal<I>;
+    fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I>;
 
     // Used by: simplify
     fn instantiate_binders_existentially(
@@ -168,11 +173,7 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
     ) -> Goal<I>;
 
     // Used by: logic (but for debugging only)
-    fn debug_ex_clause<'v>(
-        &mut self,
-        interner: &I,
-        value: &'v ExClause<I>,
-    ) -> Box<dyn Debug + 'v>;
+    fn debug_ex_clause<'v>(&mut self, interner: &I, value: &'v ExClause<I>) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
     fn fully_canonicalize_goal(
@@ -242,11 +243,7 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
 ///   - Grosof and Swift; 2013
 pub trait TruncateOps<I: Interner, C: Context<I>> {
     /// Check if `subgoal` is too large
-    fn goal_needs_truncation(
-        &mut self,
-        interner: &I,
-        subgoal: &InEnvironment<Goal<I>>,
-    ) -> bool;
+    fn goal_needs_truncation(&mut self, interner: &I, subgoal: &InEnvironment<Goal<I>>) -> bool;
 
     /// Check if `subst` is too large
     fn answer_needs_truncation(&mut self, interner: &I, subst: &Substitution<I>) -> bool;

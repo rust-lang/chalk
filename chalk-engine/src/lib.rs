@@ -60,7 +60,9 @@ use std::cmp::min;
 use std::usize;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{AnswerSubst, Canonical, Constraint, ConstrainedSubst, Goal, InEnvironment, Substitution};
+use chalk_ir::{
+    AnswerSubst, Canonical, ConstrainedSubst, Constraint, Goal, InEnvironment, Substitution,
+};
 
 mod boring_impls;
 pub mod context;

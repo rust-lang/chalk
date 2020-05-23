@@ -39,7 +39,10 @@ impl<I: Interner> Tables<I> {
         index
     }
 
-    pub(super) fn index_of(&self, literal: &UCanonical<InEnvironment<Goal<I>>>) -> Option<TableIndex> {
+    pub(super) fn index_of(
+        &self,
+        literal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> Option<TableIndex> {
         self.table_indices.get(literal).cloned()
     }
 }

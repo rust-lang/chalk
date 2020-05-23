@@ -11,7 +11,10 @@ use crate::{
 use chalk_base::results::{Floundered, NoSolution};
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Goal, GoalData, InEnvironment, Substitution, UCanonical, UniverseMap};
+use chalk_ir::{
+    Canonical, ConstrainedSubst, Goal, GoalData, InEnvironment, Substitution, UCanonical,
+    UniverseMap,
+};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -121,16 +124,19 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             return test(&answer.subst.value.subst);
         }
 
-        self.tables[table].strands().any(|strand| {
-            test(&strand.canonical_ex_clause.value.subst)
-        })
+        self.tables[table]
+            .strands()
+            .any(|strand| test(&strand.canonical_ex_clause.value.subst))
     }
 
     pub(crate) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<I> {
         self.tables[table].answer(answer).unwrap()
     }
 
-    fn canonicalize_strand(context: &impl ContextOps<I, C>, strand: Strand<I, C>) -> CanonicalStrand<I> {
+    fn canonicalize_strand(
+        context: &impl ContextOps<I, C>,
+        strand: Strand<I, C>,
+    ) -> CanonicalStrand<I> {
         let Strand {
             mut infer,
             ex_clause,
@@ -409,7 +415,9 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     }
 }
 
-impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'forest> SolveState<'forest, I, C, CO> {
+impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'forest>
+    SolveState<'forest, I, C, CO>
+{
     /// Ensures that answer with the given index is available from the
     /// given table. Returns `Ok` if there is an answer.
     ///

@@ -241,11 +241,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         self.infer.instantiate_binders_existentially(interner, arg)
     }
 
-    fn debug_ex_clause<'v>(
-        &mut self,
-        interner: &I,
-        value: &'v ExClause<I>,
-    ) -> Box<dyn Debug + 'v> {
+    fn debug_ex_clause<'v>(&mut self, interner: &I, value: &'v ExClause<I>) -> Box<dyn Debug + 'v> {
         Box::new(self.infer.normalize_deep(interner, value))
     }
 

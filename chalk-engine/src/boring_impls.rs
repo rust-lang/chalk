@@ -1,7 +1,7 @@
 use crate::{ExClause, FlounderedSubgoal, Literal};
 use chalk_base::results::Fallible;
-use chalk_ir::interner::{Interner, HasInterner, TargetInterner};
 use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::interner::{HasInterner, Interner, TargetInterner};
 use chalk_ir::visit::{Visit, VisitResult, Visitor};
 use chalk_ir::{Canonical, ConstrainedSubst, Constraint, DebruijnIndex, InEnvironment};
 use std::fmt::Debug;
