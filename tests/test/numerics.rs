@@ -77,3 +77,45 @@ fn float_kind_trait() {
         }
     }
 }
+
+/// You can still get ambiguous results with integer variables
+#[test]
+fn integer_ambiguity() {
+    test! {
+        program {
+            trait Foo {}
+
+            impl Foo for usize {}
+            impl Foo for isize {}
+        }
+
+        goal {
+            exists<int N> {
+                N: Foo
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
+
+/// You can still get ambiguous results with float variables
+#[test]
+fn float_ambiguity() {
+    test! {
+        program {
+            trait Foo {}
+
+            impl Foo for f32 {}
+            impl Foo for f64 {}
+        }
+
+        goal {
+            exists<float N> {
+                N: Foo
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
