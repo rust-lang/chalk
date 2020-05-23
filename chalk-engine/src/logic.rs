@@ -940,14 +940,6 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 }
             }
             None => {
-                if floundered {
-                    // The strand floundered when trying to select a subgoal.
-                    // This will always return a `RootSearchFail`, either because the
-                    // root table floundered or we yield with `QuantumExceeded`.
-                    return NoRemainingSubgoalsResult::RootSearchFail(
-                        self.on_subgoal_selection_flounder(),
-                    );
-                }
                 debug!("answer is not available (or not new)");
 
                 // This table ned nowhere of interest
@@ -1322,12 +1314,14 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             && answer.subst.value.constraints.is_empty();
 
         if is_trivial_answer {
+            self.on_subgoal_selection_flounder();
             None
         } else {
             if let Some(answer_index) = self.forest.tables[table].push_answer(answer) {
                 Some(answer_index)
             } else {
                 info!("answer: not a new answer, returning None");
+                self.on_subgoal_selection_flounder();
                 None
             }
         }
