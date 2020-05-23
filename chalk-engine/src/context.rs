@@ -9,9 +9,8 @@ use crate::hh::HhGoal;
 use crate::{CompleteAnswer, ExClause};
 use chalk_base::results::{Fallible, Floundered};
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, GenericArg, Goal, InEnvironment, Substitution, UCanonical};
+use chalk_ir::{AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses, Substitution, UCanonical, UniverseMap};
 use std::fmt::Debug;
-use std::hash::Hash;
 
 /// The "context" in which the SLG solver operates. It defines all the
 /// types that the SLG solver may need to refer to, as well as a few
@@ -33,56 +32,18 @@ use std::hash::Hash;
 /// FIXME: Clone and Debug bounds are just for easy derive, they are
 /// not actually necessary. But dang are they convenient.
 pub trait Context<I: Interner>: Clone + Debug {
-    /// A map between universes. These are produced when
-    /// u-canonicalizing something; they map canonical results back to
-    /// the universes from the original.
-    type UniverseMap: Clone + Debug;
-
-    /// Extracted from a canonicalized substitution or canonicalized ex clause, this is the type of
-    /// substitution that is fully normalized with respect to inference variables.
-    type InferenceNormalizedSubst: Debug;
-
-    /// A u-canonicalized `GoalInEnvironment` -- this is one where the
-    /// free universes are renumbered to consecutive integers starting
-    /// from U1 (but preserving their relative order).
-    type UCanonicalGoalInEnvironment: Debug + Clone + Eq + Hash;
-
     /// A final solution that is passed back to the user. This is
     /// completely opaque to the SLG solver; it is produced by
     /// `make_solution`.
     type Solution;
 
-    /// Part of an answer: the canonical version of a substitution,
-    /// region constraints, and delayed literals.
-    type CanonicalAnswerSubst: Clone + Debug + Eq + Hash;
-
     /// Represents an inference table.
     type InferenceTable: InferenceTable<I, Self> + Clone;
-
-    /// A "higher-order" goal, quantified over some types and/or
-    /// lifetimes. When you have a quantification, like `forall<T> { G
-    /// }` or `exists<T> { G }`, this represents the `<T> { G }` part.
-    ///
-    /// (In Lambda Prolog, this would be a "lambda predicate", like `T
-    /// \ Goal`).
-    type BindersGoal: Debug;
-
-    /// A rule like `DomainGoal :- Goal`.
-    ///
-    /// `resolvent_clause` combines a program-clause and a concrete
-    /// goal we are trying to solve to produce an ex-clause.
-    type ProgramClause: Debug;
-
-    /// A vector of program clauses.
-    type ProgramClauses: Debug;
 
     /// How to relate two kinds when unifying: for example in rustc, we
     /// may want to unify parameters either for the sub-typing relation or for
     /// the equality relation.
     type Variance;
-
-    /// The type used to store concrete representations of "core types" from chalk-ir.
-    type Interner;
 
     /// Given an environment and a goal, glue them together to create
     /// a `GoalInEnvironment`.
@@ -94,24 +55,24 @@ pub trait Context<I: Interner>: Clone + Debug {
     /// Extracts the inner normalized substitution from a canonical ex-clause.
     fn inference_normalized_subst_from_ex_clause(
         canon_ex_clause: &Canonical<ExClause<I>>,
-    ) -> &Self::InferenceNormalizedSubst;
+    ) -> &Substitution<I>;
 
     /// Extracts the inner normalized substitution from a canonical constraint subst.
     fn inference_normalized_subst_from_subst(
-        canon_ex_clause: &Self::CanonicalAnswerSubst,
-    ) -> &Self::InferenceNormalizedSubst;
+        canon_ex_clause: &Canonical<AnswerSubst<I>>,
+    ) -> &Substitution<I>;
 
     /// True if this solution has no region constraints.
-    fn empty_constraints(ccs: &Self::CanonicalAnswerSubst) -> bool;
+    fn empty_constraints(ccs: &Canonical<AnswerSubst<I>>) -> bool;
 
     fn canonical(u_canon: &UCanonical<InEnvironment<Goal<I>>>) -> &Canonical<InEnvironment<Goal<I>>>;
 
-    fn has_delayed_subgoals(canonical_subst: &Self::CanonicalAnswerSubst) -> bool;
+    fn has_delayed_subgoals(canonical_subst: &Canonical<AnswerSubst<I>>) -> bool;
 
     fn num_universes(_: &UCanonical<InEnvironment<Goal<I>>>) -> usize;
 
     fn canonical_constrained_subst_from_canonical_constrained_answer(
-        canonical_subst: &Self::CanonicalAnswerSubst,
+        canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> Canonical<ConstrainedSubst<I>>;
 
     fn goal_from_goal_in_environment(goal: &InEnvironment<Goal<I>>) -> &Goal<I>;
@@ -137,10 +98,10 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
         infer: &mut C::InferenceTable,
-    ) -> Result<Vec<C::ProgramClause>, Floundered>;
+    ) -> Result<Vec<ProgramClause<I>>, Floundered>;
 
     // Used by: simplify
-    fn add_clauses(&self, env: &Environment<I>, clauses: C::ProgramClauses) -> Environment<I>;
+    fn add_clauses(&self, env: &Environment<I>, clauses: ProgramClauses<I>) -> Environment<I>;
 
     /// Create an inference table for processing a new goal and instantiate that goal
     /// in that context, returning "all the pieces".
@@ -169,7 +130,7 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
     fn instantiate_answer_subst(
         &self,
         num_universes: usize,
-        answer: &C::CanonicalAnswerSubst,
+        answer: &Canonical<AnswerSubst<I>>,
     ) -> (
         C::InferenceTable,
         Substitution<I>,
@@ -194,7 +155,7 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
     /// but for the universes of universally quantified names.
     fn map_goal_from_canonical(
         &self,
-        _: &C::UniverseMap,
+        _: &UniverseMap,
         value: &Canonical<InEnvironment<Goal<I>>>,
     ) -> Canonical<InEnvironment<Goal<I>>>;
 
@@ -204,11 +165,11 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
     /// names.
     fn map_subst_from_canonical(
         &self,
-        _: &C::UniverseMap,
-        value: &C::CanonicalAnswerSubst,
-    ) -> C::CanonicalAnswerSubst;
+        _: &UniverseMap,
+        value: &Canonical<AnswerSubst<I>>,
+    ) -> Canonical<AnswerSubst<I>>;
 
-    fn interner(&self) -> &C::Interner;
+    fn interner(&self) -> &I;
 
     /// Upcast this domain goal into a more general goal.
     fn into_goal(&self, domain_goal: DomainGoal<I>) -> Goal<I>;
@@ -216,7 +177,7 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug + Aggreg
     fn is_trivial_substitution(
         &self,
         u_canon: &UCanonical<InEnvironment<Goal<I>>>,
-        canonical_subst: &C::CanonicalAnswerSubst,
+        canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool;
 
     /// Convert the context's goal type into the `HhGoal` type that
@@ -249,42 +210,42 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
     // Used by: simplify
     fn instantiate_binders_universally(
         &mut self,
-        interner: &C::Interner,
-        arg: &C::BindersGoal,
+        interner: &I,
+        arg: &Binders<Goal<I>>,
     ) -> Goal<I>;
 
     // Used by: simplify
     fn instantiate_binders_existentially(
         &mut self,
-        interner: &C::Interner,
-        arg: &C::BindersGoal,
+        interner: &I,
+        arg: &Binders<Goal<I>>,
     ) -> Goal<I>;
 
     // Used by: logic (but for debugging only)
     fn debug_ex_clause<'v>(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         value: &'v ExClause<I>,
     ) -> Box<dyn Debug + 'v>;
 
     // Used by: logic
     fn fully_canonicalize_goal(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         value: &InEnvironment<Goal<I>>,
-    ) -> (UCanonical<InEnvironment<Goal<I>>>, C::UniverseMap);
+    ) -> (UCanonical<InEnvironment<Goal<I>>>, UniverseMap);
 
     // Used by: logic
     fn canonicalize_ex_clause(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         value: &ExClause<I>,
     ) -> Canonical<ExClause<I>>;
 
     // Used by: logic
     fn canonicalize_constrained_subst(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         subst: Substitution<I>,
         constraints: Vec<InEnvironment<Constraint<I>>>,
     ) -> Canonical<ConstrainedSubst<I>>;
@@ -292,16 +253,16 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
     // Used by: logic
     fn canonicalize_answer_subst(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         subst: Substitution<I>,
         constraints: Vec<InEnvironment<Constraint<I>>>,
         delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
-    ) -> C::CanonicalAnswerSubst;
+    ) -> Canonical<AnswerSubst<I>>;
 
     // Used by: logic
     fn invert_goal(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         value: &InEnvironment<Goal<I>>,
     ) -> Option<InEnvironment<Goal<I>>>;
 
@@ -313,7 +274,7 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
     // Used by: simplify
     fn unify_generic_args_into_ex_clause(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         environment: &Environment<I>,
         variance: C::Variance,
         a: &GenericArg<I>,
@@ -338,12 +299,12 @@ pub trait TruncateOps<I: Interner, C: Context<I>> {
     /// Check if `subgoal` is too large
     fn goal_needs_truncation(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         subgoal: &InEnvironment<Goal<I>>,
     ) -> bool;
 
     /// Check if `subst` is too large
-    fn answer_needs_truncation(&mut self, interner: &C::Interner, subst: &Substitution<I>) -> bool;
+    fn answer_needs_truncation(&mut self, interner: &I, subst: &Substitution<I>) -> bool;
 }
 
 pub trait ResolventOps<I: Interner, C: Context<I>> {
@@ -354,20 +315,20 @@ pub trait ResolventOps<I: Interner, C: Context<I>> {
     /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
         subst: &Substitution<I>,
-        clause: &C::ProgramClause,
+        clause: &ProgramClause<I>,
     ) -> Fallible<ExClause<I>>;
 
     fn apply_answer_subst(
         &mut self,
-        interner: &C::Interner,
+        interner: &I,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
-        canonical_answer_subst: &C::CanonicalAnswerSubst,
+        canonical_answer_subst: &Canonical<AnswerSubst<I>>,
     ) -> Fallible<()>;
 }
 
@@ -438,5 +399,5 @@ pub trait AnswerStream<I: Interner, C: Context<I>> {
 
     /// Invokes `test` with each possible future answer, returning true immediately
     /// if we find any answer for which `test` returns true.
-    fn any_future_answer(&self, test: impl Fn(&C::InferenceNormalizedSubst) -> bool) -> bool;
+    fn any_future_answer(&self, test: impl Fn(&Substitution<I>) -> bool) -> bool;
 }

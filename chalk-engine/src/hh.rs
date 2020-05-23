@@ -1,16 +1,16 @@
 use crate::context::Context;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{DomainGoal, GenericArg, Goal};
+use chalk_ir::{Binders, DomainGoal, GenericArg, Goal, ProgramClauses};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 /// A general goal; this is the full range of questions you can pose to Chalk.
 pub enum HhGoal<I: Interner, C: Context<I>> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
-    ForAll(C::BindersGoal),
-    Exists(C::BindersGoal),
-    Implies(C::ProgramClauses, Goal<I>),
+    ForAll(Binders<Goal<I>>),
+    Exists(Binders<Goal<I>>),
+    Implies(ProgramClauses<I>, Goal<I>),
     All(Vec<Goal<I>>),
     Not(Goal<I>),
     Unify(C::Variance, GenericArg<I>, GenericArg<I>),

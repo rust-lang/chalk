@@ -269,7 +269,7 @@ pub struct Solver<I: Interner>(SolverImpl<I>);
 
 enum SolverImpl<I: Interner> {
     #[cfg(feature = "slg-solver")]
-    Slg { forest: Box<Forest<SlgContext<I>>> },
+    Slg { forest: Box<Forest<I, SlgContext<I>>> },
     #[cfg(feature = "recursive-solver")]
     Recursive(Box<RecursiveContext<I>>),
 }

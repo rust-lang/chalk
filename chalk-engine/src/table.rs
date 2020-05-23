@@ -1,4 +1,3 @@
-use crate::context::Context;
 use crate::strand::CanonicalStrand;
 use crate::Answer;
 use rustc_hash::FxHashMap;
@@ -7,9 +6,9 @@ use std::collections::VecDeque;
 use std::mem;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Goal, InEnvironment, UCanonical};
+use chalk_ir::{AnswerSubst, Canonical, Goal, InEnvironment, UCanonical};
 
-pub(crate) struct Table<I: Interner, C: Context<I>> {
+pub(crate) struct Table<I: Interner> {
     /// The goal this table is trying to solve (also the key to look
     /// it up).
     pub(crate) table_goal: UCanonical<InEnvironment<Goal<I>>>,
@@ -24,7 +23,7 @@ pub(crate) struct Table<I: Interner, C: Context<I>> {
 
     /// Stores the answers that we have found thus far. When we get a request
     /// for an answer N, we will first check this vector.
-    answers: Vec<Answer<I, C>>,
+    answers: Vec<Answer<I>>,
 
     /// An alternative storage for the answers we have so far, used to
     /// detect duplicates. Not every answer in `answers` will be
@@ -36,11 +35,11 @@ pub(crate) struct Table<I: Interner, C: Context<I>> {
     /// delayed subgoals from the hash, but that's a bit tricky to do
     /// with the current canonicalization setup. It should be ok not
     /// to do so though it can result in more answers than we need.
-    answers_hash: FxHashMap<C::CanonicalAnswerSubst, bool>,
+    answers_hash: FxHashMap<Canonical<AnswerSubst<I>>, bool>,
 
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
-    strands: VecDeque<CanonicalStrand<I, C>>,
+    strands: VecDeque<CanonicalStrand<I>>,
 }
 
 index_struct! {
@@ -49,11 +48,11 @@ index_struct! {
     }
 }
 
-impl<I: Interner, C: Context<I>> Table<I, C> {
+impl<I: Interner> Table<I> {
     pub(crate) fn new(
         table_goal: UCanonical<InEnvironment<Goal<I>>>,
         coinductive_goal: bool,
-    ) -> Table<I, C> {
+    ) -> Table<I> {
         Table {
             table_goal,
             coinductive_goal,
@@ -65,19 +64,19 @@ impl<I: Interner, C: Context<I>> Table<I, C> {
     }
 
     /// Push a strand to the back of the queue of strands to be processed.
-    pub(crate) fn enqueue_strand(&mut self, strand: CanonicalStrand<I, C>) {
+    pub(crate) fn enqueue_strand(&mut self, strand: CanonicalStrand<I>) {
         self.strands.push_back(strand);
     }
 
-    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<I, C>> {
+    pub(crate) fn strands_mut(&mut self) -> impl Iterator<Item = &mut CanonicalStrand<I>> {
         self.strands.iter_mut()
     }
 
-    pub(crate) fn strands(&self) -> impl Iterator<Item = &CanonicalStrand<I, C>> {
+    pub(crate) fn strands(&self) -> impl Iterator<Item = &CanonicalStrand<I>> {
         self.strands.iter()
     }
 
-    pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<I, C>> {
+    pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<I>> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
@@ -85,8 +84,8 @@ impl<I: Interner, C: Context<I>> Table<I, C> {
     /// given criteria.
     pub(crate) fn dequeue_next_strand_if(
         &mut self,
-        test: impl Fn(&CanonicalStrand<I, C>) -> bool,
-    ) -> Option<CanonicalStrand<I, C>> {
+        test: impl Fn(&CanonicalStrand<I>) -> bool,
+    ) -> Option<CanonicalStrand<I>> {
         let strand = self.strands.pop_front();
         if let Some(strand) = strand {
             if test(&strand) {
@@ -120,7 +119,7 @@ impl<I: Interner, C: Context<I>> Table<I, C> {
     /// tests trigger this case, and assumptions upstream assume that when
     /// `true` is returned here, that a *new* answer was added (instead of an)
     /// existing answer replaced.
-    pub(super) fn push_answer(&mut self, answer: Answer<I, C>) -> Option<AnswerIndex> {
+    pub(super) fn push_answer(&mut self, answer: Answer<I>) -> Option<AnswerIndex> {
         assert!(!self.floundered);
 
         debug_heading!("push_answer(answer={:?})", answer);
@@ -157,7 +156,7 @@ impl<I: Interner, C: Context<I>> Table<I, C> {
         Some(AnswerIndex::from(index))
     }
 
-    pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<I, C>> {
+    pub(super) fn answer(&self, index: AnswerIndex) -> Option<&Answer<I>> {
         self.answers.get(index.value)
     }
 

@@ -12,9 +12,6 @@ use crate::{
 };
 use std::{marker::PhantomData, sync::Arc};
 
-#[cfg(feature = "slg-solver")]
-use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
-
 /// Convenience function to visit all the items in the iterator it.
 pub fn visit_iter<'i, T, I, R>(
     it: impl Iterator<Item = T>,
@@ -213,11 +210,6 @@ const_visit!(IntTy);
 const_visit!(FloatTy);
 const_visit!(Mutability);
 
-#[cfg(feature = "slg-solver")]
-const_visit!(chalk_engine::TableIndex);
-#[cfg(feature = "slg-solver")]
-const_visit!(chalk_engine::TimeStamp);
-
 #[macro_export]
 macro_rules! id_visit {
     ($t:ident) => {
@@ -301,92 +293,5 @@ impl<I: Interner> Visit<I> for PhantomData<I> {
         I: 'i,
     {
         R::new()
-    }
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: Context, I: Interner> Visit<I> for ExClause<C>
-where
-    C: Context,
-    C::Substitution: Visit<I>,
-    C::RegionConstraint: Visit<I>,
-    C::CanonicalConstrainedSubst: Visit<I>,
-    C::GoalInEnvironment: Visit<I>,
-{
-    fn visit_with<'i, R: VisitResult>(
-        &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
-        outer_binder: DebruijnIndex,
-    ) -> R
-    where
-        I: 'i,
-    {
-        let ExClause {
-            subst,
-            ambiguous: _,
-            constraints,
-            subgoals,
-            delayed_subgoals,
-            answer_time,
-            floundered_subgoals,
-        } = self;
-
-        R::new()
-            .and_then(|| subst.visit_with(visitor, outer_binder))
-            .and_then(|| constraints.visit_with(visitor, outer_binder))
-            .and_then(|| constraints.visit_with(visitor, outer_binder))
-            .and_then(|| subgoals.visit_with(visitor, outer_binder))
-            .and_then(|| delayed_subgoals.visit_with(visitor, outer_binder))
-            .and_then(|| answer_time.visit_with(visitor, outer_binder))
-            .and_then(|| floundered_subgoals.visit_with(visitor, outer_binder))
-    }
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: Context, I: Interner> Visit<I> for FlounderedSubgoal<C>
-where
-    C: Context,
-    C::Substitution: Visit<I>,
-    C::RegionConstraint: Visit<I>,
-    C::CanonicalConstrainedSubst: Visit<I>,
-    C::GoalInEnvironment: Visit<I>,
-{
-    fn visit_with<'i, R: VisitResult>(
-        &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
-        outer_binder: DebruijnIndex,
-    ) -> R
-    where
-        I: 'i,
-    {
-        let FlounderedSubgoal {
-            floundered_literal,
-            floundered_time,
-        } = self;
-
-        R::new()
-            .and_then(|| floundered_literal.visit_with(visitor, outer_binder))
-            .and_then(|| floundered_time.visit_with(visitor, outer_binder))
-    }
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: Context, I: Interner> Visit<I> for Literal<C>
-where
-    C: Context,
-    C::GoalInEnvironment: Visit<I>,
-{
-    fn visit_with<'i, R: VisitResult>(
-        &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
-        outer_binder: DebruijnIndex,
-    ) -> R
-    where
-        I: 'i,
-    {
-        match self {
-            Literal::Positive(goal) => goal.visit_with(visitor, outer_binder),
-            Literal::Negative(goal) => goal.visit_with(visitor, outer_binder),
-        }
     }
 }

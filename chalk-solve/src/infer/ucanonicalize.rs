@@ -71,31 +71,16 @@ pub(crate) struct UCanonicalized<T: HasInterner> {
     pub(crate) universes: UniverseMap,
 }
 
-/// Maps the universes found in the `u_canonicalize` result (the
-/// "canonical" universes) to the universes found in the original
-/// value (and vice versa). When used as a folder -- i.e., from
-/// outside this module -- converts from "canonical" universes to the
-/// original (but see the `UMapToCanonical` folder).
-#[derive(Clone, Debug)]
-pub(crate) struct UniverseMap {
-    /// A reverse map -- for each universe Ux that appears in
-    /// `quantified`, the corresponding universe in the original was
-    /// `universes[x]`.
-    universes: Vec<UniverseIndex>,
+pub(crate) trait UniverseMapExt {
+    fn add(&mut self, universe: UniverseIndex);
+    fn map_universe_to_canonical(&self, universe: UniverseIndex) -> UniverseIndex;
+    fn map_universe_from_canonical(&self, universe: UniverseIndex) -> UniverseIndex;
+    fn map_from_canonical<T, I>(&self, interner: &I, value: &T) -> T::Result
+    where
+        T: Fold<I>,
+        I: Interner;
 }
-
-impl UniverseMap {
-    fn new() -> Self {
-        UniverseMap {
-            universes: vec![UniverseIndex::root()],
-        }
-    }
-
-    /// Number of canonical universes.
-    fn num_canonical_universes(&self) -> usize {
-        self.universes.len()
-    }
-
+impl UniverseMapExt for UniverseMap {
     fn add(&mut self, universe: UniverseIndex) {
         if let Err(i) = self.universes.binary_search(&universe) {
             self.universes.insert(i, universe);
@@ -217,7 +202,7 @@ impl UniverseMap {
     /// of universes, since that determines visibility, and (b) that
     /// the universe we produce does not correspond to any of the
     /// other original universes.
-    pub(crate) fn map_from_canonical<T, I>(&self, interner: &I, value: &T) -> T::Result
+    fn map_from_canonical<T, I>(&self, interner: &I, value: &T) -> T::Result
     where
         T: Fold<I>,
         I: Interner,

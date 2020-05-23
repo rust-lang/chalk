@@ -56,12 +56,11 @@
 #[macro_use]
 extern crate chalk_base;
 
-use crate::context::Context;
 use std::cmp::min;
 use std::usize;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, Constraint, ConstrainedSubst, Goal, InEnvironment, Substitution};
+use chalk_ir::{AnswerSubst, Canonical, Constraint, ConstrainedSubst, Goal, InEnvironment, Substitution};
 
 mod boring_impls;
 pub mod context;
@@ -190,12 +189,12 @@ pub struct FlounderedSubgoal<I: Interner> {
 /// goal for a particular table (modulo delayed literals). It contains
 /// a substitution
 #[derive(Clone, Debug)]
-pub struct Answer<I: Interner, C: Context<I>> {
+pub struct Answer<I: Interner> {
     /// Contains values for the unbound inference variables for which
     /// the table is true, along with any delayed subgoals (Which must
     /// still be proven) and region constrained (which must still be
     /// proven, but not by chalk).
-    pub subst: C::CanonicalAnswerSubst,
+    pub subst: Canonical<AnswerSubst<I>>,
 
     /// If this flag is set, then the answer could be neither proven
     /// nor disproven. This could be the size of the answer exceeded

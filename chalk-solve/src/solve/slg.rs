@@ -1,6 +1,6 @@
 use crate::clauses::program_clauses_for_goal;
 use crate::coinductive_goal::IsCoinductive;
-use crate::infer::ucanonicalize::{UCanonicalized, UniverseMap};
+use crate::infer::ucanonicalize::UCanonicalized;
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
 use crate::solve::truncate;
@@ -64,35 +64,17 @@ pub struct TruncatingInferenceTable<I: Interner> {
     infer: InferenceTable<I>,
 }
 
-impl<I: Interner> context::Context for SlgContext<I> {
-    type CanonicalGoalInEnvironment = Canonical<InEnvironment<Goal<I>>>;
-    type CanonicalExClause = Canonical<ExClause<Self>>;
-    type UCanonicalGoalInEnvironment = UCanonical<InEnvironment<Goal<I>>>;
-    type UniverseMap = UniverseMap;
-    type InferenceNormalizedSubst = Substitution<I>;
+impl<I: Interner> context::Context<I> for SlgContext<I> {
     type Solution = Solution<I>;
     type InferenceTable = TruncatingInferenceTable<I>;
-    type Environment = Environment<I>;
-    type DomainGoal = DomainGoal<I>;
-    type Goal = Goal<I>;
-    type BindersGoal = Binders<Goal<I>>;
-    type GenericArg = GenericArg<I>;
-    type ProgramClause = ProgramClause<I>;
-    type ProgramClauses = ProgramClauses<I>;
-    type CanonicalConstrainedSubst = Canonical<ConstrainedSubst<I>>;
-    type CanonicalAnswerSubst = Canonical<AnswerSubst<I>>;
-    type GoalInEnvironment = InEnvironment<Goal<I>>;
-    type Substitution = Substitution<I>;
-    type RegionConstraint = InEnvironment<Constraint<I>>;
     type Variance = ();
-    type Interner = I;
 
     fn goal_in_environment(environment: &Environment<I>, goal: Goal<I>) -> InEnvironment<Goal<I>> {
         InEnvironment::new(environment, goal)
     }
 
     fn inference_normalized_subst_from_ex_clause(
-        canon_ex_clause: &Canonical<ExClause<SlgContext<I>>>,
+        canon_ex_clause: &Canonical<ExClause<I>>,
     ) -> &Substitution<I> {
         &canon_ex_clause.value.subst
     }
@@ -136,7 +118,7 @@ impl<I: Interner> context::Context for SlgContext<I> {
     }
 
     // Used by: logic
-    fn next_subgoal_index(ex_clause: &ExClause<SlgContext<I>>) -> usize {
+    fn next_subgoal_index(ex_clause: &ExClause<I>) -> usize {
         // For now, we always pick the last subgoal in the
         // list.
         //
@@ -148,7 +130,7 @@ impl<I: Interner> context::Context for SlgContext<I> {
     }
 }
 
-impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me, I> {
+impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'me, I> {
     fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<I>>>) -> bool {
         goal.is_coinductive(self.program)
     }
@@ -158,6 +140,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         map: &UniverseMap,
         value: &Canonical<InEnvironment<Goal<I>>>,
     ) -> Canonical<InEnvironment<Goal<I>>> {
+        use crate::infer::ucanonicalize::UniverseMapExt;
         map.map_from_canonical(self.program.interner(), value)
     }
 
@@ -166,6 +149,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         map: &UniverseMap,
         value: &Canonical<AnswerSubst<I>>,
     ) -> Canonical<AnswerSubst<I>> {
+        use crate::infer::ucanonicalize::UniverseMapExt;
         map.map_from_canonical(self.program.interner(), value)
     }
 
@@ -204,8 +188,8 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
     fn instantiate_ex_clause(
         &self,
         num_universes: usize,
-        canonical_ex_clause: &Canonical<ExClause<SlgContext<I>>>,
-    ) -> (TruncatingInferenceTable<I>, ExClause<SlgContext<I>>) {
+        canonical_ex_clause: &Canonical<ExClause<I>>,
+    ) -> (TruncatingInferenceTable<I>, ExClause<I>) {
         let (infer, _subst, ex_cluse) = InferenceTable::from_canonical(
             self.program.interner(),
             num_universes,
@@ -240,7 +224,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
 
     fn constrained_subst_from_answer(
         &self,
-        answer: CompleteAnswer<SlgContext<I>>,
+        answer: CompleteAnswer<I>,
     ) -> Canonical<ConstrainedSubst<I>> {
         let CompleteAnswer { subst, .. } = answer;
         subst
@@ -283,7 +267,7 @@ impl<'me, I: Interner> context::ContextOps<SlgContext<I>> for SlgContextOps<'me,
         u_canon.is_trivial_substitution(interner, canonical_subst)
     }
 
-    fn into_hh_goal(&self, goal: Goal<I>) -> HhGoal<SlgContext<I>> {
+    fn into_hh_goal(&self, goal: Goal<I>) -> HhGoal<I, SlgContext<I>> {
         let interner = self.interner();
         match goal.data(interner).clone() {
             GoalData::Quantified(QuantifierKind::ForAll, binders_goal) => {
@@ -308,7 +292,7 @@ impl<I: Interner> TruncatingInferenceTable<I> {
     }
 }
 
-impl<I: Interner> context::TruncateOps<SlgContext<I>> for TruncatingInferenceTable<I> {
+impl<I: Interner> context::TruncateOps<I, SlgContext<I>> for TruncatingInferenceTable<I> {
     fn goal_needs_truncation(&mut self, interner: &I, subgoal: &InEnvironment<Goal<I>>) -> bool {
         truncate::needs_truncation(interner, &mut self.infer, self.max_size, &subgoal)
     }
@@ -318,9 +302,9 @@ impl<I: Interner> context::TruncateOps<SlgContext<I>> for TruncatingInferenceTab
     }
 }
 
-impl<I: Interner> context::InferenceTable<SlgContext<I>> for TruncatingInferenceTable<I> {}
+impl<I: Interner> context::InferenceTable<I, SlgContext<I>> for TruncatingInferenceTable<I> {}
 
-impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInferenceTable<I> {
+impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInferenceTable<I> {
     fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I> {
         self.infer.instantiate_binders_universally(interner, arg)
     }
@@ -336,7 +320,7 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
     fn debug_ex_clause<'v>(
         &mut self,
         interner: &I,
-        value: &'v ExClause<SlgContext<I>>,
+        value: &'v ExClause<I>,
     ) -> Box<dyn Debug + 'v> {
         Box::new(self.infer.normalize_deep(interner, value))
     }
@@ -357,8 +341,8 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
     fn canonicalize_ex_clause(
         &mut self,
         interner: &I,
-        value: &ExClause<SlgContext<I>>,
-    ) -> Canonical<ExClause<SlgContext<I>>> {
+        value: &ExClause<I>,
+    ) -> Canonical<ExClause<I>> {
         self.infer.canonicalize(interner, value).quantified
     }
 
@@ -407,7 +391,7 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
         _: (),
         a: &GenericArg<I>,
         b: &GenericArg<I>,
-        ex_clause: &mut ExClause<SlgContext<I>>,
+        ex_clause: &mut ExClause<I>,
     ) -> Fallible<()> {
         let result = self.infer.unify(interner, environment, a, b)?;
         Ok(into_ex_clause(interner, result, ex_clause))
@@ -418,7 +402,7 @@ impl<I: Interner> context::UnificationOps<SlgContext<I>> for TruncatingInference
 fn into_ex_clause<I: Interner>(
     interner: &I,
     result: UnificationResult<I>,
-    ex_clause: &mut ExClause<SlgContext<I>>,
+    ex_clause: &mut ExClause<I>,
 ) {
     ex_clause.subgoals.extend(
         result

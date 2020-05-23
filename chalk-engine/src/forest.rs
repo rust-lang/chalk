@@ -6,11 +6,11 @@ use crate::{TableIndex, TimeStamp};
 use std::fmt::Display;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
+use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
 
 pub struct Forest<I: Interner, C: Context<I>> {
     context: C,
-    pub(crate) tables: Tables<I, C>,
+    pub(crate) tables: Tables<I>,
 
     /// This is a clock which always increases. It is
     /// incremented every time a new subgoal is followed.
@@ -199,7 +199,7 @@ impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I, C> f
         answer
     }
 
-    fn any_future_answer(&self, test: impl Fn(&C::InferenceNormalizedSubst) -> bool) -> bool {
+    fn any_future_answer(&self, test: impl Fn(&Substitution<I>) -> bool) -> bool {
         self.forest.any_future_answer(self.table, self.answer, test)
     }
 }

@@ -4,14 +4,14 @@ use crate::{ExClause, TableIndex, TimeStamp};
 use std::fmt::{Debug, Error, Formatter};
 
 use chalk_ir::interner::Interner;
-use chalk_ir::Canonical;
+use chalk_ir::{Canonical, UniverseMap};
 
 #[derive(Debug)]
-pub(crate) struct CanonicalStrand<I: Interner, C: Context<I>> {
+pub(crate) struct CanonicalStrand<I: Interner> {
     pub(super) canonical_ex_clause: Canonical<ExClause<I>>,
 
     /// Index into `ex_clause.subgoals`.
-    pub(crate) selected_subgoal: Option<SelectedSubgoal<I, C>>,
+    pub(crate) selected_subgoal: Option<SelectedSubgoal>,
 
     pub(crate) last_pursued_time: TimeStamp,
 }
@@ -22,13 +22,13 @@ pub(crate) struct Strand<I: Interner, C: Context<I>> {
     pub(super) ex_clause: ExClause<I>,
 
     /// Index into `ex_clause.subgoals`.
-    pub(crate) selected_subgoal: Option<SelectedSubgoal<I, C>>,
+    pub(crate) selected_subgoal: Option<SelectedSubgoal>,
 
     pub(crate) last_pursued_time: TimeStamp,
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct SelectedSubgoal<I: Interner, C: Context<I>> {
+pub(crate) struct SelectedSubgoal {
     /// The index of the subgoal in `ex_clause.subgoals`
     pub(crate) subgoal_index: usize,
 
@@ -40,7 +40,7 @@ pub(crate) struct SelectedSubgoal<I: Interner, C: Context<I>> {
 
     /// Maps the universes of the subgoal to the canonical universes
     /// used in the table
-    pub(crate) universe_map: C::UniverseMap,
+    pub(crate) universe_map: UniverseMap,
 }
 
 impl<I: Interner, C: Context<I>> Debug for Strand<I, C> {

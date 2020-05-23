@@ -12,7 +12,7 @@ use crate::{
 use chalk_base::results::{Floundered, NoSolution};
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{Goal, InEnvironment, UCanonical};
+use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical, UniverseMap};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -112,7 +112,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         &self,
         table: TableIndex,
         answer: AnswerIndex,
-        mut test: impl FnMut(&C::InferenceNormalizedSubst) -> bool,
+        mut test: impl FnMut(&Substitution<I>) -> bool,
     ) -> bool {
         if let Some(answer) = self.tables[table].answer(answer) {
             info!("answer cached = {:?}", answer);
@@ -126,11 +126,11 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         })
     }
 
-    pub(crate) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<I, C> {
+    pub(crate) fn answer(&self, table: TableIndex, answer: AnswerIndex) -> &Answer<I> {
         self.tables[table].answer(answer).unwrap()
     }
 
-    fn canonicalize_strand(context: &impl ContextOps<I, C>, strand: Strand<I, C>) -> CanonicalStrand<I, C> {
+    fn canonicalize_strand(context: &impl ContextOps<I, C>, strand: Strand<I, C>) -> CanonicalStrand<I> {
         let Strand {
             mut infer,
             ex_clause,
@@ -150,9 +150,9 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         context: &impl ContextOps<I, C>,
         infer: &mut dyn InferenceTable<I, C>,
         ex_clause: &ExClause<I>,
-        selected_subgoal: Option<SelectedSubgoal<I, C>>,
+        selected_subgoal: Option<SelectedSubgoal>,
         last_pursued_time: TimeStamp,
-    ) -> CanonicalStrand<I, C> {
+    ) -> CanonicalStrand<I> {
         let canonical_ex_clause = infer.canonicalize_ex_clause(context.interner(), &ex_clause);
         CanonicalStrand {
             canonical_ex_clause,
@@ -179,7 +179,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         context: &impl ContextOps<I, C>,
         infer: &mut dyn InferenceTable<I, C>,
         subgoal: &Literal<I>,
-    ) -> Option<(TableIndex, C::UniverseMap)> {
+    ) -> Option<(TableIndex, UniverseMap)> {
         debug_heading!("get_or_create_table_for_subgoal(subgoal={:?})", subgoal);
 
         // Subgoal abstraction:
@@ -243,7 +243,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         context: &impl ContextOps<I, C>,
         table_idx: TableIndex,
         goal: UCanonical<InEnvironment<Goal<I>>>,
-    ) -> Table<I, C> {
+    ) -> Table<I> {
         let mut table = Table::new(goal.clone(), context.is_coinductive(&goal));
         let (mut infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&goal);
         match context.into_hh_goal(goal) {
@@ -320,7 +320,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         context: &impl ContextOps<I, C>,
         infer: &mut dyn InferenceTable<I, C>,
         subgoal: &InEnvironment<Goal<I>>,
-    ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, C::UniverseMap)> {
+    ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, UniverseMap)> {
         if infer.goal_needs_truncation(context.interner(), subgoal) {
             None
         } else {
@@ -339,7 +339,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         context: &impl ContextOps<I, C>,
         infer: &mut dyn InferenceTable<I, C>,
         subgoal: &InEnvironment<Goal<I>>,
-    ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, C::UniverseMap)> {
+    ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, UniverseMap)> {
         // First, we have to check that the selected negative literal
         // is ground, and invert any universally quantified variables.
         //
@@ -961,8 +961,8 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     fn create_refinement_strand(
         &self,
         table: TableIndex,
-        answer: &Answer<I, C>,
-    ) -> Option<CanonicalStrand<I, C>> {
+        answer: &Answer<I>,
+    ) -> Option<CanonicalStrand<I>> {
         // If there are no delayed subgoals, then there is no need for
         // a refinement strand.
         if !C::has_delayed_subgoals(&answer.subst) {
@@ -1184,7 +1184,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     /// recursively clears the active strands from the tables
     /// referenced in `strands`, since all of them must encounter
     /// cycles too.
-    fn clear_strands_after_cycle(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<I, C>>) {
+    fn clear_strands_after_cycle(&mut self, strands: impl IntoIterator<Item = CanonicalStrand<I>>) {
         for strand in strands {
             let CanonicalStrand {
                 canonical_ex_clause,

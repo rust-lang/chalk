@@ -14,11 +14,11 @@ use std::fmt::Debug;
 
 /// Draws as many answers as it needs from `answers` (but
 /// no more!) in order to come up with a solution.
-impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> {
+impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, I> {
     fn make_solution(
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,
-        mut answers: impl context::AnswerStream<SlgContext<I>>,
+        mut answers: impl context::AnswerStream<I, SlgContext<I>>,
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
         let interner = self.program.interner();
