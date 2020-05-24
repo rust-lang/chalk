@@ -171,7 +171,7 @@ where
         self.record(trait_id);
         self.db.borrow().is_object_safe(trait_id)
     }
-    fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
+    fn fn_def_datum(&self, _fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
         todo!("function def datum")
     }
 }
@@ -319,7 +319,7 @@ where
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
         self.db.borrow().opaque_type_name(opaque_ty_id)
     }
-    fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
+    fn fn_def_datum(&self, _fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
         todo!("function def datum")
     }
 }
