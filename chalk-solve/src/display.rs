@@ -240,6 +240,13 @@ impl<I: Interner> RenderAsRust<I> for Lifetime<I> {
         self.data(s.db.interner()).fmt(s, f)
     }
 }
+
+impl<I: Interner> RenderAsRust<I> for Const<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        self.data(s.db.interner()).fmt(s, f)
+    }
+}
+
 impl<I: Interner> RenderAsRust<I> for GenericArg<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to ParameterData
@@ -351,11 +358,13 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                 Ok(())
             }
             TyData::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
+            TyData::InferenceVar(_) => write!(f, "_"),
             TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
             TyData::Apply(apply_ty) => apply_ty.fmt(s, f),
             TyData::Function(func) => func.fmt(s, f),
-            TyData::Placeholder(_) => unreachable!("cannot print placeholder variables"),
-            _ => unimplemented!(),
+            TyData::Placeholder(_) => unreachable!(
+                "cannot print placeholder variables; these should only be in goals not programs"
+            ),
         }
     }
 }
@@ -568,10 +577,32 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
         match self {
             LifetimeData::BoundVar(v) => write!(f, "'{}", s.display_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
-            LifetimeData::Placeholder(_) => unreachable!("cannot print placeholder variables"),
+            LifetimeData::Placeholder(_) => unreachable!(
+                "cannot print placeholder variables; these should only be in goals not programs"
+            ),
             // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},
+        }
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for ConstData<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        write!(f, "{}", self.value.display(s))
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for ConstValue<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        let interner = s.db.interner();
+        match self {
+            ConstValue::BoundVar(v) => write!(f, "{}", s.display_bound_var(v)),
+            ConstValue::InferenceVar(_) => write!(f, "_"),
+            ConstValue::Placeholder(_) => unreachable!(
+                "cannot print placeholder variables; these should only be in goals not programs"
+            ),
+            ConstValue::Concrete(value) => unimplemented!("const values"),
         }
     }
 }
@@ -581,7 +612,7 @@ impl<I: Interner> RenderAsRust<I> for GenericArgData<I> {
         match self {
             GenericArgData::Ty(ty) => write!(f, "{}", ty.display(s)),
             GenericArgData::Lifetime(lt) => write!(f, "{}", lt.display(s)),
-            GenericArgData::Const(_) => todo!(""),
+            GenericArgData::Const(const_ty) => write!(f, "{}", const_ty.display(s)),
         }
     }
 }
@@ -1120,7 +1151,9 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .map(move |(parameter, var)| match parameter {
                 VariableKind::Ty => format!("{}", self.apply_mappings(var)),
                 VariableKind::Lifetime => format!("'{}", self.apply_mappings(var)),
-                VariableKind::Const(_) => todo!("const variable kinds"),
+                VariableKind::Const(ty) => {
+                    format!("const {}: {}", self.apply_mappings(var), ty.display(self))
+                }
             })
     }
 }
