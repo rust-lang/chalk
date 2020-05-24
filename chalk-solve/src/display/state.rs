@@ -55,11 +55,10 @@ impl<T: Copy + Ord> DefIdAliases<T> {
     fn alias_for_id_name(&mut self, id: T, name: String) -> String {
         let next_unused_for_name = &mut self.next_unused_for_name;
         let alias = *self.aliases.entry(id).or_insert_with(|| {
-            let next_unused: &mut u32 =
-                dbg!(next_unused_for_name.entry(dbg!(&name).clone())).or_default();
+            let next_unused: &mut u32 = next_unused_for_name.entry(name.clone()).or_default();
             let id = *next_unused;
             *next_unused += 1;
-            dbg!(id)
+            id
         });
         // If there are no conflicts, keep the name the same so that we don't
         // need name-agnostic equality in display tests.
