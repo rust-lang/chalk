@@ -6,7 +6,7 @@ use crate::stack::{Stack, StackIndex};
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{AnswerIndex, Table};
 use crate::{
-    Answer, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
+    Answer, AnswerMode, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex, TimeStamp,
 };
 use chalk_base::results::{Floundered, NoSolution};
 
@@ -462,24 +462,36 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             let clock = self.stack.top().clock;
             // If we had an active strand, continue to pursue it
             let table = self.stack.top().table;
+            let table_answer_mode = self.forest.tables[table].answer_mode;
 
             // We track when we last pursued each strand. If all the strands have been
             // pursued at this depth, then that means they all encountered a cycle.
             // We also know that if the first strand has been pursued at this depth,
             // then all have. Otherwise, an answer to any strand would have provided an
             // answer for the table.
+            let num_universes = self.forest.tables[table].table_goal.universes;
+            let forest = &mut self.forest;
+            let context = &self.context;
             let next_strand = self.stack.top().active_strand.take().or_else(|| {
-                self.forest.tables[table]
-                    .dequeue_next_strand_if(|strand| strand.last_pursued_time < clock)
+                forest.tables[table]
+                    .dequeue_next_strand_that(|strand| {
+                        let (_, ex_clause) = context
+                            .instantiate_ex_clause(num_universes, &strand.canonical_ex_clause);
+                        let time_eligble = strand.last_pursued_time < clock;
+                        let mode_eligble = match (table_answer_mode, ex_clause.ambiguous) {
+                            (AnswerMode::Complete, false) => true,
+                            (AnswerMode::Complete, true) => false,
+                            (AnswerMode::Ambiguous, _) => true,
+                        };
+                        time_eligble && mode_eligble
+                    })
                     .map(|canonical_strand| {
-                        let num_universes = self.forest.tables[table].table_goal.universes;
                         let CanonicalStrand {
                             canonical_ex_clause,
                             selected_subgoal,
                             last_pursued_time,
                         } = canonical_strand;
-                        let (infer, ex_clause) = self
-                            .context
+                        let (infer, ex_clause) = context
                             .instantiate_ex_clause(num_universes, &canonical_ex_clause);
                         let strand = Strand {
                             infer,
@@ -508,9 +520,8 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                             match self.on_no_remaining_subgoals(strand) {
                                 NoRemainingSubgoalsResult::RootAnswerAvailable => return Ok(()),
                                 NoRemainingSubgoalsResult::RootSearchFail(e) => return Err(e),
-                                NoRemainingSubgoalsResult::Success => {}
+                                NoRemainingSubgoalsResult::Success => continue,
                             };
-                            continue;
                         }
                     }
                 }
@@ -532,6 +543,24 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         // At this point, we know we have an answer for
         // the selected subgoal of the strand.
         // Now, we have to unify that answer onto the strand.
+
+
+        // If this answer is ambiguous and we don't want ambiguous answers
+        // yet, then we act like this is a floundered subgoal.
+        let ambiguous = {
+            let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+            let answer = self.forest.answer(selected_subgoal.subgoal_table, selected_subgoal.answer_index);
+            answer.ambiguous
+        };
+        if let AnswerMode::Complete = self.forest.tables[self.stack.top().table].answer_mode {
+            if ambiguous {
+                // The selected subgoal returned an ambiguous answer, but we don't want that.
+                // So, we treat this subgoal as floundered.
+                let selected_subgoal = strand.selected_subgoal.take().unwrap();
+                self.flounder_subgoal(&mut strand.ex_clause, selected_subgoal.subgoal_index);
+                return Ok(());
+            }
+        }
 
         // If this subgoal was a `Positive` one, whichever way this
         // particular answer turns out, there may yet be *more* answers.
@@ -892,6 +921,16 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     }
 
     fn on_no_remaining_subgoals(&mut self, strand: Strand<I, C>) -> NoRemainingSubgoalsResult {
+        let ambiguous = strand.ex_clause.ambiguous;
+        if let AnswerMode::Complete = self.forest.tables[self.stack.top().table].answer_mode {
+            if ambiguous {
+                // The strand can only return an ambiguous answer, but we don't
+                // want that right noe, so requeue and we'll deal with it later.
+                let canonical_strand = Forest::canonicalize_strand(self.context, strand);
+                self.forest.tables[self.stack.top().table].enqueue_strand(canonical_strand);
+                return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
+            }
+        }
         let floundered = strand.ex_clause.floundered_subgoals.len() > 0;
         if floundered {
             debug!("all remaining subgoals floundered for the table");
@@ -1029,7 +1068,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 Some(s) => s,
                 None => {
                     // That was the root table, so we are done.
-                    return RootSearchFail::Floundered;
+                    return RootSearchFail::QuantumExceeded;
                 }
             };
 
@@ -1054,8 +1093,8 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         debug!("no more strands available (or all cycles)");
 
         // No more strands left to try! This is either because all
-        // strands have failed or because all strands encountered a
-        // cycle.
+        // strands have failed, because all strands encountered a
+        // cycle, or all strands have would give ambiguous answers.
 
         let table = self.stack.top().table;
         if self.forest.tables[table].strands_mut().count() == 0 {
@@ -1104,72 +1143,101 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             };
         }
 
-        let clock = self.stack.top().clock;
-        let cyclic_minimums = self.stack.top().cyclic_minimums;
-        if cyclic_minimums.positive >= clock && cyclic_minimums.negative >= clock {
-            debug!("cycle with no new answers");
+        let num_universes = self.forest.tables[table].table_goal.universes;
+        let table_answer_mode = self.forest.tables[table].answer_mode;
+        let forest = &mut self.forest;
+        let context = &self.context;
+        let strand_is_participating = |strand: &CanonicalStrand<I>| {
+            let (_, ex_clause) = context
+                .instantiate_ex_clause(num_universes, &strand.canonical_ex_clause);
+            match (table_answer_mode, ex_clause.ambiguous) {
+                (AnswerMode::Complete, true) => false,
+                (AnswerMode::Complete, false) => true,
+                (AnswerMode::Ambiguous, _) => true,
 
-            if cyclic_minimums.negative < TimeStamp::MAX {
-                // This is a negative cycle.
+            }
+        };
+        if forest.tables[table].strands_mut().any(|s| strand_is_participating(s)) {
+            let clock = self.stack.top().clock;
+            let cyclic_minimums = self.stack.top().cyclic_minimums;
+            if cyclic_minimums.positive >= clock && cyclic_minimums.negative >= clock {
+                debug!("cycle with no new answers");
+    
+                if cyclic_minimums.negative < TimeStamp::MAX {
+                    // This is a negative cycle.
+                    self.unwind_stack();
+                    return Err(RootSearchFail::NegativeCycle);
+                }
+    
+                // If all the things that we recursively depend on have
+                // positive dependencies on things below us in the stack,
+                // then no more answers are forthcoming. We can clear all
+                // the strands for those things recursively.
+                let table = self.stack.top().table;
+                let cyclic_strands = self.forest.tables[table].drain_strands(strand_is_participating);
+                self.clear_strands_after_cycle(cyclic_strands);
+    
+                // Now we yield with `QuantumExceeded`
                 self.unwind_stack();
-                return Err(RootSearchFail::NegativeCycle);
+                return Err(RootSearchFail::QuantumExceeded);
+            } else {
+                debug!("table part of a cycle");
+    
+                // This table resulted in a positive cycle, so we have
+                // to check what this means for the subgoal containing
+                // this strand
+                let caller_strand = match self.stack.pop_and_borrow_caller_strand() {
+                    Some(s) => s,
+                    None => {
+                        panic!("nothing on the stack but cyclic result");
+                    }
+                };
+    
+                // We can't take this because we might need it later to clear the cycle
+                let caller_selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
+                match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
+                    Literal::Positive(_) => {
+                        self.stack
+                            .top()
+                            .cyclic_minimums
+                            .take_minimums(&cyclic_minimums);
+                    }
+                    Literal::Negative(_) => {
+                        // We depend on `not(subgoal)`. For us to continue,
+                        // `subgoal` must be completely evaluated. Therefore,
+                        // we depend (negatively) on the minimum link of
+                        // `subgoal` as a whole -- it doesn't matter whether
+                        // it's pos or neg.
+                        let mins = Minimums {
+                            positive: self.stack.top().clock,
+                            negative: cyclic_minimums.minimum_of_pos_and_neg(),
+                        };
+                        self.stack.top().cyclic_minimums.take_minimums(&mins);
+                    }
+                }
+    
+                // We can't pursue this strand anymore, so push it back onto the table
+                let active_strand = self.stack.top().active_strand.take().unwrap();
+                let table = self.stack.top().table;
+                let canonical_active_strand = Forest::canonicalize_strand(self.context, active_strand);
+                self.forest.tables[table].enqueue_strand(canonical_active_strand);
+    
+                // The strand isn't active, but the table is, so just continue
+                return Ok(());
             }
+        }
 
-            // If all the things that we recursively depend on have
-            // positive dependencies on things below us in the stack,
-            // then no more answers are forthcoming. We can clear all
-            // the strands for those things recursively.
-            let table = self.stack.top().table;
-            let cyclic_strands = self.forest.tables[table].take_strands();
-            self.clear_strands_after_cycle(cyclic_strands);
-
-            // Now we yield with `QuantumExceeded`
-            self.unwind_stack();
-            return Err(RootSearchFail::QuantumExceeded);
-        } else {
-            debug!("table part of a cycle");
-
-            // This table resulted in a positive cycle, so we have
-            // to check what this means for the subgoal containing
-            // this strand
-            let caller_strand = match self.stack.pop_and_borrow_caller_strand() {
-                Some(s) => s,
-                None => {
-                    panic!("nothing on the stack but cyclic result");
-                }
-            };
-
-            // We can't take this because we might need it later to clear the cycle
-            let caller_selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
-            match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
-                Literal::Positive(_) => {
-                    self.stack
-                        .top()
-                        .cyclic_minimums
-                        .take_minimums(&cyclic_minimums);
-                }
-                Literal::Negative(_) => {
-                    // We depend on `not(subgoal)`. For us to continue,
-                    // `subgoal` must be completely evaluated. Therefore,
-                    // we depend (negatively) on the minimum link of
-                    // `subgoal` as a whole -- it doesn't matter whether
-                    // it's pos or neg.
-                    let mins = Minimums {
-                        positive: self.stack.top().clock,
-                        negative: cyclic_minimums.minimum_of_pos_and_neg(),
-                    };
-                    self.stack.top().cyclic_minimums.take_minimums(&mins);
-                }
+        debug!("All strands would return ambiguous answers.");
+        match self.forest.tables[table].answer_mode {
+            AnswerMode::Complete => {
+                debug!("Allowing ambiguous answers.");
+                self.forest.tables[table].answer_mode = AnswerMode::Ambiguous;
+                return Err(RootSearchFail::QuantumExceeded);
             }
+            AnswerMode::Ambiguous => {
+                panic!();
 
-            // We can't pursue this strand anymore, so push it back onto the table
-            let active_strand = self.stack.top().active_strand.take().unwrap();
-            let table = self.stack.top().table;
-            let canonical_active_strand = Forest::canonicalize_strand(self.context, active_strand);
-            self.forest.tables[table].enqueue_strand(canonical_active_strand);
-
-            // The strand isn't active, but the table is, so just continue
-            return Ok(());
+            }
         }
     }
 
@@ -1206,7 +1274,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             let selected_subgoal = selected_subgoal.unwrap_or_else(|| {
                 panic!(
                     "clear_strands_after_cycle invoked on strand in table \
-                     without a selected subgoal: {:?}",
+                     without a selected subgoal: {:#?}",
                     canonical_ex_clause,
                 )
             });
@@ -1217,10 +1285,10 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         }
     }
 
-    fn select_subgoal(&mut self, strand: &mut Strand<I, C>) -> SubGoalSelection {
+    fn select_subgoal(&mut self, mut strand: &mut Strand<I, C>) -> SubGoalSelection {
         loop {
             while strand.selected_subgoal.is_none() {
-                if strand.ex_clause.subgoals.len() == 0 {
+                if strand.ex_clause.subgoals.is_empty() {
                     if strand.ex_clause.floundered_subgoals.is_empty() {
                         return SubGoalSelection::NotSelected;
                     }
@@ -1228,7 +1296,11 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                     self.reconsider_floundered_subgoals(&mut strand.ex_clause);
 
                     if strand.ex_clause.subgoals.is_empty() {
+                        // All the subgoals of this strand floundered. We may be able
+                        // to get helpful information from this strand still, but it
+                        // will *always* be ambiguous, so mark it as so.
                         assert!(!strand.ex_clause.floundered_subgoals.is_empty());
+                        strand.ex_clause.ambiguous = true;
                         return SubGoalSelection::NotSelected;
                     }
 
@@ -1291,25 +1363,14 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         let table = self.stack.top().table;
         let Strand {
             mut infer,
-            ex_clause:
-                ExClause {
-                    subst,
-                    constraints,
-                    mut ambiguous,
-                    subgoals,
-                    delayed_subgoals,
-                    answer_time: _,
-                    floundered_subgoals,
-                },
+            ex_clause,
             selected_subgoal: _,
-            last_pursued_time: _,
+            last_pursued_time,
         } = strand;
-        assert!(subgoals.is_empty());
-        let floundered = !floundered_subgoals.is_empty();
+        assert!(ex_clause.subgoals.is_empty());
+        let floundered = !ex_clause.floundered_subgoals.is_empty();
         if floundered {
-            // If this Strand has floundered, then this is only a partial answer
-            debug!("Marking Answer as ambiguous because all subgoals floundered");
-            ambiguous = true;
+            //return None;
         }
 
         // If the answer gets too large, mark the table as floundered.
@@ -1329,10 +1390,35 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         // Ultimately, the current decision to flounder the entire table mostly boils
         // down to "it works as we expect for the current tests". And, we likely don't
         // even *need* the added complexity just for potentially more answers.
-        if infer.answer_needs_truncation(self.context.interner(), &subst) {
+        if infer.answer_needs_truncation(self.context.interner(), &ex_clause.subst) {
             self.forest.tables[table].mark_floundered();
             return None;
         }
+
+        if ex_clause.ambiguous || floundered {
+            let table = &mut self.forest.tables[table];
+            if let AnswerMode::Complete = table.answer_mode {
+                let canonical_strand = Forest::canonicalize_strand_from(
+                    self.context,
+                    &mut infer,
+                    &ex_clause,
+                    None,
+                    last_pursued_time,
+                );
+                table.enqueue_strand(canonical_strand);
+                return None;
+            }
+        }
+
+        let ExClause {
+            subst,
+            constraints,
+            ambiguous,
+            subgoals: _,
+            delayed_subgoals,
+            answer_time: _,
+            floundered_subgoals: _,
+        } = ex_clause;
 
         let table_goal = &self.forest.tables[table].table_goal;
 
@@ -1361,7 +1447,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             debug!("answer: table={:?}, subst={:?}", table, subst);
         }
 
-        let answer = Answer { subst, ambiguous };
+        let answer = Answer { subst, ambiguous: ambiguous || floundered };
 
         // A "trivial" answer is one that is 'just true for all cases'
         // -- in other words, it gives no information back to the

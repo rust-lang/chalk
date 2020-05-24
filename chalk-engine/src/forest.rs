@@ -159,7 +159,8 @@ impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    return AnswerResult::Answer(answer.clone());
+                    debug!("Answer: {:?}", &answer);
+                    return AnswerResult::Answer(answer);
                 }
 
                 Err(RootSearchFail::InvalidAnswer) => {
