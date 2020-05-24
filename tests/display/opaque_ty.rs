@@ -1,8 +1,7 @@
-use super::*;
 #[test]
 fn opaque_types() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Bar {}
             trait Buz {}
             trait Baz {
@@ -13,33 +12,33 @@ fn opaque_types() {
                 type Hi = Foo;
             }
             opaque type Foo: Buz = Bar;
-            ",
+        }
     );
 }
 
 #[test]
 fn test_generic_opaque_types() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo {}
             trait Bar<T> {}
             opaque type Baz<T>: Bar<T> = Foo;
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<T> {}
             struct Unit {}
             trait Bar<T, U> {}
             opaque type Boz<U>: Bar<Unit, U> = Foo<U>;
-            ",
+        }
     );
 }
 
 #[test]
 fn test_opaque_type_as_type_value() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo {}
             trait Bar {}
             trait Fuzz {
@@ -50,10 +49,10 @@ fn test_opaque_type_as_type_value() {
                 type Assoc = Bax;
             }
             opaque type Bax: Bar = Foo;
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo {}
             trait Bar<T> {}
             trait Faz {
@@ -63,7 +62,7 @@ fn test_opaque_type_as_type_value() {
                 type Assoc = fn(Baz);
             }
             opaque type Baz: Bar<Foo> = Foo;
-            ",
+        }
     );
 }
 
@@ -71,8 +70,8 @@ fn test_opaque_type_as_type_value() {
 #[ignore]
 #[test]
 fn test_generic_opaque_type_as_value1() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo {}
             trait Bar<T> {}
             trait Fizz {
@@ -83,10 +82,10 @@ fn test_generic_opaque_type_as_value1() {
                 type Assoc = Baz<Foo>;
             }
             opaque type Baz<T>: Bar<T> = Foo;
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo {}
             trait Bar<T> {}
             trait Faz {
@@ -96,10 +95,10 @@ fn test_generic_opaque_type_as_value1() {
                 type Assoc = fn(Baz<Foo>);
             }
             opaque type Baz<T>: Bar<T> = Foo;
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<T> {}
             struct Unit {}
             trait Bar<T, U> {}
@@ -111,6 +110,6 @@ fn test_generic_opaque_type_as_value1() {
             }
             impl<T, U> Bar<T, U> for Foo {}
             opaque type Biiiz<U>: Bar<Unit, U> = Foo<U>;
-            ",
+        }
     );
 }

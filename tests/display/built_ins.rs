@@ -1,19 +1,19 @@
 use super::*;
 #[test]
 fn test_function_type() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo { }
             trait Baz<T> { }
             impl Baz<fn(Foo)> for Foo { }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo { }
             trait Baz { }
             impl Baz for fn(Foo) { }
-        ",
+        }
     );
 }
 
@@ -50,27 +50,28 @@ fn test_scalar_types() {
 
 #[test]
 fn test_slice_types() {
-    reparse_test(
-        "
-        struct Foo<T> {
-            field: [T]
+    reparse_test!(
+        program {
+            struct Foo<T> {
+                field: [T]
+            }
+            trait Bar {
+                type Baz;
+            }
+            impl<T> Bar for Foo<T> {
+                type Baz = [T];
+            }
+            impl<T> Bar for [T] {
+                type Baz = Foo<T>;
+            }
         }
-        trait Bar {
-            type Baz;
-        }
-        impl<T> Bar for Foo<T> {
-            type Baz = [T];
-        }
-        impl<T> Bar for [T] {
-            type Baz = Foo<T>;
-        }",
     );
 }
 
 #[test]
 fn test_str_types() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo {
                 field: str
             }
@@ -83,14 +84,14 @@ fn test_str_types() {
             impl Bar for str {
                 type Baz = str;
             }
-            ",
+        }
     );
 }
 
 #[test]
 fn test_raw_ptr_types() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<T> {
                 field: *const T
             }
@@ -103,10 +104,10 @@ fn test_raw_ptr_types() {
             impl Bar for *const u32 {
                 type Baz = *const u32;
             }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<T> {
                 field: *mut T
             }
@@ -119,10 +120,10 @@ fn test_raw_ptr_types() {
             impl Bar for *mut u32 {
                 type Baz = *mut u32;
             }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             trait Bar {
                 type Baz;
             }
@@ -132,14 +133,14 @@ fn test_raw_ptr_types() {
             impl<T> Bar for *const T {
                 type Baz = *const T;
             }
-            ",
+        }
     );
 }
 
 #[test]
 fn test_reference_types() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<'a,T> {
                 field: &'a T
             }
@@ -152,10 +153,10 @@ fn test_reference_types() {
             impl<'a> Bar for &'a u32 {
                 type Baz = &'a u32;
             }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<'a,T> {
                 field: &'a mut T
             }
@@ -168,10 +169,10 @@ fn test_reference_types() {
             impl<'a> Bar for &'a mut u32 {
                 type Baz = &'a u32;
             }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             trait Bar {
                 type Baz;
             }
@@ -181,30 +182,30 @@ fn test_reference_types() {
             impl<'a,T> Bar for &'a T {
                 type Baz = &'a T;
             }
-            ",
+        }
     );
 }
 
 #[test]
 fn test_tuples() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Fuu {
                 fuu_field: ()
             }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Uff {
                 fuu_field: (Iff,),
                 iff2_field: (Iff, Iff, Iff)
             }
             struct Iff { }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo<T> {
                 field: (u32,*const T,T),
                 field2: (T,),
@@ -216,13 +217,13 @@ fn test_tuples() {
             impl<T> Bar for Foo<T> {
                 type Baz = (T,Foo<T>,u32);
             }
-            ",
+        }
     );
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             trait Blug {}
             impl<T1,T2> Blug for (T1,T2) {
-                
+
             }
             impl<T1> Blug for (T1,) {
 
@@ -230,6 +231,6 @@ fn test_tuples() {
             impl Blug for () {
 
             }
-        ",
+        }
     );
 }

@@ -1,24 +1,32 @@
 use super::*;
 #[test]
 fn test_simple_traits_and_bounds() {
-    reparse_test("trait Foo {}");
-    reparse_test("trait Foo<T> {}");
-    reparse_test(
-        "
+    reparse_test!(
+        program {
+            trait Foo {}
+        }
+    );
+    reparse_test!(
+        program {
+            trait Foo<T> {}
+        }
+    );
+    reparse_test!(
+        program {
             trait Foo<T> where T: Trait {}
             trait Trait {}
-            ",
+        }
     );
 }
 
 #[test]
 fn test_basic_trait_impl() {
-    reparse_test(
-        "
+    reparse_test!(
+        program {
             struct Foo { }
             trait Bar {}
             impl Bar for Foo { }
-            ",
+        }
     );
 }
 
