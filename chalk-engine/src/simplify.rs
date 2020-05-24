@@ -75,6 +75,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                         )));
                 }
                 GoalData::CannotProve(()) => {
+                    debug!("Marking Strand as ambiguous because of a `CannotProve` subgoal");
                     ex_clause.ambiguous = true;
                 }
             }

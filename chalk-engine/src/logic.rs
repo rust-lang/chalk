@@ -22,6 +22,7 @@ type RootSearchResult<T> = Result<T, RootSearchFail>;
 /// many strands) can fail. A root search is one that begins with an
 /// empty stack.
 #[derive(Debug)]
+#[must_use]
 pub(super) enum RootSearchFail {
     /// The table we were trying to solve cannot succeed.
     NoMoreSolutions,
@@ -277,7 +278,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                         }
                     }
                     Err(Floundered) => {
-                        debug!("Marking table {:?} as floundered!", table_idx);
+                        debug!("Marking table {:?} as floundered! (failed to create program clauses)", table_idx);
                         table.mark_floundered();
                     }
                 }
@@ -594,6 +595,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                         // the SLG FACTOR operation, though NFTD just makes it
                         // part of computing the SLG resolvent.
                         if self.forest.answer(subgoal_table, answer_index).ambiguous {
+                            debug!("Marking Strand as ambiguous because answer to (positive) subgoal was ambiguous");
                             ex_clause.ambiguous = true;
                         }
 
@@ -660,6 +662,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 // We want to disproval the subgoal, but we
                 // have an unconditional answer for the subgoal,
                 // therefore we have failed to disprove it.
+                debug!("Marking Strand as ambiguous because answer to (negative) subgoal was ambiguous");
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
@@ -890,14 +893,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
 
     fn on_no_remaining_subgoals(&mut self, strand: Strand<I, C>) -> NoRemainingSubgoalsResult {
         let floundered = strand.ex_clause.floundered_subgoals.len() > 0;
-        let possible_answer = if !floundered {
-            debug!("no remaining subgoals for the table");
-            self.pursue_answer(strand)
-        } else {
+        if floundered {
             debug!("all remaining subgoals floundered for the table");
-            self.pursue_answer_from_floundered(strand)
+        } else {
+            debug!("no remaining subgoals for the table");
         };
-        match possible_answer {
+        match self.pursue_answer(strand) {
             Some(answer_index) => {
                 debug!("answer is available");
 
@@ -940,6 +941,14 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 }
             }
             None => {
+                if floundered {
+                    // The strand floundered when trying to select a subgoal.
+                    // This will always return a `RootSearchFail`, either because the
+                    // root table floundered or we yield with `QuantumExceeded`.
+                    return NoRemainingSubgoalsResult::RootSearchFail(
+                        self.on_subgoal_selection_flounder(),
+                    );
+                }
                 debug!("answer is not available (or not new)");
 
                 // This table ned nowhere of interest
@@ -1013,7 +1022,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         loop {
             // This table is marked as floundered
             let table = self.stack.top().table;
-            debug!("Marking table {:?} as floundered!", table);
+            debug!("Marking table {:?} as floundered! (all subgoals floundered)", table);
             self.forest.tables[table].mark_floundered();
 
             let mut strand = match self.stack.pop_and_take_caller_strand() {
@@ -1270,63 +1279,6 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         }
     }
 
-    /// This strand has no subgoals left, but some have floundered.
-    /// It's still possible that we can get an ambiguous answer from it though
-    fn pursue_answer_from_floundered(&mut self, strand: Strand<I, C>) -> Option<AnswerIndex> {
-        let table = self.stack.top().table;
-        let Strand {
-            mut infer,
-            ex_clause:
-                ExClause {
-                    subst,
-                    constraints,
-                    ambiguous: _,
-                    subgoals,
-                    delayed_subgoals,
-                    answer_time: _,
-                    floundered_subgoals: _,
-                },
-            selected_subgoal: _,
-            last_pursued_time: _,
-        } = strand;
-        assert!(subgoals.is_empty());
-        let subst = infer.canonicalize_answer_subst(
-            self.context.interner(),
-            subst,
-            constraints,
-            delayed_subgoals,
-        );
-        debug!(
-            "answer from floundered goal: table={:?}, subst={:?}",
-            table, subst
-        );
-
-        let answer = Answer {
-            subst,
-            ambiguous: true,
-        };
-
-        // If our answer gives trivial information on the canonicalized goal then we have nothing interesting
-        // to return.
-        let is_trivial_answer = self
-            .context
-            .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
-            && answer.subst.value.constraints.is_empty();
-
-        if is_trivial_answer {
-            self.on_subgoal_selection_flounder();
-            None
-        } else {
-            if let Some(answer_index) = self.forest.tables[table].push_answer(answer) {
-                Some(answer_index)
-            } else {
-                info!("answer: not a new answer, returning None");
-                self.on_subgoal_selection_flounder();
-                None
-            }
-        }
-    }
-
     /// Invoked when a strand represents an **answer**. This means
     /// that the strand has no subgoals left. There are two possibilities:
     ///
@@ -1343,7 +1295,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 ExClause {
                     subst,
                     constraints,
-                    ambiguous,
+                    mut ambiguous,
                     subgoals,
                     delayed_subgoals,
                     answer_time: _,
@@ -1353,7 +1305,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             last_pursued_time: _,
         } = strand;
         assert!(subgoals.is_empty());
-        assert!(floundered_subgoals.is_empty());
+        let floundered = !floundered_subgoals.is_empty();
+        if floundered {
+            // If this Strand has floundered, then this is only a partial answer
+            debug!("Marking Answer as ambiguous because all subgoals floundered");
+            ambiguous = true;
+        }
 
         // If the answer gets too large, mark the table as floundered.
         // This is the *most conservative* course. There are a few alternatives:
@@ -1379,7 +1336,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
 
         let table_goal = &self.forest.tables[table].table_goal;
 
-        //FIXME: Avoid double canonicalization
+        // FIXME: Avoid double canonicalization
         let filtered_delayed_subgoals = delayed_subgoals
             .into_iter()
             .filter(|delayed_subgoal| {
@@ -1395,7 +1352,14 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             constraints,
             filtered_delayed_subgoals,
         );
-        debug!("answer: table={:?}, subst={:?}", table, subst);
+        if floundered {
+            debug!(
+                "answer from floundered Strand: table={:?}, subst={:?}",
+                table, subst
+            );
+        } else {
+            debug!("answer: table={:?}, subst={:?}", table, subst);
+        }
 
         let answer = Answer { subst, ambiguous };
 
@@ -1458,15 +1422,16 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         // is a *bit* suspect; e.g., those things in the environment
         // must be backed by an impl *eventually*).
         let is_trivial_answer = {
-            !answer.ambiguous
-                && self
-                    .context
-                    .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
-                && answer.subst.value.constraints.is_empty()
+            self
+                .context
+                .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
+            && answer.subst.value.constraints.is_empty()
         };
 
         if let Some(answer_index) = self.forest.tables[table].push_answer(answer) {
-            if is_trivial_answer {
+            // See above, if we have a *complete* and trivial answer, we don't
+            // want to follow any more strands
+            if !ambiguous && is_trivial_answer {
                 self.forest.tables[table].take_strands();
             }
 
