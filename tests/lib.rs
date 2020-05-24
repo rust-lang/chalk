@@ -4,6 +4,7 @@ mod test_util;
 mod test;
 
 mod display;
+mod logging_db;
 mod lowering;
 
 mod integration;
