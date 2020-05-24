@@ -234,12 +234,15 @@ fn program_clauses_that_could_match<I: Interner>(
                     .trait_ref_from_projection(proj)
                     .self_type_parameter(interner);
 
-                if let TyData::Apply(ApplicationTy {
-                    name: TypeName::OpaqueType(opaque_ty_id),
-                    ..
-                }) = trait_self_ty.data(interner)
-                {
-                    db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder)
+                match trait_self_ty.data(interner) {
+                    TyData::Apply(ApplicationTy {
+                        name: TypeName::OpaqueType(opaque_ty_id),
+                        ..
+                    })
+                    | TyData::Alias(AliasTy::Opaque(OpaqueTy { opaque_ty_id, .. })) => {
+                        db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder);
+                    }
+                    _ => {}
                 }
 
                 db.associated_ty_data(proj.associated_ty_id)

@@ -96,5 +96,14 @@ fn opaque_generics() {
             "Unique; substitution []"
         }
 
+        goal {
+            exists<T> {
+                <Foo<Bar> as Iterator>::Item = T
+            }
+        } yields[SolverChoice::slg_default()] {
+            "Ambiguous" // #234
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := Bar], lifetime constraints []"
+        }
     }
 }
