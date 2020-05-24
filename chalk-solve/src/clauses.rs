@@ -226,7 +226,9 @@ fn program_clauses_that_could_match<I: Interner>(
                 let self_ty = trait_ref.self_type_parameter(interner);
 
                 if let TyData::Alias(AliasTy::Opaque(opaque_ty)) = self_ty.data(interner) {
-                    push_auto_trait_impls_opaque(builder, trait_id, opaque_ty.opaque_ty_id)
+                    if trait_datum.is_auto_trait() {
+                        push_auto_trait_impls_opaque(builder, trait_id, opaque_ty.opaque_ty_id)
+                    }
                 } else if self_ty.bound_var(interner).is_some()
                     || self_ty.inference_var(interner).is_some()
                 {
