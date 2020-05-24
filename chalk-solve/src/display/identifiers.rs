@@ -1,0 +1,42 @@
+use std::fmt::{Formatter, Result};
+
+use chalk_ir::interner::Interner;
+use chalk_ir::*;
+
+use super::{render_trait::RenderAsRust, state::WriterState};
+
+impl<I: Interner> RenderAsRust<I> for AdtId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        write!(
+            f,
+            "{}",
+            s.alias_for_adt_id_name(self.0, s.db.adt_name(*self))
+        )
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for TraitId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        write!(f, "{}", s.alias_for_id_name(self.0, s.db.trait_name(*self)))
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        f.write_str(&s.db.assoc_type_name(*self))
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for OpaqueTyId<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        // TODO: use debug methods?
+        write!(
+            f,
+            "{}",
+            s.alias_for_id_name(self.0, s.db.opaque_type_name(*self))
+        )
+    }
+}
