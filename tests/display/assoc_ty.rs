@@ -83,6 +83,7 @@ fn test_trait_impl_associated_type_with_generics() {
         }
     );
 }
+
 #[test]
 fn test_simple_assoc_type() {
     reparse_test!(

@@ -68,6 +68,7 @@ fn test_trait_projection() {
         }
     );
 }
+
 #[test]
 fn test_trait_projection_with_dyn_arg() {
     reparse_test!(

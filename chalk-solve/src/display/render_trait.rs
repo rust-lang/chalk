@@ -17,6 +17,7 @@ impl<I: Interner, T: RenderAsRust<I>> Display for DisplayRenderAsRust<'_, I, T> 
         self.rar.fmt(self.s, f)
     }
 }
+
 pub trait RenderAsRust<I: Interner> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result;
     fn display<'a>(&'a self, s: &'a WriterState<'a, I>) -> DisplayRenderAsRust<'a, I, Self>

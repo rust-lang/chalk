@@ -1,15 +1,20 @@
 //! Provides wrappers over `RustIrDatabase` which record used definitions and write
 //! `.chalk` files containing those definitions.
 use std::{
-    borrow::Borrow, cmp::Ord, cmp::Ordering, collections::BTreeSet, fmt, fmt::Display, io::Write,
-    marker::PhantomData, sync::Arc, sync::Mutex,
+    borrow::Borrow,
+    cmp::{Ord, Ordering},
+    collections::BTreeSet,
+    fmt::{self, Debug, Display},
+    io::Write,
+    marker::PhantomData,
+    sync::Arc,
+    sync::Mutex,
 };
 
 use crate::rust_ir::*;
+use crate::{display, RustIrDatabase};
 use chalk_ir::{interner::Interner, *};
 
-use crate::{display, RustIrDatabase};
-use fmt::Debug;
 /// Wraps another `RustIrDatabase` (`DB`) and records which definitions are
 /// used.
 ///
@@ -66,6 +71,7 @@ where
     fn record(&self, id: impl Into<RecordedItemId<I>>) {
         self.def_ids.lock().unwrap().insert(id.into());
     }
+
     fn record_all<T, U>(&self, ids: T)
     where
         T: IntoIterator<Item = U>,
@@ -87,6 +93,7 @@ where
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
         self.db.borrow().custom_clauses()
     }
+
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocTypeId<I>,
@@ -95,18 +102,22 @@ where
         self.record(ty_datum.trait_id);
         ty_datum
     }
+
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.record(trait_id);
         self.db.borrow().trait_datum(trait_id)
     }
+
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
         self.record(adt_id);
         self.db.borrow().adt_datum(adt_id)
     }
+
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.record(impl_id);
         self.db.borrow().impl_datum(impl_id)
     }
+
     fn associated_ty_value(
         &self,
         id: crate::rust_ir::AssociatedTyValueId<I>,
@@ -115,10 +126,12 @@ where
         self.record(value.impl_id);
         value
     }
+
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
         self.record(id);
         self.db.borrow().opaque_ty_data(id)
     }
+
     fn impls_for_trait(
         &self,
         trait_id: TraitId<I>,
@@ -129,15 +142,18 @@ where
         self.record_all(impl_ids.iter().copied());
         impl_ids
     }
+
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {
         self.record(trait_id);
         self.db.borrow().local_impls_to_coherence_check(trait_id)
     }
+
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
         self.record(auto_trait_id);
         self.record(adt_id);
         self.db.borrow().impl_provided_for(auto_trait_id, adt_id)
     }
+
     fn well_known_trait_id(
         &self,
         well_known_trait: crate::rust_ir::WellKnownTrait,
@@ -146,31 +162,39 @@ where
         trait_id.map(|id| self.record(id));
         trait_id
     }
+
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<I>,
     ) -> chalk_ir::ProgramClauses<I> {
         self.db.borrow().program_clauses_for_env(environment)
     }
+
     fn interner(&self) -> &I {
         self.db.borrow().interner()
     }
+
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
         self.db.borrow().trait_name(trait_id)
     }
+
     fn adt_name(&self, adt_id: AdtId<I>) -> String {
         self.db.borrow().adt_name(adt_id)
     }
+
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
         self.db.borrow().assoc_type_name(assoc_ty_id)
     }
+
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
         self.db.borrow().opaque_type_name(opaque_ty_id)
     }
+
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.record(trait_id);
         self.db.borrow().is_object_safe(trait_id)
     }
+
     fn fn_def_datum(&self, _fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
         todo!("function def datum")
     }
@@ -252,30 +276,37 @@ where
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
         self.db.borrow().custom_clauses()
     }
+
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocTypeId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         self.db.borrow().associated_ty_data(ty)
     }
+
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.db.borrow().trait_datum(trait_id)
     }
+
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
         self.db.borrow().adt_datum(adt_id)
     }
+
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.db.borrow().impl_datum(impl_id)
     }
+
     fn associated_ty_value(
         &self,
         id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
         self.db.borrow().associated_ty_value(id)
     }
+
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
         self.db.borrow().opaque_ty_data(id)
     }
+
     fn impls_for_trait(
         &self,
         trait_id: TraitId<I>,
@@ -283,42 +314,53 @@ where
     ) -> Vec<ImplId<I>> {
         self.db.borrow().impls_for_trait(trait_id, parameters)
     }
+
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {
         self.db.borrow().local_impls_to_coherence_check(trait_id)
     }
+
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
         self.db.borrow().impl_provided_for(auto_trait_id, adt_id)
     }
+
     fn well_known_trait_id(
         &self,
         well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
         self.db.borrow().well_known_trait_id(well_known_trait)
     }
+
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<I>,
     ) -> chalk_ir::ProgramClauses<I> {
         self.db.borrow().program_clauses_for_env(environment)
     }
+
     fn interner(&self) -> &I {
         self.db.borrow().interner()
     }
+
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.db.borrow().is_object_safe(trait_id)
     }
+
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
         self.db.borrow().trait_name(trait_id)
     }
+
     fn adt_name(&self, adt_id: AdtId<I>) -> String {
         self.db.borrow().adt_name(adt_id)
     }
+
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
         self.db.borrow().assoc_type_name(assoc_ty_id)
     }
+
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
         self.db.borrow().opaque_type_name(opaque_ty_id)
     }
+
     fn fn_def_datum(&self, _fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
         todo!("function def datum")
     }
@@ -337,6 +379,7 @@ impl<I: Interner> From<AdtId<I>> for RecordedItemId<I> {
         RecordedItemId::Adt(v)
     }
 }
+
 impl<I: Interner> From<TraitId<I>> for RecordedItemId<I> {
     fn from(v: TraitId<I>) -> Self {
         RecordedItemId::Trait(v)
@@ -348,6 +391,7 @@ impl<I: Interner> From<ImplId<I>> for RecordedItemId<I> {
         RecordedItemId::Impl(v)
     }
 }
+
 impl<I: Interner> From<OpaqueTyId<I>> for RecordedItemId<I> {
     fn from(v: OpaqueTyId<I>) -> Self {
         RecordedItemId::OpaqueTy(v)

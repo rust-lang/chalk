@@ -14,6 +14,7 @@ fn test_various_forall() {
         }
     );
 }
+
 #[test]
 fn test_lifetimes_in_structs() {
     reparse_test!(

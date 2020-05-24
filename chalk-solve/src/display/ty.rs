@@ -70,6 +70,7 @@ impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
         Ok(())
     }
 }
+
 impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
@@ -289,6 +290,7 @@ impl<I: Interner> RenderAsRust<I> for Ty<I> {
         self.data(s.db.interner()).fmt(s, f)
     }
 }
+
 impl<I: Interner> RenderAsRust<I> for Lifetime<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to LifetimeData
