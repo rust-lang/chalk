@@ -557,3 +557,58 @@ fn builtin_impl_enumeration() {
         }
     }
 }
+
+/// Don't return definite guidance if we flounder after finding one solution.
+#[test]
+fn flounder_ambiguous() {
+    test! {
+        program {
+            trait IntoIterator { }
+            #[non_enumerable]
+            trait OtherTrait { }
+
+            struct Ref<T> { }
+            struct A { }
+
+            impl IntoIterator for Ref<A> { }
+            impl<T> IntoIterator for Ref<T> where T: OtherTrait { }
+        }
+
+        goal {
+            exists<T> { Ref<T>: IntoIterator }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
+
+/// Don't return definite guidance if we are able to merge two solutions and the
+/// third one matches that as well (the fourth may not).
+#[test]
+fn normalize_ambiguous() {
+    test! {
+        program {
+            trait IntoIterator { type Item; }
+
+            struct Ref<T> { }
+            struct A { }
+            struct B { }
+            struct C { }
+
+            struct D { }
+
+            impl IntoIterator for Ref<A> { type Item = Ref<A>; }
+            impl IntoIterator for Ref<B> { type Item = Ref<B>; }
+            impl IntoIterator for Ref<C> { type Item = Ref<C>; }
+            impl IntoIterator for Ref<D> { type Item = D; }
+        }
+
+        goal {
+            exists<T, U> {
+                Normalize(<Ref<T> as IntoIterator>::Item -> U)
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
