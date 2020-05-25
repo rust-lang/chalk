@@ -470,9 +470,12 @@ impl WfWellKnownGoals {
     ) -> Option<Goal<I>> {
         match db.trait_datum(trait_ref.trait_id).well_known? {
             WellKnownTrait::CopyTrait => Self::copy_impl_constraint(db, trait_ref),
-            WellKnownTrait::DropTrait | WellKnownTrait::CloneTrait | WellKnownTrait::SizedTrait => {
-                None
-            }
+            WellKnownTrait::DropTrait
+            | WellKnownTrait::CloneTrait
+            | WellKnownTrait::SizedTrait
+            | WellKnownTrait::FnTrait
+            | WellKnownTrait::FnMutTrait
+            | WellKnownTrait::FnOnceTrait => None,
         }
     }
 
@@ -489,7 +492,11 @@ impl WfWellKnownGoals {
             // You can't add a manual implementation of Sized
             WellKnownTrait::SizedTrait => Some(GoalData::CannotProve(()).intern(interner)),
             WellKnownTrait::DropTrait => Self::drop_impl_constraint(db, impl_datum),
-            WellKnownTrait::CopyTrait | WellKnownTrait::CloneTrait => None,
+            WellKnownTrait::CopyTrait
+            | WellKnownTrait::CloneTrait
+            | WellKnownTrait::FnTrait
+            | WellKnownTrait::FnMutTrait
+            | WellKnownTrait::FnOnceTrait => None,
         }
     }
 
