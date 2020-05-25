@@ -985,14 +985,6 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 }
             }
             None => {
-                if floundered {
-                    // The strand floundered when trying to select a subgoal.
-                    // This will always return a `RootSearchFail`, either because the
-                    // root table floundered or we yield with `QuantumExceeded`.
-                    return NoRemainingSubgoalsResult::RootSearchFail(
-                        self.on_subgoal_selection_flounder(),
-                    );
-                }
                 debug!("answer is not available (or not new)");
 
                 // This table ned nowhere of interest
@@ -1054,47 +1046,6 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         };
 
         Some(Forest::canonicalize_strand(self.context, strand))
-    }
-
-    fn on_subgoal_selection_flounder(&mut self) -> RootSearchFail {
-        debug!("all subgoals floundered");
-
-        // We were unable to select a subgoal for this strand
-        // because all of them had floundered or because any one
-        // that we dependended on negatively floundered
-
-        loop {
-            // This table is marked as floundered
-            let table = self.stack.top().table;
-            debug!(
-                "Marking table {:?} as floundered! (all subgoals floundered)",
-                table
-            );
-            self.forest.tables[table].mark_floundered();
-
-            let mut strand = match self.stack.pop_and_take_caller_strand() {
-                Some(s) => s,
-                None => {
-                    // That was the root table, so we are done.
-                    return RootSearchFail::QuantumExceeded;
-                }
-            };
-
-            if self.propagate_floundered_subgoal(&mut strand) {
-                // This strand will never lead anywhere of interest.
-                // Drop it and continue around the loop.
-                drop(strand);
-            } else {
-                // We want to maybe pursue this strand later
-                let table = self.stack.top().table;
-                let canonical_strand = Forest::canonicalize_strand(self.context, strand);
-                self.forest.tables[table].enqueue_strand(canonical_strand);
-
-                // Now we yield with `QuantumExceeded`
-                self.unwind_stack();
-                return RootSearchFail::QuantumExceeded;
-            }
-        }
     }
 
     fn on_no_strands_left(&mut self) -> Result<(), RootSearchFail> {
