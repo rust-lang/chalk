@@ -7,15 +7,15 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{Environment, Goal, GoalData, InEnvironment, QuantifierKind, Substitution};
 
 impl<I: Interner, C: Context<I>> Forest<I, C> {
-    /// Simplifies an HH goal into a series of positive domain goals
-    /// and negative HH goals. This operation may fail if the HH goal
+    /// Simplifies a goal into a series of positive domain goals
+    /// and negative goals. This operation may fail if the goal
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_goal(
         context: &impl ContextOps<I, C>,
         infer: &mut dyn InferenceTable<I, C>,
         subst: Substitution<I>,
         initial_environment: Environment<I>,
-        initial_hh_goal: Goal<I>,
+        initial_goal: Goal<I>,
     ) -> Fallible<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,
@@ -28,10 +28,10 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         };
 
         // A stack of higher-level goals to process.
-        let mut pending_goals = vec![(initial_environment, initial_hh_goal)];
+        let mut pending_goals = vec![(initial_environment, initial_goal)];
 
-        while let Some((environment, hh_goal)) = pending_goals.pop() {
-            match hh_goal.data(context.interner()) {
+        while let Some((environment, goal)) = pending_goals.pop() {
+            match goal.data(context.interner()) {
                 GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                     let subgoal =
                         infer.instantiate_binders_universally(context.interner(), &subgoal);

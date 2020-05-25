@@ -151,48 +151,11 @@ impl<I: Interner> Visit<I> for Literal<I> {
     }
 }
 
-// FIXME: I can't figure out macro visibility rules
-macro_rules! copy_fold {
-    ($t:ty) => {
-        impl<I: Interner, TI: TargetInterner<I>> chalk_ir::fold::Fold<I, TI> for $t {
-            type Result = Self;
-            fn fold_with<'i>(
-                &self,
-                _folder: &mut dyn (chalk_ir::fold::Folder<'i, I, TI>),
-                _outer_binder: DebruijnIndex,
-            ) -> chalk_base::results::Fallible<Self::Result>
-            where
-                I: 'i,
-                TI: 'i,
-            {
-                Ok(*self)
-            }
-        }
-    };
-}
+chalk_ir::copy_fold!(crate::TableIndex);
+chalk_ir::copy_fold!(crate::TimeStamp);
 
-copy_fold!(crate::TableIndex);
-copy_fold!(crate::TimeStamp);
-
-macro_rules! const_visit {
-    ($t:ty) => {
-        impl<I: Interner> chalk_ir::visit::Visit<I> for $t {
-            fn visit_with<'i, R: VisitResult>(
-                &self,
-                _visitor: &mut dyn (chalk_ir::visit::Visitor<'i, I, Result = R>),
-                _outer_binder: DebruijnIndex,
-            ) -> R
-            where
-                I: 'i,
-            {
-                R::new()
-            }
-        }
-    };
-}
-
-const_visit!(crate::TableIndex);
-const_visit!(crate::TimeStamp);
+chalk_ir::const_visit!(crate::TableIndex);
+chalk_ir::const_visit!(crate::TimeStamp);
 
 impl<I: Interner> HasInterner for ExClause<I> {
     type Interner = I;

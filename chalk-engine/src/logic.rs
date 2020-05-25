@@ -286,14 +286,14 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             }
 
             _ => {
-                // `canonical_goal` is an HH goal. We can simplify it
+                // `canonical_goal` is a goal. We can simplify it
                 // into a series of *literals*, all of which must be
                 // true. Thus, in EWFS terms, we are effectively
                 // creating a single child of the `A :- A` goal that
                 // is like `A :- B, C, D` where B, C, and D are the
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
-                // reduce HH goals into Domain goals.
+                // reduce goals into Domain goals.
                 if let Ok(ex_clause) =
                     Self::simplify_goal(context, &mut infer, subst, environment, goal)
                 {

@@ -275,7 +275,7 @@ enum SolverImpl<I: Interner> {
         forest: Box<Forest<I, SlgContext<I>>>,
         max_size: usize,
         /// The expected number of answers for a solution.
-        /// Only really sseful for tests, since `make_solution`
+        /// Only really useful for tests, since `make_solution`
         /// will panic if the number of cached answers does not
         /// equal this when a solution is made.
         expected_answers: Option<usize>,
