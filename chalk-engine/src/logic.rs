@@ -925,6 +925,10 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         Ok(())
     }
 
+    /// This is called when there are no remaining subgoals for a strand, so
+    /// it represents an answer. If the strand is ambiguous and we don't want
+    /// it yet, we just enqueue it again to pick it up later. Otherwise, we
+    /// add the answer from the strand onto the table.
     fn on_no_remaining_subgoals(&mut self, strand: Strand<I, C>) -> NoRemainingSubgoalsResult {
         let ambiguous = strand.ex_clause.ambiguous;
         if let AnswerMode::Complete = self.forest.tables[self.stack.top().table].answer_mode {
@@ -950,8 +954,11 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 // answer for this table. Now, this table was either a
                 // subgoal for another strand, or was the root table.
                 let table = self.stack.top().table;
-                let mut caller_strand = match self.stack.pop_and_take_caller_strand() {
-                    Some(s) => s,
+                match self.stack.pop_and_take_caller_strand() {
+                    Some(caller_strand) => {
+                        self.stack.top().active_strand = Some(caller_strand);
+                        return NoRemainingSubgoalsResult::Success;
+                    }
                     None => {
                         // That was the root table, so we are done --
                         // *well*, unless there were delayed
@@ -972,22 +979,13 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                         return NoRemainingSubgoalsResult::RootAnswerAvailable;
                     }
                 };
-
-                match self.merge_answer_into_strand(&mut caller_strand) {
-                    Err(e) => {
-                        drop(caller_strand);
-                        return NoRemainingSubgoalsResult::RootSearchFail(e);
-                    }
-                    Ok(_) => {
-                        self.stack.top().active_strand = Some(caller_strand);
-                        return NoRemainingSubgoalsResult::Success;
-                    }
-                }
             }
             None => {
                 debug!("answer is not available (or not new)");
 
-                // This table ned nowhere of interest
+                // This strand led nowhere of interest. There might be *other*
+                // answers on this table, but we don't care right now, we'll
+                // try again at another time.
 
                 // Now we yield with `QuantumExceeded`
                 self.unwind_stack();
