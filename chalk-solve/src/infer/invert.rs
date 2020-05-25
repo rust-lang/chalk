@@ -150,7 +150,7 @@ where
             .inverted_ty
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
-            .to_ty(self.interner(), TyKind::General)
+            .to_ty(self.interner())
             .shifted_in(self.interner()))
     }
 

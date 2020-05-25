@@ -9,8 +9,8 @@ fn infer() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let b = table.new_variable(U0).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U0).to_ty(interner);
     table
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
@@ -33,7 +33,7 @@ fn universe_error() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
     table
         .unify(interner, &environment0, &a, &ty!(placeholder 1))
         .unwrap_err();
@@ -45,7 +45,7 @@ fn cycle_error() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
     table
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr a)))
         .unwrap_err();
@@ -62,8 +62,8 @@ fn cycle_indirect() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let b = table.new_variable(U0).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U0).to_ty(interner);
     table
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
@@ -76,8 +76,8 @@ fn universe_error_indirect_1() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let b = table.new_variable(U1).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
     table
         .unify(interner, &environment0, &b, &ty!(placeholder 1))
         .unwrap();
@@ -90,8 +90,8 @@ fn universe_error_indirect_2() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let b = table.new_variable(U1).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
     table.unify(interner, &environment0, &a, &b).unwrap();
     table
         .unify(interner, &environment0, &b, &ty!(placeholder 1))
@@ -104,8 +104,8 @@ fn universe_promote() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let b = table.new_variable(U1).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
     table
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
@@ -125,8 +125,8 @@ fn universe_promote_bad() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let b = table.new_variable(U1).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
+    let b = table.new_variable(U1).to_ty(interner);
     table
         .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
         .unwrap();
@@ -143,7 +143,7 @@ fn projection_eq() {
     let interner = &ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner, TyKind::General);
+    let a = table.new_variable(U0).to_ty(interner);
 
     // expect an error ("cycle during unification")
     table
@@ -199,10 +199,10 @@ fn quantify_bound() {
     let mut table = make_table();
     let environment0 = Environment::new(interner);
 
-    let v0 = table.new_variable(U0).to_ty(interner, TyKind::General);
-    let v1 = table.new_variable(U1).to_ty(interner, TyKind::General);
-    let v2a = table.new_variable(U2).to_ty(interner, TyKind::General);
-    let v2b = table.new_variable(U2).to_ty(interner, TyKind::General);
+    let v0 = table.new_variable(U0).to_ty(interner);
+    let v1 = table.new_variable(U1).to_ty(interner);
+    let v2a = table.new_variable(U2).to_ty(interner);
+    let v2b = table.new_variable(U2).to_ty(interner);
 
     table
         .unify(
@@ -248,8 +248,8 @@ fn quantify_ty_under_binder() {
         .unify(
             interner,
             &environment0,
-            &v0.to_ty(interner, TyKind::General),
-            &v1.to_ty(interner, TyKind::General),
+            &v0.to_ty(interner),
+            &v1.to_ty(interner),
         )
         .unwrap();
 

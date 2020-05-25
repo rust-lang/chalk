@@ -630,7 +630,7 @@ where
                         .unwrap();
                 }
 
-                Ok(var.to_ty(interner, kind))
+                Ok(var.to_ty_with_kind(interner, kind))
             }
         }
     }

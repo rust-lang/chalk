@@ -478,9 +478,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 
     fn new_ty_variable(&mut self) -> Ty<I> {
         let interner = self.interner;
-        self.infer
-            .new_variable(self.universe)
-            .to_ty(interner, TyKind::General)
+        self.infer.new_variable(self.universe).to_ty(interner)
     }
 
     fn new_lifetime_variable(&mut self) -> Lifetime<I> {
