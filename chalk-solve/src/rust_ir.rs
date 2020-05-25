@@ -196,6 +196,9 @@ pub enum WellKnownTrait {
     CopyTrait,
     CloneTrait,
     DropTrait,
+    FnTrait,
+    FnMutTrait,
+    FnOnceTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {
