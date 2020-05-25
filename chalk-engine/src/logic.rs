@@ -559,6 +559,19 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         };
         if let AnswerMode::Complete = self.forest.tables[self.stack.top().table].answer_mode {
             if ambiguous {
+                // FIXME: we could try to be a little bit smarter here. This can
+                // really be split into cases:
+                // 1) Cases where no amount of solving will cause this ambiguity to change.
+                //    (e.g. `CannnotProve`)
+                // 2) Cases where we may be able to get a better answer if we
+                //    solve other subgoals first.
+                //    (e.g. the `non_enumerable_traits_reorder` test)
+                // We really only need to delay merging an ambiguous answer for
+                // case 2. Do note, though, that even if we *do* merge the answer
+                // case 1, we should stop solving this strand when in
+                // `AnswerMode::Complete` since we wouldn't use this answer yet
+                // *anyways*.
+
                 // The selected subgoal returned an ambiguous answer, but we don't want that.
                 // So, we treat this subgoal as floundered.
                 let selected_subgoal = strand.selected_subgoal.take().unwrap();
@@ -568,23 +581,33 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         }
 
         // If this subgoal was a `Positive` one, whichever way this
-        // particular answer turns out, there may yet be *more* answers.
+        // particular answer turns out, there may yet be *more* answers,
+        // if this isn't a trivial substitution.
         // Enqueue that alternative for later.
         // NOTE: this is separate from the match below because we `take` the selected_subgoal
         // below, but here we keep it for the new `Strand`.
         let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
         if let Literal::Positive(_) = strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
-            let mut next_subgoal = selected_subgoal.clone();
-            next_subgoal.answer_index.increment();
-            let next_strand = Strand {
-                infer: strand.infer.clone(),
-                ex_clause: strand.ex_clause.clone(),
-                selected_subgoal: Some(next_subgoal),
-                last_pursued_time: strand.last_pursued_time.clone(),
-            };
-            let table = self.stack.top().table;
-            let canonical_next_strand = Forest::canonicalize_strand(self.context, next_strand);
-            self.forest.tables[table].enqueue_strand(canonical_next_strand);
+            let answer = self.forest.answer(
+                selected_subgoal.subgoal_table,
+                selected_subgoal.answer_index,
+            );
+            if !self.context.is_trivial_substitution(
+                &self.forest.tables[selected_subgoal.subgoal_table].table_goal,
+                &answer.subst,
+            ) {
+                let mut next_subgoal = selected_subgoal.clone();
+                next_subgoal.answer_index.increment();
+                let next_strand = Strand {
+                    infer: strand.infer.clone(),
+                    ex_clause: strand.ex_clause.clone(),
+                    selected_subgoal: Some(next_subgoal),
+                    last_pursued_time: strand.last_pursued_time.clone(),
+                };
+                let table = self.stack.top().table;
+                let canonical_next_strand = Forest::canonicalize_strand(self.context, next_strand);
+                self.forest.tables[table].enqueue_strand(canonical_next_strand);
+            }
         }
 
         // Deselect and remove the selected subgoal, now that we have an answer for it.
@@ -1391,7 +1414,10 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             constraints,
             filtered_delayed_subgoals,
         );
-        debug!("answer: table={:?}, subst={:?}, floundered={:?}", table, subst, floundered);
+        debug!(
+            "answer: table={:?}, subst={:?}, floundered={:?}",
+            table, subst, floundered
+        );
 
         let answer = Answer { subst, ambiguous };
 
