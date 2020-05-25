@@ -82,3 +82,81 @@ fn fn_def_implied_bounds_from_env() {
         }
     }
 }
+
+#[test]
+fn fn_ptr_implements_fn_traits() {
+    test! {
+        program {
+            #[lang(fn)]
+            trait Fn<Args> { }
+
+            #[lang(fnmut)]
+            trait FnMut<Args> { }
+
+            #[lang(fnonce)]
+            trait FnOnce<Args> { }
+
+            struct Foo { }
+        }
+
+        goal {
+            fn(i32): Fn<(i32)>
+        } yields {
+            "Unique"
+        }
+        goal {
+            fn(()): FnMut<(())>
+        } yields {
+            "Unique"
+        }
+        goal {
+            fn(()): FnOnce<(())>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            fn(()): Fn<(i32)>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            fn(()): FnMut<(i32)>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            fn(()): FnOnce<(i32)>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            fn((i32, i32)): Fn<((i32, i32))>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            fn((i32, i32, (u32, u32))): Fn<(i32, i32, (u32, u32))>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            fn((i32, i32, (u32, u32))): Fn<(i32, i32, (u32, u32, u32))>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            exists<Args> {
+                Foo: Fn<Args>
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
