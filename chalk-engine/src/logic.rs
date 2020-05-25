@@ -1136,93 +1136,93 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 (AnswerMode::Ambiguous, _) => true,
             }
         };
-        // N.B. If we try to pursue a strand and it's found to be ambiguous,
-        // we know that isn't part of a cycle.
         if forest.tables[table]
             .strands_mut()
-            .any(|s| strand_is_participating(s))
+            .all(|s| !strand_is_participating(s))
         {
-            let clock = self.stack.top().clock;
-            let cyclic_minimums = self.stack.top().cyclic_minimums;
-            if cyclic_minimums.positive >= clock && cyclic_minimums.negative >= clock {
-                debug!("cycle with no new answers");
-
-                if cyclic_minimums.negative < TimeStamp::MAX {
-                    // This is a negative cycle.
-                    self.unwind_stack();
-                    return Err(RootSearchFail::NegativeCycle);
+            // If no strands are participating, then that means they are all
+            // ambiguous and we are in complete mode.
+            debug!("All strands would return ambiguous answers.");
+            match self.forest.tables[table].answer_mode {
+                AnswerMode::Complete => {
+                    debug!("Allowing ambiguous answers.");
+                    self.forest.tables[table].answer_mode = AnswerMode::Ambiguous;
+                    return Err(RootSearchFail::QuantumExceeded);
                 }
-
-                // If all the things that we recursively depend on have
-                // positive dependencies on things below us in the stack,
-                // then no more answers are forthcoming. We can clear all
-                // the strands for those things recursively.
-                let table = self.stack.top().table;
-                let cyclic_strands =
-                    self.forest.tables[table].drain_strands(strand_is_participating);
-                self.clear_strands_after_cycle(cyclic_strands);
-
-                // Now we yield with `QuantumExceeded`
-                self.unwind_stack();
-                return Err(RootSearchFail::QuantumExceeded);
-            } else {
-                debug!("table part of a cycle");
-
-                // This table resulted in a positive cycle, so we have
-                // to check what this means for the subgoal containing
-                // this strand
-                let caller_strand = match self.stack.pop_and_borrow_caller_strand() {
-                    Some(s) => s,
-                    None => {
-                        panic!("nothing on the stack but cyclic result");
-                    }
-                };
-
-                // We can't take this because we might need it later to clear the cycle
-                let caller_selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
-                match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
-                    Literal::Positive(_) => {
-                        self.stack
-                            .top()
-                            .cyclic_minimums
-                            .take_minimums(&cyclic_minimums);
-                    }
-                    Literal::Negative(_) => {
-                        // We depend on `not(subgoal)`. For us to continue,
-                        // `subgoal` must be completely evaluated. Therefore,
-                        // we depend (negatively) on the minimum link of
-                        // `subgoal` as a whole -- it doesn't matter whether
-                        // it's pos or neg.
-                        let mins = Minimums {
-                            positive: self.stack.top().clock,
-                            negative: cyclic_minimums.minimum_of_pos_and_neg(),
-                        };
-                        self.stack.top().cyclic_minimums.take_minimums(&mins);
-                    }
+                AnswerMode::Ambiguous => {
+                    unreachable!();
                 }
-
-                // We can't pursue this strand anymore, so push it back onto the table
-                let active_strand = self.stack.top().active_strand.take().unwrap();
-                let table = self.stack.top().table;
-                let canonical_active_strand =
-                    Forest::canonicalize_strand(self.context, active_strand);
-                self.forest.tables[table].enqueue_strand(canonical_active_strand);
-
-                // The strand isn't active, but the table is, so just continue
-                return Ok(());
             }
         }
 
-        debug!("All strands would return ambiguous answers.");
-        match self.forest.tables[table].answer_mode {
-            AnswerMode::Complete => {
-                debug!("Allowing ambiguous answers.");
-                self.forest.tables[table].answer_mode = AnswerMode::Ambiguous;
-                return Err(RootSearchFail::QuantumExceeded);
+        let clock = self.stack.top().clock;
+        let cyclic_minimums = self.stack.top().cyclic_minimums;
+        if cyclic_minimums.positive >= clock && cyclic_minimums.negative >= clock {
+            debug!("cycle with no new answers");
+
+            if cyclic_minimums.negative < TimeStamp::MAX {
+                // This is a negative cycle.
+                self.unwind_stack();
+                return Err(RootSearchFail::NegativeCycle);
             }
-            AnswerMode::Ambiguous => {
-                panic!();
+
+            // If all the things that we recursively depend on have
+            // positive dependencies on things below us in the stack,
+            // then no more answers are forthcoming. We can clear all
+            // the strands for those things recursively.
+            let table = self.stack.top().table;
+            // N.B. If we try to pursue a strand and it's found to be ambiguous,
+            // we know that isn't part of a cycle.
+            let cyclic_strands = self.forest.tables[table].drain_strands(strand_is_participating);
+            self.clear_strands_after_cycle(cyclic_strands);
+
+            // Now we yield with `QuantumExceeded`
+            self.unwind_stack();
+            return Err(RootSearchFail::QuantumExceeded);
+        } else {
+            debug!("table part of a cycle");
+
+            // This table resulted in a positive cycle, so we have
+            // to check what this means for the subgoal containing
+            // this strand
+            let caller_strand = match self.stack.pop_and_borrow_caller_strand() {
+                Some(s) => s,
+                None => {
+                    panic!("nothing on the stack but cyclic result");
+                }
+            };
+
+            // We can't take this because we might need it later to clear the cycle
+            let caller_selected_subgoal = caller_strand.selected_subgoal.as_ref().unwrap();
+            match caller_strand.ex_clause.subgoals[caller_selected_subgoal.subgoal_index] {
+                Literal::Positive(_) => {
+                    self.stack
+                        .top()
+                        .cyclic_minimums
+                        .take_minimums(&cyclic_minimums);
+                }
+                Literal::Negative(_) => {
+                    // We depend on `not(subgoal)`. For us to continue,
+                    // `subgoal` must be completely evaluated. Therefore,
+                    // we depend (negatively) on the minimum link of
+                    // `subgoal` as a whole -- it doesn't matter whether
+                    // it's pos or neg.
+                    let mins = Minimums {
+                        positive: self.stack.top().clock,
+                        negative: cyclic_minimums.minimum_of_pos_and_neg(),
+                    };
+                    self.stack.top().cyclic_minimums.take_minimums(&mins);
+                }
             }
+
+            // We can't pursue this strand anymore, so push it back onto the table
+            let active_strand = self.stack.top().active_strand.take().unwrap();
+            let table = self.stack.top().table;
+            let canonical_active_strand = Forest::canonicalize_strand(self.context, active_strand);
+            self.forest.tables[table].enqueue_strand(canonical_active_strand);
+
+            // The strand isn't active, but the table is, so just continue
+            return Ok(());
         }
     }
 
