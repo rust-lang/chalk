@@ -1338,8 +1338,18 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             selected_subgoal: _,
             last_pursued_time: _,
         } = strand;
+        // If there are subgoals left, they should be followed
         assert!(subgoals.is_empty());
+        // We can still try to get an ambiguous answer if there are floundered subgoals
         let floundered = !floundered_subgoals.is_empty();
+        // So let's make sure that it *really* is an ambiguous answer (this should be set previously)
+        assert!(!floundered || ambiguous);
+
+        // FIXME: If there are floundered subgoals, we *could* potentially
+        // actually check if the partial answers to any of these subgoals
+        // conflict. But this requires that we think about whether they are
+        // positive or negative subgoals. This duplicates some of the logic
+        // in `merge_answer_into_strand`, so a bit of refactoring is needed.
 
         // If the answer gets too large, mark the table as floundered.
         // This is the *most conservative* course. There are a few alternatives:
@@ -1381,14 +1391,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             constraints,
             filtered_delayed_subgoals,
         );
-        if floundered {
-            debug!(
-                "answer from floundered Strand: table={:?}, subst={:?}",
-                table, subst
-            );
-        } else {
-            debug!("answer: table={:?}, subst={:?}", table, subst);
-        }
+        debug!("answer: table={:?}, subst={:?}, floundered={:?}", table, subst, floundered);
 
         let answer = Answer { subst, ambiguous };
 
