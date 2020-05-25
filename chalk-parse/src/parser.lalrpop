@@ -51,6 +51,9 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "copy" ")" "]" => WellKnownTrait::CopyTrait,
      "#" "[" "lang" "(" "clone" ")" "]" => WellKnownTrait::CloneTrait,
      "#" "[" "lang" "(" "drop" ")" "]" => WellKnownTrait::DropTrait,
+     "#" "[" "lang" "(" "fn" ")" "]" => WellKnownTrait::FnTrait,
+     "#" "[" "lang" "(" "fnmut" ")" "]" => WellKnownTrait::FnMutTrait,
+     "#" "[" "lang" "(" "fnonce" ")" "]" => WellKnownTrait::FnOnceTrait,
 };
 
 StructDefn: StructDefn = {

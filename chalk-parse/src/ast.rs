@@ -68,6 +68,9 @@ pub enum WellKnownTrait {
     CopyTrait,
     CloneTrait,
     DropTrait,
+    FnTrait,
+    FnMutTrait,
+    FnOnceTrait,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
