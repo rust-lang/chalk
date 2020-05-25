@@ -115,7 +115,30 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            // Tried to unify mis-matching inference variables (not caught by prior match arm)
+            // General inference variables can be unified with more specific
+            // inference variables, but they need to inherit the specific
+            // variable's type kind. The general_var kind != the specific_var
+            // kind because of the prior match arm
+            (
+                &TyData::InferenceVar(general_var, TyKind::General),
+                specific_ty_data @ &TyData::InferenceVar(_, _)
+            )
+            | (
+                specific_ty_data @ &TyData::InferenceVar(_, _),
+                &TyData::InferenceVar(general_var, TyKind::General)
+            ) => {
+                let specific_ty = specific_ty_data.clone().intern(interner);
+                self.table
+                    .unify
+                    .unify_var_value(general_var, InferenceValue::from_ty(interner, specific_ty.clone()))
+                    .unwrap();
+
+                debug!("unify_ty_ty: general kinded var {:?} set to {:?}", general_var, specific_ty);
+                Ok(())
+            }
+
+            // Tried to unify inference variables with mis-matching specific type kinds (not caught
+            // by prior match arms)
             (
                 &TyData::InferenceVar(_, kind1),
                 &TyData::InferenceVar(_, kind2),

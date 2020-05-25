@@ -119,3 +119,53 @@ fn float_ambiguity() {
         }
     }
 }
+
+/// Integer/float type kinds are just specialized type kinds, so they can unify
+/// with general type kinds.
+#[test]
+fn integer_and_float_are_specialized_ty_kinds() {
+    test! {
+        program {}
+
+        goal {
+            exists<T, int N> {
+                T = N, N = usize
+            }
+        } yields {
+            "Unique; substitution [?0 := Uint(Usize), ?1 := Uint(Usize)], lifetime constraints []"
+        }
+
+        goal {
+            exists<T, float N> {
+                T = N, N = f32
+            }
+        } yields {
+            "Unique; substitution [?0 := Float(F32), ?1 := Float(F32)], lifetime constraints []"
+        }
+    }
+}
+
+/// Once a general type kind is unified with a specific type kind, it cannot be
+/// unified with an incompatible type (ex. integer type kind with char)
+#[test]
+fn general_ty_kind_becomes_specific() {
+    test! {
+        program {}
+
+        goal {
+            exists<T, int N> {
+                T = N, T = char
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            exists<T, float N> {
+                T = N, T = char
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
