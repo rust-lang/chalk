@@ -284,7 +284,6 @@ impl Minimums {
     }
 }
 
-
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum AnswerMode {
     Complete,

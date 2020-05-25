@@ -368,9 +368,9 @@ fn iterator_flatten() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        }/* yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive()] {
             "Unique; substitution [?0 := Uint(U32)]"
-        }*/
+        }
     }
 }
 
