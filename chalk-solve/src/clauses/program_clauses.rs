@@ -126,7 +126,6 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// AliasEq(T<..> = !T<..>).
     /// Implemented(!T<..>: A).
     /// Implemented(!T<..>: B).
-    /// Implemented(!T<..>: Send) :- Implemented(HiddenTy: Send). // For all auto traits
     /// ```
     /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
@@ -142,7 +141,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             let alias_placeholder_ty = Ty::new(
                 interner,
                 ApplicationTy {
-                    name: TypeName::OpaqueType(self.opaque_ty_id),
+                    name: self.opaque_ty_id.cast(interner),
                     substitution,
                 },
             );

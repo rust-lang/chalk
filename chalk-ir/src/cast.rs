@@ -319,6 +319,15 @@ where
     }
 }
 
+impl<I> CastTo<TypeName<I>> for OpaqueTyId<I>
+where
+    I: Interner,
+{
+    fn cast_to(self, _interner: &I) -> TypeName<I> {
+        TypeName::OpaqueType(self)
+    }
+}
+
 impl<T> CastTo<T> for &T
 where
     T: Clone + HasInterner,
