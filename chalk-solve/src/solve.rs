@@ -5,7 +5,7 @@ use std::fmt;
 
 #[cfg(feature = "slg-solver")]
 use {
-    crate::solve::slg::SlgContext,
+    crate::solve::slg::{SlgContext, SlgContextOps},
     chalk_engine::forest::{Forest, SubstitutionResult},
 };
 
@@ -233,7 +233,9 @@ impl SolverChoice {
                 max_size,
                 expected_answers,
             } => Solver(SolverImpl::Slg {
-                forest: Box::new(Forest::new(SlgContext::new(max_size, expected_answers))),
+                forest: Box::new(Forest::new()),
+                max_size,
+                expected_answers,
             }),
             #[cfg(feature = "recursive-solver")]
             SolverChoice::Recursive {
@@ -269,7 +271,15 @@ pub struct Solver<I: Interner>(SolverImpl<I>);
 
 enum SolverImpl<I: Interner> {
     #[cfg(feature = "slg-solver")]
-    Slg { forest: Box<Forest<SlgContext<I>>> },
+    Slg {
+        forest: Box<Forest<I, SlgContext<I>>>,
+        max_size: usize,
+        /// The expected number of answers for a solution.
+        /// Only really useful for tests, since `make_solution`
+        /// will panic if the number of cached answers does not
+        /// equal this when a solution is made.
+        expected_answers: Option<usize>,
+    },
     #[cfg(feature = "recursive-solver")]
     Recursive(Box<RecursiveContext<I>>),
 }
@@ -300,8 +310,12 @@ impl<I: Interner> Solver<I> {
     ) -> Option<Solution<I>> {
         match &mut self.0 {
             #[cfg(feature = "slg-solver")]
-            SolverImpl::Slg { forest } => {
-                let ops = forest.context().ops(program);
+            SolverImpl::Slg {
+                forest,
+                max_size,
+                expected_answers,
+            } => {
+                let ops = SlgContextOps::new(program, *max_size, *expected_answers);
                 forest.solve(&ops, goal, || true)
             }
             #[cfg(feature = "recursive-solver")]
@@ -339,8 +353,12 @@ impl<I: Interner> Solver<I> {
     ) -> Option<Solution<I>> {
         match &mut self.0 {
             #[cfg(feature = "slg-solver")]
-            SolverImpl::Slg { forest } => {
-                let ops = forest.context().ops(program);
+            SolverImpl::Slg {
+                forest,
+                max_size,
+                expected_answers,
+            } => {
+                let ops = SlgContextOps::new(program, *max_size, *expected_answers);
                 forest.solve(&ops, goal, should_continue)
             }
             #[cfg(feature = "recursive-solver")]
@@ -381,8 +399,12 @@ impl<I: Interner> Solver<I> {
         f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
         match &mut self.0 {
-            SolverImpl::Slg { forest } => {
-                let ops = forest.context().ops(program);
+            SolverImpl::Slg {
+                forest,
+                max_size,
+                expected_answers,
+            } => {
+                let ops = SlgContextOps::new(program, *max_size, *expected_answers);
                 forest.solve_multiple(&ops, goal, f)
             }
             #[cfg(feature = "recursive-solver")]

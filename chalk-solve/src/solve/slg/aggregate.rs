@@ -8,17 +8,17 @@ use chalk_ir::cast::Cast;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
-use chalk_engine::context::{self, AnswerResult, Context, ContextOps};
+use chalk_engine::context::{self, AnswerResult, ContextOps};
 use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
 /// Draws as many answers as it needs from `answers` (but
 /// no more!) in order to come up with a solution.
-impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> {
+impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, I> {
     fn make_solution(
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,
-        mut answers: impl context::AnswerStream<SlgContext<I>>,
+        mut answers: impl context::AnswerStream<I>,
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
         let interner = self.program.interner();
@@ -95,12 +95,7 @@ impl<I: Interner> context::AggregateOps<SlgContext<I>> for SlgContextOps<'_, I> 
                     break Guidance::Suggested(subst);
                 }
             };
-            subst = merge_into_guidance(
-                interner,
-                SlgContext::canonical(root_goal),
-                subst,
-                &new_subst,
-            );
+            subst = merge_into_guidance(interner, &root_goal.canonical, subst, &new_subst);
             num_answers += 1;
         };
 

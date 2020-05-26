@@ -5,34 +5,27 @@ use crate::tables::Tables;
 use crate::{TableIndex, TimeStamp};
 use std::fmt::Display;
 
-pub struct Forest<C: Context> {
-    context: C,
-    pub(crate) tables: Tables<C>,
+use chalk_ir::interner::Interner;
+use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
+
+pub struct Forest<I: Interner, C: Context<I>> {
+    pub(crate) tables: Tables<I>,
 
     /// This is a clock which always increases. It is
     /// incremented every time a new subgoal is followed.
     /// This effectively gives us way to track what depth
     /// and loop a table or strand was last followed.
     pub(crate) clock: TimeStamp,
+    _context: std::marker::PhantomData<C>,
 }
 
-impl<C: Context> Forest<C> {
-    pub fn new(context: C) -> Self {
+impl<I: Interner, C: Context<I>> Forest<I, C> {
+    pub fn new() -> Self {
         Forest {
-            context,
             tables: Tables::new(),
             clock: TimeStamp::default(),
+            _context: std::marker::PhantomData,
         }
-    }
-
-    /// Gives access to `self.context`. In fact, the SLG solver
-    /// doesn't ever use `self.context` for anything, and only cares
-    /// about the associated types and methods defined on it.  But the
-    /// creator of the forest can use the context field to store
-    /// configuration info (e.g., in chalk, we store the max size of a
-    /// term in here).
-    pub fn context(&self) -> &C {
-        &self.context
     }
 
     // Gets the next clock TimeStamp. This will never decrease.
@@ -47,9 +40,9 @@ impl<C: Context> Forest<C> {
     /// invocations. Invoking `next` fewer times is preferable =)
     fn iter_answers<'f>(
         &'f mut self,
-        context: &'f impl ContextOps<C>,
-        goal: &C::UCanonicalGoalInEnvironment,
-    ) -> impl AnswerStream<C> + 'f {
+        context: &'f impl ContextOps<I, C>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> impl AnswerStream<I> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
         let answer = AnswerIndex::ZERO;
         ForestSolver {
@@ -57,6 +50,7 @@ impl<C: Context> Forest<C> {
             context,
             table,
             answer,
+            _context: std::marker::PhantomData::<C>,
         }
     }
 
@@ -65,8 +59,8 @@ impl<C: Context> Forest<C> {
     /// cached for future attempts).
     pub fn solve(
         &mut self,
-        context: &impl ContextOps<C>,
-        goal: &C::UCanonicalGoalInEnvironment,
+        context: &impl ContextOps<I, C>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
         should_continue: impl Fn() -> bool,
     ) -> Option<C::Solution> {
         context.make_solution(&goal, self.iter_answers(context, goal), should_continue)
@@ -78,18 +72,18 @@ impl<C: Context> Forest<C> {
     /// iterate over multiple solutions until the function return `false`.
     pub fn solve_multiple(
         &mut self,
-        context: &impl ContextOps<C>,
-        goal: &C::UCanonicalGoalInEnvironment,
-        mut f: impl FnMut(SubstitutionResult<C::CanonicalConstrainedSubst>, bool) -> bool,
+        context: &impl ContextOps<I, C>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+        mut f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
         let mut answers = self.iter_answers(context, goal);
         loop {
             let subst = match answers.next_answer(|| true) {
                 AnswerResult::Answer(answer) => {
                     if !answer.ambiguous {
-                        SubstitutionResult::Definite(context.constrained_subst_from_answer(answer))
+                        SubstitutionResult::Definite(answer.subst)
                     } else {
-                        SubstitutionResult::Ambiguous(context.constrained_subst_from_answer(answer))
+                        SubstitutionResult::Ambiguous(answer.subst)
                     }
                 }
                 AnswerResult::Floundered => SubstitutionResult::Floundered,
@@ -140,18 +134,21 @@ impl<S: Display> Display for SubstitutionResult<S> {
     }
 }
 
-struct ForestSolver<'me, C: Context, CO: ContextOps<C>> {
-    forest: &'me mut Forest<C>,
+struct ForestSolver<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> {
+    forest: &'me mut Forest<I, C>,
     context: &'me CO,
     table: TableIndex,
     answer: AnswerIndex,
+    _context: std::marker::PhantomData<C>,
 }
 
-impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C, CO> {
+impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
+    for ForestSolver<'me, I, C, CO>
+{
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.
-    fn peek_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C> {
+    fn peek_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<I> {
         loop {
             match self
                 .forest
@@ -190,13 +187,13 @@ impl<'me, C: Context, CO: ContextOps<C>> AnswerStream<C> for ForestSolver<'me, C
         }
     }
 
-    fn next_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<C> {
+    fn next_answer(&mut self, should_continue: impl Fn() -> bool) -> AnswerResult<I> {
         let answer = self.peek_answer(should_continue);
         self.answer.increment();
         answer
     }
 
-    fn any_future_answer(&self, test: impl Fn(&C::InferenceNormalizedSubst) -> bool) -> bool {
+    fn any_future_answer(&self, test: impl Fn(&Substitution<I>) -> bool) -> bool {
         self.forest.any_future_answer(self.table, self.answer, test)
     }
 }

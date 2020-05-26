@@ -46,7 +46,7 @@ use chalk_engine::{ExClause, Literal, TimeStamp};
 //
 // is the SLG resolvent of G with C.
 
-impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTable<I> {
+impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenceTable<I> {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.
@@ -62,7 +62,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
         goal: &DomainGoal<I>,
         subst: &Substitution<I>,
         clause: &ProgramClause<I>,
-    ) -> Fallible<ExClause<SlgContext<I>>> {
+    ) -> Fallible<ExClause<I>> {
         // Relating the above description to our situation:
         //
         // - `goal` G, except with binders for any existential variables.
@@ -206,7 +206,7 @@ impl<I: Interner> context::ResolventOps<SlgContext<I>> for TruncatingInferenceTa
     fn apply_answer_subst(
         &mut self,
         interner: &I,
-        ex_clause: &mut ExClause<SlgContext<I>>,
+        ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
         canonical_answer_subst: &Canonical<AnswerSubst<I>>,
@@ -271,7 +271,7 @@ struct AnswerSubstitutor<'t, I: Interner> {
     /// * `2`, when visiting `D`.
     outer_binder: DebruijnIndex,
 
-    ex_clause: &'t mut ExClause<SlgContext<I>>,
+    ex_clause: &'t mut ExClause<I>,
     interner: &'t I,
 }
 
@@ -281,7 +281,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         table: &mut InferenceTable<I>,
         environment: &Environment<I>,
         answer_subst: &Substitution<I>,
-        ex_clause: &mut ExClause<SlgContext<I>>,
+        ex_clause: &mut ExClause<I>,
         answer: &T,
         pending: &T,
     ) -> Fallible<()> {

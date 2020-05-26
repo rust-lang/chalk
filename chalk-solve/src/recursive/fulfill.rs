@@ -1,9 +1,6 @@
 use crate::infer::{
-    canonicalize::Canonicalized,
-    instantiate::IntoBindersAndValue,
-    ucanonicalize::{UCanonicalized, UniverseMap},
-    unify::UnificationResult,
-    InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
+    canonicalize::Canonicalized, instantiate::IntoBindersAndValue, ucanonicalize::UCanonicalized,
+    unify::UnificationResult, InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
 };
 use crate::recursive::{Minimums, Solver};
 use crate::solve::{truncate, Guidance, Solution};
@@ -14,7 +11,7 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::Zip;
 use chalk_ir::{
     Canonical, ConstrainedSubst, Constraint, Environment, EqGoal, Goal, GoalData, InEnvironment,
-    QuantifierKind, Substitution, UCanonical,
+    QuantifierKind, Substitution, UCanonical, UniverseMap,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -293,6 +290,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         universes: UniverseMap,
         subst: Canonical<ConstrainedSubst<I>>,
     ) {
+        use crate::infer::ucanonicalize::UniverseMapExt;
         let subst = universes.map_from_canonical(self.interner(), &subst);
         let ConstrainedSubst { subst, constraints } = self
             .infer

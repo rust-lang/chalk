@@ -159,6 +159,8 @@ name = "chalk-engine"
 version = "0.10.1-dev"
 dependencies = [
  "chalk-base 0.10.1-dev",
+ "chalk-derive 0.10.1-dev",
+ "chalk-ir 0.10.1-dev",
  "rustc-hash 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -182,7 +184,6 @@ version = "0.10.1-dev"
 dependencies = [
  "chalk-base 0.10.1-dev",
  "chalk-derive 0.10.1-dev",
- "chalk-engine 0.10.1-dev",
 ]
 
 [[package]]

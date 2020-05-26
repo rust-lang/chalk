@@ -56,14 +56,20 @@
 #[macro_use]
 extern crate chalk_base;
 
-use crate::context::Context;
 use std::cmp::min;
 use std::usize;
+
+use chalk_derive::{Fold, HasInterner, Visit};
+use chalk_ir::interner::{Interner, TargetInterner};
+use chalk_ir::visit::VisitResult;
+use chalk_ir::{
+    AnswerSubst, Canonical, ConstrainedSubst, Constraint, DebruijnIndex, Goal, InEnvironment,
+    Substitution,
+};
 
 pub mod context;
 mod derived;
 pub mod forest;
-pub mod hh;
 mod logic;
 mod simplify;
 mod stack;
@@ -88,11 +94,11 @@ index_struct! {
 }
 
 /// The paper describes these as `A :- D | G`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExClause<C: Context> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+pub struct ExClause<I: Interner> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
-    pub subst: C::Substitution,
+    pub subst: Substitution<I>,
 
     /// True if any subgoals were depended upon negatively and
     /// were not fully evaluated, or if we encountered a `CannotProve`
@@ -101,13 +107,13 @@ pub struct ExClause<C: Context> {
     pub ambiguous: bool,
 
     /// Region constraints we have accumulated.
-    pub constraints: Vec<C::RegionConstraint>,
+    pub constraints: Vec<InEnvironment<Constraint<I>>>,
 
     /// Subgoals: literals that must be proven
-    pub subgoals: Vec<Literal<C>>,
+    pub subgoals: Vec<Literal<I>>,
 
     /// We assume that negative literals cannot have coinductive cycles.
-    pub delayed_subgoals: Vec<C::GoalInEnvironment>,
+    pub delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
 
     /// Time stamp that is incremented each time we find an answer to
     /// some subgoal. This is used to figure out whether any of the
@@ -120,7 +126,7 @@ pub struct ExClause<C: Context> {
 
     /// List of subgoals that have floundered. See `FlounderedSubgoal`
     /// for more information.
-    pub floundered_subgoals: Vec<FlounderedSubgoal<C>>,
+    pub floundered_subgoals: Vec<FlounderedSubgoal<I>>,
 }
 
 /// The "time stamp" is a simple clock that gets incremented each time
@@ -172,10 +178,10 @@ impl TimeStamp {
 ///
 /// trying to solve `?T: Foo` would immediately require solving `?T:
 /// Sized`, and hence would flounder.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct FlounderedSubgoal<C: Context> {
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+pub struct FlounderedSubgoal<I: Interner> {
     /// Literal that floundered.
-    pub floundered_literal: Literal<C>,
+    pub floundered_literal: Literal<I>,
 
     /// Current value of the strand's clock at the time of
     /// floundering.
@@ -186,12 +192,12 @@ pub struct FlounderedSubgoal<C: Context> {
 /// goal for a particular table (modulo delayed literals). It contains
 /// a substitution
 #[derive(Clone, Debug)]
-pub struct Answer<C: Context> {
+pub struct Answer<I: Interner> {
     /// Contains values for the unbound inference variables for which
     /// the table is true, along with any delayed subgoals (Which must
     /// still be proven) and region constrained (which must still be
     /// proven, but not by chalk).
-    pub subst: C::CanonicalAnswerSubst,
+    pub subst: Canonical<AnswerSubst<I>>,
 
     /// If this flag is set, then the answer could be neither proven
     /// nor disproven. This could be the size of the answer exceeded
@@ -200,11 +206,11 @@ pub struct Answer<C: Context> {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompleteAnswer<C: Context> {
+pub struct CompleteAnswer<I: Interner> {
     /// Contains values for the unbound inference variables for which
     /// the table is true, along with any region constrained (which must still be
     /// proven, but not by chalk).
-    pub subst: C::CanonicalConstrainedSubst,
+    pub subst: Canonical<ConstrainedSubst<I>>,
 
     /// If this flag is set, then the answer could be neither proven
     /// nor disproven. This could be the size of the answer exceeded
@@ -213,11 +219,11 @@ pub struct CompleteAnswer<C: Context> {
 }
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
-#[derive(Clone, Debug)]
-pub enum Literal<C: Context> {
+#[derive(Clone, Debug, Fold, Visit)]
+pub enum Literal<I: Interner> {
     // FIXME: pub b/c fold
-    Positive(C::GoalInEnvironment),
-    Negative(C::GoalInEnvironment),
+    Positive(InEnvironment<Goal<I>>),
+    Negative(InEnvironment<Goal<I>>),
 }
 
 /// The `Minimums` structure is used to track the dependencies between
@@ -277,3 +283,9 @@ impl Minimums {
         min(self.positive, self.negative)
     }
 }
+
+chalk_ir::copy_fold!(TableIndex);
+chalk_ir::copy_fold!(TimeStamp);
+
+chalk_ir::const_visit!(TableIndex);
+chalk_ir::const_visit!(TimeStamp);

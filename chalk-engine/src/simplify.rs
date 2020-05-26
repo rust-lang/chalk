@@ -1,20 +1,22 @@
 use crate::context::{Context, ContextOps, InferenceTable};
 use crate::forest::Forest;
-use crate::hh::HhGoal;
 use crate::{ExClause, Literal, TimeStamp};
 use chalk_base::results::Fallible;
 
-impl<C: Context> Forest<C> {
-    /// Simplifies an HH goal into a series of positive domain goals
-    /// and negative HH goals. This operation may fail if the HH goal
+use chalk_ir::interner::Interner;
+use chalk_ir::{Environment, Goal, GoalData, InEnvironment, QuantifierKind, Substitution};
+
+impl<I: Interner, C: Context<I>> Forest<I, C> {
+    /// Simplifies a goal into a series of positive domain goals
+    /// and negative goals. This operation may fail if the goal
     /// includes unifications that cannot be completed.
-    pub(super) fn simplify_hh_goal(
-        context: &impl ContextOps<C>,
-        infer: &mut dyn InferenceTable<C>,
-        subst: C::Substitution,
-        initial_environment: C::Environment,
-        initial_hh_goal: HhGoal<C>,
-    ) -> Fallible<ExClause<C>> {
+    pub(super) fn simplify_goal(
+        context: &impl ContextOps<I, C>,
+        infer: &mut dyn InferenceTable<I, C>,
+        subst: Substitution<I>,
+        initial_environment: Environment<I>,
+        initial_goal: Goal<I>,
+    ) -> Fallible<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,
             ambiguous: false,
@@ -26,54 +28,53 @@ impl<C: Context> Forest<C> {
         };
 
         // A stack of higher-level goals to process.
-        let mut pending_goals = vec![(initial_environment, initial_hh_goal)];
+        let mut pending_goals = vec![(initial_environment, initial_goal)];
 
-        while let Some((environment, hh_goal)) = pending_goals.pop() {
-            match hh_goal {
-                HhGoal::ForAll(subgoal) => {
+        while let Some((environment, goal)) = pending_goals.pop() {
+            match goal.data(context.interner()) {
+                GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                     let subgoal =
                         infer.instantiate_binders_universally(context.interner(), &subgoal);
-                    pending_goals.push((environment, context.into_hh_goal(subgoal)));
+                    pending_goals.push((environment, subgoal.clone()));
                 }
-                HhGoal::Exists(subgoal) => {
+                GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
                     let subgoal =
                         infer.instantiate_binders_existentially(context.interner(), &subgoal);
-                    pending_goals.push((environment, context.into_hh_goal(subgoal)))
+                    pending_goals.push((environment, subgoal.clone()));
                 }
-                HhGoal::Implies(wc, subgoal) => {
-                    let new_environment = context.add_clauses(&environment, wc);
-                    pending_goals.push((new_environment, context.into_hh_goal(subgoal)));
+                GoalData::Implies(wc, subgoal) => {
+                    let new_environment = context.add_clauses(&environment, wc.clone());
+                    pending_goals.push((new_environment, subgoal.clone()));
                 }
-                HhGoal::All(subgoals) => {
-                    for subgoal in subgoals {
-                        pending_goals.push((environment.clone(), context.into_hh_goal(subgoal)));
+                GoalData::All(subgoals) => {
+                    for subgoal in subgoals.iter(context.interner()) {
+                        pending_goals.push((environment.clone(), subgoal.clone()));
                     }
                 }
-                HhGoal::Not(subgoal) => {
+                GoalData::Not(subgoal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Negative(C::goal_in_environment(
+                        .push(Literal::Negative(InEnvironment::new(
                             &environment,
-                            subgoal,
+                            subgoal.clone(),
                         )));
                 }
-                HhGoal::Unify(variance, a, b) => infer.unify_generic_args_into_ex_clause(
+                GoalData::EqGoal(goal) => infer.unify_generic_args_into_ex_clause(
                     context.interner(),
                     &environment,
-                    variance,
-                    &a,
-                    &b,
+                    &goal.a,
+                    &goal.b,
                     &mut ex_clause,
                 )?,
-                HhGoal::DomainGoal(domain_goal) => {
+                GoalData::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
-                        .push(Literal::Positive(C::goal_in_environment(
+                        .push(Literal::Positive(InEnvironment::new(
                             &environment,
-                            context.into_goal(domain_goal),
+                            context.into_goal(domain_goal.clone()),
                         )));
                 }
-                HhGoal::CannotProve => {
+                GoalData::CannotProve(()) => {
                     ex_clause.ambiguous = true;
                 }
             }

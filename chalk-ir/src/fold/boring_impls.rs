@@ -9,9 +9,6 @@ use crate::*;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-#[cfg(feature = "slg-solver")]
-use chalk_engine::{context::Context, ExClause, FlounderedSubgoal, Literal};
-
 impl<'a, T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a T {
     type Result = T::Result;
     fn fold_with<'i>(
@@ -236,8 +233,9 @@ macro_rules! copy_fold {
     };
 }
 
-copy_fold!(UniverseIndex);
+copy_fold!(bool);
 copy_fold!(usize);
+copy_fold!(UniverseIndex);
 copy_fold!(PlaceholderIndex);
 copy_fold!(QuantifierKind);
 copy_fold!(DebruijnIndex);
@@ -248,11 +246,6 @@ copy_fold!(FloatTy);
 copy_fold!(Scalar);
 copy_fold!(ClausePriority);
 copy_fold!(Mutability);
-
-#[cfg(feature = "slg-solver")]
-copy_fold!(chalk_engine::TableIndex);
-#[cfg(feature = "slg-solver")]
-copy_fold!(chalk_engine::TimeStamp);
 
 #[macro_export]
 macro_rules! id_fold {
@@ -338,101 +331,5 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
         TI: 'i,
     {
         Ok(PhantomData)
-    }
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ExClause<C>
-where
-    C: Context,
-    C::Substitution: Fold<I, TI, Result = C::Substitution>,
-    C::RegionConstraint: Fold<I, TI, Result = C::RegionConstraint>,
-    C::CanonicalConstrainedSubst: Fold<I, TI, Result = C::CanonicalConstrainedSubst>,
-    C::GoalInEnvironment: Fold<I, TI, Result = C::GoalInEnvironment>,
-{
-    type Result = ExClause<C>;
-
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I, TI>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-        TI: 'i,
-    {
-        let ExClause {
-            subst,
-            ambiguous,
-            constraints,
-            subgoals,
-            delayed_subgoals,
-            answer_time,
-            floundered_subgoals,
-        } = self;
-        Ok(ExClause {
-            subst: subst.fold_with(folder, outer_binder)?,
-            ambiguous: *ambiguous,
-            constraints: constraints.fold_with(folder, outer_binder)?,
-            subgoals: subgoals.fold_with(folder, outer_binder)?,
-            delayed_subgoals: delayed_subgoals.fold_with(folder, outer_binder)?,
-            answer_time: answer_time.fold_with(folder, outer_binder)?,
-            floundered_subgoals: floundered_subgoals.fold_with(folder, outer_binder)?,
-        })
-    }
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FlounderedSubgoal<C>
-where
-    C: Context,
-    C::Substitution: Fold<I, TI, Result = C::Substitution>,
-    C::RegionConstraint: Fold<I, TI, Result = C::RegionConstraint>,
-    C::CanonicalConstrainedSubst: Fold<I, TI, Result = C::CanonicalConstrainedSubst>,
-    C::GoalInEnvironment: Fold<I, TI, Result = C::GoalInEnvironment>,
-{
-    type Result = FlounderedSubgoal<C>;
-
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I, TI>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-        TI: 'i,
-    {
-        let FlounderedSubgoal {
-            floundered_literal,
-            floundered_time,
-        } = self;
-        Ok(FlounderedSubgoal {
-            floundered_literal: floundered_literal.fold_with(folder, outer_binder)?,
-            floundered_time: floundered_time.fold_with(folder, outer_binder)?,
-        })
-    }
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: Context, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Literal<C>
-where
-    C: Context,
-    C::GoalInEnvironment: Fold<I, TI, Result = C::GoalInEnvironment>,
-{
-    type Result = Literal<C>;
-
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I, TI>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-        TI: 'i,
-    {
-        match self {
-            Literal::Positive(goal) => Ok(Literal::Positive(goal.fold_with(folder, outer_binder)?)),
-            Literal::Negative(goal) => Ok(Literal::Negative(goal.fold_with(folder, outer_binder)?)),
-        }
     }
 }

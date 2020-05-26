@@ -34,9 +34,6 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-#[cfg(feature = "slg-solver")]
-use chalk_engine::{context::Context, ExClause};
-
 /// A "interner" encapsulates the concrete representation of
 /// certain "core types" from chalk-ir. All the types in chalk-ir are
 /// parameterized by a `I: Interner`, and so (e.g.) if they want to
@@ -754,9 +751,4 @@ where
 
 impl<'a, T: HasInterner> HasInterner for std::slice::Iter<'a, T> {
     type Interner = T::Interner;
-}
-
-#[cfg(feature = "slg-solver")]
-impl<C: HasInterner + Context> HasInterner for ExClause<C> {
-    type Interner = <C as HasInterner>::Interner;
 }
