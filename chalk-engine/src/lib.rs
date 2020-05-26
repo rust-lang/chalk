@@ -59,12 +59,14 @@ extern crate chalk_base;
 use std::cmp::min;
 use std::usize;
 
-use chalk_ir::interner::Interner;
+use chalk_derive::{Fold, HasInterner, Visit};
+use chalk_ir::interner::{Interner, TargetInterner};
+use chalk_ir::visit::VisitResult;
 use chalk_ir::{
-    AnswerSubst, Canonical, ConstrainedSubst, Constraint, Goal, InEnvironment, Substitution,
+    AnswerSubst, Canonical, ConstrainedSubst, Constraint, DebruijnIndex, Goal, InEnvironment,
+    Substitution,
 };
 
-mod boring_impls;
 pub mod context;
 mod derived;
 pub mod forest;
@@ -92,7 +94,7 @@ index_struct! {
 }
 
 /// The paper describes these as `A :- D | G`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct ExClause<I: Interner> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
@@ -176,7 +178,7 @@ impl TimeStamp {
 ///
 /// trying to solve `?T: Foo` would immediately require solving `?T:
 /// Sized`, and hence would flounder.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct FlounderedSubgoal<I: Interner> {
     /// Literal that floundered.
     pub floundered_literal: Literal<I>,
@@ -217,7 +219,7 @@ pub struct CompleteAnswer<I: Interner> {
 }
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Fold, Visit)]
 pub enum Literal<I: Interner> {
     // FIXME: pub b/c fold
     Positive(InEnvironment<Goal<I>>),
@@ -281,3 +283,9 @@ impl Minimums {
         min(self.positive, self.negative)
     }
 }
+
+chalk_ir::copy_fold!(TableIndex);
+chalk_ir::copy_fold!(TimeStamp);
+
+chalk_ir::const_visit!(TableIndex);
+chalk_ir::const_visit!(TimeStamp);

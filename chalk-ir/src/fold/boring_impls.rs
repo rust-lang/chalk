@@ -233,8 +233,9 @@ macro_rules! copy_fold {
     };
 }
 
-copy_fold!(UniverseIndex);
+copy_fold!(bool);
 copy_fold!(usize);
+copy_fold!(UniverseIndex);
 copy_fold!(PlaceholderIndex);
 copy_fold!(QuantifierKind);
 copy_fold!(DebruijnIndex);

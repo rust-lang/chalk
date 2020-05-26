@@ -197,8 +197,9 @@ macro_rules! const_visit {
     };
 }
 
-const_visit!(UniverseIndex);
+const_visit!(bool);
 const_visit!(usize);
+const_visit!(UniverseIndex);
 const_visit!(PlaceholderIndex);
 const_visit!(QuantifierKind);
 const_visit!(DebruijnIndex);

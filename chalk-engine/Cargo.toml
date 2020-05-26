@@ -16,4 +16,5 @@ default = []
 rustc-hash = { version = "1.1.0" }
 
 chalk-base = { version = "0.10.1-dev", path = "../chalk-base" }
+chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
 chalk-ir = { version = "0.10.1-dev", path = "../chalk-ir" }
