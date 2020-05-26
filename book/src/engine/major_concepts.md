@@ -16,7 +16,7 @@ opaque to the engine internals. Functions in the trait are agnostic to specific
 program or environment details, since they lack a `&self` argument.
 
 To give an example, there is an associated [`Goal`] type. However, Chalk doesn't
-know how to solve this. Instead, it has to be converted an [`HhGoal`] via the
+know how to solve this. Instead, it has to be converted an `HhGoal` via the
 `Context::into_hh_goal` function. This will be coverted more in the `Goals`
 section.
 
@@ -38,7 +38,7 @@ change the state of the logic itself.
 ## Goals
 
 A "goal" in Chalk can be thought of as "something we want to prove". The engine
-itself understands [`HhGoal`]s. `HHGoal`s consist of the most basic logic,
+itself understands `HhGoal`s. `HHGoal`s consist of the most basic logic,
 such as introducing Binders (`Forall` or `Exists`) or combining goals (`All`).
 On the other hand, `Context::Goal` represents an opaque goal generated
 externally. As such, it may contain any extra information or may be interned.
@@ -111,7 +111,6 @@ stack).
 [`Context`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html
 [`ContextOps`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.ContextOps.html
 [`InferenceTable`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.InferenceTable.html
-[`HhGoal`]: https://rust-lang.github.io/chalk/chalk_engine/hh/enum.HhGoal.html
 [`Solution`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html#associatedtype.Solution
 [`ExClause`]: https://rust-lang.github.io/chalk/chalk_engine/struct.ExClause.html
 [`Strand`]: https://rust-lang.github.io/chalk/chalk_engine/strand/struct.Strand.html
