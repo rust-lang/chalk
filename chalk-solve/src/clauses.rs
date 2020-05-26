@@ -127,13 +127,12 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
 
     let clauses: Vec<ProgramClause<I>> = custom_clauses
         .chain(clauses_that_could_match)
-        .filter(|c| c.could_match(interner, goal))
         .chain(
             db.program_clauses_for_env(environment)
                 .iter(interner)
-                .filter(|c| (*c).could_match(interner, goal))
                 .cloned(),
         )
+        .filter(|c| c.could_match(interner, goal))
         .collect();
 
     debug!("vec = {:#?}", clauses);
