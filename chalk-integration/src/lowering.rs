@@ -3,7 +3,7 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
-    QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
+    QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -90,7 +90,7 @@ impl<'k> Env<'k> {
         if let Some(p) = self.parameter_map.get(&name.str) {
             let b = p.skip_kind();
             return match &p.kind {
-                chalk_ir::VariableKind::Ty => Ok(chalk_ir::TyData::BoundVar(*b)
+                chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
                     .intern(interner)
                     .cast(interner)),
                 chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
@@ -506,7 +506,7 @@ impl LowerProgram for Program {
                             let bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
                                 .in_binders(
                                     Some(chalk_ir::WithKind::new(
-                                        chalk_ir::VariableKind::Ty,
+                                        chalk_ir::VariableKind::Ty(TyKind::General),
                                         Atom::from(FIXME_SELF),
                                     )),
                                     |env1| {
@@ -681,7 +681,7 @@ impl LowerParameterMap for AssocTyValue {
 impl LowerParameterMap for TraitDefn {
     fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         Some(chalk_ir::WithKind::new(
-            chalk_ir::VariableKind::Ty,
+            chalk_ir::VariableKind::Ty(TyKind::General),
             Atom::from(SELF),
         ))
     }
@@ -717,9 +717,18 @@ trait LowerVariableKind {
 impl LowerVariableKind for VariableKind {
     fn lower(&self) -> chalk_ir::WithKind<ChalkIr, Ident> {
         match self {
-            VariableKind::Ty(n) => {
-                chalk_ir::WithKind::new(chalk_ir::VariableKind::Ty, n.str.clone())
-            }
+            VariableKind::Ty(n) => chalk_ir::WithKind::new(
+                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::General),
+                n.str.clone(),
+            ),
+            VariableKind::IntegerTy(n) => chalk_ir::WithKind::new(
+                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Integer),
+                n.str.clone(),
+            ),
+            VariableKind::FloatTy(n) => chalk_ir::WithKind::new(
+                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Float),
+                n.str.clone(),
+            ),
             VariableKind::Lifetime(n) => {
                 chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, n.str.clone())
             }
@@ -1290,7 +1299,7 @@ impl LowerTy for Ty {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::WithKind::new(
-                        chalk_ir::VariableKind::Ty,
+                        chalk_ir::VariableKind::Ty(TyKind::General),
                         Atom::from(FIXME_SELF),
                     )),
                     |env| {
@@ -1820,6 +1829,8 @@ impl Kinded for VariableKind {
     fn kind(&self) -> Kind {
         match *self {
             VariableKind::Ty(_) => Kind::Ty,
+            VariableKind::IntegerTy(_) => Kind::Ty,
+            VariableKind::FloatTy(_) => Kind::Ty,
             VariableKind::Lifetime(_) => Kind::Lifetime,
             VariableKind::Const(_) => Kind::Const,
         }
@@ -1829,7 +1840,7 @@ impl Kinded for VariableKind {
 impl Kinded for chalk_ir::VariableKind<ChalkIr> {
     fn kind(&self) -> Kind {
         match self {
-            chalk_ir::VariableKind::Ty => Kind::Ty,
+            chalk_ir::VariableKind::Ty(_) => Kind::Ty,
             chalk_ir::VariableKind::Lifetime => Kind::Lifetime,
             chalk_ir::VariableKind::Const(_) => Kind::Const,
         }

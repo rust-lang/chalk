@@ -100,6 +100,8 @@ pub struct OpaqueTyDefn {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum VariableKind {
     Ty(Identifier),
+    IntegerTy(Identifier),
+    FloatTy(Identifier),
     Lifetime(Identifier),
     Const(Identifier),
 }

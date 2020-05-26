@@ -34,7 +34,7 @@ As either `Answer`s are found for the selected `Table`, entries on the stack are
 
 As mentioned before, whenever a new `Goal` is encounted, a new [`Table`] is
 created to store current and future answers. First, the [`Goal`] is converted into
-an [`HhGoal`]. If it can be simplified, then a `Strand` with one or more
+an `HhGoal`. If it can be simplified, then a `Strand` with one or more
 subgoals will be generated and can be followed as above. Otherwise, if it is a
 `DomainGoal` (see above), then
 [`program_clauses`](https://rust-lang.github.io/chalk/chalk_engine/context/trait.ContextOps.html#tymethod.program_clauses)
@@ -123,7 +123,6 @@ For much more in-depth
 
 [`Strand`]: https://rust-lang.github.io/chalk/chalk_engine/strand/struct.Strand.html
 [`Context`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html
-[`HhGoal`]: https://rust-lang.github.io/chalk/chalk_engine/hh/enum.HhGoal.html
 [`Stack`]: https://rust-lang.github.io/chalk/chalk_engine/stack/struct.Stack.html
 [`StackEntry`]: https://rust-lang.github.io/chalk/chalk_engine/stack/struct.StackEntry.html
 [`Table`]: https://rust-lang.github.io/chalk/chalk_engine/table/struct.Table.html

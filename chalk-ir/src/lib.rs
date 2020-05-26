@@ -320,7 +320,7 @@ impl<I: Interner> Ty<I> {
 
     /// If this is a `TyData::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self, interner: &I) -> Option<InferenceVar> {
-        if let TyData::InferenceVar(depth) = self.data(interner) {
+        if let TyData::InferenceVar(depth, _) = self.data(interner) {
             Some(*depth)
         } else {
             None
@@ -330,7 +330,7 @@ impl<I: Interner> Ty<I> {
     /// Returns true if this is a `BoundVar` or `InferenceVar`.
     pub fn is_var(&self, interner: &I) -> bool {
         match self.data(interner) {
-            TyData::BoundVar(_) | TyData::InferenceVar(_) => true,
+            TyData::BoundVar(_) | TyData::InferenceVar(_, _) => true,
             _ => false,
         }
     }
@@ -338,6 +338,32 @@ impl<I: Interner> Ty<I> {
     pub fn is_alias(&self, interner: &I) -> bool {
         match self.data(interner) {
             TyData::Alias(..) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this is an `IntTy` or `UintTy`
+    pub fn is_integer(&self, interner: &I) -> bool {
+        match self.data(interner) {
+            TyData::Apply(ApplicationTy {
+                name: TypeName::Scalar(Scalar::Int(_)),
+                ..
+            })
+            | TyData::Apply(ApplicationTy {
+                name: TypeName::Scalar(Scalar::Uint(_)),
+                ..
+            }) => true,
+            _ => false,
+        }
+    }
+
+    /// Returns true if this is a `FloatTy`
+    pub fn is_float(&self, interner: &I) -> bool {
+        match self.data(interner) {
+            TyData::Apply(ApplicationTy {
+                name: TypeName::Scalar(Scalar::Float(_)),
+                ..
+            }) => true,
             _ => false,
         }
     }
@@ -390,7 +416,7 @@ pub enum TyData<I: Interner> {
     BoundVar(BoundVar),
 
     /// Inference variable defined in the current inference context.
-    InferenceVar(InferenceVar),
+    InferenceVar(InferenceVar, TyKind),
 }
 
 impl<I: Interner> TyData<I> {
@@ -682,8 +708,8 @@ impl InferenceVar {
         self.index
     }
 
-    pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
-        TyData::<I>::InferenceVar(self).intern(interner)
+    pub fn to_ty<I: Interner>(self, interner: &I, kind: TyKind) -> Ty<I> {
+        TyData::<I>::InferenceVar(self, kind).intern(interner)
     }
 
     pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
@@ -910,9 +936,26 @@ impl<I: Interner> ApplicationTy<I> {
     }
 }
 
+/// Represents some extra knowledge we may have about the type variable.
+/// ```ignore
+/// let x: &[u32];
+/// let i = 1;
+/// x[i]
+/// ```
+/// In this example, `i` is known to be some type of integer. We can infer that
+/// it is `usize` because that is the only integer type that slices have an
+/// `Index` impl for. `i` would have a `TyKind` of `Integer` to guide the
+/// inference process.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum TyKind {
+    General,
+    Integer,
+    Float,
+}
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum VariableKind<I: Interner> {
-    Ty,
+    Ty(TyKind),
     Lifetime,
     Const(Ty<I>),
 }
@@ -920,7 +963,7 @@ pub enum VariableKind<I: Interner> {
 impl<I: Interner> VariableKind<I> {
     fn to_bound_variable(&self, interner: &I, bound_var: BoundVar) -> GenericArg<I> {
         match self {
-            VariableKind::Ty => {
+            VariableKind::Ty(_) => {
                 GenericArgData::Ty(TyData::BoundVar(bound_var).intern(interner)).intern(interner)
             }
             VariableKind::Lifetime => {
@@ -1524,7 +1567,7 @@ impl<T: HasInterner> Binders<T> {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
         let value = op(new_var);
-        let binders = VariableKinds::from(interner, iter::once(VariableKind::Ty));
+        let binders = VariableKinds::from(interner, iter::once(VariableKind::Ty(TyKind::General)));
         Binders { binders, value }
     }
 
@@ -1940,7 +1983,7 @@ impl<T: HasInterner> UCanonical<T> {
                 .map(|(index, pk)| {
                     let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, index);
                     match &pk.kind {
-                        VariableKind::Ty => {
+                        VariableKind::Ty(_) => {
                             GenericArgData::Ty(TyData::BoundVar(bound_var).intern(interner))
                                 .intern(interner)
                         }

@@ -147,11 +147,13 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
+        kind: TyKind,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         debug_heading!(
-            "fold_inference_ty(depth={:?}, binders={:?})",
+            "fold_inference_ty(depth={:?}, kind={:?}, binders={:?})",
             var,
+            kind,
             outer_binder
         );
         let interner = self.interner;
@@ -169,7 +171,7 @@ where
                 // and then map `root_var` to a fresh index that is
                 // unique to this quantification.
                 let free_var =
-                    ParameterEnaVariable::new(VariableKind::Ty, self.table.unify.find(var));
+                    ParameterEnaVariable::new(VariableKind::Ty(kind), self.table.unify.find(var));
 
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!("not yet unified: position={:?}", bound_var);

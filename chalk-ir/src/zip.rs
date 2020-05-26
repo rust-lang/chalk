@@ -308,14 +308,14 @@ impl<I: Interner> Zip<I> for VariableKind<I> {
         I: 'i,
     {
         match (a, b) {
-            (VariableKind::Ty, VariableKind::Ty) => Ok(()),
+            (VariableKind::Ty(a), VariableKind::Ty(b)) if a == b => Ok(()),
             (VariableKind::Lifetime, VariableKind::Lifetime) => Ok(()),
             (VariableKind::Const(ty_a), VariableKind::Const(ty_b)) => {
                 Zip::zip_with(zipper, ty_a, ty_b)
             }
-            (VariableKind::Ty, _) | (VariableKind::Lifetime, _) | (VariableKind::Const(_), _) => {
-                panic!("zipping things of mixed kind")
-            }
+            (VariableKind::Ty(_), _)
+            | (VariableKind::Lifetime, _)
+            | (VariableKind::Const(_), _) => panic!("zipping things of mixed kind"),
         }
     }
 }

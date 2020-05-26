@@ -273,7 +273,7 @@ where
                 }
             }
             TyData::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
-            TyData::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
+            TyData::InferenceVar(var, _) => visitor.visit_inference_var(*var, outer_binder),
             TyData::Apply(apply) => apply.visit_with(visitor, outer_binder),
             TyData::Placeholder(ui) => visitor.visit_free_placeholder(*ui, outer_binder),
             TyData::Alias(proj) => proj.visit_with(visitor, outer_binder),

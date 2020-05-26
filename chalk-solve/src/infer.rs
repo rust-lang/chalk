@@ -218,7 +218,7 @@ impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
         // we are matching on kind, so skipping it is fine
         let ena_variable = self.skip_kind();
         match &self.kind {
-            VariableKind::Ty => ena_variable.to_ty(interner).cast(interner),
+            VariableKind::Ty(kind) => ena_variable.to_ty_with_kind(interner, *kind).cast(interner),
             VariableKind::Lifetime => ena_variable.to_lifetime(interner).cast(interner),
             VariableKind::Const(ty) => ena_variable.to_const(interner, ty.clone()).cast(interner),
         }

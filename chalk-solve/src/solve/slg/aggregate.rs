@@ -224,7 +224,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             // overgeneralize.  So for example if we have two
             // solutions that are both `(X, X)`, we just produce `(Y,
             // Z)` in all cases.
-            (TyData::InferenceVar(_), TyData::InferenceVar(_)) => self.new_ty_variable(),
+            (TyData::InferenceVar(_, _), TyData::InferenceVar(_, _)) => self.new_ty_variable(),
 
             // Ugh. Aggregating two types like `for<'a> fn(&'a u32,
             // &'a u32)` and `for<'a, 'b> fn(&'a u32, &'b u32)` seems
@@ -253,7 +253,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             }
 
             // Mismatched base kinds.
-            (TyData::InferenceVar(_), _)
+            (TyData::InferenceVar(_, _), _)
             | (TyData::BoundVar(_), _)
             | (TyData::Dyn(_), _)
             | (TyData::Function(_), _)
