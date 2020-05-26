@@ -288,6 +288,52 @@ fn check_variable_kinds() {
             "incorrect parameter kind for trait `IntoTime`: expected lifetime, found type"
         }
     }
+
+    lowering_error! {
+        program {
+            trait Length<const N> {}
+            struct Foo {}
+            impl<T> Length<T> for Foo {}
+        }
+        error_msg {
+            "incorrect parameter kind for trait `Length`: expected const, found type"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Length<const N> {}
+            struct Foo {}
+            impl<'a> Length<'a> for Foo {}
+        }
+        error_msg {
+            "incorrect parameter kind for trait `Length`: expected const, found lifetime"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Into<T> {}
+            struct Foo {}
+            impl<const N> Into<N> for Foo {}
+        }
+
+        error_msg {
+            "incorrect parameter kind for trait `Into`: expected type, found const"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait IntoTime<'a> {}
+            struct Foo {}
+            impl<const N> IntoTime<N> for Foo {}
+        }
+
+        error_msg {
+            "incorrect parameter kind for trait `IntoTime`: expected lifetime, found const"
+        }
+    }
 }
 
 #[test]
@@ -581,6 +627,53 @@ fn fn_defs() {
 
         error_msg {
             "invalid parameter name `TT`"
+        }
+    }
+}
+#[test]
+fn arrays() {
+    lowering_success! {
+        program {
+            struct Baz { }
+            fn foo(bar: [Baz; 3]);
+
+            fn bar<const N>(baz: [Baz; N]);
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct Baz { }
+
+            fn foo<T>(baz: [Baz; u32]);
+        }
+
+        error_msg {
+            "parse error: UnrecognizedToken"
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct Baz { }
+
+            fn foo<T>(baz: [Baz; T]);
+        }
+
+        error_msg {
+            "incorrect parameter kind for `T`: expected const, found type"
+        }
+    }
+
+    lowering_error! {
+        program {
+            struct Baz { }
+
+            fn foo<'a>(baz: [Baz; 'a]);
+        }
+
+        error_msg {
+            "parse error: UnrecognizedToken"
         }
     }
 }

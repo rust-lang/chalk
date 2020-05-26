@@ -157,6 +157,9 @@ pub enum TypeName<I: Interner> {
     /// a tuple of the given arity
     Tuple(usize),
 
+    /// an array type like `[T; N]`
+    Array,
+
     /// a slice type like `[T]`
     Slice,
 
