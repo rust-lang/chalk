@@ -121,21 +121,24 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     );
     let interner = db.interner();
 
-    // FIXME: change this to use `.chain().filter()`
-    let mut vec = vec![];
-    vec.extend(db.custom_clauses());
-    program_clauses_that_could_match(db, environment, goal, &mut vec)?;
-    vec.retain(|c| c.could_match(interner, goal));
-    vec.extend(
-        db.program_clauses_for_env(environment)
-            .iter(interner)
-            .filter(|c| (*c).could_match(interner, goal))
-            .cloned(),
-    );
+    let custom_clauses = db.custom_clauses().into_iter();
+    let clauses_that_could_match =
+        program_clauses_that_could_match(db, environment, goal).map(|cl| cl.into_iter())?;
 
-    debug!("vec = {:#?}", vec);
+    let clauses: Vec<ProgramClause<I>> = custom_clauses
+        .chain(clauses_that_could_match)
+        .filter(|c| c.could_match(interner, goal))
+        .chain(
+            db.program_clauses_for_env(environment)
+                .iter(interner)
+                .filter(|c| (*c).could_match(interner, goal))
+                .cloned(),
+        )
+        .collect();
 
-    Ok(vec)
+    debug!("vec = {:#?}", clauses);
+
+    Ok(clauses)
 }
 
 /// Returns a set of program clauses that could possibly match
@@ -146,10 +149,10 @@ fn program_clauses_that_could_match<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
-    clauses: &mut Vec<ProgramClause<I>>,
-) -> Result<(), Floundered> {
+) -> Result<Vec<ProgramClause<I>>, Floundered> {
     let interner = db.interner();
-    let builder = &mut ClauseBuilder::new(db, clauses);
+    let mut clauses: Vec<ProgramClause<I>> = vec![];
+    let builder = &mut ClauseBuilder::new(db, &mut clauses);
 
     debug_heading!("program_clauses_that_could_match(goal={:?})", goal);
 
@@ -304,7 +307,7 @@ fn program_clauses_that_could_match<I: Interner>(
         DomainGoal::Compatible(()) | DomainGoal::Reveal(()) => (),
     };
 
-    Ok(())
+    Ok(clauses)
 }
 
 /// Generate program clauses from the associated-type values
