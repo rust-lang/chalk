@@ -169,3 +169,19 @@ fn general_ty_kind_becomes_specific() {
         }
     }
 }
+
+/// Integer and float type kinds can not be equated
+#[test]
+fn integers_are_not_floats() {
+    test! {
+        program {}
+
+        goal {
+            exists<int I, float F> {
+                I = F
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
