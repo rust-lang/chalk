@@ -104,50 +104,20 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (
                 &TyData::InferenceVar(var1, kind1),
                 &TyData::InferenceVar(var2, kind2),
-            ) if kind1 == kind2 => {
-                debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
-                let var1 = EnaVariable::from(var1);
-                let var2 = EnaVariable::from(var2);
-                Ok(self
-                    .table
-                    .unify
-                    .unify_var_var(var1, var2)
-                    .expect("unification of two unbound variables cannot fail"))
-            }
-
-            // General inference variables can be unified with more specific
-            // inference variables, but they need to inherit the specific
-            // variable's type kind. The general_var kind != the specific_var
-            // kind because of the prior match arm
-            (
-                &TyData::InferenceVar(general_var, TyKind::General),
-                specific_ty_data @ &TyData::InferenceVar(_, _)
-            )
-            | (
-                specific_ty_data @ &TyData::InferenceVar(_, _),
-                &TyData::InferenceVar(general_var, TyKind::General)
             ) => {
-                let specific_ty = specific_ty_data.clone().intern(interner);
-                self.table
-                    .unify
-                    .unify_var_value(general_var, InferenceValue::from_ty(interner, specific_ty.clone()))
-                    .unwrap();
-
-                debug!("unify_ty_ty: general kinded var {:?} set to {:?}", general_var, specific_ty);
-                Ok(())
-            }
-
-            // Tried to unify inference variables with mis-matching specific type kinds (not caught
-            // by prior match arms)
-            (
-                &TyData::InferenceVar(_, kind1),
-                &TyData::InferenceVar(_, kind2),
-            ) => {
-                debug!(
-                    "Tried to unify mis-matching inference variables: {:?} and {:?}",
-                    kind1, kind2
-                );
-                Err(NoSolution)
+                if kind1 == kind2 {
+                    self.unify_var_var(var1, var2)
+                } else if kind1 == TyKind::General {
+                    self.unify_general_var_specific_ty(var1, b.clone())
+                } else if kind2 == TyKind::General {
+                    self.unify_general_var_specific_ty(var2, a.clone())
+                } else {
+                    debug!(
+                        "Tried to unify mis-matching inference variables: {:?} and {:?}",
+                        kind1, kind2
+                    );
+                    Err(NoSolution)
+                }
             }
 
             // Unifying an inference variable with a non-inference variable.
@@ -228,6 +198,43 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 a, b
             ),
         }
+    }
+
+    /// Unify two inference variables
+    fn unify_var_var(&mut self, a: InferenceVar, b: InferenceVar) -> Fallible<()> {
+        debug!("unify_var_var({:?}, {:?})", a, b);
+        let var1 = EnaVariable::from(a);
+        let var2 = EnaVariable::from(b);
+        Ok(self
+            .table
+            .unify
+            .unify_var_var(var1, var2)
+            .expect("unification of two unbound variables cannot fail"))
+    }
+
+    /// Unify a general inference variable with a specific inference variable
+    /// (type kind is not `General`). For example, unify a `TyKind::General`
+    /// inference variable with a `TyKind::Integer` variable, resulting in the
+    /// general inference variable narrowing to an integer variable.
+    fn unify_general_var_specific_ty(
+        &mut self,
+        general_var: InferenceVar,
+        specific_ty: Ty<I>,
+    ) -> Fallible<()> {
+        debug!(
+            "unify_general_var_specific_var({:?}, {:?})",
+            general_var, specific_ty
+        );
+
+        self.table
+            .unify
+            .unify_var_value(
+                general_var,
+                InferenceValue::from_ty(self.interner, specific_ty),
+            )
+            .unwrap();
+
+        Ok(())
     }
 
     fn unify_binders<'a, T, R>(
