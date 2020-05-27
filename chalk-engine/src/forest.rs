@@ -83,7 +83,11 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     if !answer.ambiguous {
                         SubstitutionResult::Definite(answer.subst)
                     } else {
-                        SubstitutionResult::Ambiguous(answer.subst)
+                        if context.is_trivial_constrained_substitution(&answer.subst) {
+                            SubstitutionResult::Floundered
+                        } else {
+                            SubstitutionResult::Ambiguous(answer.subst)
+                        }
                     }
                 }
                 AnswerResult::Floundered => SubstitutionResult::Floundered,
@@ -155,7 +159,8 @@ impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    return AnswerResult::Answer(answer.clone());
+                    debug!("Answer: {:?}", &answer);
+                    return AnswerResult::Answer(answer);
                 }
 
                 Err(RootSearchFail::InvalidAnswer) => {

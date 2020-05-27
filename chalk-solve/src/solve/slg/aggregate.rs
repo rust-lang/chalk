@@ -40,9 +40,13 @@ impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, 
         // Exactly 1 unconditional answer?
         let next_answer = answers.peek_answer(|| should_continue());
         if next_answer.is_quantum_exceeded() {
-            return Some(Solution::Ambig(Guidance::Suggested(
-                subst.map(interner, |cs| cs.subst),
-            )));
+            if subst.value.subst.is_identity_subst(interner) {
+                return Some(Solution::Ambig(Guidance::Unknown));
+            } else {
+                return Some(Solution::Ambig(Guidance::Suggested(
+                    subst.map(interner, |cs| cs.subst),
+                )));
+            }
         }
         if next_answer.is_no_more_solutions() && !ambiguous {
             return Some(Solution::Unique(subst));

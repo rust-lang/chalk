@@ -274,6 +274,12 @@ impl Minimums {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum AnswerMode {
+    Complete,
+    Ambiguous,
+}
+
 chalk_ir::copy_fold!(TableIndex);
 chalk_ir::copy_fold!(TimeStamp);
 

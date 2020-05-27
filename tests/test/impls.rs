@@ -639,3 +639,41 @@ fn clauses_in_if_goals() {
         }
     }
 }
+
+#[test]
+fn unify_types_in_ambiguous_impl() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Constraint {}
+            trait Trait<T> {}
+            struct A<T> {}
+            impl<T> Trait<T> for A<T> where T: Constraint {}
+        }
+
+        goal {
+            exists<T,U> { A<T>: Trait<U> }
+        } yields {
+            "Ambiguous; definite substitution for<?U0> { [?0 := ^0.0, ?1 := ^0.0] }"
+        }
+    }
+}
+
+#[test]
+fn unify_types_in_impl() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Constraint {}
+            trait Trait<T> {}
+            struct A<T> {}
+            impl<T> Trait<T> for A<T> {}
+        }
+
+        goal {
+            exists<T,U> { A<T>: Trait<U> }
+        } yields {
+            "Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0], lifetime constraints [] }"
+        }
+    }
+}

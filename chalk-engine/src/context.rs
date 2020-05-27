@@ -136,6 +136,11 @@ pub trait ContextOps<I: Interner, C: Context<I>>:
     /// Upcast this domain goal into a more general goal.
     fn into_goal(&self, domain_goal: DomainGoal<I>) -> Goal<I>;
 
+    fn is_trivial_constrained_substitution(
+        &self,
+        constrained_subst: &Canonical<ConstrainedSubst<I>>,
+    ) -> bool;
+
     fn is_trivial_substitution(
         &self,
         u_canon: &UCanonical<InEnvironment<Goal<I>>>,

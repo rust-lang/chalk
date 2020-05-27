@@ -176,10 +176,11 @@ fn subgoal_cycle_uninhabited() {
         }
 
         // Infinite recursion -> we flounder
+        // Still return the necessary substitution T = Box<..>
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(2, None)] {
-            "Floundered"
+            "Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"
         }
 
         // Unsurprisingly, applying negation also flounders.
@@ -201,7 +202,7 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T = Vec<Alice>, not { Vec<Vec<T>>: Foo } }
         } yields_first[SolverChoice::slg(2, None)] {
-            "Floundered"
+            "Ambiguous(substitution [?0 := Vec<Alice>], lifetime constraints [])"
         }
 
         // Same query with larger threshold works fine, though.
@@ -216,7 +217,7 @@ fn subgoal_cycle_uninhabited() {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
         } yields_first[SolverChoice::slg(2, None)] {
             "substitution [?0 := !1_0], lifetime constraints []",
-            "Floundered"
+            "Ambiguous(for<?U1> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"
         }
     }
 }
@@ -234,11 +235,12 @@ fn subgoal_cycle_inhabited() {
         }
 
         // Exceeds size threshold -> flounder
+        // Still return necessary substitution T = Box<..>
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(3, None)] {
             "substitution [?0 := Alice], lifetime constraints []",
-            "Floundered"
+            "Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"
         }
     }
 }
@@ -552,6 +554,61 @@ fn builtin_impl_enumeration() {
         } yields {
             // FIXME: wrong, most of the built-in types are Sized
             "No possible solution"
+        }
+    }
+}
+
+/// Don't return definite guidance if we flounder after finding one solution.
+#[test]
+fn flounder_ambiguous() {
+    test! {
+        program {
+            trait IntoIterator { }
+            #[non_enumerable]
+            trait OtherTrait { }
+
+            struct Ref<T> { }
+            struct A { }
+
+            impl IntoIterator for Ref<A> { }
+            impl<T> IntoIterator for Ref<T> where T: OtherTrait { }
+        }
+
+        goal {
+            exists<T> { Ref<T>: IntoIterator }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
+
+/// Don't return definite guidance if we are able to merge two solutions and the
+/// third one matches that as well (the fourth may not).
+#[test]
+fn normalize_ambiguous() {
+    test! {
+        program {
+            trait IntoIterator { type Item; }
+
+            struct Ref<T> { }
+            struct A { }
+            struct B { }
+            struct C { }
+
+            struct D { }
+
+            impl IntoIterator for Ref<A> { type Item = Ref<A>; }
+            impl IntoIterator for Ref<B> { type Item = Ref<B>; }
+            impl IntoIterator for Ref<C> { type Item = Ref<C>; }
+            impl IntoIterator for Ref<D> { type Item = D; }
+        }
+
+        goal {
+            exists<T, U> {
+                Normalize(<Ref<T> as IntoIterator>::Item -> U)
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
         }
     }
 }

@@ -1016,3 +1016,30 @@ fn issue_144_regression() {
         }
     }
 }
+
+#[test]
+fn guidance_for_projection_on_flounder() {
+    test! {
+        program {
+            trait Iterator { type Item; }
+            #[non_enumerable]
+            trait Step {}
+
+            struct Range<T> {}
+
+            impl<T> Iterator for Range<T> where T: Step {
+                type Item = T;
+            }
+        }
+
+        goal {
+            exists<T> {
+                exists<U> {
+                    <Range<T> as Iterator>::Item = U
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            "Ambiguous; definite substitution for<?U0> { [?0 := ^0.0, ?1 := ^0.0] }"
+        }
+    }
+}

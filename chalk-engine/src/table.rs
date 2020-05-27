@@ -1,5 +1,5 @@
 use crate::strand::CanonicalStrand;
-use crate::Answer;
+use crate::{Answer, AnswerMode};
 use rustc_hash::FxHashMap;
 use std::collections::hash_map::Entry;
 use std::collections::VecDeque;
@@ -40,6 +40,8 @@ pub(crate) struct Table<I: Interner> {
     /// Stores the active strands that we can "pull on" to find more
     /// answers.
     strands: VecDeque<CanonicalStrand<I>>,
+
+    pub(crate) answer_mode: AnswerMode,
 }
 
 index_struct! {
@@ -60,6 +62,7 @@ impl<I: Interner> Table<I> {
             floundered: false,
             answers_hash: FxHashMap::default(),
             strands: VecDeque::new(),
+            answer_mode: AnswerMode::Complete,
         }
     }
 
@@ -80,20 +83,29 @@ impl<I: Interner> Table<I> {
         mem::replace(&mut self.strands, VecDeque::new())
     }
 
-    /// Remove the next strand from the queue as long as it meets the
-    /// given criteria.
-    pub(crate) fn dequeue_next_strand_if(
+    pub(crate) fn drain_strands(
+        &mut self,
+        test: impl Fn(&CanonicalStrand<I>) -> bool,
+    ) -> VecDeque<CanonicalStrand<I>> {
+        let old = mem::replace(&mut self.strands, VecDeque::new());
+        let (test_in, test_out): (VecDeque<CanonicalStrand<I>>, VecDeque<CanonicalStrand<I>>) =
+            old.into_iter().partition(test);
+        let _ = mem::replace(&mut self.strands, test_out);
+        test_in
+    }
+
+    /// Remove the next strand from the queue that meets the given criteria
+    pub(crate) fn dequeue_next_strand_that(
         &mut self,
         test: impl Fn(&CanonicalStrand<I>) -> bool,
     ) -> Option<CanonicalStrand<I>> {
-        let strand = self.strands.pop_front();
-        if let Some(strand) = strand {
-            if test(&strand) {
-                return Some(strand);
-            }
-            self.strands.push_front(strand);
+        let first = self.strands.iter().position(test);
+        if let Some(first) = first {
+            self.strands.rotate_left(first);
+            self.strands.pop_front()
+        } else {
+            None
         }
-        None
     }
 
     /// Mark the table as floundered -- this also discards all pre-existing answers,

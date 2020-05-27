@@ -423,8 +423,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // inference as an ambiguous solution.
 
         let interner = self.solver.program.interner();
+        let canonical_subst = self.infer.canonicalize(interner, &subst);
 
-        if self.infer.is_trivial_substitution(interner, &subst) {
+        if canonical_subst.quantified.value.is_identity_subst(interner) {
             // In this case, we didn't learn *anything* definitively. So now, we
             // go one last time through the positive obligations, this time
             // applying even *tentative* inference suggestions, so that we can
@@ -441,10 +442,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                     } = self.prove(&goal, minimums).unwrap();
                     if let Some(constrained_subst) = solution.constrained_subst() {
                         self.apply_solution(free_vars, universes, constrained_subst);
-                        let subst = self
-                            .infer
-                            .canonicalize(self.solver.program.interner(), &subst);
-                        return Ok(Solution::Ambig(Guidance::Suggested(subst.quantified)));
+                        return Ok(Solution::Ambig(Guidance::Suggested(
+                            canonical_subst.quantified,
+                        )));
                     }
                 }
             }
@@ -471,10 +471,9 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             // for sure what `T` must be (it could be either `Foo<Bar>` or
             // `Foo<Baz>`, but we *can* say for sure that it must be of the
             // form `Foo<?0>`.
-            let subst = self
-                .infer
-                .canonicalize(self.solver.program.interner(), &subst);
-            Ok(Solution::Ambig(Guidance::Definite(subst.quantified)))
+            Ok(Solution::Ambig(Guidance::Definite(
+                canonical_subst.quantified,
+            )))
         }
     }
 
