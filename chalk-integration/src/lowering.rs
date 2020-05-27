@@ -365,6 +365,7 @@ impl LowerProgram for Program {
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
+        let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
@@ -500,6 +501,7 @@ impl LowerProgram for Program {
                         // So if we have `type Foo<P1..Pn> = impl Trait<T1..Tn>`, this would introduce `P1..Pn`
                         let binders = empty_env.in_binders(variable_kinds, |env| {
                             let hidden_ty = opaque_ty.ty.lower(&env)?;
+                            hidden_opaque_types.insert(opaque_ty_id, Arc::new(hidden_ty));
 
                             // Introduce a variable to represent the hidden "self type". This will be used in the bounds.
                             // So the `impl Trait<T1..Tn>` will be lowered to `exists<Self> { Self: Trait<T1..Tn> }`.
@@ -530,7 +532,7 @@ impl LowerProgram for Program {
                                     },
                                 )?;
 
-                            Ok(OpaqueTyDatumBound { hidden_ty, bounds })
+                            Ok(OpaqueTyDatumBound { bounds })
                         })?;
 
                         opaque_ty_data.insert(
@@ -562,6 +564,7 @@ impl LowerProgram for Program {
             opaque_ty_ids,
             opaque_ty_kinds,
             opaque_ty_data,
+            hidden_opaque_types,
             custom_clauses,
             object_safe_traits,
         };

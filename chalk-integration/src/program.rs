@@ -56,6 +56,9 @@ pub struct Program {
     /// For each opaque type:
     pub opaque_ty_data: BTreeMap<OpaqueTyId<ChalkIr>, Arc<OpaqueTyDatum<ChalkIr>>>,
 
+    /// Stores the hidden types for opaque types
+    pub hidden_opaque_types: BTreeMap<OpaqueTyId<ChalkIr>, Arc<Ty<ChalkIr>>>,
+
     /// For each trait:
     pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
 
@@ -334,6 +337,10 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {
         self.opaque_ty_data[&id].clone()
+    }
+
+    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Arc<Ty<ChalkIr>> {
+        self.hidden_opaque_types[&id].clone()
     }
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {

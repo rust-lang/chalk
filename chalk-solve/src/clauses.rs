@@ -142,8 +142,9 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
         1
     );
 
-    let binders = opaque_ty_datum.bound.map_ref(|b| &b.hidden_ty);
-    builder.push_binders(&binders, |builder, hidden_ty| {
+    let hidden_ty = (*builder.db.hidden_opaque_type(opaque_id)).clone();
+    let binders = opaque_ty_datum.bound.clone();
+    builder.push_binders(&binders, |builder, _| {
         let self_ty: Ty<_> = ApplicationTy {
             name: opaque_id.cast(interner),
             substitution: builder.substitution_in_scope(),

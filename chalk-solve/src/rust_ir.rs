@@ -544,9 +544,6 @@ pub struct OpaqueTyDatum<I: Interner> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub struct OpaqueTyDatumBound<I: Interner> {
-    /// The value for the "hidden type" for `opaque type Foo = ...`
-    pub hidden_ty: Ty<I>,
-
     /// Trait bounds for the opaque type.
     pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
