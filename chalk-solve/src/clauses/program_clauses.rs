@@ -151,7 +151,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 DomainGoal::Holds(
                     AliasEq {
                         alias: alias.clone(),
-                        ty: opaque_ty_bound.hidden_ty.clone(),
+                        ty: builder.db.hidden_opaque_type(self.opaque_ty_id),
                     }
                     .cast(interner),
                 ),

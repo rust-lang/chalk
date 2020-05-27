@@ -51,6 +51,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the `OpaqueTyDatum` with the given id.
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>>;
 
+    /// Returns the "hidden type" corresponding with the opaque type.
+    fn hidden_opaque_type(&self, id: OpaqueTyId<I>) -> Ty<I>;
+
     /// Returns a list of potentially relevant impls for a given
     /// trait-id; we also supply the type parameters that we are
     /// trying to match (if known: these parameters may contain

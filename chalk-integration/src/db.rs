@@ -9,7 +9,7 @@ use crate::{
 use chalk_engine::forest::SubstitutionResult;
 use chalk_ir::{
     AdtId, AssocTypeId, Canonical, ConstrainedSubst, Environment, FnDefId, GenericArg, Goal,
-    ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, UCanonical,
+    ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
@@ -95,6 +95,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {
         self.program_ir().unwrap().opaque_ty_data(id)
+    }
+
+    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Ty<ChalkIr> {
+        self.program_ir().unwrap().hidden_opaque_type(id)
     }
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
