@@ -97,7 +97,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().opaque_ty_data(id)
     }
 
-    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Arc<Ty<ChalkIr>> {
+    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Ty<ChalkIr> {
         self.program_ir().unwrap().hidden_opaque_type(id)
     }
 

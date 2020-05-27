@@ -339,8 +339,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.opaque_ty_data[&id].clone()
     }
 
-    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Arc<Ty<ChalkIr>> {
-        self.hidden_opaque_types[&id].clone()
+    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Ty<ChalkIr> {
+        (*self.hidden_opaque_types[&id]).clone()
     }
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {

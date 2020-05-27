@@ -142,7 +142,7 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
         1
     );
 
-    let hidden_ty = (*builder.db.hidden_opaque_type(opaque_id)).clone();
+    let hidden_ty = builder.db.hidden_opaque_type(opaque_id);
     let binders = opaque_ty_datum.bound.clone();
     builder.push_binders(&binders, |builder, _| {
         let self_ty: Ty<_> = ApplicationTy {

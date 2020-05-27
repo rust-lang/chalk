@@ -121,7 +121,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
-    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Arc<Ty<ChalkIr>> {
+    fn hidden_opaque_type(&self, id: OpaqueTyId<ChalkIr>) -> Ty<ChalkIr> {
         unimplemented!()
     }
 
