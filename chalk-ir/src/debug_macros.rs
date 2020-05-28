@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref DEBUG_ENABLED: bool = {
         use std::env;
         env::var("CHALK_DEBUG")

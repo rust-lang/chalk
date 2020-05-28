@@ -1,8 +1,5 @@
 #![deny(rust_2018_idioms)]
 
-#[macro_use]
-extern crate lazy_static;
-
 // Allows macros to refer to this crate as `::chalk_ir`
 extern crate self as chalk_ir;
 
