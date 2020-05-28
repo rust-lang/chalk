@@ -1,3 +1,4 @@
+use crate::index_struct;
 use crate::strand::CanonicalStrand;
 use crate::{Answer, AnswerMode};
 use rustc_hash::FxHashMap;
@@ -6,6 +7,7 @@ use std::collections::VecDeque;
 use std::mem;
 
 use chalk_ir::interner::Interner;
+use chalk_ir::{debug, debug_heading, info};
 use chalk_ir::{AnswerSubst, Canonical, Goal, InEnvironment, UCanonical};
 
 pub(crate) struct Table<I: Interner> {

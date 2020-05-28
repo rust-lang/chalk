@@ -1,7 +1,5 @@
 use std::cell::RefCell;
 
-mod index;
-
 lazy_static! {
     pub static ref DEBUG_ENABLED: bool = {
         use std::env;
@@ -33,8 +31,8 @@ const OVERFLOW_DEPTH: usize = 100;
 #[macro_export]
 macro_rules! debug {
     ($($t:tt)*) => {
-        if *$crate::DEBUG_ENABLED {
-            $crate::dump(&format!($($t)*), "");
+        if *$crate::debug_macros::DEBUG_ENABLED {
+            $crate::debug_macros::dump(&format!($($t)*), "");
         }
     }
 }
@@ -42,12 +40,12 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! debug_heading {
     ($($t:tt)*) => {
-        let _ = &if *$crate::DEBUG_ENABLED {
+        let _ = &if *$crate::debug_macros::DEBUG_ENABLED {
             let string = format!($($t)*);
-            $crate::dump(&string, " {");
-            $crate::Indent::new(true, string)
+            $crate::debug_macros::dump(&string, " {");
+            $crate::debug_macros::Indent::new(true, string)
         } else {
-            $crate::Indent::new(false, String::new())
+            $crate::debug_macros::Indent::new(false, String::new())
         };
     }
 }
@@ -55,8 +53,8 @@ macro_rules! debug_heading {
 #[macro_export]
 macro_rules! info {
     ($($t:tt)*) => {
-        if *$crate::INFO_ENABLED {
-            $crate::dump(&format!($($t)*), "");
+        if *$crate::debug_macros::INFO_ENABLED {
+            $crate::debug_macros::dump(&format!($($t)*), "");
         }
     }
 }
@@ -64,12 +62,12 @@ macro_rules! info {
 #[macro_export]
 macro_rules! info_heading {
     ($($t:tt)*) => {
-        let _ = &if *$crate::INFO_ENABLED {
+        let _ = &if *$crate::debug_macros::INFO_ENABLED {
             let string = format!($($t)*);
-            $crate::dump(&string, " {");
-            $crate::Indent::new(true, string)
+            $crate::debug_macros::dump(&string, " {");
+            $crate::debug_macros::Indent::new(true, string)
         } else {
-            $crate::Indent::new(false, String::new())
+            $crate::debug_macros::Indent::new(false, String::new())
         };
     }
 }

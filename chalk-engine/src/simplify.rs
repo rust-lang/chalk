@@ -1,10 +1,12 @@
 use crate::context::{Context, ContextOps, InferenceTable};
 use crate::forest::Forest;
 use crate::{ExClause, Literal, TimeStamp};
-use chalk_base::results::Fallible;
 
+use chalk_ir::debug;
 use chalk_ir::interner::Interner;
-use chalk_ir::{Environment, Goal, GoalData, InEnvironment, QuantifierKind, Substitution};
+use chalk_ir::{
+    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+};
 
 impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// Simplifies a goal into a series of positive domain goals

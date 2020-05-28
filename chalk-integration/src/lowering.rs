@@ -5,6 +5,7 @@ use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
     QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
 };
+use chalk_ir::{debug, debug_heading};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
     self, Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,

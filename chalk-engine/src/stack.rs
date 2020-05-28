@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::index_struct;
 use crate::strand::Strand;
 use crate::{Minimums, TableIndex, TimeStamp};
 use std::ops::{Index, IndexMut, Range};

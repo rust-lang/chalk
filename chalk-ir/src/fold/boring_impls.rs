@@ -222,7 +222,7 @@ macro_rules! copy_fold {
                 &self,
                 _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
                 _outer_binder: DebruijnIndex,
-            ) -> ::chalk_base::results::Fallible<Self::Result>
+            ) -> ::chalk_ir::Fallible<Self::Result>
             where
                 I: 'i,
                 TI: 'i,
@@ -260,7 +260,7 @@ macro_rules! id_fold {
                 &self,
                 _folder: &mut dyn ($crate::fold::Folder<'i, I, TI>),
                 _outer_binder: DebruijnIndex,
-            ) -> ::chalk_base::results::Fallible<Self::Result>
+            ) -> ::chalk_ir::Fallible<Self::Result>
             where
                 I: 'i,
                 TI: 'i,
@@ -285,7 +285,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
-    ) -> ::chalk_base::results::Fallible<Self::Result>
+    ) -> ::chalk_ir::Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
@@ -306,7 +306,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClause<I> {
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
-    ) -> ::chalk_base::results::Fallible<Self::Result>
+    ) -> ::chalk_ir::Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,
@@ -325,7 +325,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for PhantomData<I> {
         &self,
         _folder: &mut dyn Folder<'i, I, TI>,
         _outer_binder: DebruijnIndex,
-    ) -> ::chalk_base::results::Fallible<Self::Result>
+    ) -> ::chalk_ir::Fallible<Self::Result>
     where
         I: 'i,
         TI: 'i,

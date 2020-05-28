@@ -1,7 +1,6 @@
 use super::var::*;
 use super::*;
 use crate::infer::instantiate::IntoBindersAndValue;
-use chalk_base::results::*;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};

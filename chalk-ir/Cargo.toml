@@ -10,6 +10,6 @@ keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
 [dependencies]
-chalk-base = { version = "0.10.1-dev", path = "../chalk-base" }
+lazy_static = "1.4.0"
 chalk-derive = { version = "0.10.1-dev", path = "../chalk-derive" }
 
