@@ -3,7 +3,6 @@
 **Note: this is mostly only useful for maintainers**
 
 The following crates get published to crates.io:
-- `chalk-base`
 - `chalk-derive`
 - `chalk-engine`
 - `chalk-ir`

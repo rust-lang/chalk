@@ -6,8 +6,8 @@ use std::usize;
 use super::stack::StackDepth;
 use super::{Minimums, UCanonicalGoal};
 use crate::Solution;
-use chalk_base::results::{Fallible, NoSolution};
-use chalk_ir::{interner::Interner, ClausePriority};
+use chalk_ir::debug;
+use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
 
 pub(super) struct SearchGraph<I: Interner> {

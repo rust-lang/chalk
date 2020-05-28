@@ -35,7 +35,7 @@ fn fn_def_is_sized() {
 fn fn_def_is_copy() {
     test! {
         program {
-            #[lang(sized)]
+            #[lang(copy)]
             trait Copy { }
 
             fn foo() {}
@@ -52,7 +52,7 @@ fn fn_def_is_copy() {
 fn fn_def_is_clone() {
     test! {
         program {
-            #[lang(sized)]
+            #[lang(clone)]
             trait Clone { }
 
             fn foo() {}

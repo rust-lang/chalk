@@ -4,14 +4,14 @@ use crate::infer::{
 };
 use crate::recursive::{Minimums, Solver};
 use crate::solve::{truncate, Guidance, Solution};
-use chalk_base::results::{Fallible, NoSolution};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::Zip;
+use chalk_ir::{debug, debug_heading};
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Constraint, Environment, EqGoal, Goal, GoalData, InEnvironment,
-    QuantifierKind, Substitution, UCanonical, UniverseMap,
+    Canonical, ConstrainedSubst, Constraint, Environment, EqGoal, Fallible, Goal, GoalData,
+    InEnvironment, NoSolution, QuantifierKind, Substitution, UCanonical, UniverseMap,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;

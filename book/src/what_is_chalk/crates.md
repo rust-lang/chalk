@@ -21,8 +21,6 @@ The following crate is an implementation detail, used internally by `chalk-solve
   engine is quite general and not really specific to Rust.
 * The `chalk-derive` crate defines custom derives for the `chalk_ir::fold::Fold` trait and other
   such things.
-* The `chalk-base` crate defines some base solver types and a few miscellaneous
-  utility macros.
 
 ## Crates for standalone REPL and testing
 

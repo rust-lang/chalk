@@ -9,12 +9,12 @@ use crate::{
     Answer, AnswerMode, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex,
     TimeStamp,
 };
-use chalk_base::results::{Floundered, NoSolution};
 
 use chalk_ir::interner::Interner;
+use chalk_ir::{debug, debug_heading, info, info_heading};
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Goal, GoalData, InEnvironment, Substitution, UCanonical,
-    UniverseMap,
+    Canonical, ConstrainedSubst, Floundered, Goal, GoalData, InEnvironment, NoSolution,
+    Substitution, UCanonical, UniverseMap,
 };
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;

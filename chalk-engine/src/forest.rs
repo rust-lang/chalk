@@ -5,6 +5,7 @@ use crate::tables::Tables;
 use crate::{TableIndex, TimeStamp};
 use std::fmt::Display;
 
+use chalk_ir::debug;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
 

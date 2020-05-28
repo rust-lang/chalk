@@ -6,7 +6,6 @@ use crate::infer::InferenceTable;
 use crate::solve::truncate;
 use crate::solve::Solution;
 use crate::RustIrDatabase;
-use chalk_base::results::{Fallible, Floundered};
 use chalk_derive::HasInterner;
 use chalk_engine::context;
 use chalk_engine::{ExClause, Literal};

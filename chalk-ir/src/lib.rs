@@ -7,7 +7,6 @@ use crate::cast::{Cast, CastTo};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
-use chalk_base::results::*;
 use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
 use std::iter;
 use std::marker::PhantomData;
@@ -16,6 +15,20 @@ pub use crate::debug::SeparatorTraitRef;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
+
+/// Many of our internal operations (e.g., unification) are an attempt
+/// to perform some operation which may not complete.
+pub type Fallible<T> = Result<T, NoSolution>;
+
+/// Indicates that the attempted operation has "no solution" -- i.e.,
+/// cannot be performed.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct NoSolution;
+
+/// Error type for the `UnificationOps::program_clauses` method --
+/// indicates that the complete set of program clauses for this goal
+/// cannot be enumerated.
+pub struct Floundered;
 
 macro_rules! impl_debugs {
     ($($id:ident), *) => {
@@ -37,6 +50,9 @@ pub mod fold;
 
 #[macro_use]
 pub mod visit;
+
+#[macro_use]
+pub mod debug_macros;
 
 pub mod cast;
 

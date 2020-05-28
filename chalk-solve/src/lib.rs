@@ -6,9 +6,6 @@ use chalk_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-#[macro_use]
-extern crate chalk_base;
-
 #[cfg(test)]
 #[macro_use]
 mod test_macros;

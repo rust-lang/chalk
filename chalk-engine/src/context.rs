@@ -6,12 +6,11 @@
 //! [`Context`] trait for a list of types.
 
 use crate::{CompleteAnswer, ExClause};
-use chalk_base::results::{Fallible, Floundered};
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment,
-    GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses, Substitution, UCanonical,
-    UniverseMap,
+    Fallible, Floundered, GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses,
+    Substitution, UCanonical, UniverseMap,
 };
 use std::fmt::Debug;
 
