@@ -51,6 +51,9 @@ pub fn add_copy_program_clauses<I: Interner>(
                     iter::once(substitution.at(interner, 0).assert_ty_ref(interner).clone()),
                 );
             }
+            TypeName::FnDef(_) => {
+                builder.push_fact(trait_ref.clone());
+            }
             _ => return,
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),

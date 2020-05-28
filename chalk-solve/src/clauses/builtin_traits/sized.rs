@@ -76,6 +76,7 @@ pub fn add_sized_program_clauses<I: Interner>(
             }
             TypeName::Array
             | TypeName::Never
+            | TypeName::FnDef(_)
             | TypeName::Scalar(_)
             | TypeName::Raw(_)
             | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),

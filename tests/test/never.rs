@@ -11,3 +11,18 @@ fn never_is_well_formed() {
         }
     }
 }
+
+#[test]
+fn never_is_sized() {
+    test! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+        }
+        goal {
+            !: Sized
+        } yields {
+            "Unique"
+        }
+    }
+}
