@@ -1,4 +1,4 @@
-use crate::interner::ChalkIr;
+use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
@@ -1045,6 +1045,7 @@ impl LowerFnDefn for FnDefn {
 
         Ok(rust_ir::FnDefDatum {
             id: fn_def_id,
+            abi: ChalkFnAbi::Rust,
             binders,
         })
     }

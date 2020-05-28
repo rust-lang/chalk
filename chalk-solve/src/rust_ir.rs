@@ -119,6 +119,7 @@ pub struct AdtFlags {
 /// a specific function definition.
 pub struct FnDefDatum<I: Interner> {
     pub id: FnDefId<I>,
+    pub abi: I::FnAbi,
     pub binders: Binders<FnDefDatumBound<I>>,
 }
 
