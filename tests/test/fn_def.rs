@@ -4,7 +4,7 @@ use super::*;
 fn fn_def_is_well_formed() {
     test! {
         program {
-            fn foo() {}
+            fn foo();
         }
         goal {
             WellFormed(foo)
@@ -21,7 +21,7 @@ fn fn_def_is_sized() {
             #[lang(sized)]
             trait Sized { }
 
-            fn foo() {}
+            fn foo();
         }
         goal {
             foo: Sized
@@ -38,7 +38,7 @@ fn fn_def_is_copy() {
             #[lang(copy)]
             trait Copy { }
 
-            fn foo() {}
+            fn foo();
         }
         goal {
             foo: Copy
@@ -55,7 +55,7 @@ fn fn_def_is_clone() {
             #[lang(clone)]
             trait Clone { }
 
-            fn foo() {}
+            fn foo();
         }
         goal {
             foo: Clone

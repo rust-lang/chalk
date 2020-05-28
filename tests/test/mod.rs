@@ -303,6 +303,7 @@ mod coinduction;
 mod constants;
 mod cycle;
 mod existential_types;
+mod fn_def;
 mod functions;
 mod implied_bounds;
 mod impls;
