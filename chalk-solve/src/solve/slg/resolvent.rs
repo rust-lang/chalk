@@ -92,26 +92,6 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         debug!("consequence = {:?}", consequence);
         debug!("conditions = {:?}", conditions);
 
-        let constraints = conditions
-            .iter(interner)
-            .filter_map(|c| match c.data(interner) {
-                GoalData::DomainGoal(DomainGoal::Holds(WhereClause::LifetimeOutlives(a, b))) => {
-                    Some(InEnvironment::new(
-                        environment,
-                        Constraint::Outlives(a.clone(), b.clone()),
-                    ))
-                }
-                GoalData::Not(c1) => match c1.data(interner) {
-                    GoalData::DomainGoal(DomainGoal::Holds(WhereClause::LifetimeOutlives(
-                        _a,
-                        _b,
-                    ))) => panic!("Not allowed."),
-                    _ => None,
-                },
-                _ => None,
-            })
-            .collect();
-
         // Unify the selected literal Li with C'.
         let unification_result = self
             .infer
@@ -121,7 +101,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         let mut ex_clause = ExClause {
             subst: subst.clone(),
             ambiguous: false,
-            constraints,
+            constraints: vec![],
             subgoals: vec![],
             delayed_subgoals: vec![],
             answer_time: TimeStamp::default(),
@@ -131,26 +111,15 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         // Add the subgoals/region-constraints that unification gave us.
         slg::into_ex_clause(interner, unification_result, &mut ex_clause);
 
-        let conditions_iter = conditions
-            .iter(interner)
-            .filter(|c| match c.data(interner) {
-                GoalData::DomainGoal(DomainGoal::Holds(WhereClause::LifetimeOutlives(..))) => false,
-                GoalData::Not(c1) => match c1.data(interner) {
-                    GoalData::DomainGoal(DomainGoal::Holds(WhereClause::LifetimeOutlives(..))) => {
-                        false
-                    }
-                    _ => true,
-                },
-                _ => true,
-            })
-            .map(|c| match c.data(interner) {
+        // Add the `conditions` from the program clause into the result too.
+        ex_clause
+            .subgoals
+            .extend(conditions.iter(interner).map(|c| match c.data(interner) {
                 GoalData::Not(c1) => {
                     Literal::Negative(InEnvironment::new(environment, Goal::clone(c1)))
                 }
                 _ => Literal::Positive(InEnvironment::new(environment, Goal::clone(c))),
-            });
-        // Add the `conditions` from the program clause into the result too.
-        ex_clause.subgoals.extend(conditions_iter);
+            }));
 
         Ok(ex_clause)
     }
