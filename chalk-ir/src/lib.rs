@@ -1184,12 +1184,17 @@ impl<I: Interner> TraitRef<I> {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+pub struct LifetimeOutlives<I: Interner> {
+    pub a: Lifetime<I>,
+    pub b: Lifetime<I>,
+}
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
     Implemented(TraitRef<I>),
     AliasEq(AliasEq<I>),
-    LifetimeOutlives(Lifetime<I>, Lifetime<I>),
+    LifetimeOutlives(LifetimeOutlives<I>),
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
