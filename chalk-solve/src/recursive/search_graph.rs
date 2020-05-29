@@ -10,6 +10,8 @@ use chalk_ir::debug;
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
 
+/// The "search graph" stores in-progress goals that are still
+/// being solved.
 pub(super) struct SearchGraph<I: Interner> {
     indices: FxHashMap<UCanonicalGoal<I>, DepthFirstNumber>,
     nodes: Vec<Node<I>>,

@@ -26,6 +26,11 @@
     - [Logic](./engine/logic.md)
         - [Coinduction](./engine/logic/coinduction.md)
     - [SLG Solver](./engine/slg.md)
+- [Chalk recursive solver](./recursive.md)
+    - [The stack](./recursive/stack.md)
+    - [Inductive cycles](./recursive/inductive_cycles.md)
+    - [The search graph and caching](./recursive/search_graph.md)
+    - [Coinduction](./recursive/coinduction.md)
 
 ---
 
