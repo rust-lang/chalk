@@ -536,6 +536,12 @@ impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
     }
 }
 
+impl<I: Interner> Debug for LifetimeOutlives<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "{:?}: {:?}", self.a, self.b)
+    }
+}
+
 pub struct ProjectionTyDebug<'a, I: Interner> {
     projection_ty: &'a ProjectionTy<I>,
     interner: &'a I,
@@ -630,6 +636,7 @@ impl<I: Interner> Debug for WhereClause<I> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
             WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
+            WhereClause::LifetimeOutlives(l_o) => write!(fmt, "{:?}", l_o),
         }
     }
 }

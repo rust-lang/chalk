@@ -322,6 +322,7 @@ fn program_clauses_that_could_match<I: Interner>(
                 .opaque_ty_data(opaque_ty.opaque_ty_id)
                 .to_program_clauses(builder),
         },
+        DomainGoal::Holds(WhereClause::LifetimeOutlives(_)) => {}
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)

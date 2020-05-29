@@ -367,6 +367,11 @@ WhereClause: WhereClause = {
         let projection = ProjectionTy { trait_ref, name, args: a2 };
         WhereClause::ProjectionEq { projection, ty }
     },
+
+    // 'a: 'b
+    <a:Lifetime> ":" <b:Lifetime> => {
+        WhereClause::LifetimeOutlives { a, b }
+    }
 };
 
 QuantifiedWhereClause: QuantifiedWhereClause = {

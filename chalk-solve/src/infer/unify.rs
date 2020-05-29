@@ -81,9 +81,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         })
     }
 
-    fn unify_ty_ty<'a>(&mut self, a: &'a Ty<I>, b: &'a Ty<I>) -> Fallible<()> {
+    fn unify_ty_ty(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
-        //         ^^                 ^^         ^^ FIXME rustc bug
 
         let n_a = self.table.normalize_ty_shallow(interner, a);
         let n_b = self.table.normalize_ty_shallow(interner, b);
@@ -343,28 +342,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 Ok(())
             }
 
-            (&LifetimeData::InferenceVar(var), &LifetimeData::Placeholder(idx))
-            | (&LifetimeData::Placeholder(idx), &LifetimeData::InferenceVar(var)) => {
-                let var = EnaVariable::from(var);
-                let var_ui = self.table.universe_of_unbound_var(var);
-                if var_ui.can_see(idx.ui) {
-                    debug!(
-                        "unify_lifetime_lifetime: {:?} in {:?} can see {:?}; unifying",
-                        var, var_ui, idx.ui
-                    );
-                    let v = LifetimeData::Placeholder(idx).intern(interner);
-                    self.table
-                        .unify
-                        .unify_var_value(var, InferenceValue::from_lifetime(interner, v))
-                        .unwrap();
-                    Ok(())
-                } else {
-                    debug!(
-                        "unify_lifetime_lifetime: {:?} in {:?} cannot see {:?}; pushing constraint",
-                        var, var_ui, idx.ui
-                    );
-                    Ok(self.push_lifetime_eq_constraint(a.clone(), b.clone()))
-                }
+            (&LifetimeData::InferenceVar(a_var), &LifetimeData::Placeholder(b_idx)) => {
+                self.unify_lifetime_var(a, b, a_var, b, b_idx.ui)
+            }
+
+            (&LifetimeData::Placeholder(a_idx), &LifetimeData::InferenceVar(b_var)) => {
+                self.unify_lifetime_var(a, b, b_var, a, a_idx.ui)
             }
 
             (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_)) => {
@@ -381,6 +364,44 @@ impl<'t, I: Interner> Unifier<'t, I> {
             ),
 
             (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
+        }
+    }
+
+    fn unify_lifetime_var(
+        &mut self,
+        a: &Lifetime<I>,
+        b: &Lifetime<I>,
+        var: InferenceVar,
+        value: &Lifetime<I>,
+        value_ui: UniverseIndex,
+    ) -> Fallible<()> {
+        debug_heading!(
+            "unify_lifetime_var(var={:?}, value={:?}, value_ui={:?})",
+            var,
+            value,
+            value_ui
+        );
+        let var = EnaVariable::from(var);
+        let var_ui = self.table.universe_of_unbound_var(var);
+        if var_ui.can_see(value_ui) {
+            debug!(
+                "unify_lifetime_var: {:?} in {:?} can see {:?}; unifying",
+                var, var_ui, value_ui
+            );
+            self.table
+                .unify
+                .unify_var_value(
+                    var,
+                    InferenceValue::from_lifetime(&self.interner, value.clone()),
+                )
+                .unwrap();
+            Ok(())
+        } else {
+            debug!(
+                "unify_lifetime_var: {:?} in {:?} cannot see {:?}; pushing constraint",
+                var, var_ui, value_ui
+            );
+            Ok(self.push_lifetime_eq_constraint(a.clone(), b.clone()))
         }
     }
 

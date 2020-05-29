@@ -72,6 +72,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
                 }
                 // Associated item bindings are just taken as facts (?)
                 WhereClause::AliasEq(_) => builder.push_fact(wc),
+                WhereClause::LifetimeOutlives(..) => {}
             });
         }
     });
@@ -160,6 +161,7 @@ pub fn super_traits<I: Interner>(
                                 Some(tr.clone())
                             }
                             WhereClause::AliasEq(_) => None,
+                            WhereClause::LifetimeOutlives(..) => None,
                         })
                     })
                     .collect::<Vec<_>>()

@@ -874,6 +874,14 @@ impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
                 }),
                 chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
             ],
+            WhereClause::LifetimeOutlives { a, b } => {
+                vec![chalk_ir::WhereClause::LifetimeOutlives(
+                    chalk_ir::LifetimeOutlives {
+                        a: a.lower(env)?,
+                        b: b.lower(env)?,
+                    },
+                )]
+            }
         };
         Ok(where_clauses)
     }

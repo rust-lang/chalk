@@ -5,7 +5,8 @@ use crate::{ExClause, Literal, TimeStamp};
 use chalk_ir::debug;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+    Constraint, DomainGoal, Environment, Fallible, Goal, GoalData, InEnvironment, LifetimeOutlives,
+    QuantifierKind, Substitution, WhereClause,
 };
 
 impl<I: Interner, C: Context<I>> Forest<I, C> {
@@ -68,14 +69,22 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     &goal.b,
                     &mut ex_clause,
                 )?,
-                GoalData::DomainGoal(domain_goal) => {
-                    ex_clause
-                        .subgoals
-                        .push(Literal::Positive(InEnvironment::new(
+                GoalData::DomainGoal(domain_goal) => match domain_goal {
+                    DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
+                        ex_clause.constraints.push(InEnvironment::new(
                             &environment,
-                            context.into_goal(domain_goal.clone()),
-                        )));
-                }
+                            Constraint::Outlives(a.clone(), b.clone()),
+                        ));
+                    }
+                    _ => {
+                        ex_clause
+                            .subgoals
+                            .push(Literal::Positive(InEnvironment::new(
+                                &environment,
+                                context.into_goal(domain_goal.clone()),
+                            )));
+                    }
+                },
                 GoalData::CannotProve(()) => {
                     debug!("Marking Strand as ambiguous because of a `CannotProve` subgoal");
                     ex_clause.ambiguous = true;
