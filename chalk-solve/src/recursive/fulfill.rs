@@ -10,8 +10,9 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading};
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Constraint, Environment, EqGoal, Fallible, Goal, GoalData,
-    InEnvironment, NoSolution, QuantifierKind, Substitution, UCanonical, UniverseMap,
+    Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible, Goal,
+    GoalData, InEnvironment, LifetimeOutlives, NoSolution, QuantifierKind, Substitution,
+    UCanonical, UniverseMap, WhereClause,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -207,10 +208,18 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                 let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.push_obligation(Obligation::Refute(in_env));
             }
-            GoalData::DomainGoal(_) => {
-                let in_env = InEnvironment::new(environment, goal);
-                self.push_obligation(Obligation::Prove(in_env));
-            }
+            GoalData::DomainGoal(domain_goal) => match domain_goal {
+                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
+                    self.constraints.insert(InEnvironment::new(
+                        &environment,
+                        Constraint::Outlives(a.clone(), b.clone()),
+                    ));
+                }
+                _ => {
+                    let in_env = InEnvironment::new(environment, goal);
+                    self.push_obligation(Obligation::Prove(in_env));
+                }
+            },
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
             }

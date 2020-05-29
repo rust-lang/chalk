@@ -627,7 +627,7 @@ fn lifetime_outlives_constraints() {
             exists<'a, 'b> {
                 Bar: Foo<'a, 'b>
             }
-        } yields[SolverChoice::slg(10, None)] {
+        } yields {
             "Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := '^0.1], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '^0.1 }] }"
         }
 
@@ -637,7 +637,7 @@ fn lifetime_outlives_constraints() {
                     Bar: Foo<'a, 'b>
                 }
             }
-        } yields[SolverChoice::slg(10, None)] {
+        } yields {
             "Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }] }"
         }
     }
