@@ -696,3 +696,24 @@ fn phantom_data() {
         }
     }
 }
+
+#[test]
+fn extern_functions() {
+    lowering_success! {
+        program {
+            extern "C" fn foo();
+
+            extern "Rust" fn bar();
+        }
+    }
+
+    lowering_error! {
+        program {
+            extern "Foo" fn foo();
+        }
+
+        error_msg {
+            "invalid extern ABI `Foo`"
+        }
+    }
+}

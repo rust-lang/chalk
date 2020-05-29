@@ -14,6 +14,7 @@ macro_rules! ty {
     (function $n:tt $($arg:tt)*) => {
         chalk_ir::TyData::Function(Fn {
             num_binders: $n,
+            abi: chalk_integration::interner::ChalkFnAbi::Rust,
             substitution: chalk_ir::Substitution::from(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>

@@ -222,9 +222,14 @@ impl<I: Interner> Debug for Fn<I> {
         // FIXME -- we should introduce some names or something here
         let Fn {
             num_binders,
+            abi,
             substitution,
         } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, substitution)
+        write!(
+            fmt,
+            "extern \"{:?}\" for<{}> {:?}",
+            abi, num_binders, substitution
+        )
     }
 }
 

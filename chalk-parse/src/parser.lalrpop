@@ -79,7 +79,7 @@ FnReturn: Ty = {
 };
 
 FnDefn: FnDefn = {
-    "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")" 
+    <abi:FnAbi?> "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")"
         <ret_ty:FnReturn?> <w:QuantifiedWhereClauses> ";" => FnDefn
     {
         name: n,
@@ -87,8 +87,11 @@ FnDefn: FnDefn = {
         where_clauses: w,
         argument_types: args,
         return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
+        abi: abi.unwrap_or_default(),
     }
 };
+
+FnAbi: FnAbi = "extern" "\"" <id:Id> "\"" => FnAbi(id.str);
 
 FnArg: Ty = {
     Id ":" <arg_ty: Ty> => arg_ty
@@ -226,8 +229,9 @@ pub Ty: Ty = {
 };
 
 TyWithoutId: Ty = {
-    "for" "<" <l:Comma<LifetimeId>> ">" "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
-        lifetime_names: l,
+    <abi:FnAbi?> <l:ForLifetimes?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
+        lifetime_names: l.unwrap_or_default(),
+        abi: abi.unwrap_or_default(),
         types: types
                    .into_iter()
                    .chain(std::iter::once(ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() })))
@@ -236,13 +240,6 @@ TyWithoutId: Ty = {
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,
     "!" => Ty::Never,
-    "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
-        lifetime_names: vec![],
-        types: types
-                   .into_iter()
-                   .chain(std::iter::once(ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() })))
-                   .map(Box::new).collect()
-    },
     "dyn" <b:Plus<QuantifiedInlineBound>> "+" <l:Lifetime> => Ty::Dyn {
         bounds: b,
         lifetime: l,
@@ -256,6 +253,8 @@ TyWithoutId: Ty = {
     "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) }, 
     "[" <t:Ty> ";" <len:Const> "]" => Ty::Array { ty: Box::new(t), len },
 };
+
+ForLifetimes: Vec<Identifier> = "for" "<" <Comma<LifetimeId>> ">" => <>;
 
 ScalarType: ScalarType = {
    "u8" => ScalarType::Uint(UintTy::U8),

@@ -2,6 +2,7 @@ use crate::interner::ChalkIr;
 use chalk_parse::ast::{Identifier, Kind};
 use chalk_solve::coherence::CoherenceError;
 use chalk_solve::wf::WfError;
+use string_cache::DefaultAtom as Atom;
 
 /// Wrapper type for the various errors that can occur during chalk
 /// processing.
@@ -91,6 +92,7 @@ pub enum RustIrError {
         actual: Kind,
     },
     CannotApplyTypeParameter(Identifier),
+    InvalidExternAbi(Atom),
 }
 
 impl std::fmt::Display for RustIrError {
@@ -183,6 +185,7 @@ impl std::fmt::Display for RustIrError {
             RustIrError::CannotApplyTypeParameter(name) => {
                 write!(f, "cannot apply type parameter `{}`", name)
             }
+            RustIrError::InvalidExternAbi(abi) => write!(f, "invalid extern ABI `{}`", abi),
         }
     }
 }

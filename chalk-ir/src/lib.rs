@@ -747,6 +747,7 @@ impl InferenceVar {
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub struct Fn<I: Interner> {
     pub num_binders: usize,
+    pub abi: I::FnAbi,
     pub substitution: Substitution<I>,
 }
 

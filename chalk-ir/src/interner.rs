@@ -673,10 +673,13 @@ pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_canonical_var_kinds(
         variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
+
     fn transfer_const(
         &self,
         const_evaluated: &I::InternedConcreteConst,
     ) -> Self::InternedConcreteConst;
+
+    fn transfer_abi(abi: I::FnAbi) -> Self::FnAbi;
 }
 
 impl<I: Interner> TargetInterner<I> for I {
@@ -705,6 +708,10 @@ impl<I: Interner> TargetInterner<I> for I {
         const_evaluated: &I::InternedConcreteConst,
     ) -> Self::InternedConcreteConst {
         const_evaluated.clone()
+    }
+
+    fn transfer_abi(abi: <I as Interner>::FnAbi) -> Self::FnAbi {
+        abi
     }
 }
 

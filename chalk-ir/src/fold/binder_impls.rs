@@ -19,10 +19,12 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
     {
         let Fn {
             num_binders,
+            abi,
             substitution,
         } = self;
         Ok(Fn {
             num_binders: *num_binders,
+            abi: TI::transfer_abi(*abi),
             substitution: substitution.fold_with(folder, outer_binder.shifted_in())?,
         })
     }
