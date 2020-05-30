@@ -58,7 +58,7 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let def_ids = self.def_ids.lock().unwrap();
-        display::write_program(f, self.db.borrow(), def_ids.iter().copied())
+        display::write_items(f, self.db.borrow(), def_ids.iter().copied())
     }
 }
 

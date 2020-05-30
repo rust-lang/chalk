@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Display, Formatter, Result},
+    fmt::{Display, Result},
     sync::Arc,
 };
 
@@ -24,11 +24,11 @@ pub use self::state::*;
 
 use self::utils::as_display;
 
-pub fn write_top_level<I, T, F>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
+pub fn write_item<F, I, T>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
 where
+    F: std::fmt::Write + ?Sized,
     I: Interner,
     T: RenderAsRust<I>,
-    F: std::fmt::Write,
 {
     write!(f, "{}\n", v.display(ws))
 }
@@ -36,8 +36,9 @@ where
 /// Writes out each item recorded by a [`LoggingRustIrDatabase`].
 ///
 /// [`LoggingRustIrDatabase`]: crate::logging_db::LoggingRustIrDatabase
-pub fn write_program<I, DB, T>(f: &mut Formatter<'_>, db: &DB, ids: T) -> Result
+pub fn write_items<F, I, DB, T>(f: &mut F, db: &DB, ids: T) -> Result
 where
+    F: std::fmt::Write + ?Sized,
     I: Interner,
     DB: RustIrDatabase<I>,
     T: IntoIterator<Item = RecordedItemId<I>>,
@@ -47,19 +48,19 @@ where
         match id {
             RecordedItemId::Impl(id) => {
                 let v = db.impl_datum(id);
-                write_top_level(f, ws, &*v)?;
+                write_item(f, ws, &*v)?;
             }
             RecordedItemId::Adt(id) => {
                 let v = db.adt_datum(id);
-                write_top_level(f, ws, &*v)?;
+                write_item(f, ws, &*v)?;
             }
             RecordedItemId::Trait(id) => {
                 let v = db.trait_datum(id);
-                write_top_level(f, ws, &*v)?;
+                write_item(f, ws, &*v)?;
             }
             RecordedItemId::OpaqueTy(id) => {
                 let v = db.opaque_ty_data(id);
-                write_top_level(f, ws, &*v)?;
+                write_item(f, ws, &*v)?;
             }
         }
     }
