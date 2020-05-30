@@ -1,5 +1,13 @@
 #[test]
 fn test_complicated_bounds() {
+    // This test uses "produces" as a workaround for the lowering & writing
+    // code's behavior. Specifically, `Foo: Bax<T, BaxT=T>` will be transformed
+    // into `Foo: Bax<T, BaxT=T>, Foo: Bax<T>`, even if the where clause already
+    // includes `Foo: Bax<T>`. The writer code doesn't remove that addition.
+    //
+    // No matter how many `Foo: Bax<T>` we have in our input, we're always going
+    // to get an extra `Foo: Bax<T>` in the output, so they'll never be equal
+    // and we need the separate output program.
     reparse_test!(
         program {
             struct Foo { }
