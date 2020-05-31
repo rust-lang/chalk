@@ -224,9 +224,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .map(move |(parameter, var)| match parameter {
                 VariableKind::Ty(_) => format!("{}", self.apply_mappings(var)),
                 VariableKind::Lifetime => format!("'{}", self.apply_mappings(var)),
-                VariableKind::Const(ty) => {
-                    format!("const {}: {}", self.apply_mappings(var), ty.display(self))
-                }
+                VariableKind::Const(ty) => format!("const {}", self.apply_mappings(var)),
             })
     }
 }
