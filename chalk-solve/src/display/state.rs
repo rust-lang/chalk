@@ -222,7 +222,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .iter(self.db.interner())
             .zip(self.binder_var_indices(binders))
             .map(move |(parameter, var)| match parameter {
-                VariableKind::Ty => format!("{}", self.apply_mappings(var)),
+                VariableKind::Ty(_) => format!("{}", self.apply_mappings(var)),
                 VariableKind::Lifetime => format!("'{}", self.apply_mappings(var)),
                 VariableKind::Const(ty) => {
                     format!("const {}: {}", self.apply_mappings(var), ty.display(self))

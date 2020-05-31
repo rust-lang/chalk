@@ -25,7 +25,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                 Ok(())
             }
             TyData::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
-            TyData::InferenceVar(_) => write!(f, "_"),
+            TyData::InferenceVar(_, _) => write!(f, "_"),
             TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
             TyData::Apply(apply_ty) => apply_ty.fmt(s, f),
             TyData::Function(func) => func.fmt(s, f),
