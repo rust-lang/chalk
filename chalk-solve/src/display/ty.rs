@@ -201,6 +201,12 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             TypeName::Error => write!(f, "{{error}}")?,
             TypeName::Never => todo!("never type"),
             TypeName::FnDef(_) => todo!("fn def type"),
+            TypeName::Array => write!(
+                f,
+                "[{}; {}]",
+                self.first_type_parameter(interner).unwrap().display(s),
+                self.substitution.at(interner, 1).display(s)
+            )?,
         }
         Ok(())
     }

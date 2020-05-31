@@ -234,3 +234,17 @@ fn test_tuples() {
         }
     );
 }
+
+#[test]
+fn test_array_types() {
+    reparse_test!(
+        program {
+            struct Bazz { }
+            struct Bar<const T> {
+                field: [Bazz; T]
+            }
+            trait Foo { }
+            impl<const T> Foo for [Bazz; T] { }
+        }
+    );
+}
