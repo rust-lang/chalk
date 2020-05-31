@@ -9,8 +9,6 @@ use crate::RustIrDatabase;
 use chalk_ir::{interner::Interner, *};
 use itertools::Itertools;
 
-use super::render_trait::RenderAsRust;
-
 /// Like a BoundVar, but with the debrujin index inverted so as to create a
 /// canonical name we can use anywhere for each bound variable.
 ///
@@ -224,7 +222,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .map(move |(parameter, var)| match parameter {
                 VariableKind::Ty(_) => format!("{}", self.apply_mappings(var)),
                 VariableKind::Lifetime => format!("'{}", self.apply_mappings(var)),
-                VariableKind::Const(ty) => format!("const {}", self.apply_mappings(var)),
+                VariableKind::Const(_ty) => format!("const {}", self.apply_mappings(var)),
             })
     }
 }
