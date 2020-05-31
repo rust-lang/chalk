@@ -66,7 +66,6 @@ fn test_opaque_type_as_type_value() {
     );
 }
 
-// Generic opaque types can't currently be used as types (these fail to lower)
 #[ignore]
 #[test]
 fn test_generic_opaque_type_as_value1() {

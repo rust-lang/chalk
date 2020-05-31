@@ -16,3 +16,34 @@ fn test_const_generics() {
         }
     );
 }
+
+#[test]
+#[ignore]
+fn test_basic_const_values() {
+    reparse_test!(
+        program {
+            struct Foo<const N> { }
+            trait Bar { }
+            impl Bar for Foo<0> { }
+            impl Bar for Foo<1> { }
+            impl Bar for Foo<2> { }
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo<const N> { }
+            opaque type Zed: = Foo<0>;
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo<const N> { }
+            trait Bar {
+                type Assoc;
+            }
+            impl Bar for Foo<0> {
+                type Assoc = Foo<1>;
+            }
+        }
+    );
+}

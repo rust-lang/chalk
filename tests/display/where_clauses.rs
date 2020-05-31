@@ -1,5 +1,5 @@
 #[test]
-fn test_complicated_bounds() {
+fn test_alias_eq() {
     // This test uses "produces" as a workaround for the lowering & writing
     // code's behavior. Specifically, `Foo: Bax<T, BaxT=T>` will be transformed
     // into `Foo: Bax<T, BaxT=T>, Foo: Bax<T>`, even if the where clause already
@@ -8,6 +8,128 @@ fn test_complicated_bounds() {
     // No matter how many `Foo: Bax<T>` we have in our input, we're always going
     // to get an extra `Foo: Bax<T>` in the output, so they'll never be equal
     // and we need the separate output program.
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar { }
+            trait Third {
+                type Assoc;
+            }
+            impl Bar for Foo
+            where
+                Foo: Third<Assoc = Foo>
+            {
+            }
+        }
+        produces {
+            struct Foo { }
+            trait Bar { }
+            trait Third {
+                type Assoc;
+            }
+            impl Bar for Foo
+            where
+                Foo: Third<Assoc = Foo>,
+                Foo: Third
+            {
+            }
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar { }
+            trait Third {
+                type Assoc;
+            }
+            impl Bar for Foo
+            where
+                Foo: Third,
+                <Foo as Third>::Assoc: Third
+            {
+            }
+        }
+    );
+}
+
+#[test]
+fn test_dyn_on_left() {
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar { }
+            impl Bar for Foo
+            where
+                dyn Bar: Bar
+            {
+            }
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar { }
+            trait Baz {
+                type Assoc<T>
+                where
+                    dyn Bar: Bar;
+            }
+        }
+    );
+}
+
+#[test]
+fn test_generic_vars_inside_assoc_bounds() {
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar<T> { }
+            trait Baz {
+                type Assoc<T>
+                where
+                    dyn Bar<T>: Bar<T>,
+                    T: Bar<Foo>,
+                    Foo: Bar<T>;
+            }
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar<T> { }
+            trait Baz<U> {
+                type Assoc<T>
+                where
+                    dyn Bar<U>: Bar<T>,
+                    T: Bar<Foo>,
+                    Foo: Bar<U>;
+            }
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar<T, U> { }
+            trait Baz<U> {
+                type Assoc<T>: Bar<T, U>;
+            }
+        }
+    );
+    reparse_test!(
+        program {
+            struct Foo { }
+            trait Bar<T, U> {
+                type Assoc;
+            }
+            trait Baz<U> {
+                type Assoc<T>: Bar<T, U, Assoc=Foo>;
+            }
+        }
+    );
+}
+
+#[test]
+fn test_complicated_bounds() {
     reparse_test!(
         program {
             struct Foo { }

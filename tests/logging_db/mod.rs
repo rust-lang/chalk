@@ -140,8 +140,9 @@ fn records_generic_impls() {
 
 #[test]
 #[ignore]
-fn records_necessary_separate_impl() {
-    // might leave out the "impl Bar for Fox"
+fn does_not_need_necessary_separate_impl() {
+    // this should leave out "impl Bar for Fox" and the result should pass the
+    // test (it won't be well-formed, but that's OK.)
     logging_db_output_sufficient! {
         program {
             trait Box {
