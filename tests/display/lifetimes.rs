@@ -25,3 +25,26 @@ fn test_lifetimes_in_structs() {
         }
     );
 }
+
+#[test]
+fn test_lifetime_outlives() {
+    reparse_test!(
+        program {
+            struct Foo<'a, 'b>
+            where
+                'a: 'b
+            { }
+
+            trait Baz<'a,'b>
+            where
+                'a: 'b
+            { }
+
+            impl<'a,'b,'c> Baz<'a,'b> for Foo<'a,'c>
+            where
+                'a: 'c,
+                'b: 'c
+            { }
+        }
+    );
+}
