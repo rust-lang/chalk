@@ -155,7 +155,11 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTyDatum<I> {
                 display_self_where_clauses_as_bounds(s, clauses)
             )?;
         }
-        write!(f, "{};", bounds.hidden_ty.display(s))?;
+        write!(
+            f,
+            "{};",
+            s.db.hidden_opaque_type(self.opaque_ty_id).display(s)
+        )?;
         Ok(())
     }
 }

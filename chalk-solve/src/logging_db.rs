@@ -118,6 +118,11 @@ where
         self.db.borrow().impl_datum(impl_id)
     }
 
+    fn hidden_opaque_type(&self, id: OpaqueTyId<I>) -> Ty<I> {
+        self.record(id);
+        self.db.borrow().hidden_opaque_type(id)
+    }
+
     fn associated_ty_value(
         &self,
         id: crate::rust_ir::AssociatedTyValueId<I>,
@@ -305,6 +310,10 @@ where
 
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
         self.db.borrow().opaque_ty_data(id)
+    }
+
+    fn hidden_opaque_type(&self, id: OpaqueTyId<I>) -> Ty<I> {
+        self.db.borrow().hidden_opaque_type(id)
     }
 
     fn impls_for_trait(
