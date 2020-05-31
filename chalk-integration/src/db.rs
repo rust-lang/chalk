@@ -213,4 +213,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
         self.program_ir().unwrap().opaque_type_name(opaque_ty_id)
     }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
+        self.program_ir().unwrap().fn_def_name(fn_def_id)
+    }
 }

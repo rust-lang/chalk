@@ -104,6 +104,26 @@ trait [a-zA-Z0-9_-]+ \{
 }
 
 #[test]
+fn test_fn_where_clause() {
+    reparse_test!(
+        program {
+            trait Bar {}
+            fn foo<T>() -> T
+            where
+                dyn Bar: Bar,
+                T: Bar;
+        }
+        formatting matches
+r#"trait [a-zA-Z0-9_-]+ \{\s*\}
+fn foo<[a-zA-Z0-9_-]+>\(\) -> [a-zA-Z0-9_-]+
+where
+  dyn [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+,
+  [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+;
+"#
+    );
+}
+
+#[test]
 fn test_name_disambiguation() {
     // we don't have modules in chalk so we can't actually test different
     // structs or traits with the same name in Chalk - but luckily our

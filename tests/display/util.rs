@@ -50,7 +50,8 @@ pub fn write_program(program: &Program) -> String {
         .chain(program.adt_data.keys().copied().map(Into::into))
         .chain(program.trait_data.keys().copied().map(Into::into))
         .chain(program.impl_data.keys().copied().map(Into::into))
-        .chain(program.opaque_ty_data.keys().copied().map(Into::into));
+        .chain(program.opaque_ty_data.keys().copied().map(Into::into))
+        .chain(program.fn_def_data.keys().copied().map(Into::into));
     write_items(&mut out, program, ids).unwrap();
     out
 }

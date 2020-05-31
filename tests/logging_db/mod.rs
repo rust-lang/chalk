@@ -43,6 +43,24 @@ fn records_opaque_type() {
 
 #[test]
 #[ignore]
+fn records_fn_def() {
+    logging_db_output_sufficient! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            fn foo();
+        }
+        goal {
+            foo: Sized
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+#[ignore]
 fn records_parents_parent() {
     logging_db_output_sufficient! {
         program {

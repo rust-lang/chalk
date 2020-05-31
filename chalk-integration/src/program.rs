@@ -492,4 +492,8 @@ impl RustIrDatabase<ChalkIr> for Program {
             .name
             .to_string()
     }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
+        self.fn_def_kinds.get(&fn_def_id).unwrap().name.to_string()
+    }
 }

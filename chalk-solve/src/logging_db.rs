@@ -200,8 +200,13 @@ where
         self.db.borrow().is_object_safe(trait_id)
     }
 
-    fn fn_def_datum(&self, _fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
-        todo!("function def datum")
+    fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
+        self.record(fn_def_id);
+        self.db.borrow().fn_def_datum(fn_def_id)
+    }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
+        self.db.borrow().fn_def_name(fn_def_id)
     }
 }
 
@@ -370,8 +375,12 @@ where
         self.db.borrow().opaque_type_name(opaque_ty_id)
     }
 
-    fn fn_def_datum(&self, _fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
-        todo!("function def datum")
+    fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
+        self.db.borrow().fn_def_datum(fn_def_id)
+    }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
+        self.db.borrow().fn_def_name(fn_def_id)
     }
 }
 
@@ -381,6 +390,7 @@ pub enum RecordedItemId<I: Interner> {
     Trait(TraitId<I>),
     Impl(ImplId<I>),
     OpaqueTy(OpaqueTyId<I>),
+    FnDef(FnDefId<I>),
 }
 
 impl<I: Interner> From<AdtId<I>> for RecordedItemId<I> {
@@ -407,6 +417,12 @@ impl<I: Interner> From<OpaqueTyId<I>> for RecordedItemId<I> {
     }
 }
 
+impl<I: Interner> From<FnDefId<I>> for RecordedItemId<I> {
+    fn from(v: FnDefId<I>) -> Self {
+        RecordedItemId::FnDef(v)
+    }
+}
+
 /// Utility for implementing Ord for RecordedItemId.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 enum OrderedItemId<'a, DefId, AdtId> {
@@ -422,7 +438,8 @@ impl<I: Interner> RecordedItemId<I> {
         match self {
             RecordedItemId::Trait(TraitId(x))
             | RecordedItemId::Impl(ImplId(x))
-            | RecordedItemId::OpaqueTy(OpaqueTyId(x)) => OrderedItemId::DefId(x),
+            | RecordedItemId::OpaqueTy(OpaqueTyId(x))
+            | RecordedItemId::FnDef(FnDefId(x)) => OrderedItemId::DefId(x),
             RecordedItemId::Adt(AdtId(x)) => OrderedItemId::AdtId(x),
         }
     }

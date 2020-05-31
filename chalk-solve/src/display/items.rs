@@ -276,3 +276,50 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
         Ok(())
     }
 }
+
+impl<I: Interner> RenderAsRust<I> for FnDefDatum<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        let s = &s.add_debrujin_index(None);
+        let bound_datum = self.binders.skip_binders();
+
+        // declaration
+        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+        // ^^^^^^
+        write!(f, "fn {}", s.db.fn_def_name(self.id))?;
+
+        // binders
+        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+        //       ^^^
+        let binders = s.binder_var_display(&self.binders.binders);
+        write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
+
+        // arguments
+        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+        //          ^^^^^^^^^^^^^^^^^^^
+        let arguments = bound_datum
+            .argument_types
+            .iter()
+            .enumerate()
+            .map(|(idx, arg)| format!("arg_{}: {}", idx, arg.display(s)))
+            .format(", ");
+
+        write!(f, "({})", arguments)?;
+
+        // return Type
+        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+        //                             ^^^^^^^^^^^^^
+        write!(f, " -> {}", bound_datum.return_type.display(s))?;
+
+        // where clause
+        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+        //                                           ^^^^^^^^^^^^
+        if !bound_datum.where_clauses.is_empty() {
+            let s = &s.add_indent();
+            write!(f, "\nwhere\n{}", bound_datum.where_clauses.display(s))?;
+        }
+
+        write!(f, ";")?;
+
+        Ok(())
+    }
+}

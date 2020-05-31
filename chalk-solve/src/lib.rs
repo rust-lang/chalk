@@ -154,6 +154,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
 
     /// Retrieves the name of an opaque type.
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String;
+
+    /// Retrieves the name of a function definition
+    fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String;
 }
 
 pub use clauses::program_clauses_for_env;

@@ -62,6 +62,10 @@ where
                 let v = db.opaque_ty_data(id);
                 write_item(f, ws, &*v)?;
             }
+            RecordedItemId::FnDef(id) => {
+                let v = db.fn_def_datum(id);
+                write_item(f, ws, &*v)?;
+            }
         }
     }
     Ok(())

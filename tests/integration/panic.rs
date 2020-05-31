@@ -237,6 +237,10 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
         unimplemented!()
     }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
+        unimplemented!()
+    }
 }
 
 fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
