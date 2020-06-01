@@ -1,7 +1,7 @@
 name: Publish
 on:
   schedule:
-    - cron: "0 0 * * 2" # midnight UTC on Tuesday
+    - cron: "0 14 * * 1" # midnight UTC on Sunday
 
 jobs:
   publish:
@@ -39,5 +39,5 @@ jobs:
           git commit -am "Release $VERSION"
           git tag "v$VERSION"
           cargo workspaces publish --from-git
-          git ps --tags
+          git push --tags
           cargo workspaces version -ay --force '*' --include-merged-tags --no-git-tag --pre-id dev preminor
