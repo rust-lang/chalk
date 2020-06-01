@@ -1,7 +1,7 @@
 name: Publish
 on:
   schedule:
-    - cron: "0 0 * * 1" # midnight UTC on Monday
+    - cron: "0 0 * * 2" # midnight UTC on Tuesday
 
 jobs:
   publish:
@@ -38,6 +38,6 @@ jobs:
           sed -E -i '' $'s/(# Unreleased)/\\1\\\n\\\n# Release '"$VERSION/" RELEASES.md
           git commit -am "Release $VERSION"
           git tag "v$VERSION"
-          git push --tags
           cargo workspaces publish --from-git
+          git ps --tags
           cargo workspaces version -ay --force '*' --include-merged-tags --no-git-tag --pre-id dev preminor
