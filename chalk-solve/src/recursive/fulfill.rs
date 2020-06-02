@@ -1,6 +1,6 @@
 use crate::infer::{
-    canonicalize::Canonicalized, instantiate::IntoBindersAndValue, ucanonicalize::UCanonicalized,
-    unify::UnificationResult, InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
+    canonicalize::Canonicalized, ucanonicalize::UCanonicalized, unify::UnificationResult,
+    InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
 };
 use crate::recursive::{Minimums, Solver};
 use crate::solve::{truncate, Guidance, Solution};
@@ -10,9 +10,9 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading};
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible, Goal,
-    GoalData, InEnvironment, LifetimeOutlives, NoSolution, QuantifierKind, Substitution,
-    UCanonical, UniverseMap, WhereClause,
+    Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible,
+    Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution, ProgramClauseImplication,
+    QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -88,7 +88,7 @@ pub(crate) struct Fulfill<'s, 'db, I: Interner> {
 }
 
 impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
-    pub(crate) fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
+    fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
         solver: &'s mut Solver<'db, I>,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
     ) -> (Self, Substitution<I>, InEnvironment<T::Result>) {
@@ -104,19 +104,57 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             constraints: FxHashSet::default(),
             cannot_prove: false,
         };
+
         (fulfill, subst, canonical_goal)
     }
 
-    /// Wraps `InferenceTable::instantiate_in`
-    pub(crate) fn instantiate_binders_existentially<T>(
-        &mut self,
-        arg: impl IntoBindersAndValue<'s, I, Value = T>,
-    ) -> T::Result
-    where
-        T: Fold<I, I>,
-    {
-        self.infer
-            .instantiate_binders_existentially(self.solver.program.interner(), arg)
+    pub(crate) fn new_with_clause(
+        solver: &'s mut Solver<'db, I>,
+        ucanonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
+        clause: &Binders<ProgramClauseImplication<I>>,
+    ) -> Fallible<(Self, Substitution<I>)> {
+        let (mut fulfill, subst, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
+
+        let ProgramClauseImplication {
+            consequence,
+            conditions,
+            priority: _,
+        } = fulfill
+            .infer
+            .instantiate_binders_existentially(fulfill.solver.program.interner(), clause);
+
+        debug!("the subst is {:?}", subst);
+
+        if let Err(e) = fulfill.unify(
+            &canonical_goal.environment,
+            &canonical_goal.goal,
+            &consequence,
+        ) {
+            return Err(e);
+        }
+
+        // if so, toss in all of its premises
+        for condition in conditions.as_slice(fulfill.solver.program.interner()) {
+            if let Err(e) = fulfill.push_goal(&canonical_goal.environment, condition.clone()) {
+                return Err(e);
+            }
+        }
+
+        Ok((fulfill, subst))
+    }
+
+    pub(crate) fn new_with_simplification(
+        solver: &'s mut Solver<'db, I>,
+        ucanonical_goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> Fallible<(Self, Substitution<I>)> {
+        let (mut fulfill, subst, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
+
+        if let Err(e) = fulfill.push_goal(&canonical_goal.environment, canonical_goal.goal.clone())
+        {
+            return Err(e);
+        }
+
+        Ok((fulfill, subst))
     }
 
     fn push_obligation(&mut self, obligation: Obligation<I>) {

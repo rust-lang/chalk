@@ -26,6 +26,16 @@ pub(crate) struct RecursiveContext<I: Interner> {
     caching_enabled: bool,
 }
 
+trait Context<I: Interner> {
+    fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I>;
+
+    fn instantiate_binders_existentially(
+        &mut self,
+        interner: &I,
+        arg: &Binders<Goal<I>>,
+    ) -> Goal<I>;
+}
+
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -341,10 +351,10 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
-        if let Err(e) = fulfill.push_goal(&goal.environment, goal.goal) {
-            return (Err(e), ClausePriority::High);
-        }
+        let (fulfill, subst) = match Fulfill::new_with_simplification(self, canonical_goal) {
+            Ok(r) => r,
+            Err(e) => return (Err(e), ClausePriority::High),
+        };
         (fulfill.solve(subst, minimums), ClausePriority::High)
     }
 
@@ -369,52 +379,34 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
             }
 
-            match program_clause.data(self.program.interner()) {
-                ProgramClauseData::Implies(implication) => {
-                    let res = self.solve_via_implication(
-                        canonical_goal,
-                        &Binders::new(
-                            VariableKinds::from(self.program.interner(), vec![]),
-                            implication.clone(),
-                        ),
-                        minimums,
-                    );
-                    if let (Ok(solution), priority) = res {
-                        debug!("ok: solution={:?} prio={:?}", solution, priority);
-                        cur_solution = Some(match cur_solution {
-                            None => (solution, priority),
-                            Some((cur, cur_priority)) => combine_with_priorities(
-                                self.program.interner(),
-                                &canonical_goal.canonical.value.goal,
-                                cur,
-                                cur_priority,
-                                solution,
-                                priority,
-                            ),
-                        });
-                    } else {
-                        debug!("error");
-                    }
-                }
+            let res = match program_clause.data(self.program.interner()) {
+                ProgramClauseData::Implies(implication) => self.solve_via_implication(
+                    canonical_goal,
+                    &Binders::new(
+                        VariableKinds::from(self.program.interner(), vec![]),
+                        implication.clone(),
+                    ),
+                    minimums,
+                ),
                 ProgramClauseData::ForAll(implication) => {
-                    let res = self.solve_via_implication(canonical_goal, implication, minimums);
-                    if let (Ok(solution), priority) = res {
-                        debug!("ok: solution={:?} prio={:?}", solution, priority);
-                        cur_solution = Some(match cur_solution {
-                            None => (solution, priority),
-                            Some((cur, cur_priority)) => combine_with_priorities(
-                                self.program.interner(),
-                                &canonical_goal.canonical.value.goal,
-                                cur,
-                                cur_priority,
-                                solution,
-                                priority,
-                            ),
-                        });
-                    } else {
-                        debug!("error");
-                    }
+                    self.solve_via_implication(canonical_goal, implication, minimums)
                 }
+            };
+            if let (Ok(solution), priority) = res {
+                debug!("ok: solution={:?} prio={:?}", solution, priority);
+                cur_solution = Some(match cur_solution {
+                    None => (solution, priority),
+                    Some((cur, cur_priority)) => combine_with_priorities(
+                        self.program.interner(),
+                        &canonical_goal.canonical.value.goal,
+                        cur,
+                        cur_priority,
+                        solution,
+                        priority,
+                    ),
+                });
+            } else {
+                debug!("error");
             }
         }
         cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))
@@ -434,28 +426,11 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
-        let interner = self.program.interner();
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
-        let ProgramClauseImplication {
-            consequence,
-            conditions,
-            priority: _,
-        } = fulfill.instantiate_binders_existentially(clause);
+        let (fulfill, subst) = match Fulfill::new_with_clause(self, canonical_goal, clause) {
+            Ok(r) => r,
+            Err(e) => return (Err(e), ClausePriority::High),
+        };
 
-        debug!("the subst is {:?}", subst);
-
-        if let Err(e) = fulfill.unify(&goal.environment, &goal.goal, &consequence) {
-            return (Err(e), ClausePriority::High);
-        }
-
-        // if so, toss in all of its premises
-        for condition in conditions.as_slice(interner) {
-            if let Err(e) = fulfill.push_goal(&goal.environment, condition.clone()) {
-                return (Err(e), ClausePriority::High);
-            }
-        }
-
-        // and then try to solve
         (
             fulfill.solve(subst, minimums),
             clause.skip_binders().priority,
