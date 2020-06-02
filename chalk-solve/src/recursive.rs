@@ -351,11 +351,11 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let (fulfill, subst) = match Fulfill::new_with_simplification(self, canonical_goal) {
+        let fulfill = match Fulfill::new_with_simplification(self, canonical_goal) {
             Ok(r) => r,
             Err(e) => return (Err(e), ClausePriority::High),
         };
-        (fulfill.solve(subst, minimums), ClausePriority::High)
+        (fulfill.solve(minimums), ClausePriority::High)
     }
 
     /// See whether we can solve a goal by implication on any of the given
@@ -426,15 +426,12 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
-        let (fulfill, subst) = match Fulfill::new_with_clause(self, canonical_goal, clause) {
+        let fulfill = match Fulfill::new_with_clause(self, canonical_goal, clause) {
             Ok(r) => r,
             Err(e) => return (Err(e), ClausePriority::High),
         };
 
-        (
-            fulfill.solve(subst, minimums),
-            clause.skip_binders().priority,
-        )
+        (fulfill.solve(minimums), clause.skip_binders().priority)
     }
 
     fn program_clauses_for_goal(

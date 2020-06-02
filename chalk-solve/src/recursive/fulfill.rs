@@ -72,6 +72,7 @@ enum NegativeSolution {
 /// goals, and transport what was learned back to the outer context.
 pub(crate) struct Fulfill<'s, 'db, I: Interner> {
     solver: &'s mut Solver<'db, I>,
+    subst: Substitution<I>,
     infer: InferenceTable<I>,
 
     /// The remaining goals to prove or refute
@@ -91,7 +92,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
         solver: &'s mut Solver<'db, I>,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (Self, Substitution<I>, InEnvironment<T::Result>) {
+    ) -> (Self, InEnvironment<T::Result>) {
         let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
             solver.program.interner(),
             ucanonical_goal.universes,
@@ -100,20 +101,21 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         let fulfill = Fulfill {
             solver,
             infer,
+            subst,
             obligations: vec![],
             constraints: FxHashSet::default(),
             cannot_prove: false,
         };
 
-        (fulfill, subst, canonical_goal)
+        (fulfill, canonical_goal)
     }
 
     pub(crate) fn new_with_clause(
         solver: &'s mut Solver<'db, I>,
         ucanonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: &Binders<ProgramClauseImplication<I>>,
-    ) -> Fallible<(Self, Substitution<I>)> {
-        let (mut fulfill, subst, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
+    ) -> Fallible<Self> {
+        let (mut fulfill, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
 
         let ProgramClauseImplication {
             consequence,
@@ -123,7 +125,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             .infer
             .instantiate_binders_existentially(fulfill.solver.program.interner(), clause);
 
-        debug!("the subst is {:?}", subst);
+        debug!("the subst is {:?}", fulfill.subst);
 
         if let Err(e) = fulfill.unify(
             &canonical_goal.environment,
@@ -140,21 +142,21 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             }
         }
 
-        Ok((fulfill, subst))
+        Ok(fulfill)
     }
 
     pub(crate) fn new_with_simplification(
         solver: &'s mut Solver<'db, I>,
         ucanonical_goal: &UCanonical<InEnvironment<Goal<I>>>,
-    ) -> Fallible<(Self, Substitution<I>)> {
-        let (mut fulfill, subst, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
+    ) -> Fallible<Self> {
+        let (mut fulfill, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
 
         if let Err(e) = fulfill.push_goal(&canonical_goal.environment, canonical_goal.goal.clone())
         {
             return Err(e);
         }
 
-        Ok((fulfill, subst))
+        Ok(fulfill)
     }
 
     fn push_obligation(&mut self, obligation: Obligation<I>) {
@@ -438,11 +440,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     /// Try to fulfill all pending obligations and build the resulting
     /// solution. The returned solution will transform `subst` substitution with
     /// the outcome of type inference by updating the replacements it provides.
-    pub(super) fn solve(
-        mut self,
-        subst: Substitution<I>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    pub(super) fn solve(mut self, minimums: &mut Minimums) -> Fallible<Solution<I>> {
         let outcome = match self.fulfill(minimums) {
             Ok(o) => o,
             Err(e) => return Err(e),
@@ -459,7 +457,10 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             let constraints = self.constraints.into_iter().collect();
             let constrained = self.infer.canonicalize(
                 self.solver.program.interner(),
-                &ConstrainedSubst { subst, constraints },
+                &ConstrainedSubst {
+                    subst: self.subst,
+                    constraints,
+                },
             );
             return Ok(Solution::Unique(constrained.quantified));
         }
@@ -470,7 +471,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // inference as an ambiguous solution.
 
         let interner = self.solver.program.interner();
-        let canonical_subst = self.infer.canonicalize(interner, &subst);
+        let canonical_subst = self.infer.canonicalize(interner, &self.subst);
 
         if canonical_subst.quantified.value.is_identity_subst(interner) {
             // In this case, we didn't learn *anything* definitively. So now, we
