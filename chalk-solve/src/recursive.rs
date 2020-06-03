@@ -10,7 +10,7 @@ use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::solve::truncate;
-use crate::RustIrDatabase;
+use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
@@ -516,7 +516,8 @@ impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table is error.
-            let depth = self.context.stack.push(self.program, &goal);
+            let coinductive_goal = goal.is_coinductive(self.program);
+            let depth = self.context.stack.push(coinductive_goal);
             let dfn = self.context.search_graph.insert(&goal, depth);
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
