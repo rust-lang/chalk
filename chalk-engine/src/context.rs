@@ -34,11 +34,6 @@ use std::fmt::Debug;
 /// FIXME: Clone and Debug bounds are just for easy derive, they are
 /// not actually necessary. But dang are they convenient.
 pub trait Context<I: Interner>: Clone + Debug {
-    /// A final solution that is passed back to the user. This is
-    /// completely opaque to the SLG solver; it is produced by
-    /// `make_solution`.
-    type Solution;
-
     /// Represents an inference table.
     type InferenceTable: InferenceTable<I, Self> + Clone;
 
@@ -47,9 +42,7 @@ pub trait Context<I: Interner>: Clone + Debug {
     fn next_subgoal_index(ex_clause: &ExClause<I>) -> usize;
 }
 
-pub trait ContextOps<I: Interner, C: Context<I>>:
-    Sized + Clone + Debug + AggregateOps<I, C>
-{
+pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug {
     /// True if this is a coinductive goal -- e.g., proving an auto trait.
     fn is_coinductive(&self, goal: &UCanonical<InEnvironment<Goal<I>>>) -> bool;
 
@@ -145,16 +138,6 @@ pub trait ContextOps<I: Interner, C: Context<I>>:
         u_canon: &UCanonical<InEnvironment<Goal<I>>>,
         canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool;
-}
-
-/// Methods for combining solutions to yield an aggregate solution.
-pub trait AggregateOps<I: Interner, C: Context<I>> {
-    fn make_solution(
-        &self,
-        root_goal: &UCanonical<InEnvironment<Goal<I>>>,
-        answers: impl AnswerStream<I>,
-        should_continue: impl Fn() -> bool,
-    ) -> Option<C::Solution>;
 }
 
 /// An "inference table" contains the state to support unification and

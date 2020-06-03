@@ -3,11 +3,10 @@ use crate::logic::RootSearchFail;
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
 use crate::{TableIndex, TimeStamp};
-use std::fmt::Display;
 
 use chalk_ir::debug;
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
+use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical};
 
 pub struct Forest<I: Interner, C: Context<I>> {
     pub(crate) tables: Tables<I>,
@@ -39,7 +38,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// iterator. Each time you invoke `next`, it will do the work to
     /// extract one more answer. These answers are cached in between
     /// invocations. Invoking `next` fewer times is preferable =)
-    fn iter_answers<'f>(
+    pub fn iter_answers<'f>(
         &'f mut self,
         context: &'f impl ContextOps<I, C>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
@@ -52,89 +51,6 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             table,
             answer,
             _context: std::marker::PhantomData::<C>,
-        }
-    }
-
-    /// Solves a given goal, producing the solution. This will do only
-    /// as much work towards `goal` as it has to (and that works is
-    /// cached for future attempts).
-    pub fn solve(
-        &mut self,
-        context: &impl ContextOps<I, C>,
-        goal: &UCanonical<InEnvironment<Goal<I>>>,
-        should_continue: impl Fn() -> bool,
-    ) -> Option<C::Solution> {
-        context.make_solution(&goal, self.iter_answers(context, goal), should_continue)
-    }
-
-    /// Solves a given goal, producing the solution. This will do only
-    /// as much work towards `goal` as it has to (and that works is
-    /// cached for future attempts). Calls provided function `f` to
-    /// iterate over multiple solutions until the function return `false`.
-    pub fn solve_multiple(
-        &mut self,
-        context: &impl ContextOps<I, C>,
-        goal: &UCanonical<InEnvironment<Goal<I>>>,
-        mut f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
-    ) -> bool {
-        let mut answers = self.iter_answers(context, goal);
-        loop {
-            let subst = match answers.next_answer(|| true) {
-                AnswerResult::Answer(answer) => {
-                    if !answer.ambiguous {
-                        SubstitutionResult::Definite(answer.subst)
-                    } else {
-                        if context.is_trivial_constrained_substitution(&answer.subst) {
-                            SubstitutionResult::Floundered
-                        } else {
-                            SubstitutionResult::Ambiguous(answer.subst)
-                        }
-                    }
-                }
-                AnswerResult::Floundered => SubstitutionResult::Floundered,
-                AnswerResult::NoMoreSolutions => {
-                    return true;
-                }
-                AnswerResult::QuantumExceeded => continue,
-            };
-
-            if !f(subst, !answers.peek_answer(|| true).is_no_more_solutions()) {
-                return false;
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum SubstitutionResult<S> {
-    Definite(S),
-    Ambiguous(S),
-    Floundered,
-}
-
-impl<S> SubstitutionResult<S> {
-    pub fn as_ref(&self) -> SubstitutionResult<&S> {
-        match self {
-            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(subst),
-            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(subst),
-            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
-        }
-    }
-    pub fn map<U, F: FnOnce(S) -> U>(self, f: F) -> SubstitutionResult<U> {
-        match self {
-            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(f(subst)),
-            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(f(subst)),
-            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
-        }
-    }
-}
-
-impl<S: Display> Display for SubstitutionResult<S> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
-            SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),
-            SubstitutionResult::Floundered => write!(fmt, "Floundered"),
         }
     }
 }

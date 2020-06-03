@@ -4,7 +4,6 @@ use crate::infer::ucanonicalize::UCanonicalized;
 use crate::infer::unify::UnificationResult;
 use crate::infer::InferenceTable;
 use crate::solve::truncate;
-use crate::solve::Solution;
 use crate::RustIrDatabase;
 use chalk_derive::HasInterner;
 use chalk_engine::context;
@@ -14,11 +13,45 @@ use chalk_ir::cast::Caster;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-mod aggregate;
+pub(crate) mod aggregate;
 mod resolvent;
+
+#[derive(Debug)]
+pub enum SubstitutionResult<S> {
+    Definite(S),
+    Ambiguous(S),
+    Floundered,
+}
+
+impl<S> SubstitutionResult<S> {
+    pub fn as_ref(&self) -> SubstitutionResult<&S> {
+        match self {
+            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(subst),
+            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(subst),
+            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
+        }
+    }
+    pub fn map<U, F: FnOnce(S) -> U>(self, f: F) -> SubstitutionResult<U> {
+        match self {
+            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(f(subst)),
+            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(f(subst)),
+            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
+        }
+    }
+}
+
+impl<S: Display> Display for SubstitutionResult<S> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
+            SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),
+            SubstitutionResult::Floundered => write!(fmt, "Floundered"),
+        }
+    }
+}
 
 #[derive(Clone, Debug, HasInterner)]
 pub(crate) struct SlgContext<I: Interner> {
@@ -53,7 +86,6 @@ pub struct TruncatingInferenceTable<I: Interner> {
 }
 
 impl<I: Interner> context::Context<I> for SlgContext<I> {
-    type Solution = Solution<I>;
     type InferenceTable = TruncatingInferenceTable<I>;
 
     // Used by: logic

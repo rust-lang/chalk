@@ -140,7 +140,12 @@ pub trait RecursiveSolver<I: Interner> {
 /// of type inference in general. But when solving trait constraints, *fresh*
 /// `Fulfill` instances will be created to solve canonicalized, free-standing
 /// goals, and transport what was learned back to the outer context.
-pub(crate) struct Fulfill<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable<I>> {
+pub(crate) struct Fulfill<
+    's,
+    I: Interner,
+    Solver: RecursiveSolver<I>,
+    Infer: RecursiveInferenceTable<I>,
+> {
     solver: &'s mut Solver,
     subst: Substitution<I>,
     infer: Infer,
@@ -158,7 +163,9 @@ pub(crate) struct Fulfill<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: Re
     cannot_prove: bool,
 }
 
-impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable<I>> Fulfill<'s, I, Solver, Infer> {
+impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable<I>>
+    Fulfill<'s, I, Solver, Infer>
+{
     pub(crate) fn new_with_clause(
         solver: &'s mut Solver,
         infer: Infer,
@@ -261,9 +268,9 @@ impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable
     where
         T: ?Sized + Zip<I> + Debug,
     {
-        let (goals, constraints) =
-            self.infer
-                .unify(self.solver.interner(), environment, a, b)?;
+        let (goals, constraints) = self
+            .infer
+            .unify(self.solver.interner(), environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         debug!("unify: constraints={:?}", constraints);

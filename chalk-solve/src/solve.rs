@@ -4,9 +4,12 @@ use chalk_ir::*;
 use std::fmt;
 
 #[cfg(feature = "slg-solver")]
+pub use crate::solve::slg::SubstitutionResult;
+#[cfg(feature = "slg-solver")]
 use {
-    crate::solve::slg::{SlgContext, SlgContextOps},
-    chalk_engine::forest::{Forest, SubstitutionResult},
+    crate::solve::slg::{aggregate::AggregateOps, SlgContext, SlgContextOps},
+    chalk_engine::context::{AnswerResult, AnswerStream, ContextOps},
+    chalk_engine::forest::Forest,
 };
 
 #[cfg(feature = "recursive-solver")]
@@ -316,7 +319,7 @@ impl<I: Interner> Solver<I> {
                 expected_answers,
             } => {
                 let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                forest.solve(&ops, goal, || true)
+                ops.make_solution(goal, forest.iter_answers(&ops, goal), || true)
             }
             #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(ctx) => ctx.solver(program).solve_root_goal(goal).ok(),
@@ -359,7 +362,7 @@ impl<I: Interner> Solver<I> {
                 expected_answers,
             } => {
                 let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                forest.solve(&ops, goal, should_continue)
+                ops.make_solution(goal, forest.iter_answers(&ops, goal), should_continue)
             }
             #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(ctx) => {
@@ -396,7 +399,7 @@ impl<I: Interner> Solver<I> {
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+        mut f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
         match &mut self.0 {
             SolverImpl::Slg {
@@ -405,7 +408,31 @@ impl<I: Interner> Solver<I> {
                 expected_answers,
             } => {
                 let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                forest.solve_multiple(&ops, goal, f)
+                let mut answers = forest.iter_answers(&ops, goal);
+                loop {
+                    let subst = match answers.next_answer(|| true) {
+                        AnswerResult::Answer(answer) => {
+                            if !answer.ambiguous {
+                                SubstitutionResult::Definite(answer.subst)
+                            } else {
+                                if ops.is_trivial_constrained_substitution(&answer.subst) {
+                                    SubstitutionResult::Floundered
+                                } else {
+                                    SubstitutionResult::Ambiguous(answer.subst)
+                                }
+                            }
+                        }
+                        AnswerResult::Floundered => SubstitutionResult::Floundered,
+                        AnswerResult::NoMoreSolutions => {
+                            return true;
+                        }
+                        AnswerResult::QuantumExceeded => continue,
+                    };
+
+                    if !f(subst, !answers.peek_answer(|| true).is_no_more_solutions()) {
+                        return false;
+                    }
+                }
             }
             #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(_ctx) => unimplemented!(),
