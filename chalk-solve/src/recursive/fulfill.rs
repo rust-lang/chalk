@@ -1,5 +1,4 @@
-use crate::infer::{InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt};
-use crate::recursive::{Minimums, RecursiveInferenceTableImpl, Solver};
+use crate::recursive::{Minimums, Solver};
 use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
@@ -9,8 +8,8 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading};
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible,
-    Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
+    GenericArg, Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution,
+    ProgramClauseImplication, QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -46,7 +45,7 @@ enum Obligation<I: Interner> {
 /// so that we can update inference state accordingly.
 #[derive(Clone, Debug)]
 struct PositiveSolution<I: Interner> {
-    free_vars: Vec<ParameterEnaVariable<I>>,
+    free_vars: Vec<GenericArg<I>>,
     universes: UniverseMap,
     solution: Solution<I>,
 }
@@ -79,7 +78,7 @@ pub(crate) trait RecursiveInferenceTable<I: Interner> {
         &mut self,
         interner: &I,
         value: &T,
-    ) -> (Canonical<T::Result>, Vec<ParameterEnaVariable<I>>)
+    ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
     where
         T: Fold<I>,
         T::Result: HasInterner<Interner = I>;
@@ -149,18 +148,15 @@ pub(crate) struct Fulfill<'s, 'db, I: Interner, Infer: RecursiveInferenceTable<I
     cannot_prove: bool,
 }
 
-impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I, RecursiveInferenceTableImpl<I>> {
-    fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
+impl<'s, 'db, I: Interner, Infer: RecursiveInferenceTable<I>> Fulfill<'s, 'db, I, Infer> {
+    pub(crate) fn new_with_clause(
         solver: &'s mut Solver<'db, I>,
-        ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (Self, InEnvironment<T::Result>) {
-        let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
-            solver.program.interner(),
-            ucanonical_goal.universes,
-            &ucanonical_goal.canonical,
-        );
-        let infer = crate::recursive::RecursiveInferenceTableImpl { infer };
-        let fulfill = Fulfill {
+        infer: Infer,
+        subst: Substitution<I>,
+        canonical_goal: InEnvironment<DomainGoal<I>>,
+        clause: &Binders<ProgramClauseImplication<I>>,
+    ) -> Fallible<Self> {
+        let mut fulfill = Fulfill {
             solver,
             infer,
             subst,
@@ -168,16 +164,6 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I, RecursiveInferenceTableImpl<I>> {
             constraints: FxHashSet::default(),
             cannot_prove: false,
         };
-
-        (fulfill, canonical_goal)
-    }
-
-    pub(crate) fn new_with_clause(
-        solver: &'s mut Solver<'db, I>,
-        ucanonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-        clause: &Binders<ProgramClauseImplication<I>>,
-    ) -> Fallible<Self> {
-        let (mut fulfill, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
 
         let ProgramClauseImplication {
             consequence,
@@ -209,9 +195,18 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I, RecursiveInferenceTableImpl<I>> {
 
     pub(crate) fn new_with_simplification(
         solver: &'s mut Solver<'db, I>,
-        ucanonical_goal: &UCanonical<InEnvironment<Goal<I>>>,
+        infer: Infer,
+        subst: Substitution<I>,
+        canonical_goal: InEnvironment<Goal<I>>,
     ) -> Fallible<Self> {
-        let (mut fulfill, canonical_goal) = Fulfill::new(solver, ucanonical_goal);
+        let mut fulfill = Fulfill {
+            solver,
+            infer,
+            subst,
+            obligations: vec![],
+            constraints: FxHashSet::default(),
+            cannot_prove: false,
+        };
 
         if let Err(e) = fulfill.push_goal(&canonical_goal.environment, canonical_goal.goal.clone())
         {
@@ -383,7 +378,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I, RecursiveInferenceTableImpl<I>> {
     /// be mapped into our variables with `free_vars`.
     fn apply_solution(
         &mut self,
-        free_vars: Vec<ParameterEnaVariable<I>>,
+        free_vars: Vec<GenericArg<I>>,
         universes: UniverseMap,
         subst: Canonical<ConstrainedSubst<I>>,
     ) {
@@ -406,8 +401,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I, RecursiveInferenceTableImpl<I>> {
 
         for (i, free_var) in free_vars.into_iter().enumerate() {
             let subst_value = subst.at(self.interner(), i);
-            let free_value = free_var.to_generic_arg(self.interner());
-            self.unify(empty_env, &free_value, subst_value)
+            self.unify(empty_env, &free_var, subst_value)
                 .unwrap_or_else(|err| {
                     panic!(
                         "apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",

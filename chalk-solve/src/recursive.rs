@@ -6,7 +6,7 @@ use self::fulfill::{Fulfill, RecursiveInferenceTable};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
-use crate::infer::{InferenceTable, ParameterEnaVariable};
+use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::solve::truncate;
 use crate::{Guidance, RustIrDatabase, Solution};
 use chalk_ir::fold::Fold;
@@ -17,7 +17,8 @@ use chalk_ir::{debug, debug_heading, info, info_heading};
 use chalk_ir::{
     Binders, Canonical, ClausePriority, ConstrainedSubst, Constraint, DomainGoal, Environment,
     Fallible, Floundered, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause,
-    ProgramClauseData, ProgramClauseImplication, UCanonical, UniverseMap, VariableKinds,
+    ProgramClauseData, ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
+    VariableKinds,
 };
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
@@ -63,13 +64,18 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
         &mut self,
         interner: &I,
         value: &T,
-    ) -> (Canonical<T::Result>, Vec<ParameterEnaVariable<I>>)
+    ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
     where
         T: Fold<I>,
         T::Result: HasInterner<Interner = I>,
     {
         let res = self.infer.canonicalize(interner, value);
-        (res.quantified, res.free_vars)
+        let free_vars = res
+            .free_vars
+            .into_iter()
+            .map(|free_var| free_var.to_generic_arg(interner))
+            .collect();
+        (res.quantified, free_vars)
     }
 
     fn u_canonicalize<T>(
@@ -184,6 +190,25 @@ impl<I: Interner> RecursiveContext<I> {
 }
 
 impl<'me, I: Interner> Solver<'me, I> {
+    pub(crate) fn new_inference_table<
+        T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone,
+    >(
+        &self,
+        ucanonical_goal: &UCanonical<InEnvironment<T>>,
+    ) -> (
+        RecursiveInferenceTableImpl<I>,
+        Substitution<I>,
+        InEnvironment<T::Result>,
+    ) {
+        let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
+            self.program.interner(),
+            ucanonical_goal.universes,
+            &ucanonical_goal.canonical,
+        );
+        let infer = crate::recursive::RecursiveInferenceTableImpl { infer };
+        (infer, subst, canonical_goal)
+    }
+
     /// Solves a canonical goal. The substitution returned in the
     /// solution will be for the fully decomposed goal. For example, given the
     /// program
@@ -440,7 +465,8 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        match Fulfill::new_with_simplification(self, canonical_goal) {
+        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
+        match Fulfill::new_with_simplification(self, infer, subst, goal) {
             Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
             Err(e) => (Err(e), ClausePriority::High),
         }
@@ -515,7 +541,8 @@ impl<'me, I: Interner> Solver<'me, I> {
             clause
         );
 
-        match Fulfill::new_with_clause(self, canonical_goal, clause) {
+        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
+        match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
             Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
             Err(e) => (Err(e), ClausePriority::High),
         }
