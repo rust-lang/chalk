@@ -121,10 +121,10 @@ pub struct FnDefDatum<I: Interner> {
     pub binders: Binders<FnDefDatumBound<I>>,
 }
 
+/// Represents the inputs and outputs on a `FnDefDatum`. This is split
+/// from the where clauses, since these can contain bound lifetimes.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
-/// Represents the bounds on a `FnDefDatum`, including
-/// the function definition's type signature and where clauses.
-pub struct FnDefDatumBound<I: Interner> {
+pub struct FnDefInputsAndOutputDatum<I: Interner> {
     /// Types of the function's arguments
     /// ```ignore
     /// fn foo<T>(bar: i32, baz: T);
@@ -138,6 +138,15 @@ pub struct FnDefDatumBound<I: Interner> {
     ///                ^^^
     /// ```
     pub return_type: Ty<I>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+/// Represents the bounds on a `FnDefDatum`, including
+/// the function definition's type signature and where clauses.
+pub struct FnDefDatumBound<I: Interner> {
+    /// Inputs and outputs defined on a function
+    pub inputs_and_output: Binders<FnDefInputsAndOutputDatum<I>>,
+
     /// Where clauses defined on the function
     /// ```ignore
     /// fn foo<T>() where T: Eq;
