@@ -1,12 +1,10 @@
-use crate::infer::{
-    canonicalize::Canonicalized, ucanonicalize::UCanonicalized, unify::UnificationResult,
-    InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt,
-};
-use crate::recursive::{Minimums, Solver};
-use crate::solve::{truncate, Guidance, Solution};
+use crate::infer::{InferenceTable, ParameterEnaVariable, ParameterEnaVariableExt};
+use crate::recursive::{Minimums, RecursiveInferenceTableImpl, Solver};
+use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading};
 use chalk_ir::{
@@ -60,6 +58,69 @@ enum NegativeSolution {
     Ambiguous,
 }
 
+pub(crate) trait RecursiveInferenceTable<I: Interner> {
+    fn instantiate_binders_universally<'a, T>(
+        &mut self,
+        interner: &'a I,
+        arg: &'a Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold<I> + HasInterner<Interner = I>;
+
+    fn instantiate_binders_existentially<'a, T>(
+        &mut self,
+        interner: &'a I,
+        arg: &'a Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold<I> + HasInterner<Interner = I>;
+
+    fn canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value: &T,
+    ) -> (Canonical<T::Result>, Vec<ParameterEnaVariable<I>>)
+    where
+        T: Fold<I>,
+        T::Result: HasInterner<Interner = I>;
+
+    fn u_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value0: &Canonical<T>,
+    ) -> (UCanonical<T::Result>, UniverseMap)
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T::Result: HasInterner<Interner = I>;
+
+    fn unify<T>(
+        &mut self,
+        interner: &I,
+        environment: &Environment<I>,
+        a: &T,
+        b: &T,
+    ) -> Fallible<(
+        Vec<InEnvironment<DomainGoal<I>>>,
+        Vec<InEnvironment<Constraint<I>>>,
+    )>
+    where
+        T: ?Sized + Zip<I>;
+
+    fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Debug;
+
+    fn invert_then_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value: &T,
+    ) -> Option<Canonical<T::Result>>
+    where
+        T: Fold<I, Result = T> + HasInterner<Interner = I>;
+
+    fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool;
+}
+
 /// A `Fulfill` is where we actually break down complex goals, instantiate
 /// variables, and perform inference. It's highly stateful. It's generally used
 /// in Chalk to try to solve a goal, and then package up what was learned in a
@@ -70,10 +131,10 @@ enum NegativeSolution {
 /// of type inference in general. But when solving trait constraints, *fresh*
 /// `Fulfill` instances will be created to solve canonicalized, free-standing
 /// goals, and transport what was learned back to the outer context.
-pub(crate) struct Fulfill<'s, 'db, I: Interner> {
+pub(crate) struct Fulfill<'s, 'db, I: Interner, Infer: RecursiveInferenceTable<I>> {
     solver: &'s mut Solver<'db, I>,
     subst: Substitution<I>,
-    infer: InferenceTable<I>,
+    infer: Infer,
 
     /// The remaining goals to prove or refute
     obligations: Vec<Obligation<I>>,
@@ -88,7 +149,7 @@ pub(crate) struct Fulfill<'s, 'db, I: Interner> {
     cannot_prove: bool,
 }
 
-impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
+impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I, RecursiveInferenceTableImpl<I>> {
     fn new<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
         solver: &'s mut Solver<'db, I>,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
@@ -98,6 +159,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             ucanonical_goal.universes,
             &ucanonical_goal.canonical,
         );
+        let infer = crate::recursive::RecursiveInferenceTableImpl { infer };
         let fulfill = Fulfill {
             solver,
             infer,
@@ -163,24 +225,20 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         // truncate to avoid overflows
         match &obligation {
             Obligation::Prove(goal) => {
-                if truncate::needs_truncation(
-                    self.solver.program.interner(),
-                    &mut self.infer,
-                    30,
-                    goal,
-                ) {
+                if self
+                    .infer
+                    .needs_truncation(self.solver.program.interner(), 30, goal)
+                {
                     // the goal is too big. Record that we should return Ambiguous
                     self.cannot_prove = true;
                     return;
                 }
             }
             Obligation::Refute(goal) => {
-                if truncate::needs_truncation(
-                    self.solver.program.interner(),
-                    &mut self.infer,
-                    30,
-                    goal,
-                ) {
+                if self
+                    .infer
+                    .needs_truncation(self.solver.program.interner(), 30, goal)
+                {
                     // the goal is too big. Record that we should return Ambiguous
                     self.cannot_prove = true;
                     return;
@@ -198,7 +256,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
     where
         T: ?Sized + Zip<I> + Debug,
     {
-        let UnificationResult { goals, constraints } =
+        let (goals, constraints) =
             self.infer
                 .unify(self.solver.program.interner(), environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
@@ -276,15 +334,8 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.program.interner();
-        let Canonicalized {
-            quantified,
-            free_vars,
-            ..
-        } = self.infer.canonicalize(interner, &wc);
-        let UCanonicalized {
-            quantified,
-            universes,
-        } = self.infer.u_canonicalize(interner, &quantified);
+        let (quantified, free_vars) = self.infer.canonicalize(interner, &wc);
+        let (quantified, universes) = self.infer.u_canonicalize(interner, &quantified);
         let result = self.solver.solve_goal(quantified, minimums);
         Ok(PositiveSolution {
             free_vars,
@@ -307,10 +358,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         };
 
         // Negate the result
-        let UCanonicalized {
-            quantified,
-            universes: _,
-        } = self
+        let (quantified, _) = self
             .infer
             .u_canonicalize(self.solver.program.interner(), &canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
@@ -462,7 +510,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                     constraints,
                 },
             );
-            return Ok(Solution::Unique(constrained.quantified));
+            return Ok(Solution::Unique(constrained.0));
         }
 
         // Otherwise, we have (positive or negative) obligations remaining, but
@@ -473,7 +521,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
         let interner = self.solver.program.interner();
         let canonical_subst = self.infer.canonicalize(interner, &self.subst);
 
-        if canonical_subst.quantified.value.is_identity_subst(interner) {
+        if canonical_subst.0.value.is_identity_subst(interner) {
             // In this case, we didn't learn *anything* definitively. So now, we
             // go one last time through the positive obligations, this time
             // applying even *tentative* inference suggestions, so that we can
@@ -490,9 +538,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
                     } = self.prove(&goal, minimums).unwrap();
                     if let Some(constrained_subst) = solution.constrained_subst() {
                         self.apply_solution(free_vars, universes, constrained_subst);
-                        return Ok(Solution::Ambig(Guidance::Suggested(
-                            canonical_subst.quantified,
-                        )));
+                        return Ok(Solution::Ambig(Guidance::Suggested(canonical_subst.0)));
                     }
                 }
             }
@@ -519,9 +565,7 @@ impl<'s, 'db, I: Interner> Fulfill<'s, 'db, I> {
             // for sure what `T` must be (it could be either `Foo<Bar>` or
             // `Foo<Baz>`, but we *can* say for sure that it must be of the
             // form `Foo<?0>`.
-            Ok(Solution::Ambig(Guidance::Definite(
-                canonical_subst.quantified,
-            )))
+            Ok(Solution::Ambig(Guidance::Definite(canonical_subst.0)))
         }
     }
 

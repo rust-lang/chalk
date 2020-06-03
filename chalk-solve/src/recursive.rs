@@ -2,19 +2,25 @@ mod fulfill;
 mod search_graph;
 mod stack;
 
-use self::fulfill::Fulfill;
+use self::fulfill::{Fulfill, RecursiveInferenceTable};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
+use crate::infer::{InferenceTable, ParameterEnaVariable};
+use crate::solve::truncate;
 use crate::{Guidance, RustIrDatabase, Solution};
-use chalk_ir::interner::Interner;
+use chalk_ir::fold::Fold;
+use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::visit::Visit;
+use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading, info, info_heading};
 use chalk_ir::{
-    Binders, Canonical, ClausePriority, ConstrainedSubst, DomainGoal, Environment, Fallible,
-    Floundered, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause,
-    ProgramClauseData, ProgramClauseImplication, UCanonical, VariableKinds,
+    Binders, Canonical, ClausePriority, ConstrainedSubst, Constraint, DomainGoal, Environment,
+    Fallible, Floundered, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause,
+    ProgramClauseData, ProgramClauseImplication, UCanonical, UniverseMap, VariableKinds,
 };
 use rustc_hash::FxHashMap;
+use std::fmt::Debug;
 
 type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
@@ -26,14 +32,97 @@ pub(crate) struct RecursiveContext<I: Interner> {
     caching_enabled: bool,
 }
 
-trait Context<I: Interner> {
-    fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I>;
+pub(crate) struct RecursiveInferenceTableImpl<I: Interner> {
+    pub(crate) infer: InferenceTable<I>,
+}
 
-    fn instantiate_binders_existentially(
+impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> {
+    fn instantiate_binders_universally<'a, T>(
+        &mut self,
+        interner: &'a I,
+        arg: &'a Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold<I> + HasInterner<Interner = I>,
+    {
+        self.infer.instantiate_binders_universally(interner, arg)
+    }
+
+    fn instantiate_binders_existentially<'a, T>(
+        &mut self,
+        interner: &'a I,
+        arg: &'a Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold<I> + HasInterner<Interner = I>,
+    {
+        self.infer.instantiate_binders_existentially(interner, arg)
+    }
+
+    fn canonicalize<T>(
         &mut self,
         interner: &I,
-        arg: &Binders<Goal<I>>,
-    ) -> Goal<I>;
+        value: &T,
+    ) -> (Canonical<T::Result>, Vec<ParameterEnaVariable<I>>)
+    where
+        T: Fold<I>,
+        T::Result: HasInterner<Interner = I>,
+    {
+        let res = self.infer.canonicalize(interner, value);
+        (res.quantified, res.free_vars)
+    }
+
+    fn u_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value0: &Canonical<T>,
+    ) -> (UCanonical<T::Result>, UniverseMap)
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T::Result: HasInterner<Interner = I>,
+    {
+        let res = self.infer.u_canonicalize(interner, value0);
+        (res.quantified, res.universes)
+    }
+
+    fn unify<T>(
+        &mut self,
+        interner: &I,
+        environment: &Environment<I>,
+        a: &T,
+        b: &T,
+    ) -> Fallible<(
+        Vec<InEnvironment<DomainGoal<I>>>,
+        Vec<InEnvironment<Constraint<I>>>,
+    )>
+    where
+        T: ?Sized + Zip<I>,
+    {
+        let res = self.infer.unify(interner, environment, a, b)?;
+        Ok((res.goals, res.constraints))
+    }
+
+    fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Debug,
+    {
+        self.infer.instantiate_canonical(interner, bound)
+    }
+
+    fn invert_then_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value: &T,
+    ) -> Option<Canonical<T::Result>>
+    where
+        T: Fold<I, Result = T> + HasInterner<Interner = I>,
+    {
+        self.infer.invert_then_canonicalize(interner, value)
+    }
+
+    fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool {
+        truncate::needs_truncation(interner, &mut self.infer, max_size, value)
+    }
 }
 
 /// A Solver is the basic context in which you can propose goals for a given
@@ -351,11 +440,10 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let fulfill = match Fulfill::new_with_simplification(self, canonical_goal) {
-            Ok(r) => r,
-            Err(e) => return (Err(e), ClausePriority::High),
-        };
-        (fulfill.solve(minimums), ClausePriority::High)
+        match Fulfill::new_with_simplification(self, canonical_goal) {
+            Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
+            Err(e) => (Err(e), ClausePriority::High),
+        }
     }
 
     /// See whether we can solve a goal by implication on any of the given
@@ -426,12 +514,11 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
-        let fulfill = match Fulfill::new_with_clause(self, canonical_goal, clause) {
-            Ok(r) => r,
-            Err(e) => return (Err(e), ClausePriority::High),
-        };
 
-        (fulfill.solve(minimums), clause.skip_binders().priority)
+        match Fulfill::new_with_clause(self, canonical_goal, clause) {
+            Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
+            Err(e) => (Err(e), ClausePriority::High),
+        }
     }
 
     fn program_clauses_for_goal(
