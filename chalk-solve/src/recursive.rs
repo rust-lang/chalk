@@ -2,7 +2,7 @@ mod fulfill;
 mod search_graph;
 mod stack;
 
-use self::fulfill::{Fulfill, RecursiveInferenceTable};
+use self::fulfill::{Fulfill, RecursiveInferenceTable, RecursiveSolver};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
@@ -144,7 +144,7 @@ pub(crate) struct Solver<'me, I: Interner> {
 /// The `minimums` struct is used while solving to track whether we encountered
 /// any cycles in the process.
 #[derive(Copy, Clone, Debug)]
-struct Minimums {
+pub struct Minimums {
     positive: DepthFirstNumber,
 }
 
@@ -232,94 +232,6 @@ impl<'me, I: Interner> Solver<'me, I> {
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
         self.solve_goal(canonical_goal.clone(), minimums)
-    }
-
-    /// Attempt to solve a goal that has been fully broken down into leaf form
-    /// and canonicalized. This is where the action really happens, and is the
-    /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_goal(
-        &mut self,
-        goal: UCanonicalGoal<I>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
-        info_heading!("solve_goal({:?})", goal);
-
-        // First check the cache.
-        if let Some(value) = self.context.cache.get(&goal) {
-            debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return value.clone();
-        }
-
-        // Next, check if the goal is in the search tree already.
-        if let Some(dfn) = self.context.search_graph.lookup(&goal) {
-            // Check if this table is still on the stack.
-            if let Some(depth) = self.context.search_graph[dfn].stack_depth {
-                // Is this a coinductive goal? If so, that is success,
-                // so we can return normally. Note that this return is
-                // not tabled.
-                //
-                // XXX how does caching with coinduction work?
-                if self.context.stack.coinductive_cycle_from(depth) {
-                    let value = ConstrainedSubst {
-                        subst: goal.trivial_substitution(self.program.interner()),
-                        constraints: vec![],
-                    };
-                    debug!("applying coinductive semantics");
-                    return Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
-                }
-
-                self.context.stack[depth].flag_cycle();
-            }
-
-            minimums.update_from(self.context.search_graph[dfn].links);
-
-            // Return the solution from the table.
-            let previous_solution = self.context.search_graph[dfn].solution.clone();
-            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
-            info!(
-                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
-                previous_solution, previous_solution_priority
-            );
-            previous_solution
-        } else {
-            // Otherwise, push the goal onto the stack and create a table.
-            // The initial result for this table is error.
-            let depth = self.context.stack.push(self.program, &goal);
-            let dfn = self.context.search_graph.insert(&goal, depth);
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
-            self.context.search_graph[dfn].links = subgoal_minimums;
-            self.context.search_graph[dfn].stack_depth = None;
-            self.context.stack.pop(depth);
-            minimums.update_from(subgoal_minimums);
-
-            // Read final result from table.
-            let result = self.context.search_graph[dfn].solution.clone();
-            let priority = self.context.search_graph[dfn].solution_priority;
-
-            // If processing this subgoal did not involve anything
-            // outside of its subtree, then we can promote it to the
-            // cache now. This is a sort of hack to alleviate the
-            // worst of the repeated work that we do during tabling.
-            if subgoal_minimums.positive >= dfn {
-                if self.context.caching_enabled {
-                    self.context
-                        .search_graph
-                        .move_to_cache(dfn, &mut self.context.cache);
-                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
-                } else {
-                    debug!(
-                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
-                    );
-                    self.context.search_graph.rollback_to(dfn);
-                }
-            }
-
-            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
-            result
-        }
     }
 
     fn solve_new_subgoal(
@@ -554,6 +466,100 @@ impl<'me, I: Interner> Solver<'me, I> {
         goal: &DomainGoal<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
         program_clauses_for_goal(self.program, environment, goal)
+    }
+}
+
+impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
+    /// Attempt to solve a goal that has been fully broken down into leaf form
+    /// and canonicalized. This is where the action really happens, and is the
+    /// place where we would perform caching in rustc (and may eventually do in Chalk).
+    fn solve_goal(
+        &mut self,
+        goal: UCanonicalGoal<I>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution<I>> {
+        info_heading!("solve_goal({:?})", goal);
+
+        // First check the cache.
+        if let Some(value) = self.context.cache.get(&goal) {
+            debug!("solve_reduced_goal: cache hit, value={:?}", value);
+            return value.clone();
+        }
+
+        // Next, check if the goal is in the search tree already.
+        if let Some(dfn) = self.context.search_graph.lookup(&goal) {
+            // Check if this table is still on the stack.
+            if let Some(depth) = self.context.search_graph[dfn].stack_depth {
+                // Is this a coinductive goal? If so, that is success,
+                // so we can return normally. Note that this return is
+                // not tabled.
+                //
+                // XXX how does caching with coinduction work?
+                if self.context.stack.coinductive_cycle_from(depth) {
+                    let value = ConstrainedSubst {
+                        subst: goal.trivial_substitution(self.program.interner()),
+                        constraints: vec![],
+                    };
+                    debug!("applying coinductive semantics");
+                    return Ok(Solution::Unique(Canonical {
+                        value,
+                        binders: goal.canonical.binders,
+                    }));
+                }
+
+                self.context.stack[depth].flag_cycle();
+            }
+
+            minimums.update_from(self.context.search_graph[dfn].links);
+
+            // Return the solution from the table.
+            let previous_solution = self.context.search_graph[dfn].solution.clone();
+            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
+            info!(
+                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
+                previous_solution, previous_solution_priority
+            );
+            previous_solution
+        } else {
+            // Otherwise, push the goal onto the stack and create a table.
+            // The initial result for this table is error.
+            let depth = self.context.stack.push(self.program, &goal);
+            let dfn = self.context.search_graph.insert(&goal, depth);
+            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
+            self.context.search_graph[dfn].links = subgoal_minimums;
+            self.context.search_graph[dfn].stack_depth = None;
+            self.context.stack.pop(depth);
+            minimums.update_from(subgoal_minimums);
+
+            // Read final result from table.
+            let result = self.context.search_graph[dfn].solution.clone();
+            let priority = self.context.search_graph[dfn].solution_priority;
+
+            // If processing this subgoal did not involve anything
+            // outside of its subtree, then we can promote it to the
+            // cache now. This is a sort of hack to alleviate the
+            // worst of the repeated work that we do during tabling.
+            if subgoal_minimums.positive >= dfn {
+                if self.context.caching_enabled {
+                    self.context
+                        .search_graph
+                        .move_to_cache(dfn, &mut self.context.cache);
+                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
+                } else {
+                    debug!(
+                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
+                    );
+                    self.context.search_graph.rollback_to(dfn);
+                }
+            }
+
+            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            result
+        }
+    }
+
+    fn interner(&self) -> &I {
+        &self.program.interner()
     }
 }
 
