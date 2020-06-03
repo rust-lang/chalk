@@ -4,8 +4,7 @@ use std::ops::IndexMut;
 use std::usize;
 
 use super::stack::StackDepth;
-use super::{Minimums, UCanonicalGoal};
-use crate::Solution;
+use super::{Minimums, UCanonicalGoal, Solution};
 use chalk_ir::debug;
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
@@ -16,7 +15,7 @@ pub(super) struct SearchGraph<I: Interner> {
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub(super) struct DepthFirstNumber {
+pub struct DepthFirstNumber {
     index: usize,
 }
 

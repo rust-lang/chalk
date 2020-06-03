@@ -1,5 +1,5 @@
+use super::lib::{Guidance, Solution};
 use crate::recursive::Minimums;
-use crate::solve::{Guidance, Solution};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};

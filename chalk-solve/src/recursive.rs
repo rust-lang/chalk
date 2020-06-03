@@ -1,14 +1,16 @@
 mod fulfill;
+pub mod lib;
 mod search_graph;
 mod stack;
 
 use self::fulfill::{Fulfill, RecursiveInferenceTable, RecursiveSolver};
+use self::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::solve::truncate;
-use crate::{Guidance, RustIrDatabase, Solution};
+use crate::RustIrDatabase;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
@@ -22,8 +24,6 @@ use chalk_ir::{
 };
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
-
-type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,
@@ -139,13 +139,6 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
 pub(crate) struct Solver<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     context: &'me mut RecursiveContext<I>,
-}
-
-/// The `minimums` struct is used while solving to track whether we encountered
-/// any cycles in the process.
-#[derive(Copy, Clone, Debug)]
-pub struct Minimums {
-    positive: DepthFirstNumber,
 }
 
 /// An extension trait for merging `Result`s
@@ -633,17 +626,5 @@ fn combine_with_priorities<I: Interner>(
             }
         }
         (_, _, a, b) => (a.combine(b, interner), prio_a),
-    }
-}
-
-impl Minimums {
-    fn new() -> Self {
-        Minimums {
-            positive: DepthFirstNumber::MAX,
-        }
-    }
-
-    fn update_from(&mut self, minimums: Minimums) {
-        self.positive = ::std::cmp::min(self.positive, minimums.positive);
     }
 }
