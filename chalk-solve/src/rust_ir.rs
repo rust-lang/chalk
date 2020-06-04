@@ -145,6 +145,15 @@ pub struct FnDefInputsAndOutputDatum<I: Interner> {
 /// the function definition's type signature and where clauses.
 pub struct FnDefDatumBound<I: Interner> {
     /// Inputs and outputs defined on a function
+    /// These are needed for late-bound regions in rustc. For example the
+    /// lifetime `'a` in
+    /// ```ignore
+    /// fn foo<'a, T>(&'a T);
+    ///        ^^
+    /// ```
+    /// Rustc doesn't pass in late-bound the regions in substs, but the inputs
+    /// and outputs may use them. `where_clauses` don't need an extra set of
+    /// `Binders`, since any lifetimes found in where clauses are not late-bound.
     pub inputs_and_output: Binders<FnDefInputsAndOutputDatum<I>>,
 
     /// Where clauses defined on the function
