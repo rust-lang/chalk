@@ -38,7 +38,7 @@ first branch would be in canonical form, the second branch not since the
 occurring DeBruijn index `1` could be replaced with `0`.
 
 ## Clause
-In the A clause is the disjunction of several expressions. For example the clause
+A clause is the disjunction of several expressions. For example the clause
 `condition_1 || condition_2 || ...` states that at least one of the conditions
 holds.
 
