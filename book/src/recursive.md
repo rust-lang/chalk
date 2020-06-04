@@ -35,7 +35,7 @@ impl A for i32 { }
 which results in program clauses like:
 
 ```notrust
-forall<T> { Implemented(Vec<T>: A) :- Implemented(T: MyTrait) }
+forall<T> { Implemented(Vec<T>: A) :- Implemented(T: A) }
 Implemented(u32: A)
 Implemented(i32: A)
 ```
