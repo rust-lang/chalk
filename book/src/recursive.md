@@ -10,11 +10,11 @@ fn(Goal) -> Solution
 where the Goal is some [canonical goal](./canonical_queries.md) and
 the Solution is a result like:
 
-* Provable(S): meaning the goal is provable and it is provably exactly (and only
-  for the substitution S. S is a set of values for the inference variables that
-  appear in the goal. So if we had a goal like `Vec<?X>: Foo`, and we returned
-  `Provable(?X = u32)`, it would mean that only `Vec<u32>: Foo` and not any
-  other sort of vector (e.g., `Vec<u64>: Foo` does not hold).
+* Provable(S): meaning the goal is provable and it is provably exactly (and
+  only) for the substitution S. S is a set of values for the inference variables
+  that appear in the goal. So if we had a goal like `Vec<?X>: Foo`, and we
+  returned `Provable(?X = u32)`, it would mean that only `Vec<u32>: Foo` and not
+  any other sort of vector (e.g., `Vec<u64>: Foo` does not hold).
 * Ambiguous(S): meaning that we can't prove whether or not the goal is true.
   This can sometimes come with a substitution S, which offers suggested values
   for the inference variables that might make it provable.
@@ -40,20 +40,20 @@ Implemented(u32: A)
 Implemented(i32: A)
 ```
 
-Now, suppose that we have a goal like `Implemented(Vec<f32>: A)`. This would
+First, suppose that we have a goal like `Implemented(Vec<u64>: A)`. This would
 proceed like so:
 
-* `Solve(Implemented(Vec<f32>: A))`
-    * `Solve(Implemented(f32: A))`
+* `Solve(Implemented(Vec<u64>: A))`
+    * `Solve(Implemented(u64: A))`
         * returns `Error`
     * returns `Error`
 
 In other words, the recursive solver would start by applying the first rule,
-which would cause us recursively try to solve `Implemented(f32: A)`. This would
+which would cause us recursively try to solve `Implemented(u64: A)`. This would
 yield an Error result, because there are no applicable rules, and that error
-would propagae back up, causing the entire attempt at proving things to fail.
+would propagate back up, causing the entire attempt at proving things to fail.
 
-Now consider `Implemented(Vec<u32>: A)`. This would proceed like so:
+Next, consider `Implemented(Vec<u32>: A)`. This would proceed like so:
 
 * `Solve(Implemented(Vec<u32>: A))`
     * `Solve(Implemented(u32: A))`
@@ -90,8 +90,8 @@ In the recursive solver, with a goal of `Implemented(Vec<?X>: A)`, we
 recursively try to prove `Implemented(?X: A)` and get ambiguity, and we get
 stuck there.
 
-The SLG solver in contrast starts by exploring `?X = u32` and finds
+The [SLG solver] in contrast starts by exploring `?X = u32` and finds
 that it works, and then later tries to explore `?X = i32` and finds that it
 fails (because `i32: B` is not true).
 
-[slg solver]: ./engine.md
+[SLG solver]: ./engine.md

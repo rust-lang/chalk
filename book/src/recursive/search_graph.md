@@ -12,11 +12,11 @@ actually implement this? That's where the [`SearchGraph`] comes into play.
 [`Node`]: http://rust-lang.github.io/chalk/chalk_solve/recursive/search_graph/struct.Node.html
 [`stack_depth`]: http://rust-lang.github.io/chalk/chalk_solve/recursive/search_graph/struct.Node.html#structfield.stack_depth
 
-The role of the [`SearchGraph`] is to store information each goal that we are
-currently solving. Typically, these are goals on the stack -- but other times,
-they are goals that are no longer on the stack, but whose results (because of a
-cycle) were dependent on something that is still on the stack. We'll work
-through some examples to make it all clear.
+The role of the [`SearchGraph`] is to store information about each goal that we
+are currently solving. Typically, these are goals on the stack -- but other
+times, they are goals that are no longer on the stack, but whose results
+(because of a cycle) were dependent on something that is still on the stack.
+We'll work through some examples to make it all clear.
 
 
 ## Structure of the search graph

@@ -80,11 +80,12 @@ to the same goal, S and S1. This implies two possibilities:
   and in fact we can just stop and return right now.
 
 This technique is very similar to the traditional Prolog technique of handling
-cycles, which is called **tabling**. The difference between our solution and
-table is that we are always looking for a unique solution, whereas Prolog (like
-the [SLG solver]) tries to enumerate all solutions (i.e., in prolog, solving a
-goal is not a function but an iterator that yields solutions, and hence it would
-yield up S first, and then S1, and then any further answers we might get).
+cycles, which is called **tabling**. The difference between our approach and
+tabling is that we are always looking for a unique solution, whereas Prolog
+(like the [SLG solver]) tries to enumerate all solutions (i.e., in Prolog,
+solving a goal is not a function but an iterator that yields solutions, and
+hence it would yield up S first, and then S1, and then any further answers we
+might get).
 
 [SLG solver]: ../engine.md
 

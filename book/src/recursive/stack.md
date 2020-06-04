@@ -68,7 +68,9 @@ one of the bits of information is the [`StackDepth`] of its entry on the stack
 (if any).
 
 Therefore, when we are about to start solving some (canonical) goal G, we can
-detect a cycle by checking in the searh graph to see whether G has an associated
+detect a cycle by checking in the [search graph] to see whether G has an associated
 [`StackDepth`]. If so, it must be on the stack already (and we can set the
 [`cycle`] field to true...but I get ahead of myself, read the next chapters
 to learn more about that).
+
+[search graph]: ./search_graph.md
