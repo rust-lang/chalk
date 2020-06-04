@@ -20,7 +20,14 @@ type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,
+
+    /// The "search graph" stores "in-progress results" that are still being
+    /// solved.
     search_graph: SearchGraph<I>,
+
+    /// The "cache" stores results for goals that we have completely solved.
+    /// Things are added to the cache when we have completely processed their
+    /// result.
     cache: FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
 
     caching_enabled: bool,

@@ -32,7 +32,7 @@ fn mixed_semantics() {
 }
 
 #[test]
-fn coinductive_unification() {
+fn coinductive_unification_forall() {
     test! {
         program {
             #[coinductive]
@@ -56,7 +56,10 @@ fn coinductive_unification() {
             r"No possible solution"
         }
     }
+}
 
+#[test]
+fn coinductive_unification_exists() {
     test! {
         program {
             #[coinductive]
