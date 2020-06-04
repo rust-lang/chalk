@@ -74,3 +74,4 @@ detect a cycle by checking in the [search graph] to see whether G has an associa
 to learn more about that).
 
 [search graph]: ./search_graph.md
+[`cycle`]: http://rust-lang.github.io/chalk/chalk_solve/recursive/stack/struct.StackEntry.html#structfield.cycle
