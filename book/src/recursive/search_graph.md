@@ -183,7 +183,7 @@ recursively invoking some goal G2 that is in the search graph but *not* present
 on the stack, then we update the current [`Minimums`] with the values stored in
 the search graph.
 
-[`Minimums`]: http://rust-lang.github.io/chalk/chalk_solve/recursive/struct.Minimums.html
+[`Minimums`]: http://rust-lang.github.io/chalk/chalk_solve/recursive/lib/struct.Minimums.html
 
 ## Removing nodes from the graph
 
