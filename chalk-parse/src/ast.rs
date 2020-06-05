@@ -199,6 +199,7 @@ pub enum Ty {
     },
     Dyn {
         bounds: Vec<QuantifiedInlineBound>,
+        lifetime: Lifetime,
     },
     Apply {
         name: Identifier,

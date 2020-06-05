@@ -17,7 +17,7 @@ fn functions_are_sized() {
         }
 
         goal {
-            fn(dyn Copy): Sized
+            fn([u8]): Sized
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }

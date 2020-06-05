@@ -231,8 +231,9 @@ TyWithoutId: Ty = {
         lifetime_names: vec![],
         ty: Box::new(t)
     },
-    "dyn" <b:Plus<QuantifiedInlineBound>> => Ty::Dyn {
+    "dyn" <b:Plus<QuantifiedInlineBound>> "+" <l:Lifetime> => Ty::Dyn {
         bounds: b,
+        lifetime: l,
     },
     <n:Id> "<" <a:Comma<GenericArg>> ">" => Ty::Apply { name: n, args: a },
     <p:ProjectionTy> => Ty::Projection { proj: p },
