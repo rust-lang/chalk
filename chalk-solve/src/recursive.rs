@@ -1,22 +1,29 @@
 mod fulfill;
+pub mod lib;
 mod search_graph;
 mod stack;
 
-use self::fulfill::Fulfill;
+use self::fulfill::{Fulfill, RecursiveInferenceTable, RecursiveSolver};
+use self::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
 use crate::clauses::program_clauses_for_goal;
-use crate::{Guidance, RustIrDatabase, Solution};
-use chalk_ir::interner::Interner;
+use crate::infer::{InferenceTable, ParameterEnaVariableExt};
+use crate::solve::truncate;
+use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
+use chalk_ir::fold::Fold;
+use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::visit::Visit;
+use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading, info, info_heading};
 use chalk_ir::{
-    Binders, Canonical, ClausePriority, ConstrainedSubst, DomainGoal, Environment, Fallible,
-    Floundered, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause,
-    ProgramClauseData, ProgramClauseImplication, UCanonical, VariableKinds,
+    Binders, Canonical, ClausePriority, ConstrainedSubst, Constraint, DomainGoal, Environment,
+    Fallible, Floundered, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause,
+    ProgramClauseData, ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
+    VariableKinds,
 };
 use rustc_hash::FxHashMap;
-
-type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
+use std::fmt::Debug;
 
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,
@@ -33,6 +40,104 @@ pub(crate) struct RecursiveContext<I: Interner> {
     caching_enabled: bool,
 }
 
+pub(crate) struct RecursiveInferenceTableImpl<I: Interner> {
+    pub(crate) infer: InferenceTable<I>,
+}
+
+impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> {
+    fn instantiate_binders_universally<'a, T>(
+        &mut self,
+        interner: &'a I,
+        arg: &'a Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold<I> + HasInterner<Interner = I>,
+    {
+        self.infer.instantiate_binders_universally(interner, arg)
+    }
+
+    fn instantiate_binders_existentially<'a, T>(
+        &mut self,
+        interner: &'a I,
+        arg: &'a Binders<T>,
+    ) -> T::Result
+    where
+        T: Fold<I> + HasInterner<Interner = I>,
+    {
+        self.infer.instantiate_binders_existentially(interner, arg)
+    }
+
+    fn canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value: &T,
+    ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
+    where
+        T: Fold<I>,
+        T::Result: HasInterner<Interner = I>,
+    {
+        let res = self.infer.canonicalize(interner, value);
+        let free_vars = res
+            .free_vars
+            .into_iter()
+            .map(|free_var| free_var.to_generic_arg(interner))
+            .collect();
+        (res.quantified, free_vars)
+    }
+
+    fn u_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value0: &Canonical<T>,
+    ) -> (UCanonical<T::Result>, UniverseMap)
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T::Result: HasInterner<Interner = I>,
+    {
+        let res = self.infer.u_canonicalize(interner, value0);
+        (res.quantified, res.universes)
+    }
+
+    fn unify<T>(
+        &mut self,
+        interner: &I,
+        environment: &Environment<I>,
+        a: &T,
+        b: &T,
+    ) -> Fallible<(
+        Vec<InEnvironment<DomainGoal<I>>>,
+        Vec<InEnvironment<Constraint<I>>>,
+    )>
+    where
+        T: ?Sized + Zip<I>,
+    {
+        let res = self.infer.unify(interner, environment, a, b)?;
+        Ok((res.goals, res.constraints))
+    }
+
+    fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
+    where
+        T: HasInterner<Interner = I> + Fold<I> + Debug,
+    {
+        self.infer.instantiate_canonical(interner, bound)
+    }
+
+    fn invert_then_canonicalize<T>(
+        &mut self,
+        interner: &I,
+        value: &T,
+    ) -> Option<Canonical<T::Result>>
+    where
+        T: Fold<I, Result = T> + HasInterner<Interner = I>,
+    {
+        self.infer.invert_then_canonicalize(interner, value)
+    }
+
+    fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool {
+        truncate::needs_truncation(interner, &mut self.infer, max_size, value)
+    }
+}
+
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -41,13 +146,6 @@ pub(crate) struct RecursiveContext<I: Interner> {
 pub(crate) struct Solver<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     context: &'me mut RecursiveContext<I>,
-}
-
-/// The `minimums` struct is used while solving to track whether we encountered
-/// any cycles in the process.
-#[derive(Copy, Clone, Debug)]
-struct Minimums {
-    positive: DepthFirstNumber,
 }
 
 /// An extension trait for merging `Result`s
@@ -92,6 +190,25 @@ impl<I: Interner> RecursiveContext<I> {
 }
 
 impl<'me, I: Interner> Solver<'me, I> {
+    pub(crate) fn new_inference_table<
+        T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone,
+    >(
+        &self,
+        ucanonical_goal: &UCanonical<InEnvironment<T>>,
+    ) -> (
+        RecursiveInferenceTableImpl<I>,
+        Substitution<I>,
+        InEnvironment<T::Result>,
+    ) {
+        let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
+            self.program.interner(),
+            ucanonical_goal.universes,
+            &ucanonical_goal.canonical,
+        );
+        let infer = crate::recursive::RecursiveInferenceTableImpl { infer };
+        (infer, subst, canonical_goal)
+    }
+
     /// Solves a canonical goal. The substitution returned in the
     /// solution will be for the fully decomposed goal. For example, given the
     /// program
@@ -115,94 +232,6 @@ impl<'me, I: Interner> Solver<'me, I> {
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
         self.solve_goal(canonical_goal.clone(), minimums)
-    }
-
-    /// Attempt to solve a goal that has been fully broken down into leaf form
-    /// and canonicalized. This is where the action really happens, and is the
-    /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_goal(
-        &mut self,
-        goal: UCanonicalGoal<I>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
-        info_heading!("solve_goal({:?})", goal);
-
-        // First check the cache.
-        if let Some(value) = self.context.cache.get(&goal) {
-            debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return value.clone();
-        }
-
-        // Next, check if the goal is in the search tree already.
-        if let Some(dfn) = self.context.search_graph.lookup(&goal) {
-            // Check if this table is still on the stack.
-            if let Some(depth) = self.context.search_graph[dfn].stack_depth {
-                // Is this a coinductive goal? If so, that is success,
-                // so we can return normally. Note that this return is
-                // not tabled.
-                //
-                // XXX how does caching with coinduction work?
-                if self.context.stack.coinductive_cycle_from(depth) {
-                    let value = ConstrainedSubst {
-                        subst: goal.trivial_substitution(self.program.interner()),
-                        constraints: vec![],
-                    };
-                    debug!("applying coinductive semantics");
-                    return Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
-                }
-
-                self.context.stack[depth].flag_cycle();
-            }
-
-            minimums.update_from(self.context.search_graph[dfn].links);
-
-            // Return the solution from the table.
-            let previous_solution = self.context.search_graph[dfn].solution.clone();
-            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
-            info!(
-                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
-                previous_solution, previous_solution_priority
-            );
-            previous_solution
-        } else {
-            // Otherwise, push the goal onto the stack and create a table.
-            // The initial result for this table is error.
-            let depth = self.context.stack.push(self.program, &goal);
-            let dfn = self.context.search_graph.insert(&goal, depth);
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
-            self.context.search_graph[dfn].links = subgoal_minimums;
-            self.context.search_graph[dfn].stack_depth = None;
-            self.context.stack.pop(depth);
-            minimums.update_from(subgoal_minimums);
-
-            // Read final result from table.
-            let result = self.context.search_graph[dfn].solution.clone();
-            let priority = self.context.search_graph[dfn].solution_priority;
-
-            // If processing this subgoal did not involve anything
-            // outside of its subtree, then we can promote it to the
-            // cache now. This is a sort of hack to alleviate the
-            // worst of the repeated work that we do during tabling.
-            if subgoal_minimums.positive >= dfn {
-                if self.context.caching_enabled {
-                    self.context
-                        .search_graph
-                        .move_to_cache(dfn, &mut self.context.cache);
-                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
-                } else {
-                    debug!(
-                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
-                    );
-                    self.context.search_graph.rollback_to(dfn);
-                }
-            }
-
-            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
-            result
-        }
     }
 
     fn solve_new_subgoal(
@@ -348,11 +377,11 @@ impl<'me, I: Interner> Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
-        if let Err(e) = fulfill.push_goal(&goal.environment, goal.goal) {
-            return (Err(e), ClausePriority::High);
+        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
+        match Fulfill::new_with_simplification(self, infer, subst, goal) {
+            Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
+            Err(e) => (Err(e), ClausePriority::High),
         }
-        (fulfill.solve(subst, minimums), ClausePriority::High)
     }
 
     /// See whether we can solve a goal by implication on any of the given
@@ -376,52 +405,34 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
             }
 
-            match program_clause.data(self.program.interner()) {
-                ProgramClauseData::Implies(implication) => {
-                    let res = self.solve_via_implication(
-                        canonical_goal,
-                        &Binders::new(
-                            VariableKinds::from(self.program.interner(), vec![]),
-                            implication.clone(),
-                        ),
-                        minimums,
-                    );
-                    if let (Ok(solution), priority) = res {
-                        debug!("ok: solution={:?} prio={:?}", solution, priority);
-                        cur_solution = Some(match cur_solution {
-                            None => (solution, priority),
-                            Some((cur, cur_priority)) => combine_with_priorities(
-                                self.program.interner(),
-                                &canonical_goal.canonical.value.goal,
-                                cur,
-                                cur_priority,
-                                solution,
-                                priority,
-                            ),
-                        });
-                    } else {
-                        debug!("error");
-                    }
-                }
+            let res = match program_clause.data(self.program.interner()) {
+                ProgramClauseData::Implies(implication) => self.solve_via_implication(
+                    canonical_goal,
+                    &Binders::new(
+                        VariableKinds::from(self.program.interner(), vec![]),
+                        implication.clone(),
+                    ),
+                    minimums,
+                ),
                 ProgramClauseData::ForAll(implication) => {
-                    let res = self.solve_via_implication(canonical_goal, implication, minimums);
-                    if let (Ok(solution), priority) = res {
-                        debug!("ok: solution={:?} prio={:?}", solution, priority);
-                        cur_solution = Some(match cur_solution {
-                            None => (solution, priority),
-                            Some((cur, cur_priority)) => combine_with_priorities(
-                                self.program.interner(),
-                                &canonical_goal.canonical.value.goal,
-                                cur,
-                                cur_priority,
-                                solution,
-                                priority,
-                            ),
-                        });
-                    } else {
-                        debug!("error");
-                    }
+                    self.solve_via_implication(canonical_goal, implication, minimums)
                 }
+            };
+            if let (Ok(solution), priority) = res {
+                debug!("ok: solution={:?} prio={:?}", solution, priority);
+                cur_solution = Some(match cur_solution {
+                    None => (solution, priority),
+                    Some((cur, cur_priority)) => combine_with_priorities(
+                        self.program.interner(),
+                        &canonical_goal.canonical.value.goal,
+                        cur,
+                        cur_priority,
+                        solution,
+                        priority,
+                    ),
+                });
+            } else {
+                debug!("error");
             }
         }
         cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))
@@ -441,32 +452,12 @@ impl<'me, I: Interner> Solver<'me, I> {
             canonical_goal,
             clause
         );
-        let interner = self.program.interner();
-        let (mut fulfill, subst, goal) = Fulfill::new(self, canonical_goal);
-        let ProgramClauseImplication {
-            consequence,
-            conditions,
-            priority: _,
-        } = fulfill.instantiate_binders_existentially(clause);
 
-        debug!("the subst is {:?}", subst);
-
-        if let Err(e) = fulfill.unify(&goal.environment, &goal.goal, &consequence) {
-            return (Err(e), ClausePriority::High);
+        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
+        match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
+            Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
+            Err(e) => (Err(e), ClausePriority::High),
         }
-
-        // if so, toss in all of its premises
-        for condition in conditions.as_slice(interner) {
-            if let Err(e) = fulfill.push_goal(&goal.environment, condition.clone()) {
-                return (Err(e), ClausePriority::High);
-            }
-        }
-
-        // and then try to solve
-        (
-            fulfill.solve(subst, minimums),
-            clause.skip_binders().priority,
-        )
     }
 
     fn program_clauses_for_goal(
@@ -475,6 +466,101 @@ impl<'me, I: Interner> Solver<'me, I> {
         goal: &DomainGoal<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
         program_clauses_for_goal(self.program, environment, goal)
+    }
+}
+
+impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
+    /// Attempt to solve a goal that has been fully broken down into leaf form
+    /// and canonicalized. This is where the action really happens, and is the
+    /// place where we would perform caching in rustc (and may eventually do in Chalk).
+    fn solve_goal(
+        &mut self,
+        goal: UCanonicalGoal<I>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution<I>> {
+        info_heading!("solve_goal({:?})", goal);
+
+        // First check the cache.
+        if let Some(value) = self.context.cache.get(&goal) {
+            debug!("solve_reduced_goal: cache hit, value={:?}", value);
+            return value.clone();
+        }
+
+        // Next, check if the goal is in the search tree already.
+        if let Some(dfn) = self.context.search_graph.lookup(&goal) {
+            // Check if this table is still on the stack.
+            if let Some(depth) = self.context.search_graph[dfn].stack_depth {
+                // Is this a coinductive goal? If so, that is success,
+                // so we can return normally. Note that this return is
+                // not tabled.
+                //
+                // XXX how does caching with coinduction work?
+                if self.context.stack.coinductive_cycle_from(depth) {
+                    let value = ConstrainedSubst {
+                        subst: goal.trivial_substitution(self.program.interner()),
+                        constraints: vec![],
+                    };
+                    debug!("applying coinductive semantics");
+                    return Ok(Solution::Unique(Canonical {
+                        value,
+                        binders: goal.canonical.binders,
+                    }));
+                }
+
+                self.context.stack[depth].flag_cycle();
+            }
+
+            minimums.update_from(self.context.search_graph[dfn].links);
+
+            // Return the solution from the table.
+            let previous_solution = self.context.search_graph[dfn].solution.clone();
+            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
+            info!(
+                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
+                previous_solution, previous_solution_priority
+            );
+            previous_solution
+        } else {
+            // Otherwise, push the goal onto the stack and create a table.
+            // The initial result for this table is error.
+            let coinductive_goal = goal.is_coinductive(self.program);
+            let depth = self.context.stack.push(coinductive_goal);
+            let dfn = self.context.search_graph.insert(&goal, depth);
+            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
+            self.context.search_graph[dfn].links = subgoal_minimums;
+            self.context.search_graph[dfn].stack_depth = None;
+            self.context.stack.pop(depth);
+            minimums.update_from(subgoal_minimums);
+
+            // Read final result from table.
+            let result = self.context.search_graph[dfn].solution.clone();
+            let priority = self.context.search_graph[dfn].solution_priority;
+
+            // If processing this subgoal did not involve anything
+            // outside of its subtree, then we can promote it to the
+            // cache now. This is a sort of hack to alleviate the
+            // worst of the repeated work that we do during tabling.
+            if subgoal_minimums.positive >= dfn {
+                if self.context.caching_enabled {
+                    self.context
+                        .search_graph
+                        .move_to_cache(dfn, &mut self.context.cache);
+                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
+                } else {
+                    debug!(
+                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
+                    );
+                    self.context.search_graph.rollback_to(dfn);
+                }
+            }
+
+            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            result
+        }
+    }
+
+    fn interner(&self) -> &I {
+        &self.program.interner()
     }
 }
 
@@ -548,17 +634,5 @@ fn combine_with_priorities<I: Interner>(
             }
         }
         (_, _, a, b) => (a.combine(b, interner), prio_a),
-    }
-}
-
-impl Minimums {
-    fn new() -> Self {
-        Minimums {
-            positive: DepthFirstNumber::MAX,
-        }
-    }
-
-    fn update_from(&mut self, minimums: Minimums) {
-        self.positive = ::std::cmp::min(self.positive, minimums.positive);
     }
 }

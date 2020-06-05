@@ -6,7 +6,6 @@ use crate::{
     query::{Lowering, LoweringDatabase},
     tls,
 };
-use chalk_engine::forest::SubstitutionResult;
 use chalk_ir::{
     AdtId, AssocTypeId, Canonical, ConstrainedSubst, Environment, FnDefId, GenericArg, Goal,
     ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, Ty, UCanonical,
@@ -15,7 +14,7 @@ use chalk_solve::rust_ir::{
     AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
     OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
-use chalk_solve::{RustIrDatabase, Solution, SolverChoice};
+use chalk_solve::{RustIrDatabase, Solution, SolverChoice, SubstitutionResult};
 use salsa::Database;
 use std::sync::Arc;
 
@@ -58,6 +57,10 @@ impl ChalkDatabase {
         solution
     }
 
+    /// Solves a given goal, producing the solution. This will do only
+    /// as much work towards `goal` as it has to (and that works is
+    /// cached for future attempts). Calls provided function `f` to
+    /// iterate over multiple solutions until the function return `false`.
     pub fn solve_multiple(
         &self,
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,

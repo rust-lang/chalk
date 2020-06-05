@@ -1,6 +1,5 @@
 use crate::ext::*;
 use crate::infer::InferenceTable;
-use crate::solve::slg::SlgContext;
 use crate::solve::slg::SlgContextOps;
 use crate::solve::slg::SubstitutionExt;
 use crate::solve::{Guidance, Solution};
@@ -12,9 +11,19 @@ use chalk_engine::context::{self, AnswerResult, ContextOps};
 use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
+/// Methods for combining solutions to yield an aggregate solution.
+pub trait AggregateOps<I: Interner> {
+    fn make_solution(
+        &self,
+        root_goal: &UCanonical<InEnvironment<Goal<I>>>,
+        answers: impl context::AnswerStream<I>,
+        should_continue: impl std::ops::Fn() -> bool,
+    ) -> Option<Solution<I>>;
+}
+
 /// Draws as many answers as it needs from `answers` (but
 /// no more!) in order to come up with a solution.
-impl<I: Interner> context::AggregateOps<I, SlgContext<I>> for SlgContextOps<'_, I> {
+impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
     fn make_solution(
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,

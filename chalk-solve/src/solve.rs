@@ -4,9 +4,12 @@ use chalk_ir::*;
 use std::fmt;
 
 #[cfg(feature = "slg-solver")]
+pub use crate::solve::slg::SubstitutionResult;
+#[cfg(feature = "slg-solver")]
 use {
-    crate::solve::slg::{SlgContext, SlgContextOps},
-    chalk_engine::forest::{Forest, SubstitutionResult},
+    crate::solve::slg::{aggregate::AggregateOps, SlgContext, SlgContextOps},
+    chalk_engine::context::{AnswerResult, AnswerStream, ContextOps},
+    chalk_engine::forest::Forest,
 };
 
 #[cfg(feature = "recursive-solver")]
@@ -53,100 +56,6 @@ impl<I: Interner> Solution<I> {
     pub fn is_unique(&self) -> bool {
         match *self {
             Solution::Unique(..) => true,
-            _ => false,
-        }
-    }
-
-    /// There are multiple candidate solutions, which may or may not agree on
-    /// the values for existential variables; attempt to combine them. This
-    /// operation does not depend on the order of its arguments.
-    //
-    // This actually isn't as precise as it could be, in two ways:
-    //
-    // a. It might be that while there are multiple distinct candidates, they
-    //    all agree about *some things*. To be maximally precise, we would
-    //    compute the intersection of what they agree on. It's not clear though
-    //    that this is actually what we want Rust's inference to do, and it's
-    //    certainly not what it does today.
-    //
-    // b. There might also be an ambiguous candidate and a successful candidate,
-    //    both with the same refined-goal. In that case, we could probably claim
-    //    success, since if the conditions of the ambiguous candidate were met,
-    //    we know the success would apply.  Example: `?0: Clone` yields ambiguous
-    //    candidate `Option<?0>: Clone` and successful candidate `Option<?0>:
-    //    Clone`.
-    //
-    // But you get the idea.
-    pub(crate) fn combine(self, other: Solution<I>, interner: &I) -> Solution<I> {
-        use self::Guidance::*;
-
-        if self == other {
-            return self;
-        }
-
-        debug!(
-            "combine {} with {}",
-            self.display(interner),
-            other.display(interner)
-        );
-
-        // Otherwise, always downgrade to Ambig:
-
-        let guidance = match (self.into_guidance(), other.into_guidance()) {
-            (Definite(ref subst1), Definite(ref subst2)) if subst1 == subst2 => {
-                Definite(subst1.clone())
-            }
-            (Suggested(ref subst1), Suggested(ref subst2)) if subst1 == subst2 => {
-                Suggested(subst1.clone())
-            }
-            _ => Unknown,
-        };
-        Solution::Ambig(guidance)
-    }
-
-    /// View this solution purely in terms of type inference guidance
-    pub(crate) fn into_guidance(self) -> Guidance<I> {
-        match self {
-            Solution::Unique(constrained) => Guidance::Definite(Canonical {
-                value: constrained.value.subst,
-                binders: constrained.binders,
-            }),
-            Solution::Ambig(guidance) => guidance,
-        }
-    }
-
-    /// Extract a constrained substitution from this solution, even if ambiguous.
-    pub(crate) fn constrained_subst(&self) -> Option<Canonical<ConstrainedSubst<I>>> {
-        match *self {
-            Solution::Unique(ref constrained) => Some(constrained.clone()),
-            Solution::Ambig(Guidance::Definite(ref canonical))
-            | Solution::Ambig(Guidance::Suggested(ref canonical)) => {
-                let value = ConstrainedSubst {
-                    subst: canonical.value.clone(),
-                    constraints: vec![],
-                };
-                Some(Canonical {
-                    value,
-                    binders: canonical.binders.clone(),
-                })
-            }
-            Solution::Ambig(_) => None,
-        }
-    }
-
-    /// Determine whether this solution contains type information that *must*
-    /// hold.
-    pub(crate) fn has_definite(&self) -> bool {
-        match *self {
-            Solution::Unique(_) => true,
-            Solution::Ambig(Guidance::Definite(_)) => true,
-            _ => false,
-        }
-    }
-
-    pub(crate) fn is_ambig(&self) -> bool {
-        match *self {
-            Solution::Ambig(_) => true,
             _ => false,
         }
     }
@@ -316,10 +225,32 @@ impl<I: Interner> Solver<I> {
                 expected_answers,
             } => {
                 let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                forest.solve(&ops, goal, || true)
+                ops.make_solution(goal, forest.iter_answers(&ops, goal), || true)
             }
             #[cfg(feature = "recursive-solver")]
-            SolverImpl::Recursive(ctx) => ctx.solver(program).solve_root_goal(goal).ok(),
+            SolverImpl::Recursive(ctx) => {
+                ctx.solver(program)
+                    .solve_root_goal(goal)
+                    .ok()
+                    .map(|s| match s {
+                        crate::recursive::lib::Solution::Unique(c) => {
+                            crate::solve::Solution::Unique(c)
+                        }
+                        crate::recursive::lib::Solution::Ambig(g) => {
+                            crate::solve::Solution::Ambig(match g {
+                                crate::recursive::lib::Guidance::Definite(g) => {
+                                    crate::solve::Guidance::Definite(g)
+                                }
+                                crate::recursive::lib::Guidance::Suggested(g) => {
+                                    crate::solve::Guidance::Suggested(g)
+                                }
+                                crate::recursive::lib::Guidance::Unknown => {
+                                    crate::solve::Guidance::Unknown
+                                }
+                            })
+                        }
+                    })
+            }
         }
     }
 
@@ -359,12 +290,32 @@ impl<I: Interner> Solver<I> {
                 expected_answers,
             } => {
                 let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                forest.solve(&ops, goal, should_continue)
+                ops.make_solution(goal, forest.iter_answers(&ops, goal), should_continue)
             }
             #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(ctx) => {
                 // TODO support should_continue in recursive solver
-                ctx.solver(program).solve_root_goal(goal).ok()
+                ctx.solver(program)
+                    .solve_root_goal(goal)
+                    .ok()
+                    .map(|s| match s {
+                        crate::recursive::lib::Solution::Unique(c) => {
+                            crate::solve::Solution::Unique(c)
+                        }
+                        crate::recursive::lib::Solution::Ambig(g) => {
+                            crate::solve::Solution::Ambig(match g {
+                                crate::recursive::lib::Guidance::Definite(g) => {
+                                    crate::solve::Guidance::Definite(g)
+                                }
+                                crate::recursive::lib::Guidance::Suggested(g) => {
+                                    crate::solve::Guidance::Suggested(g)
+                                }
+                                crate::recursive::lib::Guidance::Unknown => {
+                                    crate::solve::Guidance::Unknown
+                                }
+                            })
+                        }
+                    })
             }
         }
     }
@@ -396,7 +347,7 @@ impl<I: Interner> Solver<I> {
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+        mut f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
         match &mut self.0 {
             SolverImpl::Slg {
@@ -405,7 +356,31 @@ impl<I: Interner> Solver<I> {
                 expected_answers,
             } => {
                 let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                forest.solve_multiple(&ops, goal, f)
+                let mut answers = forest.iter_answers(&ops, goal);
+                loop {
+                    let subst = match answers.next_answer(|| true) {
+                        AnswerResult::Answer(answer) => {
+                            if !answer.ambiguous {
+                                SubstitutionResult::Definite(answer.subst)
+                            } else {
+                                if ops.is_trivial_constrained_substitution(&answer.subst) {
+                                    SubstitutionResult::Floundered
+                                } else {
+                                    SubstitutionResult::Ambiguous(answer.subst)
+                                }
+                            }
+                        }
+                        AnswerResult::Floundered => SubstitutionResult::Floundered,
+                        AnswerResult::NoMoreSolutions => {
+                            return true;
+                        }
+                        AnswerResult::QuantumExceeded => continue,
+                    };
+
+                    if !f(subst, !answers.peek_answer(|| true).is_no_more_solutions()) {
+                        return false;
+                    }
+                }
             }
             #[cfg(feature = "recursive-solver")]
             SolverImpl::Recursive(_ctx) => unimplemented!(),
