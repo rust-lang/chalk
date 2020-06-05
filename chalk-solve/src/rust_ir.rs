@@ -154,6 +154,8 @@ pub struct FnDefDatumBound<I: Interner> {
     /// Rustc doesn't pass in late-bound the regions in substs, but the inputs
     /// and outputs may use them. `where_clauses` don't need an extra set of
     /// `Binders`, since any lifetimes found in where clauses are not late-bound.
+    ///
+    /// For more information, see [this rustc-dev-guide chapter](https://rustc-dev-guide.rust-lang.org/early-late-bound.html).
     pub inputs_and_output: Binders<FnDefInputsAndOutputDatum<I>>,
 
     /// Where clauses defined on the function
