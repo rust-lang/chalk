@@ -40,5 +40,11 @@ pub fn assert_same(result: &str, expected: &str) {
 
     let expected1: String = expected.chars().filter(|w| !w.is_whitespace()).collect();
     let result1: String = result.chars().filter(|w| !w.is_whitespace()).collect();
-    assert!(!expected1.is_empty() && result1.starts_with(&expected1));
+    assert!(!expected1.is_empty(), "Expectation cannot be empty!");
+    if !result1.starts_with(&expected1) {
+        let prefix = &result1[..std::cmp::min(result1.len(), expected1.len())];
+        // These will never be equal, which will cause a nice error message
+        // to be displayed
+        pretty_assertions::assert_eq!(expected1, prefix);
+    }
 }

@@ -29,3 +29,6 @@ chalk-parse = { version = "0.12.0-dev.0", path = "chalk-parse" }
 chalk-integration = { version = "0.12.0-dev.0", path = "chalk-integration" }
 
 [workspace]
+
+[dev-dependencies]
+pretty_assertions = "0.6.1"
