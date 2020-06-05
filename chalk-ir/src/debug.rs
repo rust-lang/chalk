@@ -206,8 +206,8 @@ impl Debug for DebruijnIndex {
 
 impl<I: Interner> Debug for DynTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let DynTy { bounds } = self;
-        write!(fmt, "dyn {:?}", bounds)
+        let DynTy { bounds, lifetime } = self;
+        write!(fmt, "dyn {:?} + {:?}", bounds, lifetime)
     }
 }
 

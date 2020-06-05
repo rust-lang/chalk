@@ -1307,7 +1307,10 @@ impl LowerTy for Ty {
                     }
                 })
             }
-            Ty::Dyn { ref bounds } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
+            Ty::Dyn {
+                ref bounds,
+                ref lifetime,
+            } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::WithKind::new(
@@ -1330,6 +1333,7 @@ impl LowerTy for Ty {
                         ))
                     },
                 )?,
+                lifetime: lifetime.lower(env)?,
             })
             .intern(interner)),
 

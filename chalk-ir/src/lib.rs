@@ -680,32 +680,33 @@ impl DebruijnIndex {
     }
 }
 
-/// A "DynTy" could be either a `dyn Trait` or an (opaque) `impl
-/// Trait`. Both of them are conceptually very related to a
-/// "existential type" of the form `exists<T> { T: Trait }`. The
-/// `DynTy` type represents those bounds.
+/// A "DynTy" represents a trait object (`dyn Trait`). Trait objects
+/// are conceptually very related to an "existential type" of the form
+/// `exists<T> { T: Trait }` (another exaple of such type is `impl Trait`).
+/// `DynTy` represents the bounds on that type.
 ///
 /// The "binder" here represents the unknown self type. So, a type like
-/// `impl for<'a> Fn(&'a u32)` would be represented with two-levels of
+/// `dyn for<'a> Fn(&'a u32)` would be represented with two-levels of
 /// binder, as "depicted" here:
 ///
 /// ```notrust
 /// exists<type> {
 ///    vec![
 ///        // A QuantifiedWhereClause:
-///        forall<region> { ^1: Fn(&^0 u32) }
+///        forall<region> { ^1.0: Fn(&^0.0 u32) }
 ///    ]
 /// }
 /// ```
 ///
 /// The outer `exists<type>` binder indicates that there exists
 /// some type that meets the criteria within, but that type is not
-/// known. It is referenced within the type using `^1`, indicating
+/// known. It is referenced within the type using `^1.0`, indicating
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct DynTy<I: Interner> {
     pub bounds: Binders<QuantifiedWhereClauses<I>>,
+    pub lifetime: Lifetime<I>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

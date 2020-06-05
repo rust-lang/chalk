@@ -46,13 +46,13 @@ fn tuples_are_sized() {
         }
 
         goal {
-            (dyn Foo,): Sized
+            ([u8],): Sized
         } yields {
             "No possible solution"
         }
 
         goal {
-            (u8, dyn Foo): Sized
+            (u8, [u8]): Sized
         } yields {
             "No possible solution"
         }
@@ -60,7 +60,7 @@ fn tuples_are_sized() {
         // It should not be well-formed because for tuples, only
         // the last element is allowed not to be Sized.
         goal {
-            (dyn Foo, u8): Sized
+            ([u8], u8): Sized
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
@@ -126,19 +126,19 @@ fn tuples_are_copy() {
         }
 
         goal {
-            (dyn Foo,): Copy
+            ([u8],): Copy
         } yields {
             "No possible solution"
         }
 
         goal {
-            (u8, dyn Foo): Copy
+            (u8, [u8]): Copy
         } yields {
             "No possible solution"
         }
 
         goal {
-            (dyn Foo, u8): Copy
+            ([u8], u8): Copy
         } yields {
             "No possible solution"
         }
@@ -189,19 +189,19 @@ fn tuples_are_clone() {
         }
 
         goal {
-            (dyn Foo,): Clone
+            ([u8],): Clone
         } yields {
             "No possible solution"
         }
 
         goal {
-            (u8, dyn Foo): Clone
+            (u8, [u8]): Clone
         } yields {
             "No possible solution"
         }
 
         goal {
-            (dyn Foo, u8): Clone
+            ([u8], u8): Clone
         } yields {
             "No possible solution"
         }
