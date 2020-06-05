@@ -1030,10 +1030,15 @@ impl LowerFnDefn for FnDefn {
             let where_clauses = self.lower_where_clauses(env)?;
             let return_type = self.return_type.lower(env)?;
 
+            let inputs_and_output = env.in_binders(vec![], |_| {
+                Ok(rust_ir::FnDefInputsAndOutputDatum {
+                    argument_types: args?,
+                    return_type,
+                })
+            })?;
             Ok(rust_ir::FnDefDatumBound {
-                argument_types: args?,
+                inputs_and_output,
                 where_clauses,
-                return_type,
             })
         })?;
 
