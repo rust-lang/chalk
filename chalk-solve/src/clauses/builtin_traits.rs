@@ -4,6 +4,7 @@ use chalk_ir::{Substitution, Ty};
 
 mod clone;
 mod copy;
+mod fn_;
 mod sized;
 
 /// For well known traits we have special hard-coded impls, either as an
@@ -32,6 +33,9 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Sized => sized::add_sized_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
+            WellKnownTrait::FnOnceTrait => {
+                fn_::add_fn_once_program_clauses(db, builder, &trait_ref, ty)
+            }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
         }

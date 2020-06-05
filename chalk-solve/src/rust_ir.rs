@@ -216,6 +216,10 @@ pub enum WellKnownTrait {
     Copy,
     Clone,
     Drop,
+    /// The trait `FnOnce<Args>` - the generic argument `Args` is always a tuple
+    /// corresponding to the arguments of a function implementing this trait.
+    /// E.g. `fn(u8, bool): FnOnce<(u8, bool)>`
+    FnOnceTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {

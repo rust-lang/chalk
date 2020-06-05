@@ -1,6 +1,66 @@
 use super::*;
 
 #[test]
+fn function_implement_fn_once() {
+    test! {
+        program {
+            #[lang(fn_once)]
+            trait FnOnce<Args> { }
+        }
+
+        goal {
+            fn(u8): FnOnce<(u8,)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            fn(u8, u32): FnOnce<(u8,u32)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            fn(i32): FnOnce<(bool,)>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<'a> {
+                for<'b> fn(&'b u8): FnOnce<(&'a u8,)>
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<'a, 'b> {
+                for<'c> fn(&'c u8, &'c i32): FnOnce<(&'a u8, &'b i32)>
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"
+        }
+
+        goal {
+            forall<T, U> {
+                fn(T, T): FnOnce<(T, U)>
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T, U> {
+                fn(T, U): FnOnce<(T, T)>
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
 fn functions_are_sized() {
     test! {
         program {

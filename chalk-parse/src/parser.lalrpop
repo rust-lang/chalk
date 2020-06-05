@@ -51,6 +51,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "copy" ")" "]" => WellKnownTrait::Copy,
      "#" "[" "lang" "(" "clone" ")" "]" => WellKnownTrait::Clone,
      "#" "[" "lang" "(" "drop" ")" "]" => WellKnownTrait::Drop,
+     "#" "[" "lang" "(" "fn_once" ")" "]" => WellKnownTrait::FnOnceTrait,
 };
 
 StructDefn: StructDefn = {
@@ -220,16 +221,16 @@ pub Ty: Ty = {
 };
 
 TyWithoutId: Ty = {
-    "for" "<" <l:Comma<LifetimeId>> ">" "fn" "(" <t:Ty> ")" => Ty::ForAll {
+    "for" "<" <l:Comma<LifetimeId>> ">" "fn" "(" <types:Comma<Ty>> ")" => Ty::ForAll {
         lifetime_names: l,
-        ty: Box::new(t)
+        types: types.into_iter().map(Box::new).collect()
     },
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,
     "!" => Ty::Never,
-    "fn" "(" <t:Ty> ")" => Ty::ForAll {
+    "fn" "(" <types:Comma<Ty>> ")" => Ty::ForAll {
         lifetime_names: vec![],
-        ty: Box::new(t)
+        types: types.into_iter().map(Box::new).collect()
     },
     "dyn" <b:Plus<QuantifiedInlineBound>> "+" <l:Lifetime> => Ty::Dyn {
         bounds: b,
