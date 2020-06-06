@@ -27,6 +27,10 @@ impl<I: Interner> InferenceTable<I> {
             DebruijnIndex::INNERMOST,
         );
 
+        for universe in value0.binders.iter(interner) {
+            universes.add(*universe.skip_kind())
+        }
+
         // Now re-map the universes found in value. We have to do this
         // in a second pass because it is only then that we know the
         // full set of universes found in the original value.
@@ -293,6 +297,20 @@ where
         .to_lifetime(self.interner()))
     }
 
+    fn fold_free_placeholder_const(
+        &mut self,
+        ty: &Ty<I>,
+        universe0: PlaceholderIndex,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let universe = self.universes.map_universe_to_canonical(universe0.ui);
+        Ok(PlaceholderIndex {
+            ui: universe,
+            idx: universe0.idx,
+        }
+        .to_const(self.interner(), ty.clone()))
+    }
+
     fn interner(&self) -> &'i I {
         self.interner
     }
@@ -339,6 +357,20 @@ where
             idx: universe0.idx,
         }
         .to_lifetime(self.interner()))
+    }
+
+    fn fold_free_placeholder_const(
+        &mut self,
+        ty: &Ty<I>,
+        universe0: PlaceholderIndex,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let universe = self.universes.map_universe_from_canonical(universe0.ui);
+        Ok(PlaceholderIndex {
+            ui: universe,
+            idx: universe0.idx,
+        }
+        .to_const(self.interner(), ty.clone()))
     }
 
     fn forbid_inference_vars(&self) -> bool {
