@@ -819,3 +819,16 @@ fn drop_constraints() {
         }
     }
 }
+
+#[test]
+fn opaque_type_constraints() {
+    lowering_error! {
+        program {
+            trait MyTrait { }
+            struct S { }
+
+            opaque type T: MyTrait = S;
+    } error_msg {
+        "opaque type `T` does not meet well-formedness requirements"
+    }}
+}

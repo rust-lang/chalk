@@ -108,6 +108,10 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
             solver.verify_trait_impl(impl_id)?;
         }
 
+        for &opaque_id in program.opaque_ty_data.keys() {
+            solver.verify_opaque_type(opaque_id)?;
+        }
+
         Ok(())
     })?;
 

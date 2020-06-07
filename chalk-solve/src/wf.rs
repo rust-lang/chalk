@@ -16,6 +16,7 @@ use chalk_ir::*;
 pub enum WfError<I: Interner> {
     IllFormedTypeDecl(chalk_ir::AdtId<I>),
     IllFormedTraitImpl(chalk_ir::TraitId<I>),
+    IllFormedOpaqueTypeDecl(chalk_ir::OpaqueTyId<I>),
 }
 
 impl<I: Interner> fmt::Display for WfError<I> {
@@ -29,6 +30,11 @@ impl<I: Interner> fmt::Display for WfError<I> {
             WfError::IllFormedTraitImpl(id) => write!(
                 f,
                 "trait impl for `{:?}` does not meet well-formedness requirements",
+                id
+            ),
+            WfError::IllFormedOpaqueTypeDecl(id) => write!(
+                f,
+                "opaque type `{:?}` does not meed well-formedness requirements",
                 id
             ),
         }
@@ -238,6 +244,51 @@ where
         } else {
             Err(WfError::IllFormedTraitImpl(trait_id))
         }
+    }
+
+    pub fn verify_opaque_type(&self, opaque_id: OpaqueTyId<I>) -> Result<(), WfError<I>> {
+        let opaque_ty_datum = self.db.opaque_ty_data(opaque_id);
+
+        let mut gb = GoalBuilder::new(self.db);
+        let hidden_type = gb.db().hidden_opaque_type(opaque_id);
+        let interner = gb.interner();
+
+        let substitution = match hidden_type.data(interner) {
+            TyData::Apply(application_ty) => &application_ty.substitution,
+            _ => panic!(), // TODO handle aliases, return WfError on other cases?
+        };
+
+        let opaque_ty_datum_bound = opaque_ty_datum.bound.substitute(interner, substitution);
+
+        // exists<U> { .. }
+        gb.exists(
+            &opaque_ty_datum_bound.bounds,
+            hidden_type,
+            |gb, subst, qwc, hidden_type| {
+                let interner = gb.interner();
+                let clauses = qwc.iter().map(|qwc| {
+                    match qwc.substitute(interner, &subst) {
+                        WhereClause::Implemented(trait_ref) => TraitRef {
+                            trait_id: trait_ref.trait_id,
+                            substitution: Substitution::from1(interner, hidden_type.clone()),
+                        }
+                        .from_env(),
+                        WhereClause::AliasEq(_) => panic!(), // TODO handle error?
+                    }
+                });
+
+                // FromEnv(HiddenTy<T>: Bounds<U>) => ...
+                gb.implies(clauses, |gb| {
+                    // For each bound:
+                    gb.all(
+                        qwc.iter()
+                            .map(|qwc| qwc.clone().into_from_env_goal(interner)),
+                    )
+                })
+            },
+        );
+
+        Ok(())
     }
 }
 

@@ -66,7 +66,6 @@ fn opaque_generics_simple() {
         } yields {
             "Unique; substitution []"
         }
-
     }
 }
 
