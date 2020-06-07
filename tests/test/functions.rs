@@ -1,11 +1,13 @@
 use super::*;
 
 #[test]
-fn function_implement_fn_once() {
+fn function_implement_fn_traits() {
     test! {
         program {
             #[lang(fn_once)]
-            trait FnOnce<Args> { }
+            trait FnOnce<Args> {
+                type Output;
+            }
 
             #[lang(fn_mut)]
             trait FnMut<Args> where Self: FnOnce<Args> { }
@@ -30,6 +32,42 @@ fn function_implement_fn_once() {
             fn(u8): Fn<(u8,)>
         } yields {
             "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            Normalize(<fn(u8) as FnOnce<(u8,)>>::Output -> ())
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            Normalize(<fn(u8) -> bool as FnOnce<(u8,)>>::Output -> bool)
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            Normalize(<fn(u8) -> bool as FnOnce<(u8,)>>::Output -> u8)
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T, V> {
+                Normalize(<fn(u8, V) -> T as FnOnce<(u8, V)>>::Output -> V)
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T, V> {
+                exists<U> {
+                    Normalize(<fn(u8, V) -> T as FnOnce<(u8, V)>>::Output -> U)
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := !1_0], lifetime constraints []"
         }
 
         goal {

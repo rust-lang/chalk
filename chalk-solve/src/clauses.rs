@@ -367,6 +367,12 @@ fn program_clauses_that_could_match<I: Interner>(
                     return Err(Floundered);
                 }
 
+                if let Some(well_known) = trait_datum.well_known {
+                    builtin_traits::add_builtin_assoc_program_clauses(
+                        db, builder, well_known, proj,
+                    );
+                }
+
                 push_program_clauses_for_associated_type_values_in_impls_of(
                     builder,
                     trait_id,

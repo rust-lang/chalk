@@ -1,6 +1,6 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{Substitution, Ty};
+use chalk_ir::{ProjectionTy, Substitution, Ty};
 
 mod clone;
 mod copy;
@@ -34,12 +34,35 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::FnOnceTrait | WellKnownTrait::FnMutTrait | WellKnownTrait::FnTrait => {
-                fn_::add_fn_trait_program_clauses(db, builder, &trait_ref, ty)
+                fn_::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, ty, false)
             }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
         }
     });
+}
+
+/// Like `add_builtin_program_clauses`, but for `DomainGoal::Normalize` involving
+/// a projection (e.g. `<fn(u8) as FnOnce<(u8,)>>::Output`)
+pub fn add_builtin_assoc_program_clauses<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    builder: &mut ClauseBuilder<'_, I>,
+    well_known: WellKnownTrait,
+    proj: &ProjectionTy<I>,
+) {
+    match well_known {
+        WellKnownTrait::FnOnceTrait => {
+            let interner = db.interner();
+            let self_ty = proj
+                .substitution
+                .at(interner, 0)
+                .assert_ty_ref(interner)
+                .data(interner);
+            let trait_id = db.well_known_trait_id(well_known).unwrap();
+            fn_::add_fn_trait_program_clauses(db, builder, trait_id, self_ty, true);
+        }
+        _ => {}
+    }
 }
 
 /// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form
