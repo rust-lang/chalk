@@ -33,7 +33,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Sized => sized::add_sized_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
-            WellKnownTrait::FnOnceTrait | WellKnownTrait::FnMutTrait | WellKnownTrait::FnTrait => {
+            WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
                 fn_::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, ty, false)
             }
             // Drop impls are provided explicitly
@@ -51,7 +51,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
     proj: &ProjectionTy<I>,
 ) {
     match well_known {
-        WellKnownTrait::FnOnceTrait => {
+        WellKnownTrait::FnOnce => {
             let interner = db.interner();
             let self_ty = proj
                 .substitution

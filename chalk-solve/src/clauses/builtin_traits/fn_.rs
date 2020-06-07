@@ -60,9 +60,9 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             let bound_ref = Binders::new(VariableKinds::from(interner, binders), new_trait_ref);
             builder.push_binders(&bound_ref, |this, inner_trait| {
                 if assoc_output {
-                    //The `Output` type is defined on the `FnOnceTrait`
+                    //The `Output` type is defined on the `FnOnce`
                     let fn_once = db.trait_datum(trait_id);
-                    assert_eq!(fn_once.well_known, Some(WellKnownTrait::FnOnceTrait));
+                    assert_eq!(fn_once.well_known, Some(WellKnownTrait::FnOnce));
                     let assoc_types = &fn_once.associated_ty_ids;
                     if assoc_types.len() != 1 {
                         panic!(
