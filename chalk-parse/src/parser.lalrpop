@@ -73,7 +73,7 @@ FnReturn: Ty = {
 };
 
 FnDefn: FnDefn = {
-    "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")" 
+    "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")"
         <ret_ty:FnReturn?> <w:QuantifiedWhereClauses> ";" => FnDefn
     {
         name: n,
@@ -127,12 +127,14 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 OpaqueTyDefn: OpaqueTyDefn = {
-    "opaque" "type" <identifier:Id> <p:Angle<VariableKind>> ":" <b:Plus<QuantifiedInlineBound>> "=" <ty:Ty> ";" => {
+    "opaque" "type" <identifier:Id> <p:Angle<VariableKind>> ":" <b:Plus<QuantifiedInlineBound>>
+        <w:QuantifiedWhereClauses> "=" <ty:Ty> ";" => {
         OpaqueTyDefn {
             ty,
             variable_kinds: p,
             identifier,
             bounds: b,
+            where_clauses: w,
         }
     }
 };
@@ -241,7 +243,7 @@ TyWithoutId: Ty = {
     "*" <m: RawMutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
     "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
     "&" <l: Lifetime> <t:Ty> => Ty::Ref{ mutability: Mutability::Not, lifetime: l, ty: Box::new(t) },
-    "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) }, 
+    "[" <t:Ty> "]" => Ty::Slice { ty: Box::new(t) },
     "[" <t:Ty> ";" <len:Const> "]" => Ty::Array { ty: Box::new(t), len },
 };
 

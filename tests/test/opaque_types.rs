@@ -47,6 +47,26 @@ fn opaque_reveal() {
 }
 
 #[test]
+fn opaque_where_clause() {
+    test! {
+        program {
+            struct Ty { }
+
+            trait Clone { }
+            trait Trait { }
+            impl Trait for Ty { }
+            opaque type T: Clone where T: Trait = Ty;
+        }
+
+        goal {
+            T: Trait
+        } yields {
+            "Unique; substitution []"
+        }
+    }
+}
+
+#[test]
 fn opaque_generics_simple() {
     test! {
         program {

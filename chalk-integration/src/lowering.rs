@@ -512,11 +512,11 @@ impl LowerProgram for Program {
                                         chalk_ir::VariableKind::Ty(TyKind::General),
                                         Atom::from(FIXME_SELF),
                                     )),
-                                    |env1| {
-                                        let interner = env1.interner();
+                                    |env| {
+                                        let interner = env.interner();
                                         Ok(opaque_ty
                                             .bounds
-                                            .lower(&env1)?
+                                            .lower(&env)?
                                             .iter()
                                             .flat_map(|qil| {
                                                 // Instantiate the bounds with the innermost bound variable, which represents Self, as the self type.
@@ -529,6 +529,7 @@ impl LowerProgram for Program {
                                                     .intern(interner),
                                                 )
                                             })
+                                            .chain(opaque_ty.where_clauses.lower(&env)?)
                                             .collect())
                                     },
                                 )?;

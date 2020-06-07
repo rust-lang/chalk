@@ -95,6 +95,7 @@ pub struct OpaqueTyDefn {
     pub variable_kinds: Vec<VariableKind>,
     pub identifier: Identifier,
     pub bounds: Vec<QuantifiedInlineBound>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
