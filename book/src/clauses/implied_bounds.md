@@ -224,7 +224,7 @@ forall<T> { Implemented(T: B) :- FromEnv(T: B). }
 forall<T> { FromEnv(T: A) :- FromEnv(T: B). }
 
 forall<T> { Implemented(T: C) :- FromEnv(T: C). }
-forall<T> { FromEnv(T: C) :- FromEnv(T: C). }
+forall<T> { FromEnv(T: B) :- FromEnv(T: C). }
 ```
 So these clauses are defined globally (that is, they are available from
 everywhere in the program) but they cannot be used because the hypothesis
