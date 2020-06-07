@@ -602,7 +602,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // i.e. Drop implementation for `struct S<T: Eq> {}` is forced to be
             // `impl Drop<T: Eq> for S<T> { ... }`. That means that orphan rules
             // prevent Drop from being implemented in downstream crates.
-            if self.well_known != Some(WellKnownTrait::DropTrait) {
+            if self.well_known != Some(WellKnownTrait::Drop) {
                 // Add all cases for potential downstream impls that could exist
                 for i in 0..type_parameters.len() {
                     builder.push_clause(

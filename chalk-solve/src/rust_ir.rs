@@ -212,10 +212,10 @@ pub struct TraitDatum<I: Interner> {
 /// the chalk-solve crate has special, hard-coded impls for them.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum WellKnownTrait {
-    SizedTrait,
-    CopyTrait,
-    CloneTrait,
-    DropTrait,
+    Sized,
+    Copy,
+    Clone,
+    Drop,
 }
 
 impl<I: Interner> TraitDatum<I> {

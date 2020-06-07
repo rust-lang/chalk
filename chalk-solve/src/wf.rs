@@ -470,10 +470,8 @@ impl WfWellKnownGoals {
         trait_ref: &TraitRef<I>,
     ) -> Option<Goal<I>> {
         match db.trait_datum(trait_ref.trait_id).well_known? {
-            WellKnownTrait::CopyTrait => Self::copy_impl_constraint(db, trait_ref),
-            WellKnownTrait::DropTrait | WellKnownTrait::CloneTrait | WellKnownTrait::SizedTrait => {
-                None
-            }
+            WellKnownTrait::Copy => Self::copy_impl_constraint(db, trait_ref),
+            WellKnownTrait::Drop | WellKnownTrait::Clone | WellKnownTrait::Sized => None,
         }
     }
 
@@ -488,9 +486,9 @@ impl WfWellKnownGoals {
 
         match db.trait_datum(impl_datum.trait_id()).well_known? {
             // You can't add a manual implementation of Sized
-            WellKnownTrait::SizedTrait => Some(GoalData::CannotProve(()).intern(interner)),
-            WellKnownTrait::DropTrait => Self::drop_impl_constraint(db, impl_datum),
-            WellKnownTrait::CopyTrait | WellKnownTrait::CloneTrait => None,
+            WellKnownTrait::Sized => Some(GoalData::CannotProve(()).intern(interner)),
+            WellKnownTrait::Drop => Self::drop_impl_constraint(db, impl_datum),
+            WellKnownTrait::Copy | WellKnownTrait::Clone => None,
         }
     }
 
@@ -507,7 +505,7 @@ impl WfWellKnownGoals {
 
         let interner = db.interner();
 
-        let sized_trait = db.well_known_trait_id(WellKnownTrait::SizedTrait)?;
+        let sized_trait = db.well_known_trait_id(WellKnownTrait::Sized)?;
 
         Some(Goal::all(
             interner,
@@ -547,16 +545,16 @@ impl WfWellKnownGoals {
         };
 
         // not { Implemented(ImplSelfTy: Drop) }
-        let neg_drop_goal =
-            db.well_known_trait_id(WellKnownTrait::DropTrait)
-                .map(|drop_trait_id| {
-                    TraitRef {
-                        trait_id: drop_trait_id,
-                        substitution: Substitution::from1(interner, ty.clone()),
-                    }
-                    .cast::<Goal<I>>(interner)
-                    .negate(interner)
-                });
+        let neg_drop_goal = db
+            .well_known_trait_id(WellKnownTrait::Drop)
+            .map(|drop_trait_id| {
+                TraitRef {
+                    trait_id: drop_trait_id,
+                    substitution: Substitution::from1(interner, ty.clone()),
+                }
+                .cast::<Goal<I>>(interner)
+                .negate(interner)
+            });
 
         let adt_datum = db.adt_datum(adt_id);
 
