@@ -1818,10 +1818,10 @@ trait LowerWellKnownTrait {
 impl LowerWellKnownTrait for WellKnownTrait {
     fn lower(&self) -> rust_ir::WellKnownTrait {
         match self {
-            Self::SizedTrait => rust_ir::WellKnownTrait::SizedTrait,
-            Self::CopyTrait => rust_ir::WellKnownTrait::CopyTrait,
-            Self::CloneTrait => rust_ir::WellKnownTrait::CloneTrait,
-            Self::DropTrait => rust_ir::WellKnownTrait::DropTrait,
+            Self::Sized => rust_ir::WellKnownTrait::Sized,
+            Self::Copy => rust_ir::WellKnownTrait::Copy,
+            Self::Clone => rust_ir::WellKnownTrait::Clone,
+            Self::Drop => rust_ir::WellKnownTrait::Drop,
         }
     }
 }

@@ -47,10 +47,10 @@ CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 ObjectSafeKeyword: () = "#" "[" "object_safe" "]";
 
 WellKnownTrait: WellKnownTrait = {
-     "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::SizedTrait,
-     "#" "[" "lang" "(" "copy" ")" "]" => WellKnownTrait::CopyTrait,
-     "#" "[" "lang" "(" "clone" ")" "]" => WellKnownTrait::CloneTrait,
-     "#" "[" "lang" "(" "drop" ")" "]" => WellKnownTrait::DropTrait,
+     "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::Sized,
+     "#" "[" "lang" "(" "copy" ")" "]" => WellKnownTrait::Copy,
+     "#" "[" "lang" "(" "clone" ")" "]" => WellKnownTrait::Clone,
+     "#" "[" "lang" "(" "drop" ")" "]" => WellKnownTrait::Drop,
 };
 
 StructDefn: StructDefn = {

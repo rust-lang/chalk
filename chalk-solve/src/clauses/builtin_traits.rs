@@ -29,17 +29,11 @@ pub fn add_builtin_program_clauses<I: Interner>(
         }
 
         match well_known {
-            WellKnownTrait::SizedTrait => {
-                sized::add_sized_program_clauses(db, builder, &trait_ref, ty)
-            }
-            WellKnownTrait::CopyTrait => {
-                copy::add_copy_program_clauses(db, builder, &trait_ref, ty)
-            }
-            WellKnownTrait::CloneTrait => {
-                clone::add_clone_program_clauses(db, builder, &trait_ref, ty)
-            }
+            WellKnownTrait::Sized => sized::add_sized_program_clauses(db, builder, &trait_ref, ty),
+            WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
+            WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
             // Drop impls are provided explicitly
-            WellKnownTrait::DropTrait => (),
+            WellKnownTrait::Drop => (),
         }
     });
 }
