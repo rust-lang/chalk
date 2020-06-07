@@ -220,6 +220,8 @@ pub enum WellKnownTrait {
     /// corresponding to the arguments of a function implementing this trait.
     /// E.g. `fn(u8, bool): FnOnce<(u8, bool)>`
     FnOnceTrait,
+    FnMutTrait,
+    FnTrait,
 }
 
 impl<I: Interner> TraitDatum<I> {

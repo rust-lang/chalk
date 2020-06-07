@@ -3,7 +3,8 @@ use crate::infer::instantiate::IntoBindersAndValue;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{ApplicationTy, Binders, Substitution, Ty, TyData, TypeName, VariableKinds};
 
-pub fn add_fn_once_program_clauses<I: Interner>(
+// Handles clauses for FnOnce/FnMut/Fn
+pub fn add_fn_trait_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: &TraitRef<I>,

@@ -1825,6 +1825,8 @@ impl LowerWellKnownTrait for WellKnownTrait {
             Self::Clone => rust_ir::WellKnownTrait::Clone,
             Self::Drop => rust_ir::WellKnownTrait::Drop,
             Self::FnOnceTrait => rust_ir::WellKnownTrait::FnOnceTrait,
+            Self::FnMutTrait => rust_ir::WellKnownTrait::FnMutTrait,
+            Self::FnTrait => rust_ir::WellKnownTrait::FnTrait,
         }
     }
 }

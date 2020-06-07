@@ -6,10 +6,28 @@ fn function_implement_fn_once() {
         program {
             #[lang(fn_once)]
             trait FnOnce<Args> { }
+
+            #[lang(fn_mut)]
+            trait FnMut<Args> where Self: FnOnce<Args> { }
+
+            #[lang(fn)]
+            trait Fn<Args> where Self: FnMut<Args> { }
         }
 
         goal {
             fn(u8): FnOnce<(u8,)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            fn(u8): FnMut<(u8,)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            fn(u8): Fn<(u8,)>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }

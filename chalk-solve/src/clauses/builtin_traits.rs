@@ -33,8 +33,8 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Sized => sized::add_sized_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
-            WellKnownTrait::FnOnceTrait => {
-                fn_::add_fn_once_program_clauses(db, builder, &trait_ref, ty)
+            WellKnownTrait::FnOnceTrait | WellKnownTrait::FnMutTrait | WellKnownTrait::FnTrait => {
+                fn_::add_fn_trait_program_clauses(db, builder, &trait_ref, ty)
             }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
