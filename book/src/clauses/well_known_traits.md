@@ -28,7 +28,7 @@ Some common examples of auto traits are `Send` and `Sync`.
 [coinductive_section]: ../engine/logic/coinduction.html#coinduction-and-refinement-strands
 
 # Current state 
-| Type            | Copy | Clone | Sized | Unsize | Drop | FnOnce  | Unpin  | Generator | auto traits |
+| Type            | Copy | Clone | Sized | Unsize | Drop | FnOnce/FnMut/Fn  | Unpin  | Generator | auto traits |
 | ---             | ---  | ---   | ---   | ---    | ---  | --- | ---    |  ---      |  ---        |
 | tuple types     | ✅    | ✅    | ✅     | ✅     | ⚬    | ⚬  |  ⚬      |  ⚬       |   ❌         |
 | structs         | ⚬    | ⚬    |  ✅    | ✅     | ⚬    | ⚬  |  ⚬      |  ⚬       |   ✅         |
