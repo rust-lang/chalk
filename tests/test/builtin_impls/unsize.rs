@@ -29,6 +29,7 @@ fn dyn_to_dyn_unsizing() {
             trait Auto3 {}
         }
 
+        // Tests with the same principal and auto traits
         goal {
             forall<'a> {
                 forall<'b> {
@@ -41,12 +42,24 @@ fn dyn_to_dyn_unsizing() {
 
         goal {
             forall<'a> {
+                forall<'b> {
+                    dyn Principal + Auto1 + Auto2 + Auto3 + 'a: Unsize<dyn Principal + Auto1 + Auto2 + Auto3 + 'b>
+                }
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }]"
+        }
+
+        // Target has a subset of source auto traits
+        goal {
+            forall<'a> {
                 dyn Principal + Auto1 + Auto2 + 'a: Unsize<dyn Principal + Auto1 + 'a>
             }
         } yields {
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
         }
 
+        // Both target and source don't have principal as their first trait
         goal {
             forall<'a> {
                 dyn Auto1 + Principal + 'a: Unsize<dyn Auto1 + Principal + 'a>
@@ -55,6 +68,7 @@ fn dyn_to_dyn_unsizing() {
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
         }
 
+        // Different order of traits in target and source
         // FIXME: this doesn't work because trait object unification
         // respects where clause order, which it shouldn't
         goal {
@@ -65,7 +79,7 @@ fn dyn_to_dyn_unsizing() {
             "No possible solution"
         }
 
-        // Same as above
+        // See above
         goal {
             forall<'a> {
                 dyn Principal + Auto2 + Auto1 + 'a: Unsize<dyn Principal + Auto1 + Auto2 + 'a>
@@ -74,6 +88,7 @@ fn dyn_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Source has a subset of auto traits of target
         goal {
             forall<'a> {
                 dyn Principal + Auto2 + 'a: Unsize<dyn Principal + Auto1 + Auto2 + 'a>
@@ -82,6 +97,7 @@ fn dyn_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Source and target have different set of auto traits
         goal {
             forall<'a> {
                 dyn Principal + Auto1 + Auto2 + 'a: Unsize<dyn Principal + Auto1 + Auto3 + 'a>
@@ -90,6 +106,7 @@ fn dyn_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Source has a principal trait, while target doesnt, both have the same auto traits.
         goal {
             forall<'a> {
                 dyn Principal + Auto1 + 'a: Unsize<dyn Auto1 + 'a>
@@ -98,6 +115,7 @@ fn dyn_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Non-matching principal traits
         goal {
             forall<'a> {
                 dyn Principal + 'a: Unsize<dyn OtherPrincipal + 'a>
@@ -106,6 +124,7 @@ fn dyn_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Matching generic principal traits
         goal {
             forall<'a> {
                 dyn GenericPrincipal<u64, Item = u64> + 'a: Unsize<dyn GenericPrincipal<u64, Item = u64> + 'a>
@@ -114,6 +133,7 @@ fn dyn_to_dyn_unsizing() {
             "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
         }
 
+        // Non-matching generic principal traits
         goal {
             forall<'a> {
                 dyn GenericPrincipal<u32, Item = u32> + 'a: Unsize<dyn GenericPrincipal<u32, Item = u64> + 'a>
@@ -147,6 +167,7 @@ fn ty_to_dyn_unsizing() {
             trait Auto {}
 
             struct Foo {}
+            struct FooLifetime<'a> {}
             struct Bar {}
             struct Baz {}
             struct FooNotSized<T> {
@@ -154,13 +175,12 @@ fn ty_to_dyn_unsizing() {
             }
 
             impl Principal for Foo {}
-            impl Auto for Foo {}
             impl UnsafePrincipal for Foo {}
+
+            impl<'a> Principal for FooLifetime<'a> {}
 
             impl Principal for Bar {}
             impl !Auto for Bar {}
-
-            impl Auto for Baz {}
 
             impl<T> Principal for FooNotSized<T> {}
 
@@ -177,6 +197,7 @@ fn ty_to_dyn_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Principal is not the first trait
         goal {
             forall<'a> {
                 Foo: Unsize<dyn Auto + Principal + 'a>
@@ -185,6 +206,7 @@ fn ty_to_dyn_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Auto-only trait object
         goal {
             forall<'a> {
                 Foo: Unsize<dyn Auto + 'a>
@@ -193,6 +215,29 @@ fn ty_to_dyn_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // TypeOutlives test
+        // FIXME: this should create a constraint 'a: 'a, but currently
+        // we have no `TypeOutlives` goal to produce it
+        goal {
+            forall<'a> {
+                FooLifetime<'a>: Unsize<dyn Principal + Auto + 'a>
+            }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        // See above
+        goal {
+            forall<'a> {
+                exists<'b> {
+                    FooLifetime<'a>: Unsize<dyn Principal + Auto + 'b>
+                }
+            }
+        } yields {
+            "Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [] }"
+        }
+
+        // Source does not implement auto trait (with principal)
         goal {
             forall<'a> {
                 Bar: Unsize<dyn Principal + Auto + 'a>
@@ -201,6 +246,16 @@ fn ty_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Source does not implement auto trait (without principal)
+        goal {
+            forall<'a> {
+                Bar: Unsize<dyn Auto + 'a>
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        // Source does not implement principal
         goal {
             forall<'a> {
                 Baz: Unsize<dyn Principal + Auto + 'a>
@@ -209,6 +264,7 @@ fn ty_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Implemeted generic principal
         goal {
             forall<'a> {
                 Foo: Unsize<dyn GenericPrincipal<u32, Item = u32> + 'a>
@@ -217,6 +273,8 @@ fn ty_to_dyn_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+
+        // Non-implemeted generic principal
         goal {
             forall<'a> {
                 Foo: Unsize<dyn GenericPrincipal<u32, Item = u64> + 'a>
@@ -225,6 +283,7 @@ fn ty_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Not object-safe principal trait
         goal {
             forall<'a> {
                 Foo: Unsize<dyn UnsafePrincipal + 'a>
@@ -233,6 +292,7 @@ fn ty_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Source ty is not Sized
         goal {
             forall<'a> {
                 forall<T> {
@@ -243,6 +303,7 @@ fn ty_to_dyn_unsizing() {
             "No possible solution"
         }
 
+        // Sized counterpart for the previous test
         goal {
             forall<'a> {
                 forall<T> {
@@ -296,6 +357,7 @@ fn tuple_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Last field does not implement `Unsize`
         goal {
             forall<'a> {
                (u32, Foo): Unsize<(u32, dyn OtherPrincipal + 'a)>
@@ -304,6 +366,7 @@ fn tuple_unsizing() {
             "No possible solution"
         }
 
+        // Mismatch of head fields
         goal {
             forall<'a> {
                (u32, Foo): Unsize<(u64, dyn Principal + 'a)>
@@ -312,6 +375,7 @@ fn tuple_unsizing() {
             "No possible solution"
         }
 
+        // Tuple length mismatch
         goal {
             forall<'a> {
                (u32, u32, Foo): Unsize<(u32, dyn Principal + 'a)>
@@ -320,6 +384,7 @@ fn tuple_unsizing() {
             "No possible solution"
         }
 
+        // Multilevel tuple test
         goal {
             forall<'a> {
                (u32, (u32, Foo)): Unsize<(u32, (u32, dyn Principal + 'a))>
@@ -424,6 +489,7 @@ fn struct_unsizing() {
             impl Principal for Foo {}
         }
 
+        // Single field struct tests
         goal {
             Foo: Unsize<Foo>
         } yields {
@@ -446,6 +512,7 @@ fn struct_unsizing() {
             "No possible solution"
         }
 
+        // Unsizing parameter is used in head fields
         goal {
             forall<'a> {
                 SParamsInMultipleFields<Foo>:
@@ -455,6 +522,7 @@ fn struct_unsizing() {
             "No possible solution"
         }
 
+        // Two-field struct test
         goal {
             forall<'a> {
                 S12<Foo, Foo>: Unsize<S12<Foo, dyn Principal + 'a>>
@@ -463,6 +531,8 @@ fn struct_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Test for the unsizing parameters collector
+        // (checking that it ignores the binder inside `SWithBinders`)
         goal {
             forall<'a> {
                 SWithBinders<Foo, Foo>: Unsize<SWithBinders<dyn Principal + 'a, Foo>>
@@ -471,6 +541,7 @@ fn struct_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Non-trivial unsizing of the last field
         goal {
             forall<'a> {
                 SNested<Foo, Bar<Foo>, Foo>: Unsize<SNested<Foo, Bar<Foo>, dyn Principal + 'a>>
@@ -487,6 +558,7 @@ fn struct_unsizing() {
             "No possible solution"
         }
 
+        // Check that lifetimes can't be used as unsizing parameters
         goal {
             forall<'a> {
                 SLifetime<'a, Foo>: Unsize<SLifetime<'a, dyn Principal + 'a>>
@@ -495,18 +567,22 @@ fn struct_unsizing() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Tests with constant as an unsizing parameter
         goal {
             SGoodConst<5, [u32; 2]>: Unsize<SGoodConst<5, [u32]>>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
 
+
+        // Target does not match source
         goal {
             SGoodConst<4, [u32; 2]>: Unsize<SGoodConst<5, [u32]>>
         } yields {
             "No possible solution"
         }
 
+        // Unsizing parameter is used in head fields
         goal {
             SBadConst<5, [u32; 2]>: Unsize<SBadConst<5, [u32]>>
         } yields {

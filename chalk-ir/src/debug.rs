@@ -210,6 +210,7 @@ impl<I: Interner> Debug for DynTy<I> {
         write!(fmt, "dyn {:?} + {:?}", bounds, lifetime)
     }
 }
+
 impl Debug for InferenceVar {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "?{}", self.index)
