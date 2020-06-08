@@ -18,7 +18,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
     ty: &TyData<I>,
-    assoc_output: bool,
 ) {
     match ty {
         TyData::Function(fn_val) => {
@@ -59,7 +58,9 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             // (e.g. `for<'a> fn(&'a u8): FnOnce<(&'b u8)>`)
             let bound_ref = Binders::new(VariableKinds::from(interner, binders), new_trait_ref);
             builder.push_binders(&bound_ref, |this, inner_trait| {
-                if assoc_output {
+                this.push_fact(inner_trait.clone());
+
+                if let Some(WellKnownTrait::FnOnce) = db.trait_datum(trait_id).well_known {
                     //The `Output` type is defined on the `FnOnce`
                     let fn_once = db.trait_datum(trait_id);
                     assert_eq!(fn_once.well_known, Some(WellKnownTrait::FnOnce));
@@ -83,10 +84,8 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     };
 
                     this.push_clause(normalize, std::iter::once(inner_trait));
-                } else {
-                    this.push_fact(inner_trait);
                 }
-            })
+            });
         }
         _ => {}
     }

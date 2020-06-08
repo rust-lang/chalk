@@ -1,10 +1,10 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{ProjectionTy, Substitution, Ty};
+use chalk_ir::{ProjectionTy, Substitution, Ty, AliasTy};
 
 mod clone;
 mod copy;
-mod fn_;
+mod fn_family;
 mod sized;
 
 /// For well known traits we have special hard-coded impls, either as an
@@ -34,7 +34,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
-                fn_::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, ty, false)
+                fn_family::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, ty)
             }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
@@ -53,13 +53,9 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
     match well_known {
         WellKnownTrait::FnOnce => {
             let interner = db.interner();
-            let self_ty = proj
-                .substitution
-                .at(interner, 0)
-                .assert_ty_ref(interner)
-                .data(interner);
+            let self_ty = AliasTy::Projection(proj.clone()).self_type_parameter(interner);
             let trait_id = db.well_known_trait_id(well_known).unwrap();
-            fn_::add_fn_trait_program_clauses(db, builder, trait_id, self_ty, true);
+            fn_family::add_fn_trait_program_clauses(db, builder, trait_id, self_ty.data(interner));
         }
         _ => {}
     }
