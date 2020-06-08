@@ -1655,22 +1655,6 @@ where
     }
 }
 
-/// Allows iterating over a `&Binders<Vec<T>>`, for instance. Each
-/// element will be a `Binders<&T>`.
-impl<'a, V> IntoIterator for &'a Binders<V>
-where
-    V: HasInterner,
-    &'a V: IntoIterator,
-    <&'a V as IntoIterator>::Item: HasInterner<Interner = V::Interner>,
-{
-    type Item = Binders<<&'a V as IntoIterator>::Item>;
-    type IntoIter = BindersIntoIterator<&'a V>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.map_ref(|r| r).into_iter()
-    }
-}
-
 /// Allows iterating over a Binders<Vec<T>>, for instance.
 /// Each element will include the same set of parameter bounds.
 impl<V, U> IntoIterator for Binders<V>
