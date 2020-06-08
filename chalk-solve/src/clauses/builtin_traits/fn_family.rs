@@ -25,7 +25,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(VariableKinds::from(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
-
                 let all_params: Vec<_> = orig_sub.iter(interner).cloned().collect();
 
                 // The last parameter represents the function return type
