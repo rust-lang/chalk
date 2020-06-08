@@ -14,6 +14,12 @@ fn function_implement_fn_traits() {
 
             #[lang(fn)]
             trait Fn<Args> where Self: FnMut<Args> { }
+
+            struct Ty { }
+
+            trait Clone { }
+            opaque type MyOpaque: Clone = Ty;
+
         }
 
         // Simple test: make sure a fully monomorphic type implements FnOnce
@@ -155,6 +161,22 @@ fn function_implement_fn_traits() {
             }
         } yields {
             "No possible solution"
+        }
+
+        // Tests that we flounder for inference variables
+        goal {
+            exists<T> {
+                T: FnOnce<()>
+            }
+        } yields_first[SolverChoice::slg(3, None)] {
+            "Floundered"
+        }
+
+        // Tests that we flounder for alias type (opaque)
+        goal {
+            MyOpaque: FnOnce<()>
+        } yields_first[SolverChoice::slg(3, None)] {
+            "Floundered"
         }
     }
 }

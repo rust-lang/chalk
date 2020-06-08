@@ -295,7 +295,7 @@ fn program_clauses_that_could_match<I: Interner>(
             }
 
             if let Some(well_known) = trait_datum.well_known {
-                builtin_traits::add_builtin_program_clauses(db, builder, well_known, trait_ref);
+                builtin_traits::add_builtin_program_clauses(db, builder, well_known, trait_ref)?;
             }
         }
         DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => match &alias_eq.alias {
@@ -370,7 +370,7 @@ fn program_clauses_that_could_match<I: Interner>(
                 if let Some(well_known) = trait_datum.well_known {
                     builtin_traits::add_builtin_assoc_program_clauses(
                         db, builder, well_known, self_ty,
-                    );
+                    )?;
                 }
 
                 push_program_clauses_for_associated_type_values_in_impls_of(

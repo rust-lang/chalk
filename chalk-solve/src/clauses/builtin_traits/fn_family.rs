@@ -3,8 +3,8 @@ use crate::infer::instantiate::IntoBindersAndValue;
 use crate::rust_ir::WellKnownTrait;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    AliasTy, ApplicationTy, Binders, Normalize, ProjectionTy, Substitution, TraitId, Ty, TyData,
-    TypeName, VariableKinds,
+    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Substitution, TraitId,
+    Ty, TyData, TypeName, VariableKinds,
 };
 
 /// Handles clauses for FnOnce/FnMut/Fn.
@@ -21,7 +21,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
     self_ty: Ty<I>,
-) {
+) -> Result<(), Floundered> {
     let interner = db.interner();
     match self_ty.data(interner) {
         TyData::Function(fn_val) => {
@@ -81,7 +81,10 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     builder.push_fact(normalize);
                 }
             });
+            Ok(())
         }
-        _ => {}
+        // Function traits are non-enumerable
+        TyData::InferenceVar(..) | TyData::Alias(..) => Err(Floundered),
+        _ => Ok(()),
     }
 }
