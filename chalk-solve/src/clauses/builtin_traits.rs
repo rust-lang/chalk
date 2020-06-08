@@ -1,6 +1,6 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{ProjectionTy, Substitution, Ty, AliasTy};
+use chalk_ir::{AliasTy, ProjectionTy, Substitution, Ty};
 
 mod clone;
 mod copy;

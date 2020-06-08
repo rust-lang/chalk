@@ -63,12 +63,12 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     let fn_once = db.trait_datum(trait_id);
                     assert_eq!(fn_once.well_known, Some(WellKnownTrait::FnOnce));
                     let assoc_types = &fn_once.associated_ty_ids;
-                    if assoc_types.len() != 1 {
-                        panic!(
-                            "FnOnce trait should have exactly one associated type, found {:?}",
-                            assoc_types
-                        );
-                    }
+                    assert_eq!(
+                        assoc_types.len(),
+                        1,
+                        "FnOnce trait should have exactly one associated type, found {:?}",
+                        assoc_types
+                    );
 
                     // Construct `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
                     let assoc_output_ty = assoc_types[0];
@@ -81,7 +81,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                         ty: fn_output_ty.clone(),
                     };
 
-                    this.push_clause(normalize, std::iter::once(inner_trait));
+                    this.push_fact(normalize);
                 }
             });
         }
