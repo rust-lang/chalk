@@ -17,11 +17,11 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
-    ty: &TyData<I>,
+    self_ty: Ty<I>,
 ) {
-    match ty {
+    let interner = db.interner();
+    match self_ty.data(interner) {
         TyData::Function(fn_val) => {
-            let interner = db.interner();
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             // Take all of the arguments except for the last one, which
             // represents the return type
@@ -43,9 +43,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 }),
             );
 
-            let self_ty = Ty::new(interner, ty);
-
-            let tupled_sub = Substitution::from(interner, vec![self_ty, tupled]);
+            let tupled_sub = Substitution::from(interner, vec![self_ty.clone(), tupled]);
             // Given a function type `fn(A1, A2, ..., AN)`, construct a `TraitRef`
             // of the form `fn(A1, A2, ..., AN): FnOnce<(A1, A2, ..., AN)>`
             let new_trait_ref = TraitRef {

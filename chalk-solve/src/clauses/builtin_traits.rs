@@ -34,7 +34,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
-                fn_family::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, ty)
+                fn_family::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, self_ty)
             }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
@@ -55,7 +55,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
             let interner = db.interner();
             let self_ty = AliasTy::Projection(proj.clone()).self_type_parameter(interner);
             let trait_id = db.well_known_trait_id(well_known).unwrap();
-            fn_family::add_fn_trait_program_clauses(db, builder, trait_id, self_ty.data(interner));
+            fn_family::add_fn_trait_program_clauses(db, builder, trait_id, self_ty);
         }
         _ => {}
     }
