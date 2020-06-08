@@ -23,15 +23,12 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     match self_ty.data(interner) {
         TyData::Function(fn_val) => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
-            // Take all of the arguments except for the last one, which
-            // represents the return type
-            let arg_sub = Substitution::from(
-                interner,
-                orig_sub.iter(interner).take(orig_sub.len(interner) - 1),
-            );
-            let fn_output_ty = orig_sub
-                .at(interner, orig_sub.len(interner) - 1)
-                .assert_ty_ref(interner);
+            let all_params: Vec<_> = orig_sub.iter(interner).cloned().collect();
+
+            // The last parameter represents the function return type
+            let (arg_sub, fn_output_ty) = all_params.split_at(all_params.len() - 1);
+            let arg_sub = Substitution::from(interner, arg_sub);
+            let fn_output_ty = fn_output_ty[0].assert_ty_ref(interner);
 
             // We are constructing a reference to `FnOnce<Args>`, where
             // `Args` is a tuple of the function's argument types
