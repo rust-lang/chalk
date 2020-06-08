@@ -358,18 +358,18 @@ fn program_clauses_that_could_match<I: Interner>(
 
                 let trait_datum = db.trait_datum(trait_id);
 
+                let self_ty = alias.self_type_parameter(interner);
+
                 // Flounder if the self-type is unknown and the trait is non-enumerable.
                 //
                 // e.g., Normalize(<?X as Iterator>::Item = u32)
-                if (alias.self_type_parameter(interner).is_var(interner))
-                    && trait_datum.is_non_enumerable_trait()
-                {
+                if (self_ty.is_var(interner)) && trait_datum.is_non_enumerable_trait() {
                     return Err(Floundered);
                 }
 
                 if let Some(well_known) = trait_datum.well_known {
                     builtin_traits::add_builtin_assoc_program_clauses(
-                        db, builder, well_known, proj,
+                        db, builder, well_known, self_ty,
                     );
                 }
 

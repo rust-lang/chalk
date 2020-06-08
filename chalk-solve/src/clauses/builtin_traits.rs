@@ -1,6 +1,6 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{AliasTy, ProjectionTy, Substitution, Ty};
+use chalk_ir::{Substitution, Ty};
 
 mod clone;
 mod copy;
@@ -48,12 +48,10 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     well_known: WellKnownTrait,
-    proj: &ProjectionTy<I>,
+    self_ty: Ty<I>,
 ) {
     match well_known {
         WellKnownTrait::FnOnce => {
-            let interner = db.interner();
-            let self_ty = AliasTy::Projection(proj.clone()).self_type_parameter(interner);
             let trait_id = db.well_known_trait_id(well_known).unwrap();
             fn_family::add_fn_trait_program_clauses(db, builder, trait_id, self_ty);
         }

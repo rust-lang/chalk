@@ -8,11 +8,14 @@ use chalk_ir::{
 };
 
 /// Handles clauses for FnOnce/FnMut/Fn.
-/// If `assoc_output` is `true`, we push a clause of the form
-/// `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B) :- Implemented(fn(A) -> B as FnOnce<(A,)>`
+/// If `self_ty` is a function, we push a clause of the form
+/// `fn(A1, A2, ..., AN) -> O: FnTrait<(A1, A2, ..., AN)>`, where `FnTrait`
+/// is the trait corresponding to `trait_id` (FnOnce/FnMut/Fn)
 ///
-/// If `assoc_output` is `false`, we push a clause of the form
-/// `Implemented(fn(A) -> B as FnOnce<(A,)>)`
+/// If `trait_id` is `FnOnce`, we also push a clause for the output type of the form:
+/// `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
+/// We do not add the usual `Implemented(fn(A) -> b as FnOnce<(A,)>` clause
+/// as a condition, since we already called `push_fact` with it
 pub fn add_fn_trait_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
@@ -25,10 +28,10 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(VariableKinds::from(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
-                let all_params: Vec<_> = orig_sub.iter(interner).cloned().collect();
-
                 // The last parameter represents the function return type
-                let (arg_sub, fn_output_ty) = all_params.split_at(all_params.len() - 1);
+                let (arg_sub, fn_output_ty) = orig_sub
+                    .parameters(interner)
+                    .split_at(orig_sub.len(interner) - 1);
                 let arg_sub = Substitution::from(interner, arg_sub);
                 let fn_output_ty = fn_output_ty[0].assert_ty_ref(interner);
 
