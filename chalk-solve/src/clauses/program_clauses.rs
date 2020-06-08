@@ -168,7 +168,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             ));
 
             let substitution = Substitution::from1(interner, alias_placeholder_ty.clone());
-            for bound in &opaque_ty_bound.bounds {
+            for bound in opaque_ty_bound.bounds {
                 // Implemented(!T<..>: Bound).
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
                 builder.push_binders(&bound_with_placeholder_ty, |builder, bound| {
