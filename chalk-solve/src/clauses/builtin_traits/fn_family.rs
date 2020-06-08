@@ -23,37 +23,35 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     match self_ty.data(interner) {
         TyData::Function(fn_val) => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
-            let all_params: Vec<_> = orig_sub.iter(interner).cloned().collect();
+            let bound_ref = Binders::new(VariableKinds::from(interner, binders), orig_sub);
+            builder.push_binders(&bound_ref, |builder, orig_sub| {
 
-            // The last parameter represents the function return type
-            let (arg_sub, fn_output_ty) = all_params.split_at(all_params.len() - 1);
-            let arg_sub = Substitution::from(interner, arg_sub);
-            let fn_output_ty = fn_output_ty[0].assert_ty_ref(interner);
+                let all_params: Vec<_> = orig_sub.iter(interner).cloned().collect();
 
-            // We are constructing a reference to `FnOnce<Args>`, where
-            // `Args` is a tuple of the function's argument types
-            let tupled = Ty::new(
-                interner,
-                TyData::Apply(ApplicationTy {
-                    name: TypeName::Tuple(arg_sub.len(interner)),
-                    substitution: arg_sub.clone(),
-                }),
-            );
+                // The last parameter represents the function return type
+                let (arg_sub, fn_output_ty) = all_params.split_at(all_params.len() - 1);
+                let arg_sub = Substitution::from(interner, arg_sub);
+                let fn_output_ty = fn_output_ty[0].assert_ty_ref(interner);
 
-            let tupled_sub = Substitution::from(interner, vec![self_ty.clone(), tupled]);
-            // Given a function type `fn(A1, A2, ..., AN)`, construct a `TraitRef`
-            // of the form `fn(A1, A2, ..., AN): FnOnce<(A1, A2, ..., AN)>`
-            let new_trait_ref = TraitRef {
-                trait_id,
-                substitution: tupled_sub.clone(),
-            };
+                // We are constructing a reference to `FnOnce<Args>`, where
+                // `Args` is a tuple of the function's argument types
+                let tupled = Ty::new(
+                    interner,
+                    TyData::Apply(ApplicationTy {
+                        name: TypeName::Tuple(arg_sub.len(interner)),
+                        substitution: arg_sub.clone(),
+                    }),
+                );
 
-            // Functions types come with a binder, which we push so
-            // that the `TraitRef` properly references any bound lifetimes
-            // (e.g. `for<'a> fn(&'a u8): FnOnce<(&'b u8)>`)
-            let bound_ref = Binders::new(VariableKinds::from(interner, binders), new_trait_ref);
-            builder.push_binders(&bound_ref, |this, inner_trait| {
-                this.push_fact(inner_trait.clone());
+                let tupled_sub = Substitution::from(interner, vec![self_ty.clone(), tupled]);
+                // Given a function type `fn(A1, A2, ..., AN)`, construct a `TraitRef`
+                // of the form `fn(A1, A2, ..., AN): FnOnce<(A1, A2, ..., AN)>`
+                let new_trait_ref = TraitRef {
+                    trait_id,
+                    substitution: tupled_sub.clone(),
+                };
+
+                builder.push_fact(new_trait_ref.clone());
 
                 if let Some(WellKnownTrait::FnOnce) = db.trait_datum(trait_id).well_known {
                     //The `Output` type is defined on the `FnOnce`
@@ -78,7 +76,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                         ty: fn_output_ty.clone(),
                     };
 
-                    this.push_fact(normalize);
+                    builder.push_fact(normalize);
                 }
             });
         }
