@@ -229,9 +229,8 @@ pub Ty: Ty = {
 };
 
 TyWithoutId: Ty = {
-    <abi:FnAbi?> <l:ForLifetimes?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
+    <l:ForLifetimes?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
         lifetime_names: l.unwrap_or_default(),
-        abi: abi.unwrap_or_default(),
         types: types
                    .into_iter()
                    .chain(std::iter::once(ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() })))

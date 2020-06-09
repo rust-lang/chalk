@@ -134,7 +134,6 @@ impl<'k> Env<'k> {
             } else {
                 return Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
                     num_binders: k.binders.len(interner),
-                    abi: *self.fn_def_abis.get(id).unwrap(),
                     substitution: chalk_ir::Substitution::empty(interner),
                 })
                 .intern(interner)
@@ -1416,7 +1415,6 @@ impl LowerTy for Ty {
 
             Ty::ForAll {
                 lifetime_names,
-                abi,
                 types,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
@@ -1430,7 +1428,6 @@ impl LowerTy for Ty {
 
                 let function = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
-                    abi: abi.lower()?,
                     substitution: Substitution::from(interner, lowered_tys),
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
