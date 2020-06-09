@@ -476,7 +476,8 @@ impl WfWellKnownGoals {
             | WellKnownTrait::Sized
             | WellKnownTrait::FnOnce
             | WellKnownTrait::FnMut
-            | WellKnownTrait::Fn => None,
+            | WellKnownTrait::Fn
+            | WellKnownTrait::Unsize => None,
         }
     }
 
@@ -490,13 +491,14 @@ impl WfWellKnownGoals {
         let interner = db.interner();
 
         match db.trait_datum(impl_datum.trait_id()).well_known? {
-            // You can't add a manual implementation of Sized
+            WellKnownTrait::Drop => Self::drop_impl_constraint(db, impl_datum),
+            WellKnownTrait::Copy | WellKnownTrait::Clone => None,
+            // You can't add a manual implementation for following traits:
             WellKnownTrait::Sized
             | WellKnownTrait::FnOnce
             | WellKnownTrait::FnMut
-            | WellKnownTrait::Fn => Some(GoalData::CannotProve(()).intern(interner)),
-            WellKnownTrait::Drop => Self::drop_impl_constraint(db, impl_datum),
-            WellKnownTrait::Copy | WellKnownTrait::Clone => None,
+            | WellKnownTrait::Fn
+            | WellKnownTrait::Unsize => Some(GoalData::CannotProve(()).intern(interner)),
         }
     }
 

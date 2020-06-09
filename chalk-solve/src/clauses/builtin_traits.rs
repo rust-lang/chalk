@@ -6,6 +6,7 @@ mod clone;
 mod copy;
 mod fn_family;
 mod sized;
+mod unsize;
 
 /// For well known traits we have special hard-coded impls, either as an
 /// optimization or to enforce special rules for correctness.
@@ -35,6 +36,9 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
                 fn_family::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, self_ty)?
+            }
+            WellKnownTrait::Unsize => {
+                unsize::add_unsize_program_clauses(db, builder, &trait_ref, ty)
             }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),

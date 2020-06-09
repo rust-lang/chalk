@@ -223,6 +223,7 @@ pub enum WellKnownTrait {
     FnOnce,
     FnMut,
     Fn,
+    Unsize,
 }
 
 impl<I: Interner> TraitDatum<I> {

@@ -1828,6 +1828,7 @@ impl LowerWellKnownTrait for WellKnownTrait {
             Self::FnOnce => rust_ir::WellKnownTrait::FnOnce,
             Self::FnMut => rust_ir::WellKnownTrait::FnMut,
             Self::Fn => rust_ir::WellKnownTrait::Fn,
+            Self::Unsize => rust_ir::WellKnownTrait::Unsize,
         }
     }
 }

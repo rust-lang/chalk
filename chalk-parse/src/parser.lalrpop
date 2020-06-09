@@ -55,6 +55,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "fn_once" ")" "]" => WellKnownTrait::FnOnce,
      "#" "[" "lang" "(" "fn_mut" ")" "]" => WellKnownTrait::FnMut,
      "#" "[" "lang" "(" "fn" ")" "]" => WellKnownTrait::Fn,
+     "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
 };
 
 StructDefn: StructDefn = {

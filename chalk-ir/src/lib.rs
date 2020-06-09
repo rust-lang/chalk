@@ -1351,6 +1351,15 @@ impl<I: Interner> WhereClause<I> {
             wc => wc.cast(interner),
         }
     }
+
+    /// If where clause is a `TraitRef`, returns its trait id
+    pub fn trait_id(&self) -> Option<TraitId<I>> {
+        match self {
+            WhereClause::Implemented(trait_ref) => Some(trait_ref.trait_id),
+            WhereClause::AliasEq(_) => None,
+            WhereClause::LifetimeOutlives(_) => None,
+        }
+    }
 }
 
 impl<I: Interner> QuantifiedWhereClause<I> {
@@ -1368,6 +1377,11 @@ impl<I: Interner> QuantifiedWhereClause<I> {
     /// FromEnv(T: Trait) }`.
     pub fn into_from_env_goal(self, interner: &I) -> Binders<DomainGoal<I>> {
         self.map(|wc| wc.into_from_env_goal(interner))
+    }
+
+    /// If the underlying where clause is a `TraitRef`, returns its trait id
+    pub fn trait_id(&self) -> Option<TraitId<I>> {
+        self.skip_binders().trait_id()
     }
 }
 
