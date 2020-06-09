@@ -712,7 +712,7 @@ fn struct_sized_constraints() {
 
 #[test]
 fn copy_constraints() {
-    lowering_error! {
+    lowering_success! {
         program {
             #[lang(copy)]
             trait Copy { }
@@ -720,11 +720,9 @@ fn copy_constraints() {
             #[lang(drop)]
             trait Drop { }
 
-            struct S<T> { t: T }
+            struct S<T1, T2> { t1: T1, t2: T2 }
 
-            impl<T> Copy for S<T> { }
-        } error_msg {
-           "trait impl for `Copy` does not meet well-formedness requirements"
+            impl<T1, T2> Copy for S<T1, T2> where T1: Copy, T2: Copy { }
         }
     }
 
@@ -744,6 +742,34 @@ fn copy_constraints() {
         }
     }
 
+    // Copy implementations for a struct with non-copy field
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            struct S<T> { t: T }
+
+            impl<T> Copy for S<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            struct S<T1, T2> { t1: T1, t2: T2 }
+
+            impl<T1, T2> Copy for S<T1, T2> where T2: Copy { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    // Copy implemenation for a Drop type
     lowering_error! {
         program {
             #[lang(copy)]
@@ -757,6 +783,95 @@ fn copy_constraints() {
             impl<T> Copy for S<T> { }
 
             impl<T> Drop for S<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    // Tests for Copy impls for builtin types
+    lowering_success! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            impl Copy for u8 {}
+            impl Copy for f32 {}
+            impl Copy for char {}
+            impl Copy for bool {}
+            impl<T> Copy for *const T {}
+            impl<T> Copy for *mut T {}
+            impl<'a, T> Copy for &'a T {}
+            impl Copy for ! {}
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            impl<'a, T> Copy for &'a mut T {}
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[object_safe]
+            trait Trait {}
+
+            impl<'a> Copy for dyn Trait + 'a {}
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            impl Copy for fn(u32) {}
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            impl Copy for str {}
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            impl Copy for [u32; 4] {}
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            impl Copy for [u32] {}
         } error_msg {
            "trait impl for `Copy` does not meet well-formedness requirements"
         }

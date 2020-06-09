@@ -534,14 +534,19 @@ impl WfWellKnownGoals {
         let ty = trait_ref.self_type_parameter(interner);
         let ty_data = ty.data(interner);
 
+        // Implementations for scalars, pointer types and never type are provided by libcore.
+        // User implementations on types other than ADTs are forbidden.
         let (adt_id, substitution) = match ty_data {
-            TyData::Apply(ApplicationTy {
-                name: TypeName::Adt(adt_id),
-                substitution,
-            }) => (*adt_id, substitution),
-            // TODO(areredify)
-            // when #368 lands, extend this to handle everything accordingly
-            _ => return None,
+            TyData::Apply(ApplicationTy { name, substitution }) => match name {
+                TypeName::Scalar(_)
+                | TypeName::Raw(_)
+                | TypeName::Ref(Mutability::Not)
+                | TypeName::Never => return None,
+                TypeName::Adt(adt_id) => (*adt_id, substitution),
+                _ => return Some(GoalData::CannotProve(()).intern(interner)),
+            },
+
+            _ => return Some(GoalData::CannotProve(()).intern(interner)),
         };
 
         // not { Implemented(ImplSelfTy: Drop) }
