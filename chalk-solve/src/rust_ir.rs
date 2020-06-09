@@ -101,6 +101,7 @@ pub struct AdtDatumBound<I: Interner> {
 pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
+    pub phantom_data: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

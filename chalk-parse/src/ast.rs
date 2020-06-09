@@ -41,6 +41,7 @@ pub struct StructDefn {
 pub struct StructFlags {
     pub upstream: bool,
     pub fundamental: bool,
+    pub phantom_data: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

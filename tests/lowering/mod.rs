@@ -686,3 +686,13 @@ fn lifetime_outlives() {
         }
     }
 }
+
+#[test]
+fn phantom_data() {
+    lowering_success! {
+        program {
+            #[phantom_data]
+            struct PhantomData<T> {}
+        }
+    }
+}

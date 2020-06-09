@@ -1001,6 +1001,7 @@ impl LowerAdtDefn for StructDefn {
         let flags = rust_ir::AdtFlags {
             upstream: self.flags.upstream,
             fundamental: self.flags.fundamental,
+            phantom_data: self.flags.phantom_data,
         };
 
         Ok(rust_ir::AdtDatum {

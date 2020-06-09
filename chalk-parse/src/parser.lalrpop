@@ -45,6 +45,7 @@ FundamentalKeyword: () = "#" "[" "fundamental" "]";
 NonEnumerableKeyword: () = "#" "[" "non_enumerable" "]";
 CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 ObjectSafeKeyword: () = "#" "[" "object_safe" "]";
+PhantomDataKeyword: () = "#" "[" "phantom_data" "]";
 
 WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::Sized,
@@ -57,7 +58,8 @@ WellKnownTrait: WellKnownTrait = {
 };
 
 StructDefn: StructDefn = {
-    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> "struct" <n:Id><p:Angle<VariableKind>>
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?>
+        "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
         name: n,
@@ -67,6 +69,7 @@ StructDefn: StructDefn = {
         flags: StructFlags {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
+            phantom_data: phantom_data.is_some(),
         },
     }
 };
