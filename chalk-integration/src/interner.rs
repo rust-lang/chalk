@@ -8,7 +8,7 @@ use chalk_ir::{
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
-    QuantifiedWhereClause,
+    QuantifiedWhereClause, Variance,
 };
 use std::fmt;
 use std::fmt::Debug;
@@ -54,6 +54,7 @@ impl Interner for ChalkIr {
     type InternedVariableKinds = Vec<VariableKind<ChalkIr>>;
     type InternedCanonicalVarKinds = Vec<CanonicalVarKind<ChalkIr>>;
     type InternedConstraints = Vec<InEnvironment<Constraint<ChalkIr>>>;
+    type InternedVariances = Vec<Variance>;
     type DefId = RawId;
     type InternedAdtId = RawId;
     type Identifier = Identifier;
@@ -355,6 +356,17 @@ impl Interner for ChalkIr {
         constraints: &'a Self::InternedConstraints,
     ) -> &'a [InEnvironment<Constraint<Self>>] {
         constraints
+    }
+
+    fn intern_variances<E>(
+        &self,
+        data: impl IntoIterator<Item = Result<Variance, E>>,
+    ) -> Result<Self::InternedVariances, E> {
+        data.into_iter().collect()
+    }
+
+    fn variances_data<'a>(&self, variances: &'a Self::InternedVariances) -> &'a [Variance] {
+        variances
     }
 }
 

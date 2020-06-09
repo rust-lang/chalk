@@ -12,8 +12,8 @@ use crate::{
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    AnswerSubst, Canonical, CanonicalVarKinds, ConstrainedSubst, Floundered, Goal, GoalData,
-    InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
+    AnswerSubst, Canonical, CanonicalVarKinds, ConstrainedSubst, FallibleOrFloundered, Floundered,
+    Goal, GoalData, InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
 };
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::coinductive_goal::IsCoinductive;
@@ -278,6 +278,7 @@ impl<I: Interner> Forest<I> {
                             info!("program clause = {:#?}", clause);
                             let mut infer = infer.clone();
                             if let Ok(resolvent) = infer.resolvent_clause(
+                                context.unification_database(),
                                 context.program().interner(),
                                 &environment,
                                 &domain_goal,
@@ -316,21 +317,23 @@ impl<I: Interner> Forest<I> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce goals into Domain goals.
-                if let Ok(ex_clause) =
-                    Self::simplify_goal(context, &mut infer, subst, environment, goal)
-                {
-                    info!(
-                        ex_clause = ?infer.debug_ex_clause(context.program().interner(), &ex_clause),
-                        "pushing initial strand"
-                    );
-                    let strand = Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: None,
-                        last_pursued_time: TimeStamp::default(),
-                    };
-                    let canonical_strand = Self::canonicalize_strand(context, strand);
-                    table.enqueue_strand(canonical_strand);
+                match Self::simplify_goal(context, &mut infer, subst, environment, goal) {
+                    FallibleOrFloundered::Ok(ex_clause) => {
+                        info!(
+                            ex_clause = ?infer.debug_ex_clause(context.program().interner(), &ex_clause),
+                            "pushing initial strand"
+                        );
+                        let strand = Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: None,
+                            last_pursued_time: TimeStamp::default(),
+                        };
+                        let canonical_strand = Self::canonicalize_strand(context, strand);
+                        table.enqueue_strand(canonical_strand);
+                    }
+                    FallibleOrFloundered::NoSolution => {}
+                    FallibleOrFloundered::Floundered => table.mark_floundered(),
                 }
             }
         }
@@ -653,6 +656,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 );
                 match strand.infer.apply_answer_subst(
                     self.context.program().interner(),
+                    self.context.unification_database(),
                     &mut strand.ex_clause,
                     &subgoal,
                     &table_goal,

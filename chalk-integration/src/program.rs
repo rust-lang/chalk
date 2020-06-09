@@ -1,12 +1,12 @@
 use crate::interner::ChalkIr;
 use crate::{tls, Identifier, TypeKind};
-use chalk_ir::could_match::CouldMatch;
-use chalk_ir::debug::Angle;
+use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
+use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
     FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy,
     OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
-    Substitution, TraitId, Ty, TyKind,
+    Substitution, TraitId, Ty, TyKind, Variances,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -344,6 +344,30 @@ impl tls::DebugContext for Program {
     }
 }
 
+impl UnificationDatabase<ChalkIr> for Program {
+    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::from(
+            self.interner(),
+            self.fn_def_data[&fn_def_id]
+                .binders
+                .binders
+                .iter(self.interner())
+                .map(|_| Variance::Invariant),
+        )
+    }
+
+    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::from(
+            self.interner(),
+            self.adt_data[&adt_id]
+                .binders
+                .binders
+                .iter(self.interner())
+                .map(|_| Variance::Invariant),
+        )
+    }
+}
+
 impl RustIrDatabase<ChalkIr> for Program {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
         self.custom_clauses.clone()
@@ -415,6 +439,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                     <[_] as CouldMatch<[_]>>::could_match(
                         &parameters,
                         interner,
+                        self.unification_database(),
                         &trait_ref.substitution.as_slice(interner),
                     )
                 }
@@ -534,6 +559,10 @@ impl RustIrDatabase<ChalkIr> for Program {
         substs: &Substitution<ChalkIr>,
     ) -> Substitution<ChalkIr> {
         substs.clone()
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase<ChalkIr> {
+        self
     }
 
     // The default implementation for `RustIrDatabase::assoc_type_name` outputs

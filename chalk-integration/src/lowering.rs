@@ -266,6 +266,11 @@ impl LowerWithEnv for LeafGoal {
                 b: b.lower(env)?.cast(interner),
             }
             .cast::<chalk_ir::Goal<ChalkIr>>(interner),
+            LeafGoal::SubtypeGenericArgs { a, b } => chalk_ir::SubtypeGoal {
+                a: a.lower(env)?,
+                b: b.lower(env)?,
+            }
+            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
         })
     }
 }
@@ -766,7 +771,7 @@ impl LowerWithEnv for Ty {
 
                 let function = chalk_ir::FnPointer {
                     num_binders: lifetime_names.len(),
-                    substitution: Substitution::from_iter(interner, lowered_tys),
+                    substitution: chalk_ir::FnSubst(Substitution::from_iter(interner, lowered_tys)),
                     sig: sig.lower()?,
                 };
                 chalk_ir::TyKind::Function(function).intern(interner)

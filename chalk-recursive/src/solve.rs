@@ -8,7 +8,7 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ClausePriority, DomainGoal, Environment, Fallible, Floundered, GenericArg,
     Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
-    ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
+    ProgramClauseImplication, Substitution, UCanonical, UnificationDatabase, UniverseMap, Variance,
 };
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::debug_span;
@@ -281,14 +281,18 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn unify<T>(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
+        variance: Variance,
         a: &T,
         b: &T,
     ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
     where
         T: ?Sized + Zip<I>,
     {
-        let res = self.infer.unify(interner, environment, a, b)?;
+        let res = self
+            .infer
+            .relate(interner, db, environment, variance, a, b)?;
         Ok(res.goals)
     }
 

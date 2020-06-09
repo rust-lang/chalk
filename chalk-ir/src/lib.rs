@@ -23,6 +23,16 @@ pub enum Void {}
 /// to perform some operation which may not complete.
 pub type Fallible<T> = Result<T, NoSolution>;
 
+/// A combination of `Fallible` and `Floundered`.
+pub enum FallibleOrFloundered<T> {
+    /// Success
+    Ok(T),
+    /// No solution. See `chalk_ir::NoSolution`.
+    NoSolution,
+    /// Floundered. See `chalk_ir::Floundered`.
+    Floundered,
+}
+
 /// Indicates that the attempted operation has "no solution" -- i.e.,
 /// cannot be performed.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -61,6 +71,80 @@ use interner::{HasInterner, Interner};
 
 pub mod could_match;
 pub mod debug;
+
+/// Variance
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Variance {
+    /// a <: b
+    Covariant,
+    /// a == b
+    Invariant,
+    /// b <: a
+    Contravariant,
+}
+
+impl Variance {
+    /// `a.xform(b)` combines the variance of a context with the
+    /// variance of a type with the following meaning. If we are in a
+    /// context with variance `a`, and we encounter a type argument in
+    /// a position with variance `b`, then `a.xform(b)` is the new
+    /// variance with which the argument appears.
+    ///
+    /// Example 1:
+    ///
+    /// ```ignore
+    /// *mut Vec<i32>
+    /// ```
+    ///
+    /// Here, the "ambient" variance starts as covariant. `*mut T` is
+    /// invariant with respect to `T`, so the variance in which the
+    /// `Vec<i32>` appears is `Covariant.xform(Invariant)`, which
+    /// yields `Invariant`. Now, the type `Vec<T>` is covariant with
+    /// respect to its type argument `T`, and hence the variance of
+    /// the `i32` here is `Invariant.xform(Covariant)`, which results
+    /// (again) in `Invariant`.
+    ///
+    /// Example 2:
+    ///
+    /// ```ignore
+    /// fn(*const Vec<i32>, *mut Vec<i32)
+    /// ```
+    ///
+    /// The ambient variance is covariant. A `fn` type is
+    /// contravariant with respect to its parameters, so the variance
+    /// within which both pointer types appear is
+    /// `Covariant.xform(Contravariant)`, or `Contravariant`. `*const
+    /// T` is covariant with respect to `T`, so the variance within
+    /// which the first `Vec<i32>` appears is
+    /// `Contravariant.xform(Covariant)` or `Contravariant`. The same
+    /// is true for its `i32` argument. In the `*mut T` case, the
+    /// variance of `Vec<i32>` is `Contravariant.xform(Invariant)`,
+    /// and hence the outermost type is `Invariant` with respect to
+    /// `Vec<i32>` (and its `i32` argument).
+    ///
+    /// Source: Figure 1 of "Taming the Wildcards:
+    /// Combining Definition- and Use-Site Variance" published in PLDI'11.
+    /// (Doc from rustc)
+    pub fn xform(self, other: Variance) -> Variance {
+        match (self, other) {
+            (Variance::Invariant, _) => Variance::Invariant,
+            (_, Variance::Invariant) => Variance::Invariant,
+            (_, Variance::Covariant) => self,
+            (Variance::Covariant, Variance::Contravariant) => Variance::Contravariant,
+            (Variance::Contravariant, Variance::Contravariant) => Variance::Covariant,
+        }
+    }
+
+    /// Converts `Covariant` into `Contravariant` and vice-versa. `Invariant`
+    /// stays the same.
+    pub fn invert(self) -> Variance {
+        match self {
+            Variance::Invariant => Variance::Invariant,
+            Variance::Covariant => Variance::Contravariant,
+            Variance::Contravariant => Variance::Covariant,
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 /// The set of assumptions we've made so far, and the current number of
@@ -829,7 +913,7 @@ impl DebruijnIndex {
 /// known. It is referenced within the type using `^1.0`, indicating
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct DynTy<I: Interner> {
     /// The unknown self type.
     pub bounds: Binders<QuantifiedWhereClauses<I>>,
@@ -891,6 +975,11 @@ pub struct FnSig<I: Interner> {
     pub safety: Safety,
     pub variadic: bool,
 }
+/// A wrapper for the substs on a Fn.
+#[derive(Clone, PartialEq, Eq, Hash, HasInterner, Fold, Visit)]
+pub struct FnSubst<I: Interner>(pub Substitution<I>);
+
+impl<I: Interner> Copy for FnSubst<I> where I::InternedSubstitution: Copy {}
 
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
@@ -899,10 +988,34 @@ pub struct FnSig<I: Interner> {
 pub struct FnPointer<I: Interner> {
     pub num_binders: usize,
     pub sig: FnSig<I>,
-    pub substitution: Substitution<I>,
+    pub substitution: FnSubst<I>,
 }
 
 impl<I: Interner> Copy for FnPointer<I> where I::InternedSubstitution: Copy {}
+
+impl<I: Interner> FnPointer<I> {
+    /// Represent the current `Fn` as if it was wrapped in `Binders`
+    pub fn into_binders(self, interner: &I) -> Binders<FnSubst<I>> {
+        Binders::new(
+            VariableKinds::from_iter(
+                interner,
+                (0..self.num_binders).map(|_| VariableKind::Lifetime),
+            ),
+            self.substitution,
+        )
+    }
+
+    /// Represent the current `Fn` as if it was wrapped in `Binders`
+    pub fn as_binders(&self, interner: &I) -> Binders<&FnSubst<I>> {
+        Binders::new(
+            VariableKinds::from_iter(
+                interner,
+                (0..self.num_binders).map(|_| VariableKind::Lifetime),
+            ),
+            &self.substitution,
+        )
+    }
+}
 
 /// Constants.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
@@ -1123,7 +1236,6 @@ impl PlaceholderIndex {
         .intern(interner)
     }
 }
-
 /// Represents some extra knowledge we may have about the type variable.
 /// ```ignore
 /// let x: &[u32];
@@ -1368,7 +1480,7 @@ impl<I: Interner> AliasTy<I> {
 }
 
 /// A projection `<P0 as TraitName<P1..Pn>>::AssocItem<Pn+1..Pm>`.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct ProjectionTy<I: Interner> {
     /// The id for the associated type member.
     pub associated_ty_id: AssocTypeId<I>,
@@ -1379,7 +1491,7 @@ pub struct ProjectionTy<I: Interner> {
 impl<I: Interner> Copy for ProjectionTy<I> where I::InternedSubstitution: Copy {}
 
 /// An opaque type `opaque type T<..>: Trait = HiddenTy`.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct OpaqueTy<I: Interner> {
     /// The id for the opaque type.
     pub opaque_ty_id: OpaqueTyId<I>,
@@ -1395,7 +1507,7 @@ impl<I: Interner> Copy for OpaqueTy<I> where I::InternedSubstitution: Copy {}
 ///   implements the trait.
 /// - `<P0 as Trait<P1..Pn>>` (e.g. `i32 as Copy`), which casts the type to
 ///   that specific trait.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct TraitRef<I: Interner> {
     /// The trait id.
     pub trait_id: TraitId<I>,
@@ -1724,6 +1836,16 @@ pub struct EqGoal<I: Interner> {
 }
 
 impl<I: Interner> Copy for EqGoal<I> where I::InternedGenericArg: Copy {}
+
+/// Subtype goal: tries to prove that `a` is a subtype of `b`
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
+#[allow(missing_docs)]
+pub struct SubtypeGoal<I: Interner> {
+    pub a: Ty<I>,
+    pub b: Ty<I>,
+}
+
+impl<I: Interner> Copy for SubtypeGoal<I> where I::InternedType: Copy {}
 
 /// Proves that the given type alias **normalizes** to the given
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
@@ -2094,6 +2216,70 @@ impl<I: Interner> ProgramClause<I> {
     }
 }
 
+/// List of variable kinds with universe index. Wraps `InternedCanonicalVarKinds`.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct Variances<I: Interner> {
+    interned: I::InternedVariances,
+}
+
+impl<I: Interner> Variances<I> {
+    /// Creates an empty list of canonical variable kinds.
+    pub fn empty(interner: &I) -> Self {
+        Self::from(interner, None::<Variance>)
+    }
+
+    /// Get the interned canonical variable kinds.
+    pub fn interned(&self) -> &I::InternedVariances {
+        &self.interned
+    }
+
+    /// Creates a list of canonical variable kinds using an iterator.
+    pub fn from(interner: &I, variances: impl IntoIterator<Item = Variance>) -> Self {
+        Self::from_fallible(
+            interner,
+            variances
+                .into_iter()
+                .map(|p| -> Result<Variance, ()> { Ok(p) }),
+        )
+        .unwrap()
+    }
+
+    /// Tries to create a list of canonical variable kinds using an iterator.
+    pub fn from_fallible<E>(
+        interner: &I,
+        variances: impl IntoIterator<Item = Result<Variance, E>>,
+    ) -> Result<Self, E> {
+        Ok(Variances {
+            interned: I::intern_variances(interner, variances.into_iter())?,
+        })
+    }
+
+    /// Creates a list of canonical variable kinds from a single canonical variable kind.
+    pub fn from1(interner: &I, variance: Variance) -> Self {
+        Self::from(interner, Some(variance))
+    }
+
+    /// Get an iterator over the list of canonical variable kinds.
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Variance> {
+        self.as_slice(interner).iter()
+    }
+
+    /// Checks whether the list of canonical variable kinds is empty.
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    /// Returns the number of canonical variable kinds.
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    /// Returns a slice containing the canonical variable kinds.
+    pub fn as_slice(&self, interner: &I) -> &[Variance] {
+        interner.variances_data(&self.interned)
+    }
+}
+
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
 /// All unresolved existential variables are "renumbered" according to their
@@ -2297,6 +2483,9 @@ pub enum GoalData<I: Interner> {
 
     /// Make two things equal; the rules for doing so are well known to the logic
     EqGoal(EqGoal<I>),
+
+    /// Make one thing a subtype of another; the rules for doing so are well known to the logic
+    SubtypeGoal(SubtypeGoal<I>),
 
     /// A "domain goal" indicates some base sort of goal that can be
     /// proven via program clauses
@@ -2699,4 +2888,17 @@ pub struct AnswerSubst<I: Interner> {
 
     /// Delayed subgoals, used when the solver answered with an (incomplete) `Answer` (instead of a `CompleteAnswer`).
     pub delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
+}
+
+/// Logic to decide the Variance for a given subst
+pub trait UnificationDatabase<I>
+where
+    Self: std::fmt::Debug,
+    I: Interner,
+{
+    /// Gets the variances for the substitution of a fn def
+    fn fn_def_variance(&self, fn_def_id: FnDefId<I>) -> Variances<I>;
+
+    /// Gets the variances for the substitution of a adt
+    fn adt_variance(&self, adt_id: AdtId<I>) -> Variances<I>;
 }

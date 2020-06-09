@@ -224,7 +224,7 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
     let mut body = each_variant_pair(&mut a, &mut b, |v_a, v_b| {
         let mut t = TokenStream::new();
         for (b_a, b_b) in v_a.bindings().iter().zip(v_b.bindings().iter()) {
-            quote!(chalk_ir::zip::Zip::zip_with(zipper, #b_a, #b_b)?;).to_tokens(&mut t);
+            quote!(chalk_ir::zip::Zip::zip_with(zipper, variance, #b_a, #b_b)?;).to_tokens(&mut t);
         }
         quote!(Ok(())).to_tokens(&mut t);
         t
@@ -240,8 +240,9 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
 
             fn zip_with<'i, Z: ::chalk_ir::zip::Zipper<'i, #interner>>(
                 zipper: &mut Z,
-                 a: &Self,
-                 b: &Self,
+                variance: ::chalk_ir::Variance,
+                a: &Self,
+                b: &Self,
             ) -> ::chalk_ir::Fallible<()>
             where
                 #interner: 'i,

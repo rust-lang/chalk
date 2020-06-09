@@ -29,6 +29,16 @@ struct MockDatabase {
     panicking_method: PanickingMethod,
 }
 
+impl UnificationDatabase<ChalkIr> for MockDatabase {
+    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::empty(self.interner())
+    }
+
+    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::empty(self.interner())
+    }
+}
+
 /// This DB represents the following lowered program:
 ///
 /// struct Foo { }
@@ -242,6 +252,10 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         substs: &Substitution<ChalkIr>,
     ) -> Substitution<ChalkIr> {
         unimplemented!()
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase<ChalkIr> {
+        self
     }
 }
 

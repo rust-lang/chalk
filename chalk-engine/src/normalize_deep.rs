@@ -107,6 +107,20 @@ mod test {
 
     const U0: UniverseIndex = UniverseIndex { counter: 0 };
 
+    // We just use a vec of 20 `Invariant`, since this is zipped and no substs are
+    // longer than this
+    #[derive(Debug)]
+    struct TestDatabase;
+    impl UnificationDatabase<ChalkIr> for TestDatabase {
+        fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
+            Variances::from(&ChalkIr, [Variance::Invariant; 20].iter().copied())
+        }
+
+        fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
+            Variances::from(&ChalkIr, [Variance::Invariant; 20].iter().copied())
+        }
+    }
+
     #[test]
     fn infer() {
         let interner = &ChalkIr;
@@ -115,14 +129,28 @@ mod test {
         let a = table.new_variable(U0).to_ty(interner);
         let b = table.new_variable(U0).to_ty(interner);
         table
-            .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
+            .relate(
+                interner,
+                &TestDatabase,
+                &environment0,
+                Variance::Invariant,
+                &a,
+                &ty!(apply (item 0) (expr b)),
+            )
             .unwrap();
         assert_eq!(
             DeepNormalizer::normalize_deep(&mut table, interner, &a),
             ty!(apply (item 0) (expr b))
         );
         table
-            .unify(interner, &environment0, &b, &ty!(apply (item 1)))
+            .relate(
+                interner,
+                &TestDatabase,
+                &environment0,
+                Variance::Invariant,
+                &b,
+                &ty!(apply (item 1)),
+            )
             .unwrap();
         assert_eq!(
             DeepNormalizer::normalize_deep(&mut table, interner, &a),

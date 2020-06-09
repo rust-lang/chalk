@@ -184,7 +184,7 @@ impl<I: Interner> RenderAsRust<I> for FnPointer<I> {
                     .format(", ")
             )?;
         }
-        let parameters = self.substitution.as_slice(interner);
+        let parameters = self.substitution.0.as_slice(interner);
         write!(
             f,
             "fn({}) -> {}",

@@ -1,5 +1,5 @@
 use chalk_integration::{program::Program, query::LoweringDatabase, tls};
-use chalk_ir::interner::Interner;
+use chalk_ir::{interner::Interner, UnificationDatabase};
 use chalk_solve::{
     display::{write_items, WriterState},
     RustIrDatabase,
@@ -183,6 +183,10 @@ where
         substs: &chalk_ir::Substitution<I>,
     ) -> chalk_ir::Substitution<I> {
         self.db.closure_fn_substitution(closure_id, substs)
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
+        self.db.unification_database()
     }
 }
 

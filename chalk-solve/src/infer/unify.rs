@@ -6,22 +6,26 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
+use chalk_ir::UnificationDatabase;
 use std::fmt::Debug;
+use tracing::instrument;
 
 impl<I: Interner> InferenceTable<I> {
-    #[instrument(level = "debug", skip(self, interner, environment))]
-    pub fn unify<T>(
+    #[instrument(level = "debug", skip(self, interner, db, environment))]
+    pub fn relate<T>(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
+        variance: Variance,
         a: &T,
         b: &T,
-    ) -> Fallible<UnificationResult<I>>
+    ) -> Fallible<RelationResult<I>>
     where
         T: ?Sized + Zip<I>,
     {
         let snapshot = self.snapshot();
-        match Unifier::new(interner, self, environment).unify(a, b) {
+        match Unifier::new(interner, db, self, environment).relate(variance, a, b) {
             Ok(r) => {
                 self.commit(snapshot);
                 Ok(r)
@@ -39,16 +43,18 @@ struct Unifier<'t, I: Interner> {
     environment: &'t Environment<I>,
     goals: Vec<InEnvironment<Goal<I>>>,
     interner: &'t I,
+    db: &'t dyn UnificationDatabase<I>,
 }
 
 #[derive(Debug)]
-pub struct UnificationResult<I: Interner> {
+pub struct RelationResult<I: Interner> {
     pub goals: Vec<InEnvironment<Goal<I>>>,
 }
 
 impl<'t, I: Interner> Unifier<'t, I> {
     fn new(
         interner: &'t I,
+        db: &'t dyn UnificationDatabase<I>,
         table: &'t mut InferenceTable<I>,
         environment: &'t Environment<I>,
     ) -> Self {
@@ -57,21 +63,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
             table,
             goals: vec![],
             interner,
+            db,
         }
     }
 
     /// The main entry point for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
-    /// unification of `a` and `b` and returns the Unification Result.
-    fn unify<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult<I>>
+    /// relation of `a` and `b` and returns the Unification Result.
+    #[instrument(level = "debug", skip(self))]
+    fn relate<T>(mut self, variance: Variance, a: &T, b: &T) -> Fallible<RelationResult<I>>
     where
         T: ?Sized + Zip<I>,
     {
-        Zip::zip_with(&mut self, a, b)?;
-        Ok(UnificationResult { goals: self.goals })
+        Zip::zip_with(&mut self, variance, a, b)?;
+        Ok(RelationResult { goals: self.goals })
     }
 
-    fn unify_ty_ty(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
+    fn relate_ty_ty(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
 
         let n_a = self.table.normalize_ty_shallow(interner, a);
@@ -79,42 +87,62 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_span!("unify_ty_ty", ?a, ?b);
+        debug_span!("relate_ty_ty", ?variance, ?a, ?b);
 
         match (a.kind(interner), b.kind(interner)) {
-            // Unifying two inference variables: unify them in the underlying
-            // ena table.
+            // Relating two inference variables:
+            // If `Invariant`, unify them in the underlying ena table.
+            // If `Covariant` or `Contravariant`, push `SubtypeGoal`
             (&TyKind::InferenceVar(var1, kind1), &TyKind::InferenceVar(var2, kind2)) => {
-                if kind1 == kind2 {
-                    self.unify_var_var(var1, var2)
-                } else if kind1 == TyVariableKind::General {
-                    self.unify_general_var_specific_ty(var1, b.clone())
-                } else if kind2 == TyVariableKind::General {
-                    self.unify_general_var_specific_ty(var2, a.clone())
-                } else {
-                    debug!(
-                        "Tried to unify mis-matching inference variables: {:?} and {:?}",
-                        kind1, kind2
-                    );
-                    Err(NoSolution)
+                match variance {
+                    Variance::Invariant => {
+                        if kind1 == kind2 {
+                            self.unify_var_var(var1, var2)
+                        } else if kind1 == TyVariableKind::General {
+                            self.unify_general_var_specific_ty(var1, b.clone())
+                        } else if kind2 == TyVariableKind::General {
+                            self.unify_general_var_specific_ty(var2, a.clone())
+                        } else {
+                            debug!(
+                                "Tried to unify mis-matching inference variables: {:?} and {:?}",
+                                kind1, kind2
+                            );
+                            Err(NoSolution)
+                        }
+                    }
+                    Variance::Covariant => {
+                        self.push_subtype_goal(a.clone(), b.clone());
+                        Ok(())
+                    }
+                    Variance::Contravariant => {
+                        self.push_subtype_goal(b.clone(), a.clone());
+                        Ok(())
+                    }
                 }
             }
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyKind::Function(ref fn1), &TyKind::Function(ref fn2)) => {
                 if fn1.sig == fn2.sig {
-                    self.unify_binders(fn1, fn2)
+                    Zip::zip_with(
+                        self,
+                        variance,
+                        &fn1.clone().into_binders(interner),
+                        &fn2.clone().into_binders(interner),
+                    )
                 } else {
                     Err(NoSolution)
                 }
             }
 
             (&TyKind::Placeholder(ref p1), &TyKind::Placeholder(ref p2)) => {
-                Zip::zip_with(self, p1, p2)
+                Zip::zip_with(self, variance, p1, p2)
             }
 
             // Unifying two dyn is possible if they have the same bounds.
-            (&TyKind::Dyn(ref qwc1), &TyKind::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+            (&TyKind::Dyn(ref qwc1), &TyKind::Dyn(ref qwc2)) => {
+                Zip::zip_with(self, variance, qwc1, qwc2)
+            }
 
             (TyKind::BoundVar(_), _) | (_, TyKind::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
@@ -122,10 +150,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
             ),
 
             // Unifying an alias type with some other type `U`.
-            (_, &TyKind::Alias(ref alias)) => self.unify_alias_ty(alias, a),
-            (&TyKind::Alias(ref alias), _) => self.unify_alias_ty(alias, b),
+            (_, &TyKind::Alias(ref alias)) => self.relate_alias_ty(variance.invert(), alias, a),
+            (&TyKind::Alias(ref alias), _) => self.relate_alias_ty(variance, alias, b),
 
-            // Unifying an inference variable with a non-inference variable.
+            // FIXME: needs to handle relating a var and ty; needs generalization
+            // Relating an inference variable with a non-inference variable.
             (&TyKind::InferenceVar(var, kind), ty_data @ _)
             | (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
                 let ty = ty_data.clone().intern(interner);
@@ -152,70 +181,146 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (_, &TyKind::Dyn(_)) | (&TyKind::Dyn(_), _) => Err(NoSolution),
 
             (TyKind::Adt(id_a, substitution_a), TyKind::Adt(id_b, substitution_b)) => {
-                Zip::zip_with(self, id_a, id_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    Some(self.unification_database().adt_variance(*id_a)),
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
             (
-                TyKind::AssociatedType(assoc_ty_a, substitution_a),
-                TyKind::AssociatedType(assoc_ty_b, substitution_b),
+                TyKind::AssociatedType(id_a, substitution_a),
+                TyKind::AssociatedType(id_b, substitution_b),
             ) => {
-                Zip::zip_with(self, assoc_ty_a, assoc_ty_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    None,
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
             (TyKind::Scalar(scalar_a), TyKind::Scalar(scalar_b)) => {
-                Zip::zip_with(self, scalar_a, scalar_b)
+                Zip::zip_with(self, variance, scalar_a, scalar_b)
             }
             (TyKind::Str, TyKind::Str) => Ok(()),
-            (TyKind::Tuple(_arity_a, substitution_a), TyKind::Tuple(_arity_b, substitution_b)) => {
-                Zip::zip_with(self, substitution_a, substitution_b)
+            (TyKind::Tuple(arity_a, substitution_a), TyKind::Tuple(arity_b, substitution_b)) => {
+                if arity_a != arity_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    None,
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
             (
-                TyKind::OpaqueType(opaque_ty_a, substitution_a),
-                TyKind::OpaqueType(opaque_ty_b, substitution_b),
+                TyKind::OpaqueType(id_a, substitution_a),
+                TyKind::OpaqueType(id_b, substitution_b),
             ) => {
-                Zip::zip_with(self, opaque_ty_a, opaque_ty_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    None,
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
-            (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => {
-                Zip::zip_with(self, substitution_a, substitution_b)
-            }
-            (TyKind::FnDef(fn_def_a, substitution_a), TyKind::FnDef(fn_def_b, substitution_b)) => {
-                Zip::zip_with(self, fn_def_a, fn_def_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+            (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => Zip::zip_with(self, variance, ty_a, ty_b),
+            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    Some(self.unification_database().fn_def_variance(*id_a)),
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
             (
                 TyKind::Ref(mutability_a, lifetime_a, ty_a),
                 TyKind::Ref(mutability_b, lifetime_b, ty_b),
             ) => {
-                Zip::zip_with(self, mutability_a, mutability_b)?;
-                Zip::zip_with(self, lifetime_a, lifetime_b)?;
-                Zip::zip_with(self, ty_a, ty_b)
+                if mutability_a != mutability_b {
+                    return Err(NoSolution);
+                }
+                // The lifetime is `Contravariant`
+                Zip::zip_with(
+                    self,
+                    variance.xform(Variance::Contravariant),
+                    lifetime_a,
+                    lifetime_b,
+                )?;
+                // The type is `Covariant` when not mut, `Invariant` otherwise
+                let output_variance = match mutability_a {
+                    Mutability::Not => Variance::Covariant,
+                    Mutability::Mut => Variance::Invariant,
+                };
+                Zip::zip_with(self, variance.xform(output_variance), ty_a, ty_b)
             }
             (TyKind::Raw(mutability_a, ty_a), TyKind::Raw(mutability_b, ty_b)) => {
-                Zip::zip_with(self, mutability_a, mutability_b)?;
-                Zip::zip_with(self, ty_a, ty_b)
+                if mutability_a != mutability_b {
+                    return Err(NoSolution);
+                }
+                let ty_variance = match mutability_a {
+                    Mutability::Not => Variance::Covariant,
+                    Mutability::Mut => Variance::Invariant,
+                };
+                Zip::zip_with(self, variance.xform(ty_variance), ty_a, ty_b)
             }
             (TyKind::Never, TyKind::Never) => Ok(()),
             (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
-                Zip::zip_with(self, ty_a, ty_b)?;
-                Zip::zip_with(self, const_a, const_b)
+                Zip::zip_with(self, variance, ty_a, ty_b)?;
+                Zip::zip_with(self, variance, const_a, const_b)
             }
             (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
-                Zip::zip_with(self, id_a, id_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    None,
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
             (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
-                Zip::zip_with(self, id_a, id_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    None,
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
             (
                 TyKind::GeneratorWitness(id_a, substitution_a),
                 TyKind::GeneratorWitness(id_b, substitution_b),
             ) => {
-                Zip::zip_with(self, id_a, id_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                if id_a != id_b {
+                    return Err(NoSolution);
+                }
+                self.zip_substs(
+                    variance,
+                    None,
+                    substitution_a.as_slice(interner),
+                    substitution_b.as_slice(interner),
+                )
             }
-            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => Zip::zip_with(self, id_a, id_b),
+            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => {
+                Zip::zip_with(self, variance, id_a, id_b)
+            }
             (TyKind::Error, TyKind::Error) => Ok(()),
 
             (_, _) => Err(NoSolution),
@@ -257,8 +362,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn unify_binders<'a, T, R>(
+    fn relate_binders<'a, T, R>(
         &mut self,
+        variance: Variance,
         a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
         b: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
     ) -> Fallible<()>
@@ -279,33 +385,63 @@ impl<'t, I: Interner> Unifier<'t, I> {
         {
             let a_universal = self.table.instantiate_binders_universally(interner, a);
             let b_existential = self.table.instantiate_binders_existentially(interner, b);
-            Zip::zip_with(self, &a_universal, &b_existential)?;
+            Zip::zip_with(self, variance, &a_universal, &b_existential)?;
         }
 
         {
             let b_universal = self.table.instantiate_binders_universally(interner, b);
             let a_existential = self.table.instantiate_binders_existentially(interner, a);
-            Zip::zip_with(self, &a_existential, &b_universal)
+            Zip::zip_with(self, variance, &a_existential, &b_universal)
         }
     }
 
-    /// Unify an alias like `<T as Trait>::Item` or `impl Trait` with some other
-    /// type `ty` (which might also be an alias). Creates a goal like
+    /// Relate an alias like `<T as Trait>::Item` or `impl Trait` with some other
+    /// type `ty`. If the variance is `Invariant`, creates a goal like
     ///
     /// ```notrust
     /// AliasEq(<T as Trait>::Item = U) // associated type projection
     /// AliasEq(impl Trait = U) // impl trait
     /// ```
-    fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
+    /// Otherwise, this creates a new variable `?X`, creates a goal like
+    /// ```notrust
+    /// AliasEq(Alias = ?X)
+    /// ```
+    /// and relates `?X` and `ty`.
+    fn relate_alias_ty(
+        &mut self,
+        variance: Variance,
+        alias: &AliasTy<I>,
+        ty: &Ty<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
-        Ok(self.goals.push(InEnvironment::new(
-            self.environment,
-            AliasEq {
-                alias: alias.clone(),
-                ty: ty.clone(),
+        match variance {
+            Variance::Invariant => {
+                self.goals.push(InEnvironment::new(
+                    self.environment,
+                    AliasEq {
+                        alias: alias.clone(),
+                        ty: ty.clone(),
+                    }
+                    .cast(interner),
+                ));
+                Ok(())
             }
-            .cast(interner),
-        )))
+            Variance::Covariant | Variance::Contravariant => {
+                let var = self
+                    .table
+                    .new_variable(UniverseIndex::root())
+                    .to_ty(interner);
+                self.goals.push(InEnvironment::new(
+                    self.environment,
+                    AliasEq {
+                        alias: alias.clone(),
+                        ty: var.clone(),
+                    }
+                    .cast(interner),
+                ));
+                self.relate_ty_ty(variance, &var, ty)
+            }
+        }
     }
 
     /// Unify an inference variable `var` with some non-inference
@@ -341,7 +477,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
-    fn unify_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
+    fn relate_lifetime_lifetime(
+        &mut self,
+        variance: Variance,
+        a: &Lifetime<I>,
+        b: &Lifetime<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
 
         let n_a = self.table.normalize_lifetime_shallow(interner, a);
@@ -349,7 +490,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_span!("unify_lifetime_lifetime", ?a, ?b);
+        debug_span!("relate_lifetime_lifetime", ?variance, ?a, ?b);
 
         match (a.data(interner), b.data(interner)) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
@@ -365,7 +506,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 &LifetimeData::Placeholder(PlaceholderIndex { ui, .. }),
             )
             | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Empty(ui)) => {
-                self.unify_lifetime_var(a, b, a_var, b, ui)
+                self.unify_lifetime_var(variance, a, b, a_var, b, ui)
             }
 
             (
@@ -373,17 +514,17 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 &LifetimeData::InferenceVar(b_var),
             )
             | (&LifetimeData::Empty(ui), &LifetimeData::InferenceVar(b_var)) => {
-                self.unify_lifetime_var(a, b, b_var, a, ui)
+                self.unify_lifetime_var(variance, a, b, b_var, a, ui)
             }
 
             (&LifetimeData::InferenceVar(a_var), &LifetimeData::Erased)
             | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static) => {
-                self.unify_lifetime_var(a, b, a_var, b, UniverseIndex::root())
+                self.unify_lifetime_var(variance, a, b, a_var, b, UniverseIndex::root())
             }
 
             (&LifetimeData::Erased, &LifetimeData::InferenceVar(b_var))
             | (&LifetimeData::Static, &LifetimeData::InferenceVar(b_var)) => {
-                self.unify_lifetime_var(a, b, b_var, a, UniverseIndex::root())
+                self.unify_lifetime_var(variance, a, b, b_var, a, UniverseIndex::root())
             }
 
             (&LifetimeData::Static, &LifetimeData::Static)
@@ -404,7 +545,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&LifetimeData::Erased, &LifetimeData::Placeholder(_))
             | (&LifetimeData::Erased, &LifetimeData::Empty(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_eq_goals(a.clone(), b.clone()))
+                    Ok(self.push_lifetime_eq_goals(variance, a.clone(), b.clone()))
                 } else {
                     Ok(())
                 }
@@ -422,6 +563,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     #[instrument(level = "debug", skip(self, a, b))]
     fn unify_lifetime_var(
         &mut self,
+        variance: Variance,
         a: &Lifetime<I>,
         b: &Lifetime<I>,
         var: InferenceVar,
@@ -445,11 +587,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_eq_goals(a.clone(), b.clone()))
+            Ok(self.push_lifetime_eq_goals(variance, a.clone(), b.clone()))
         }
     }
 
-    fn unify_const_const<'a>(&mut self, a: &'a Const<I>, b: &'a Const<I>) -> Fallible<()> {
+    fn relate_const_const<'a>(
+        &mut self,
+        variance: Variance,
+        a: &'a Const<I>,
+        b: &'a Const<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
 
         let n_a = self.table.normalize_const_shallow(interner, a);
@@ -457,7 +604,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_span!("unify_const_const", ?a, ?b);
+        debug_span!("relate_const_const", ?variance, ?a, ?b);
 
         let ConstData {
             ty: a_ty,
@@ -468,13 +615,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
             value: b_val,
         } = b.data(interner);
 
-        self.unify_ty_ty(a_ty, b_ty)?;
+        self.relate_ty_ty(variance, a_ty, b_ty)?;
 
         match (a_val, b_val) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (&ConstValue::InferenceVar(var1), &ConstValue::InferenceVar(var2)) => {
-                debug!(?var1, ?var2, "unify_ty_ty");
+                debug!(?var1, ?var2, "relate_ty_ty");
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
                 Ok(self
@@ -498,7 +645,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             }
 
             (&ConstValue::Placeholder(p1), &ConstValue::Placeholder(p2)) => {
-                Zip::zip_with(self, &p1, &p2)
+                Zip::zip_with(self, variance, &p1, &p2)
             }
 
             (&ConstValue::Concrete(ref ev1), &ConstValue::Concrete(ref ev2)) => {
@@ -545,36 +692,51 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
-    fn push_lifetime_eq_goals(&mut self, a: Lifetime<I>, b: Lifetime<I>) {
-        self.goals.push(InEnvironment::new(
-            self.environment,
-            WhereClause::LifetimeOutlives(LifetimeOutlives {
-                a: a.clone(),
-                b: b.clone(),
-            })
-            .cast(self.interner),
-        ));
-        self.goals.push(InEnvironment::new(
-            self.environment,
-            WhereClause::LifetimeOutlives(LifetimeOutlives { a: b, b: a }).cast(self.interner),
-        ));
+    fn push_lifetime_eq_goals(&mut self, variance: Variance, a: Lifetime<I>, b: Lifetime<I>) {
+        if matches!(variance, Variance::Invariant | Variance::Covariant) {
+            self.goals.push(InEnvironment::new(
+                self.environment,
+                WhereClause::LifetimeOutlives(LifetimeOutlives {
+                    a: a.clone(),
+                    b: b.clone(),
+                })
+                .cast(self.interner),
+            ));
+        }
+        if matches!(variance, Variance::Invariant | Variance::Contravariant) {
+            self.goals.push(InEnvironment::new(
+                self.environment,
+                WhereClause::LifetimeOutlives(LifetimeOutlives { a: b, b: a }).cast(self.interner),
+            ));
+        }
+    }
+
+    fn push_subtype_goal(&mut self, a: Ty<I>, b: Ty<I>) {
+        let subtype_goal = GoalData::SubtypeGoal(SubtypeGoal { a, b }).intern(self.interner());
+        self.goals
+            .push(InEnvironment::new(self.environment, subtype_goal));
     }
 }
 
 impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
-    fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
-        self.unify_ty_ty(a, b)
+    fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
+        self.relate_ty_ty(variance, a, b)
     }
 
-    fn zip_lifetimes(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
-        self.unify_lifetime_lifetime(a, b)
+    fn zip_lifetimes(
+        &mut self,
+        variance: Variance,
+        a: &Lifetime<I>,
+        b: &Lifetime<I>,
+    ) -> Fallible<()> {
+        self.relate_lifetime_lifetime(variance, a, b)
     }
 
-    fn zip_consts(&mut self, a: &Const<I>, b: &Const<I>) -> Fallible<()> {
-        self.unify_const_const(a, b)
+    fn zip_consts(&mut self, variance: Variance, a: &Const<I>, b: &Const<I>) -> Fallible<()> {
+        self.relate_const_const(variance, a, b)
     }
 
-    fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
+    fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
         T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
@@ -587,13 +749,17 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         //   (representing the hidden "self" type)
         // * The `for<..>` binders from higher-ranked traits.
         //
-        // In both cases we can use the same `unify_binders` routine.
+        // In both cases we can use the same `relate_binders` routine.
 
-        self.unify_binders(a, b)
+        self.relate_binders(variance, a, b)
     }
 
     fn interner(&self) -> &'i I {
         self.interner
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
+        self.db
     }
 }
 
@@ -674,8 +840,11 @@ where
             // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
-            self.unifier
-                .push_lifetime_eq_goals(tick_x.to_lifetime(interner), ui.to_lifetime(interner));
+            self.unifier.push_lifetime_eq_goals(
+                Variance::Invariant,
+                tick_x.to_lifetime(interner),
+                ui.to_lifetime(interner),
+            );
             Ok(tick_x.to_lifetime(interner))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name

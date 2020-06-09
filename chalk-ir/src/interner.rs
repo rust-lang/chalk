@@ -34,6 +34,7 @@ use crate::Ty;
 use crate::TyData;
 use crate::VariableKind;
 use crate::VariableKinds;
+use crate::Variance;
 use crate::{Const, ConstData};
 use std::fmt::{self, Debug};
 use std::hash::Hash;
@@ -175,6 +176,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// An `InternedConstraints` is created by `intern_constraints`
     /// and can be converted back to its underlying data via `constraints_data`.
     type InternedConstraints: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of a list of `chalk_ir::Variance`.
+    /// In normal user code, `Self::InternedVariances` is not referenced.
+    /// Instead, we refer to `Variances<Self>`, which wraps this type.
+    ///
+    /// An `InternedVariances` is created by
+    /// `intern_variances` and can be converted back
+    /// to its underlying data via `variances_data`.
+    type InternedVariances: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for trait-ids and the like.
     type DefId: Debug + Copy + Eq + Ord + Hash;
@@ -618,6 +628,19 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         &self,
         constraints: &'a Self::InternedConstraints,
     ) -> &'a [InEnvironment<Constraint<Self>>];
+
+    /// Create "interned" variances from `data`. This is not
+    /// normally invoked directly; instead, you invoke
+    /// `Variances::from` (which will ultimately call this
+    /// method).
+    fn intern_variances<E>(
+        &self,
+        data: impl IntoIterator<Item = Result<Variance, E>>,
+    ) -> Result<Self::InternedVariances, E>;
+
+    /// Lookup the slice of `Variance` that was interned to
+    /// create a `Variances`.
+    fn variances_data<'a>(&self, variances: &'a Self::InternedVariances) -> &'a [Variance];
 }
 
 /// Implemented by types that have an associated interner (which

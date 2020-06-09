@@ -11,7 +11,8 @@ use crate::{
     RustIrDatabase,
 };
 use chalk_ir::{
-    interner::Interner, Binders, CanonicalVarKinds, GeneratorId, Substitution, VariableKinds,
+    interner::Interner, Binders, CanonicalVarKinds, GeneratorId, Substitution, UnificationDatabase,
+    VariableKinds, Variances,
 };
 
 #[derive(Debug)]
@@ -22,6 +23,16 @@ pub struct StubWrapper<'a, DB> {
 impl<'a, DB> StubWrapper<'a, DB> {
     pub fn new(db: &'a DB) -> Self {
         StubWrapper { db }
+    }
+}
+
+impl<I: Interner, DB: RustIrDatabase<I>> UnificationDatabase<I> for StubWrapper<'_, DB> {
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Variances<I> {
+        self.db.unification_database().fn_def_variance(fn_def_id)
+    }
+
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Variances<I> {
+        self.db.unification_database().adt_variance(adt_id)
     }
 }
 
@@ -221,6 +232,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         _substs: &chalk_ir::Substitution<I>,
     ) -> chalk_ir::Substitution<I> {
         unimplemented!("cannot stub closures")
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
+        self
     }
 
     fn trait_name(&self, trait_id: chalk_ir::TraitId<I>) -> String {

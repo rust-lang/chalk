@@ -6,7 +6,7 @@ use chalk_ir::cast::Caster;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_solve::infer::ucanonicalize::UCanonicalized;
-use chalk_solve::infer::unify::UnificationResult;
+use chalk_solve::infer::unify::RelationResult;
 use chalk_solve::infer::InferenceTable;
 use chalk_solve::solve::truncate;
 use chalk_solve::RustIrDatabase;
@@ -81,6 +81,10 @@ impl<I: Interner> SlgContextOps<'_, I> {
     pub(crate) fn max_size(&self) -> usize {
         self.max_size
     }
+
+    pub(crate) fn unification_database(&self) -> &dyn UnificationDatabase<I> {
+        self.program.unification_database()
+    }
 }
 
 /// "Truncation" (called "abstraction" in the papers referenced below)
@@ -111,6 +115,7 @@ pub trait ResolventOps<I: Interner> {
     /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
         &mut self,
+        ops: &dyn UnificationDatabase<I>,
         interner: &I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
@@ -121,6 +126,7 @@ pub trait ResolventOps<I: Interner> {
     fn apply_answer_subst(
         &mut self,
         interner: &I,
+        unification_database: &dyn UnificationDatabase<I>,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
@@ -187,12 +193,25 @@ pub trait UnificationOps<I: Interner> {
     ///
     /// If the parameters fail to unify, then `Error` is returned
     // Used by: simplify
-    fn unify_generic_args_into_ex_clause(
+    fn relate_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
+        variance: Variance,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
+        ex_clause: &mut ExClause<I>,
+    ) -> Fallible<()>;
+
+    fn relate_tys_into_ex_clause(
+        &mut self,
+        interner: &I,
+        db: &dyn UnificationDatabase<I>,
+        environment: &Environment<I>,
+        variance: Variance,
+        a: &Ty<I>,
+        b: &Ty<I>,
         ex_clause: &mut ExClause<I>,
     ) -> Fallible<()>;
 }
@@ -305,15 +324,35 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
         self.infer.invert(interner, value)
     }
 
-    fn unify_generic_args_into_ex_clause(
+    fn relate_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
+        variance: Variance,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
         ex_clause: &mut ExClause<I>,
     ) -> Fallible<()> {
-        let result = self.infer.unify(interner, environment, a, b)?;
+        let result = self
+            .infer
+            .relate(interner, db, environment, variance, a, b)?;
+        Ok(into_ex_clause(interner, result, ex_clause))
+    }
+
+    fn relate_tys_into_ex_clause(
+        &mut self,
+        interner: &I,
+        db: &dyn UnificationDatabase<I>,
+        environment: &Environment<I>,
+        variance: Variance,
+        a: &Ty<I>,
+        b: &Ty<I>,
+        ex_clause: &mut ExClause<I>,
+    ) -> Fallible<()> {
+        let result = self
+            .infer
+            .relate(interner, db, environment, variance, a, b)?;
         Ok(into_ex_clause(interner, result, ex_clause))
     }
 }
@@ -321,7 +360,7 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
 /// Helper function
 fn into_ex_clause<I: Interner>(
     interner: &I,
-    result: UnificationResult<I>,
+    result: RelationResult<I>,
     ex_clause: &mut ExClause<I>,
 ) {
     ex_clause.subgoals.extend(
