@@ -68,6 +68,9 @@ pub enum WellKnownTrait {
     Copy,
     Clone,
     Drop,
+    FnOnce,
+    FnMut,
+    Fn,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -210,7 +213,7 @@ pub enum Ty {
     },
     ForAll {
         lifetime_names: Vec<Identifier>,
-        ty: Box<Ty>,
+        types: Vec<Box<Ty>>,
     },
     Tuple {
         types: Vec<Box<Ty>>,

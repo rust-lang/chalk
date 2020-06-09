@@ -28,7 +28,7 @@ Some common examples of auto traits are `Send` and `Sync`.
 [coinductive_section]: ../engine/logic/coinduction.html#coinduction-and-refinement-strands
 
 # Current state 
-| Type            | Copy | Clone | Sized | Unsize | Drop | Fn  | Unpin  | Generator | auto traits |
+| Type            | Copy | Clone | Sized | Unsize | Drop | FnOnce/FnMut/Fn  | Unpin  | Generator | auto traits |
 | ---             | ---  | ---   | ---   | ---    | ---  | --- | ---    |  ---      |  ---        |
 | tuple types     | ✅    | ✅    | ✅     | ✅     | ⚬    | ⚬  |  ⚬      |  ⚬       |   ❌         |
 | structs         | ⚬    | ⚬    |  ✅    | ✅     | ⚬    | ⚬  |  ⚬      |  ⚬       |   ✅         |
@@ -37,7 +37,7 @@ Some common examples of auto traits are `Send` and `Sync`.
 | never type      | 📚   |  📚   |  ✅   |  ⚬    |  ⚬    | ⚬   |   ⚬    |  ⚬       |   ❌       |
 | trait objects   | ⚬    | ⚬    | ⚬     |  ✅    | ⚬    | ⚬   | ⚬      |  ⚬       |    ⚬        |
 | functions defs  | ✅    | ✅    | ✅     | ⚬     | ⚬    |  ❌  | ⚬      |  ⚬       |    ❌         |
-| functions ptrs  | ✅    | ✅    | ✅     | ⚬     | ⚬    | ❌   | ⚬      |  ⚬       |    ❌         |
+| functions ptrs  | ✅    | ✅    | ✅     | ⚬     | ⚬    |  ✅  | ⚬      |  ⚬       |    ❌         |
 | raw ptrs        | 📚   |  📚  |   ✅   |  ⚬    |   ⚬   |  ⚬  |   ⚬    |   ⚬      |      ❌      |
 | immutable refs  | 📚   |  📚  |   ✅   |  ⚬    |   ⚬   |  ⚬  |   ⚬    |   ⚬      |      ❌      |
 | mutable refs    | ⚬    |  ⚬   |   ✅   |  ⚬    |   ⚬   |  ⚬  |   ⚬    |   ⚬      |      ❌      |

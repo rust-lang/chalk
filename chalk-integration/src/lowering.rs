@@ -1394,18 +1394,20 @@ impl LowerTy for Ty {
 
             Ty::ForAll {
                 ref lifetime_names,
-                ref ty,
+                ref types,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
                     chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
                 }))?;
 
+                let mut lowered_tys = Vec::with_capacity(types.len());
+                for ty in types {
+                    lowered_tys.push(ty.lower(&quantified_env)?.cast(interner));
+                }
+
                 let function = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
-                    substitution: Substitution::from(
-                        interner,
-                        Some(ty.lower(&quantified_env)?.cast(interner)),
-                    ),
+                    substitution: Substitution::from(interner, lowered_tys),
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
@@ -1822,6 +1824,9 @@ impl LowerWellKnownTrait for WellKnownTrait {
             Self::Copy => rust_ir::WellKnownTrait::Copy,
             Self::Clone => rust_ir::WellKnownTrait::Clone,
             Self::Drop => rust_ir::WellKnownTrait::Drop,
+            Self::FnOnce => rust_ir::WellKnownTrait::FnOnce,
+            Self::FnMut => rust_ir::WellKnownTrait::FnMut,
+            Self::Fn => rust_ir::WellKnownTrait::Fn,
         }
     }
 }

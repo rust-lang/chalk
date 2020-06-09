@@ -1,9 +1,10 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{Substitution, Ty};
+use chalk_ir::{Floundered, Substitution, Ty};
 
 mod clone;
 mod copy;
+mod fn_family;
 mod sized;
 
 /// For well known traits we have special hard-coded impls, either as an
@@ -13,7 +14,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     well_known: WellKnownTrait,
     trait_ref: &TraitRef<I>,
-) {
+) -> Result<(), Floundered> {
     // If `trait_ref` contains bound vars, we want to universally quantify them.
     // `Generalize` collects them for us.
     let generalized = generalize::Generalize::apply(db.interner(), trait_ref);
@@ -25,17 +26,39 @@ pub fn add_builtin_program_clauses<I: Interner>(
             if force_impl {
                 builder.push_fact(trait_ref.clone());
             }
-            return;
+            return Ok(());
         }
 
         match well_known {
             WellKnownTrait::Sized => sized::add_sized_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
+            WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
+                fn_family::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, self_ty)?
+            }
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
         }
-    });
+        Ok(())
+    })
+}
+
+/// Like `add_builtin_program_clauses`, but for `DomainGoal::Normalize` involving
+/// a projection (e.g. `<fn(u8) as FnOnce<(u8,)>>::Output`)
+pub fn add_builtin_assoc_program_clauses<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    builder: &mut ClauseBuilder<'_, I>,
+    well_known: WellKnownTrait,
+    self_ty: Ty<I>,
+) -> Result<(), Floundered> {
+    match well_known {
+        WellKnownTrait::FnOnce => {
+            let trait_id = db.well_known_trait_id(well_known).unwrap();
+            fn_family::add_fn_trait_program_clauses(db, builder, trait_id, self_ty)?;
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 /// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form
