@@ -352,7 +352,9 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         b: &GenericArg<I>,
         ex_clause: &mut ExClause<I>,
     ) -> Fallible<()> {
-        let result = self.infer.unify(interner, environment, a, b)?;
+        let result = self
+            .infer
+            .unify(interner, environment, Variance::Invariant, a, b)?;
         Ok(into_ex_clause(interner, result, ex_clause))
     }
 }

@@ -17,14 +17,20 @@ where
     I: Interner,
 {
     fn could_match(&self, interner: &I, other: &T) -> bool {
-        return Zip::zip_with(&mut MatchZipper { interner }, self, other).is_ok();
+        return Zip::zip_with(
+            &mut MatchZipper { interner },
+            Variance::Invariant,
+            self,
+            other,
+        )
+        .is_ok();
 
         struct MatchZipper<'i, I> {
             interner: &'i I,
         };
 
         impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
-            fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
+            fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
                 let interner = self.interner;
                 let could_match = match (a.data(interner), b.data(interner)) {
                     (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
@@ -47,19 +53,34 @@ where
                 }
             }
 
-            fn zip_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> Fallible<()> {
+            fn zip_lifetimes(
+                &mut self,
+                variance: Variance,
+                _: &Lifetime<I>,
+                _: &Lifetime<I>,
+            ) -> Fallible<()> {
                 Ok(())
             }
 
-            fn zip_consts(&mut self, _: &Const<I>, _: &Const<I>) -> Fallible<()> {
+            fn zip_consts(
+                &mut self,
+                variance: Variance,
+                _: &Const<I>,
+                _: &Const<I>,
+            ) -> Fallible<()> {
                 Ok(())
             }
 
-            fn zip_binders<T>(&mut self, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
+            fn zip_binders<T>(
+                &mut self,
+                variance: Variance,
+                a: &Binders<T>,
+                b: &Binders<T>,
+            ) -> Fallible<()>
             where
                 T: HasInterner + Zip<I>,
             {
-                Zip::zip_with(self, &a.value, &b.value)
+                Zip::zip_with(self, variance, &a.value, &b.value)
             }
 
             fn interner(&self) -> &'i I {

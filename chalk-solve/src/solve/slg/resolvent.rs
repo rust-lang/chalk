@@ -87,9 +87,13 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         debug!(?consequence, ?conditions, ?constraints);
 
         // Unify the selected literal Li with C'.
-        let unification_result = self
-            .infer
-            .unify(interner, environment, goal, &consequence)?;
+        let unification_result = self.infer.unify(
+            interner,
+            environment,
+            Variance::Invariant,
+            goal,
+            &consequence,
+        )?;
 
         // Final X-clause that we will return.
         let mut ex_clause = ExClause {
@@ -286,13 +290,14 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             ex_clause,
             outer_binder: DebruijnIndex::INNERMOST,
         };
-        Zip::zip_with(&mut this, answer, pending)?;
+        Zip::zip_with(&mut this, Variance::Invariant, answer, pending)?;
         Ok(())
     }
 
     fn unify_free_answer_var(
         &mut self,
         interner: &I,
+        variance: Variance,
         answer_var: BoundVar,
         pending: GenericArgData<I>,
     ) -> Fallible<bool> {
@@ -320,6 +325,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             self.table.unify(
                 interner,
                 &self.environment,
+                variance,
                 answer_param,
                 &GenericArg::new(interner, pending_shifted),
             )?,
@@ -363,11 +369,11 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 }
 
 impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
-    fn zip_tys(&mut self, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
+    fn zip_tys(&mut self, variance: Variance, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
 
         if let Some(pending) = self.table.normalize_ty_shallow(interner, pending) {
-            return Zip::zip_with(self, answer, &pending);
+            return Zip::zip_with(self, variance, answer, &pending);
         }
 
         // If the answer has a variable here, then this is one of the
@@ -377,6 +383,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         if let TyData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
                 interner,
+                variance,
                 *answer_depth,
                 GenericArgData::Ty(pending.clone()),
             )? {
@@ -391,19 +398,25 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (TyData::Apply(answer), TyData::Apply(pending)) => Zip::zip_with(self, answer, pending),
+            (TyData::Apply(answer), TyData::Apply(pending)) => {
+                Zip::zip_with(self, variance, answer, pending)
+            }
 
-            (TyData::Dyn(answer), TyData::Dyn(pending)) => Zip::zip_with(self, answer, pending),
+            (TyData::Dyn(answer), TyData::Dyn(pending)) => {
+                Zip::zip_with(self, variance, answer, pending)
+            }
 
-            (TyData::Alias(answer), TyData::Alias(pending)) => Zip::zip_with(self, answer, pending),
+            (TyData::Alias(answer), TyData::Alias(pending)) => {
+                Zip::zip_with(self, variance, answer, pending)
+            }
 
             (TyData::Placeholder(answer), TyData::Placeholder(pending)) => {
-                Zip::zip_with(self, answer, pending)
+                Zip::zip_with(self, variance, answer, pending)
             }
 
             (TyData::Function(answer), TyData::Function(pending)) => {
                 self.outer_binder.shift_in();
-                Zip::zip_with(self, &answer.substitution, &pending.substitution)?;
+                Zip::zip_with(self, variance, &answer.substitution, &pending.substitution)?;
                 self.outer_binder.shift_out();
                 Ok(())
             }
@@ -425,15 +438,21 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         }
     }
 
-    fn zip_lifetimes(&mut self, answer: &Lifetime<I>, pending: &Lifetime<I>) -> Fallible<()> {
+    fn zip_lifetimes(
+        &mut self,
+        variance: Variance,
+        answer: &Lifetime<I>,
+        pending: &Lifetime<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
         if let Some(pending) = self.table.normalize_lifetime_shallow(interner, pending) {
-            return Zip::zip_with(self, answer, &pending);
+            return Zip::zip_with(self, variance, answer, &pending);
         }
 
         if let LifetimeData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
                 interner,
+                variance,
                 *answer_depth,
                 GenericArgData::Lifetime(pending.clone()),
             )? {
@@ -465,10 +484,15 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         }
     }
 
-    fn zip_consts(&mut self, answer: &Const<I>, pending: &Const<I>) -> Fallible<()> {
+    fn zip_consts(
+        &mut self,
+        variance: Variance,
+        answer: &Const<I>,
+        pending: &Const<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
         if let Some(pending) = self.table.normalize_const_shallow(interner, pending) {
-            return Zip::zip_with(self, answer, &pending);
+            return Zip::zip_with(self, variance, answer, &pending);
         }
 
         let ConstData {
@@ -480,11 +504,12 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             value: pending_value,
         } = pending.data(interner);
 
-        self.zip_tys(answer_ty, pending_ty)?;
+        self.zip_tys(variance, answer_ty, pending_ty)?;
 
         if let ConstValue::BoundVar(answer_depth) = answer_value {
             if self.unify_free_answer_var(
                 interner,
+                variance,
                 *answer_depth,
                 GenericArgData::Const(pending.clone()),
             )? {
@@ -521,12 +546,22 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         }
     }
 
-    fn zip_binders<T>(&mut self, answer: &Binders<T>, pending: &Binders<T>) -> Fallible<()>
+    fn zip_binders<T>(
+        &mut self,
+        variance: Variance,
+        answer: &Binders<T>,
+        pending: &Binders<T>,
+    ) -> Fallible<()>
     where
         T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         self.outer_binder.shift_in();
-        Zip::zip_with(self, answer.skip_binders(), pending.skip_binders())?;
+        Zip::zip_with(
+            self,
+            variance,
+            answer.skip_binders(),
+            pending.skip_binders(),
+        )?;
         self.outer_binder.shift_out();
         Ok(())
     }

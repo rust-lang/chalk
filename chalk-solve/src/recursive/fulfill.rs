@@ -9,7 +9,7 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, UCanonical, UniverseMap,
+    QuantifierKind, Substitution, UCanonical, UniverseMap, Variance,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -97,6 +97,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
         &mut self,
         interner: &I,
         environment: &Environment<I>,
+        variance: Variance,
         a: &T,
         b: &T,
     ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
@@ -189,6 +190,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
 
         if let Err(e) = fulfill.unify(
             &canonical_goal.environment,
+            Variance::Invariant,
             &canonical_goal.goal,
             &consequence,
         ) {
@@ -259,13 +261,19 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub(super) fn unify<T>(&mut self, environment: &Environment<I>, a: &T, b: &T) -> Fallible<()>
+    pub(super) fn unify<T>(
+        &mut self,
+        environment: &Environment<I>,
+        variance: Variance,
+        a: &T,
+        b: &T,
+    ) -> Fallible<()>
     where
         T: ?Sized + Zip<I> + Debug,
     {
         let goals = self
             .infer
-            .unify(self.solver.interner(), environment, a, b)?;
+            .unify(self.solver.interner(), environment, variance, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         for goal in goals {
@@ -316,7 +324,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 self.push_obligation(Obligation::Prove(in_env));
             }
             GoalData::EqGoal(EqGoal { a, b }) => {
-                self.unify(&environment, &a, &b)?;
+                self.unify(&environment, Variance::Invariant, &a, &b)?;
             }
             GoalData::CannotProve(()) => {
                 debug!("Pushed a CannotProve goal, setting cannot_prove = true");
@@ -406,7 +414,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
 
         for (i, free_var) in free_vars.into_iter().enumerate() {
             let subst_value = subst.at(self.interner(), i);
-            self.unify(empty_env, &free_var, subst_value)
+            self.unify(empty_env, Variance::Invariant, &free_var, subst_value)
                 .unwrap_or_else(|err| {
                     panic!(
                         "apply_solution failed with free_var={:?}, subst_value={:?}: {:?}",
