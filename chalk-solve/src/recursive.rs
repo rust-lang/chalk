@@ -42,104 +42,6 @@ pub(crate) struct RecursiveContext<I: Interner> {
     caching_enabled: bool,
 }
 
-pub(crate) struct RecursiveInferenceTableImpl<I: Interner> {
-    pub(crate) infer: InferenceTable<I>,
-}
-
-impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> {
-    fn instantiate_binders_universally<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: &'a Binders<T>,
-    ) -> T::Result
-    where
-        T: Fold<I> + HasInterner<Interner = I>,
-    {
-        self.infer.instantiate_binders_universally(interner, arg)
-    }
-
-    fn instantiate_binders_existentially<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: &'a Binders<T>,
-    ) -> T::Result
-    where
-        T: Fold<I> + HasInterner<Interner = I>,
-    {
-        self.infer.instantiate_binders_existentially(interner, arg)
-    }
-
-    fn canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value: &T,
-    ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
-    where
-        T: Fold<I>,
-        T::Result: HasInterner<Interner = I>,
-    {
-        let res = self.infer.canonicalize(interner, value);
-        let free_vars = res
-            .free_vars
-            .into_iter()
-            .map(|free_var| free_var.to_generic_arg(interner))
-            .collect();
-        (res.quantified, free_vars)
-    }
-
-    fn u_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value0: &Canonical<T>,
-    ) -> (UCanonical<T::Result>, UniverseMap)
-    where
-        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
-        T::Result: HasInterner<Interner = I>,
-    {
-        let res = self.infer.u_canonicalize(interner, value0);
-        (res.quantified, res.universes)
-    }
-
-    fn unify<T>(
-        &mut self,
-        interner: &I,
-        environment: &Environment<I>,
-        a: &T,
-        b: &T,
-    ) -> Fallible<(
-        Vec<InEnvironment<DomainGoal<I>>>,
-        Vec<InEnvironment<Constraint<I>>>,
-    )>
-    where
-        T: ?Sized + Zip<I>,
-    {
-        let res = self.infer.unify(interner, environment, a, b)?;
-        Ok((res.goals, res.constraints))
-    }
-
-    fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
-    where
-        T: HasInterner<Interner = I> + Fold<I> + Debug,
-    {
-        self.infer.instantiate_canonical(interner, bound)
-    }
-
-    fn invert_then_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value: &T,
-    ) -> Option<Canonical<T::Result>>
-    where
-        T: Fold<I, Result = T> + HasInterner<Interner = I>,
-    {
-        self.infer.invert_then_canonicalize(interner, value)
-    }
-
-    fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool {
-        truncate::needs_truncation(interner, &mut self.infer, max_size, value)
-    }
-}
-
 /// A Solver is the basic context in which you can propose goals for a given
 /// program. **All questions posed to the solver are in canonical, closed form,
 /// so that each question is answered with effectively a "clean slate"**. This
@@ -192,25 +94,6 @@ impl<I: Interner> RecursiveContext<I> {
 }
 
 impl<'me, I: Interner> Solver<'me, I> {
-    pub(crate) fn new_inference_table<
-        T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone,
-    >(
-        &self,
-        ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (
-        RecursiveInferenceTableImpl<I>,
-        Substitution<I>,
-        InEnvironment<T::Result>,
-    ) {
-        let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
-            self.program.interner(),
-            ucanonical_goal.universes,
-            &ucanonical_goal.canonical,
-        );
-        let infer = crate::recursive::RecursiveInferenceTableImpl { infer };
-        (infer, subst, canonical_goal)
-    }
-
     /// Solves a canonical goal. The substitution returned in the
     /// solution will be for the fully decomposed goal. For example, given the
     /// program
