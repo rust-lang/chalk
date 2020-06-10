@@ -754,3 +754,51 @@ fn struct_repr() {
         }
     }
 }
+
+#[test]
+fn algebraic_data_types() {
+    lowering_success! {
+        program {
+            enum Foo {}
+
+            enum Bar {
+                Variant,
+                OtherVariant(u32, u32),
+                LastVariant {
+                    foo: Foo,
+                    bar: u32,
+                },
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            enum Option<T> {
+                None,
+                Some(T),
+            }
+
+            enum Result<T, E> {
+                Ok(T),
+                Err(E),
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Borrow<Borrowed> {}
+
+            trait ToOwned {
+                type Owned: Borrow<Self>;
+            }
+
+            // FIXME(#435) should be `B: 'a + ToOwned`
+            enum Cow<'a, B> where B: ToOwned {
+                Borrowed(&'a B),
+                Owned(<B as ToOwned>::Owned),
+            }
+        }
+    }
+}

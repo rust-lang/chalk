@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::iter;
 
 use crate::clauses::ClauseBuilder;
+use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     cast::Cast,
@@ -337,33 +338,46 @@ pub fn add_unsize_program_clauses<I: Interner>(
             builder.push_clause(trait_ref.clone(), iter::once(eq_goal));
         }
 
-        // Struct<T> -> Struct<U>
-        // Unsizing of enums is not allowed
+        // Adt<T> -> Adt<U>
         (
             TyData::Apply(ApplicationTy {
-                name: TypeName::Adt(struct_id_a),
+                name: TypeName::Adt(adt_id_a),
                 substitution: substitution_a,
             }),
             TyData::Apply(ApplicationTy {
-                name: TypeName::Adt(struct_id_b),
+                name: TypeName::Adt(adt_id_b),
                 substitution: substitution_b,
             }),
         ) => {
-            if struct_id_a != struct_id_b {
+            if adt_id_a != adt_id_b {
                 return;
             }
 
-            let struct_id = *struct_id_a;
-            let struct_datum = db.adt_datum(struct_id);
-            let fields_len = struct_datum.binders.skip_binders().fields.len();
+            let adt_id = *adt_id_a;
+            let adt_datum = db.adt_datum(adt_id);
+
+            // Unsizing of enums is not allowed
+            if adt_datum.flags.kind == AdtKind::Enum {
+                return;
+            }
+
+            // We have a `struct` so we're guaranteed a single variant
+            let fields_len = adt_datum
+                .binders
+                .skip_binders()
+                .variants
+                .last()
+                .unwrap()
+                .fields
+                .len();
 
             if fields_len == 0 {
                 return;
             }
 
-            let adt_tail_field = struct_datum
+            let adt_tail_field = adt_datum
                 .binders
-                .map_ref(|bound| bound.fields.last().unwrap());
+                .map_ref(|bound| bound.variants.last().unwrap().fields.last().unwrap());
 
             // Collect unsize parameters that last field contains and
             // ensure there at least one of them.
@@ -379,9 +393,9 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // i.e. the struct generic arguments binder.
             if uses_outer_binder_params(
                 interner,
-                &struct_datum
+                &adt_datum
                     .binders
-                    .map_ref(|bound| &bound.fields[..fields_len - 1]),
+                    .map_ref(|bound| &bound.variants.last().unwrap().fields[..fields_len - 1]),
                 &unsize_parameter_candidates,
             ) {
                 return;
@@ -411,7 +425,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
             let eq_goal = EqGoal {
                 a: TyData::Apply(ApplicationTy {
-                    name: TypeName::Adt(struct_id),
+                    name: TypeName::Adt(adt_id),
                     substitution,
                 })
                 .intern(interner)

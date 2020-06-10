@@ -18,6 +18,7 @@ mod env_elaborator;
 mod generalize;
 pub mod program_clauses;
 
+/// FIXME(#505) update comments for ADTs
 /// For auto-traits, we generate a default rule for every struct,
 /// unless there is a manual impl for that struct given explicitly.
 ///
@@ -74,8 +75,8 @@ pub fn push_auto_trait_impls<I: Interner>(
         return;
     }
 
-    let binders = adt_datum.binders.map_ref(|b| &b.fields);
-    builder.push_binders(&binders, |builder, fields| {
+    let binders = adt_datum.binders.map_ref(|b| &b.variants);
+    builder.push_binders(&binders, |builder, variants| {
         let self_ty: Ty<_> = ApplicationTy {
             name: adt_id.cast(interner),
             substitution: builder.substitution_in_scope(),
@@ -96,9 +97,11 @@ pub fn push_auto_trait_impls<I: Interner>(
         // }
         builder.push_clause(
             auto_trait_ref,
-            fields.iter().map(|field_ty| TraitRef {
-                trait_id: auto_trait_id,
-                substitution: Substitution::from1(interner, field_ty.clone()),
+            variants.iter().flat_map(|variant| {
+                variant.fields.iter().map(|field_ty| TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from1(interner, field_ty.clone()),
+                })
             }),
         );
     });

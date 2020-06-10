@@ -711,6 +711,76 @@ fn struct_sized_constraints() {
 }
 
 #[test]
+fn enum_sized_constraints() {
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            enum E<T> {
+                A {
+                    t1: T,
+                    t2: T,
+                },
+                B,
+                C,
+            }
+        } error_msg {
+            "type declaration `E` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo { }
+
+            enum E<T> {
+                A {
+                    t1: Foo,
+                    t2: T,
+                },
+                B,
+                C,
+            }
+        } error_msg {
+            "type declaration `E` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            enum S<T> where T: Sized {
+                A {
+                    t1: T,
+                    t2: T,
+                },
+                B,
+                C,
+            }
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            enum Foo {}
+
+            impl Sized for Foo {}
+        } error_msg {
+            "trait impl for `Sized` does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
 fn copy_constraints() {
     lowering_success! {
         program {

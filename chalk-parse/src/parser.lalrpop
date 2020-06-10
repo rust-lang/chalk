@@ -13,7 +13,7 @@ Items: Vec<Item> = {
 
 Item: Option<Item> = {
     Comment => None,
-    StructDefn => Some(Item::StructDefn(<>)),
+    AdtDefn => Some(Item::AdtDefn(<>)),
     FnDefn => Some(Item::FnDefn(<>)),
     ClosureDefn => Some(Item::ClosureDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
@@ -59,27 +59,80 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
 };
 
-StructRepr: Atom = "#" "[" "repr" "(" <name:Id> ")" "]" => name.str;
+AdtRepr: Atom = "#" "[" "repr" "(" <name:Id> ")" "]" => name.str;
 
-StructDefn: StructDefn = {
-    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:StructRepr*>
-        "struct" <n:Id><p:Angle<VariableKind>>
-        <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
+AdtDefn: AdtDefn = {
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtRepr*>
+        "enum" <n:Id><p:Angle<VariableKind>>
+        <w:QuantifiedWhereClauses> "{" <v:Variants> "}" => AdtDefn
     {
         name: n,
         variable_kinds: p,
         where_clauses: w,
-        fields: f,
-        flags: StructFlags {
+        variants: v,
+        flags: AdtFlags {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
             phantom_data: phantom_data.is_some(),
+            kind: AdtKind::Enum,
         },
-        repr: StructRepr {
+        repr: AdtRepr {
+            repr_c: repr.iter().any(|s| s == "C"),
+            repr_packed: repr.iter().any(|s| s == "packed"),
+        },
+    },
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtRepr*>
+        "struct" <n:Id><p:Angle<VariableKind>>
+        <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => AdtDefn
+    {
+        variants: vec![Variant {
+            // FIXME(#505) choose a proper span
+            name: Identifier {
+                str: Atom::from("0"),
+                span: n.span,
+            },
+            fields: f,
+        }],
+        name: n,
+        variable_kinds: p,
+        where_clauses: w,
+        flags: AdtFlags {
+            upstream: upstream.is_some(),
+            fundamental: fundamental.is_some(),
+            phantom_data: phantom_data.is_some(),
+            kind: AdtKind::Struct,
+        },
+        repr: AdtRepr {
             repr_c: repr.iter().any(|s| s == "C"),
             repr_packed: repr.iter().any(|s| s == "packed"),
         },
     }
+};
+
+Variants: Vec<Variant> = {
+    <Comma<Variant>>,
+};
+
+Variant: Variant = {
+    <n: Id> "{" <f:Fields> "}" => Variant {
+        name: n,
+        fields: f,
+    },
+    <n: Id> "(" <tys:Comma<Ty>> ")" => Variant {
+        fields: tys.into_iter().enumerate().map(|(i, t)| Field {
+            // FIXME(#505) choose a proper span
+            name: Identifier {
+                str: Atom::from(format!("{}", i)),
+                span: n.span,
+            },
+            ty: t,
+        }).collect(),
+        name: n,
+    },
+    <n: Id> => Variant {
+        name: n,
+        fields: vec![],
+    },
 };
 
 FnReturn: Ty = {
@@ -492,7 +545,8 @@ Separator1<S, T>: Vec<T> = {
 
 #[inline]
 Comma<T>: Vec<T> = {
-    <Separator<",", T>>
+    <v:Separator<",", T>> "," => v,
+    <v:Separator<",", T>> => v,
 };
 
 #[inline]
