@@ -256,68 +256,9 @@ impl<'me, I: Interner> Solver<'me, I> {
         // - None < Some(CannotProve)
         // the function which maps the loop iteration to `answer` is a nondecreasing function
         // so this function will eventually be constant and the loop terminates.
-        let minimums = &mut Minimums::new();
         loop {
-            let UCanonical {
-                universes,
-                canonical:
-                    Canonical {
-                        binders,
-                        value: InEnvironment { environment, goal },
-                    },
-            } = canonical_goal.clone();
-
-            let (current_answer, current_prio) = match goal.data(self.program.interner()) {
-                GoalData::DomainGoal(domain_goal) => {
-                    let canonical_goal = UCanonical {
-                        universes,
-                        canonical: Canonical {
-                            binders,
-                            value: InEnvironment {
-                                environment,
-                                goal: domain_goal.clone(),
-                            },
-                        },
-                    };
-
-                    // "Domain" goals (i.e., leaf goals that are Rust-specific) are
-                    // always solved via some form of implication. We can either
-                    // apply assumptions from our environment (i.e. where clauses),
-                    // or from the lowered program, which includes fallback
-                    // clauses. We try each approach in turn:
-
-                    let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
-
-                    let (prog_solution, prog_prio) = {
-                        debug_heading!("prog_clauses");
-
-                        let prog_clauses = self.program_clauses_for_goal(environment, &goal);
-                        match prog_clauses {
-                            Ok(clauses) => {
-                                self.solve_from_clauses(&canonical_goal, clauses, minimums)
-                            }
-                            Err(Floundered) => {
-                                (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
-                            }
-                        }
-                    };
-                    debug!("prog_solution={:?}", prog_solution);
-
-                    (prog_solution, prog_prio)
-                }
-
-                _ => {
-                    let canonical_goal = UCanonical {
-                        universes,
-                        canonical: Canonical {
-                            binders,
-                            value: InEnvironment { environment, goal },
-                        },
-                    };
-
-                    self.solve_via_simplification(&canonical_goal, minimums)
-                }
-            };
+            let minimums = &mut Minimums::new();
+            let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
@@ -368,6 +309,71 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             // Otherwise: rollback the search tree and try again.
             self.context.search_graph.rollback_to(dfn + 1);
+        }
+    }
+
+    fn solve_iteration(
+        &mut self,
+        canonical_goal: &UCanonicalGoal<I>,
+        minimums: &mut Minimums,
+    ) -> (Fallible<Solution<I>>, ClausePriority) {
+        let UCanonical {
+            universes,
+            canonical:
+                Canonical {
+                    binders,
+                    value: InEnvironment { environment, goal },
+                },
+        } = canonical_goal.clone();
+
+        match goal.data(self.program.interner()) {
+            GoalData::DomainGoal(domain_goal) => {
+                let canonical_goal = UCanonical {
+                    universes,
+                    canonical: Canonical {
+                        binders,
+                        value: InEnvironment {
+                            environment,
+                            goal: domain_goal.clone(),
+                        },
+                    },
+                };
+
+                // "Domain" goals (i.e., leaf goals that are Rust-specific) are
+                // always solved via some form of implication. We can either
+                // apply assumptions from our environment (i.e. where clauses),
+                // or from the lowered program, which includes fallback
+                // clauses. We try each approach in turn:
+
+                let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
+
+                let (prog_solution, prog_prio) = {
+                    debug_heading!("prog_clauses");
+
+                    let prog_clauses = self.program_clauses_for_goal(environment, &goal);
+                    match prog_clauses {
+                        Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
+                        Err(Floundered) => {
+                            (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
+                        }
+                    }
+                };
+                debug!("prog_solution={:?}", prog_solution);
+
+                (prog_solution, prog_prio)
+            }
+
+            _ => {
+                let canonical_goal = UCanonical {
+                    universes,
+                    canonical: Canonical {
+                        binders,
+                        value: InEnvironment { environment, goal },
+                    },
+                };
+
+                self.solve_via_simplification(&canonical_goal, minimums)
+            }
         }
     }
 
