@@ -1,6 +1,8 @@
+mod combine;
 mod fulfill;
 pub mod lib;
 mod search_graph;
+mod solve;
 mod stack;
 
 use self::fulfill::{Fulfill, RecursiveInferenceTable, RecursiveSolver};
@@ -276,7 +278,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             let old_answer = &self.context.search_graph[dfn].solution;
             let old_prio = self.context.search_graph[dfn].solution_priority;
 
-            let (current_answer, current_prio) = combine_with_priorities_for_goal(
+            let (current_answer, current_prio) = combine::with_priorities_for_goal(
                 self.program.interner(),
                 &canonical_goal.canonical.value.goal,
                 old_answer.clone(),
@@ -309,160 +311,6 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             // Otherwise: rollback the search tree and try again.
             self.context.search_graph.rollback_to(dfn + 1);
-        }
-    }
-
-    fn solve_iteration(
-        &mut self,
-        canonical_goal: &UCanonicalGoal<I>,
-        minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
-        let UCanonical {
-            universes,
-            canonical:
-                Canonical {
-                    binders,
-                    value: InEnvironment { environment, goal },
-                },
-        } = canonical_goal.clone();
-
-        match goal.data(self.program.interner()) {
-            GoalData::DomainGoal(domain_goal) => {
-                let canonical_goal = UCanonical {
-                    universes,
-                    canonical: Canonical {
-                        binders,
-                        value: InEnvironment {
-                            environment,
-                            goal: domain_goal.clone(),
-                        },
-                    },
-                };
-
-                // "Domain" goals (i.e., leaf goals that are Rust-specific) are
-                // always solved via some form of implication. We can either
-                // apply assumptions from our environment (i.e. where clauses),
-                // or from the lowered program, which includes fallback
-                // clauses. We try each approach in turn:
-
-                let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
-
-                let (prog_solution, prog_prio) = {
-                    debug_heading!("prog_clauses");
-
-                    let prog_clauses = self.program_clauses_for_goal(environment, &goal);
-                    match prog_clauses {
-                        Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
-                        Err(Floundered) => {
-                            (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
-                        }
-                    }
-                };
-                debug!("prog_solution={:?}", prog_solution);
-
-                (prog_solution, prog_prio)
-            }
-
-            _ => {
-                let canonical_goal = UCanonical {
-                    universes,
-                    canonical: Canonical {
-                        binders,
-                        value: InEnvironment { environment, goal },
-                    },
-                };
-
-                self.solve_via_simplification(&canonical_goal, minimums)
-            }
-        }
-    }
-
-    fn solve_via_simplification(
-        &mut self,
-        canonical_goal: &UCanonicalGoal<I>,
-        minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
-        debug_heading!("solve_via_simplification({:?})", canonical_goal);
-        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
-        match Fulfill::new_with_simplification(self, infer, subst, goal) {
-            Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
-            Err(e) => (Err(e), ClausePriority::High),
-        }
-    }
-
-    /// See whether we can solve a goal by implication on any of the given
-    /// clauses. If multiple such solutions are possible, we attempt to combine
-    /// them.
-    fn solve_from_clauses<C>(
-        &mut self,
-        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-        clauses: C,
-        minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority)
-    where
-        C: IntoIterator<Item = ProgramClause<I>>,
-    {
-        let mut cur_solution = None;
-        for program_clause in clauses {
-            debug_heading!("clause={:?}", program_clause);
-
-            // If we have a completely ambiguous answer, it's not going to get better, so stop
-            if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
-                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
-            }
-
-            let res = match program_clause.data(self.program.interner()) {
-                ProgramClauseData::Implies(implication) => self.solve_via_implication(
-                    canonical_goal,
-                    &Binders::new(
-                        VariableKinds::from(self.program.interner(), vec![]),
-                        implication.clone(),
-                    ),
-                    minimums,
-                ),
-                ProgramClauseData::ForAll(implication) => {
-                    self.solve_via_implication(canonical_goal, implication, minimums)
-                }
-            };
-            if let (Ok(solution), priority) = res {
-                debug!("ok: solution={:?} prio={:?}", solution, priority);
-                cur_solution = Some(match cur_solution {
-                    None => (solution, priority),
-                    Some((cur, cur_priority)) => combine_with_priorities(
-                        self.program.interner(),
-                        &canonical_goal.canonical.value.goal,
-                        cur,
-                        cur_priority,
-                        solution,
-                        priority,
-                    ),
-                });
-            } else {
-                debug!("error");
-            }
-        }
-        cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))
-    }
-
-    /// Modus ponens! That is: try to apply an implication by proving its premises.
-    fn solve_via_implication(
-        &mut self,
-        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-        clause: &Binders<ProgramClauseImplication<I>>,
-        minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
-        info_heading!(
-            "solve_via_implication(\
-             \n    canonical_goal={:?},\
-             \n    clause={:?})",
-            canonical_goal,
-            clause
-        );
-
-        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
-        match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
-            Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
-            Err(e) => (Err(e), ClausePriority::High),
         }
     }
 
@@ -567,78 +415,5 @@ impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
 
     fn interner(&self) -> &I {
         &self.program.interner()
-    }
-}
-
-fn calculate_inputs<I: Interner>(
-    interner: &I,
-    domain_goal: &DomainGoal<I>,
-    solution: &Solution<I>,
-) -> Vec<GenericArg<I>> {
-    if let Some(subst) = solution.constrained_subst() {
-        let subst_goal = subst.value.subst.apply(&domain_goal, interner);
-        subst_goal.inputs(interner)
-    } else {
-        domain_goal.inputs(interner)
-    }
-}
-
-fn combine_with_priorities_for_goal<I: Interner>(
-    interner: &I,
-    goal: &Goal<I>,
-    a: Fallible<Solution<I>>,
-    prio_a: ClausePriority,
-    b: Fallible<Solution<I>>,
-    prio_b: ClausePriority,
-) -> (Fallible<Solution<I>>, ClausePriority) {
-    let domain_goal = match goal.data(interner) {
-        GoalData::DomainGoal(domain_goal) => domain_goal,
-        _ => {
-            // non-domain goals currently have no priorities, so we always take the new solution here
-            return (b, prio_b);
-        }
-    };
-    match (a, b) {
-        (Ok(a), Ok(b)) => {
-            let (solution, prio) =
-                combine_with_priorities(interner, domain_goal, a, prio_a, b, prio_b);
-            (Ok(solution), prio)
-        }
-        (Ok(solution), Err(_)) => (Ok(solution), prio_a),
-        (Err(_), Ok(solution)) => (Ok(solution), prio_b),
-        (Err(_), Err(e)) => (Err(e), prio_b),
-    }
-}
-
-fn combine_with_priorities<I: Interner>(
-    interner: &I,
-    domain_goal: &DomainGoal<I>,
-    a: Solution<I>,
-    prio_a: ClausePriority,
-    b: Solution<I>,
-    prio_b: ClausePriority,
-) -> (Solution<I>, ClausePriority) {
-    match (prio_a, prio_b, a, b) {
-        (ClausePriority::High, ClausePriority::Low, higher, lower)
-        | (ClausePriority::Low, ClausePriority::High, lower, higher) => {
-            // if we have a high-priority solution and a low-priority solution,
-            // the high-priority solution overrides *if* they are both for the
-            // same inputs -- we don't want a more specific high-priority
-            // solution overriding a general low-priority one. Currently inputs
-            // only matter for projections; in a goal like `AliasEq(<?0 as
-            // Trait>::Type = ?1)`, ?0 is the input.
-            let inputs_higher = calculate_inputs(interner, domain_goal, &higher);
-            let inputs_lower = calculate_inputs(interner, domain_goal, &lower);
-            if inputs_higher == inputs_lower {
-                debug!(
-                    "preferring solution: {:?} over {:?} because of higher prio",
-                    higher, lower
-                );
-                (higher, ClausePriority::High)
-            } else {
-                (higher.combine(lower, interner), ClausePriority::High)
-            }
-        }
-        (_, _, a, b) => (a.combine(b, interner), prio_a),
     }
 }
