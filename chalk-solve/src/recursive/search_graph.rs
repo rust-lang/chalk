@@ -17,7 +17,7 @@ pub(super) struct SearchGraph<I: Interner> {
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub struct DepthFirstNumber {
+pub(super) struct DepthFirstNumber {
     index: usize,
 }
 

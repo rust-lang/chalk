@@ -56,7 +56,7 @@ enum NegativeSolution {
     Ambiguous,
 }
 
-pub(crate) trait RecursiveInferenceTable<I: Interner> {
+pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
@@ -119,7 +119,7 @@ pub(crate) trait RecursiveInferenceTable<I: Interner> {
     fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool;
 }
 
-pub trait RecursiveSolver<I: Interner> {
+pub(super) trait RecursiveSolver<I: Interner> {
     fn solve_goal(
         &mut self,
         goal: UCanonical<InEnvironment<Goal<I>>>,
@@ -139,7 +139,7 @@ pub trait RecursiveSolver<I: Interner> {
 /// of type inference in general. But when solving trait constraints, *fresh*
 /// `Fulfill` instances will be created to solve canonicalized, free-standing
 /// goals, and transport what was learned back to the outer context.
-pub(crate) struct Fulfill<
+pub(super) struct Fulfill<
     's,
     I: Interner,
     Solver: RecursiveSolver<I>,
@@ -165,7 +165,7 @@ pub(crate) struct Fulfill<
 impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable<I>>
     Fulfill<'s, I, Solver, Infer>
 {
-    pub(crate) fn new_with_clause(
+    pub(super) fn new_with_clause(
         solver: &'s mut Solver,
         infer: Infer,
         subst: Substitution<I>,
@@ -209,7 +209,7 @@ impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable
         Ok(fulfill)
     }
 
-    pub(crate) fn new_with_simplification(
+    pub(super) fn new_with_simplification(
         solver: &'s mut Solver,
         infer: Infer,
         subst: Substitution<I>,
@@ -263,7 +263,7 @@ impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable
     ///
     /// Wraps `InferenceTable::unify`; any resulting normalizations are added
     /// into our list of pending obligations with the given environment.
-    pub(crate) fn unify<T>(&mut self, environment: &Environment<I>, a: &T, b: &T) -> Fallible<()>
+    pub(super) fn unify<T>(&mut self, environment: &Environment<I>, a: &T, b: &T) -> Fallible<()>
     where
         T: ?Sized + Zip<I> + Debug,
     {
@@ -283,7 +283,7 @@ impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable
 
     /// Create obligations for the given goal in the given environment. This may
     /// ultimately create any number of obligations.
-    pub(crate) fn push_goal(
+    pub(super) fn push_goal(
         &mut self,
         environment: &Environment<I>,
         goal: Goal<I>,
