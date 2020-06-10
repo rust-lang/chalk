@@ -1,6 +1,6 @@
-use crate::interner::ChalkIr;
+use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::interner::HasInterner;
+use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
     QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
@@ -24,6 +24,7 @@ type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
+type FnDefAbis = BTreeMap<FnDefId<ChalkIr>, <ChalkIr as Interner>::FnAbi>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
@@ -40,6 +41,7 @@ struct Env<'k> {
     adt_kinds: &'k AdtKinds,
     fn_def_ids: &'k FnDefIds,
     fn_def_kinds: &'k FnDefKinds,
+    fn_def_abis: &'k FnDefAbis,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
@@ -320,6 +322,7 @@ impl LowerProgram for Program {
         let mut opaque_ty_ids = BTreeMap::new();
         let mut adt_kinds = BTreeMap::new();
         let mut fn_def_kinds = BTreeMap::new();
+        let mut fn_def_abis = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
         let mut object_safe_traits = HashSet::new();
@@ -336,6 +339,7 @@ impl LowerProgram for Program {
                     let id = FnDefId(raw_id);
                     fn_def_ids.insert(type_kind.name.clone(), id);
                     fn_def_kinds.insert(id, type_kind);
+                    fn_def_abis.insert(id, defn.abi.lower()?);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -374,6 +378,7 @@ impl LowerProgram for Program {
                 adt_kinds: &adt_kinds,
                 fn_def_ids: &fn_def_ids,
                 fn_def_kinds: &fn_def_kinds,
+                fn_def_abis: &fn_def_abis,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
@@ -1045,8 +1050,23 @@ impl LowerFnDefn for FnDefn {
 
         Ok(rust_ir::FnDefDatum {
             id: fn_def_id,
+            abi: self.abi.lower()?,
             binders,
         })
+    }
+}
+
+trait LowerFnAbi {
+    fn lower(&self) -> LowerResult<ChalkFnAbi>;
+}
+
+impl LowerFnAbi for FnAbi {
+    fn lower(&self) -> LowerResult<ChalkFnAbi> {
+        match self.0.as_ref() {
+            "Rust" => Ok(ChalkFnAbi::Rust),
+            "C" => Ok(ChalkFnAbi::C),
+            _ => Err(RustIrError::InvalidExternAbi(self.0.clone())),
+        }
     }
 }
 
@@ -1394,8 +1414,8 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::ForAll {
-                ref lifetime_names,
-                ref types,
+                lifetime_names,
+                types,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
                     chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
@@ -1733,6 +1753,11 @@ impl LowerGoal<LoweredProgram> for Goal {
                 ((datum.trait_id, datum.name.clone()), lookup)
             })
             .collect();
+        let fn_def_abis: BTreeMap<_, _> = program
+            .fn_def_data
+            .iter()
+            .map(|fn_def_data| (*fn_def_data.0, fn_def_data.1.abi))
+            .collect();
 
         let env = Env {
             adt_ids: &program.adt_ids,
@@ -1741,6 +1766,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             opaque_ty_ids: &program.opaque_ty_ids,
             adt_kinds: &program.adt_kinds,
             fn_def_kinds: &program.fn_def_kinds,
+            fn_def_abis: &fn_def_abis,
             trait_kinds: &program.trait_kinds,
             opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,

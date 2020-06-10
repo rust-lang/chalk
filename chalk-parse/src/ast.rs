@@ -51,6 +51,16 @@ pub struct FnDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
+    pub abi: FnAbi,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct FnAbi(pub Atom);
+
+impl Default for FnAbi {
+    fn default() -> Self {
+        FnAbi(Atom::from("Rust"))
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

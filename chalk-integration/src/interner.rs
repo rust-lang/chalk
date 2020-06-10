@@ -28,6 +28,12 @@ impl Debug for RawId {
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ChalkFnAbi {
+    Rust,
+    C,
+}
+
 /// The default "interner" and the only interner used by chalk
 /// itself. In this interner, no interning actually occurs.
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -50,6 +56,7 @@ impl Interner for ChalkIr {
     type DefId = RawId;
     type InternedAdtId = RawId;
     type Identifier = Identifier;
+    type FnAbi = ChalkFnAbi;
 
     fn debug_adt_id(
         type_kind_id: AdtId<ChalkIr>,

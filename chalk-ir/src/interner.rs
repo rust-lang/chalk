@@ -170,6 +170,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     type Identifier: Debug + Clone + Eq + Hash;
 
+    type FnAbi: Debug + Copy + Eq + Hash;
+
     /// Prints the debug representation of a type-kind-id. To get good
     /// results, this requires inspecting TLS, and is difficult to
     /// code without reference to a specific interner (and hence
@@ -671,6 +673,7 @@ pub trait TargetInterner<I: Interner>: Interner {
     fn transfer_canonical_var_kinds(
         variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
+
     fn transfer_const(
         &self,
         const_evaluated: &I::InternedConcreteConst,
