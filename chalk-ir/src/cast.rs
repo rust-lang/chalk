@@ -205,7 +205,8 @@ where
             priority: ClausePriority::High,
         };
 
-        ProgramClauseData(Binders::empty(interner, implication)).intern(interner)
+        ProgramClauseData(Binders::empty(interner, implication.shifted_in(interner)))
+            .intern(interner)
     }
 }
 
@@ -226,7 +227,7 @@ where
 
 impl<I: Interner> CastTo<ProgramClause<I>> for ProgramClauseImplication<I> {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData(Binders::empty(interner, self)).intern(interner)
+        ProgramClauseData(Binders::empty(interner, self.shifted_in(interner))).intern(interner)
     }
 }
 

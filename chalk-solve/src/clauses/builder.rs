@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
-use chalk_ir::fold::Fold;
+use chalk_ir::fold::{Fold, Shift};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 
@@ -75,6 +75,13 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
             consequence: consequence.cast(interner),
             conditions: Goals::from(interner, conditions),
             priority,
+        };
+
+        let clause = if self.binders.is_empty() {
+            // Compensate for the added empty binder
+            clause.shifted_in(interner)
+        } else {
+            clause
         };
 
         self.clauses.push(

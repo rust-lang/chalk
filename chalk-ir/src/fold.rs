@@ -9,6 +9,7 @@ mod boring_impls;
 pub mod shift;
 mod subst;
 
+pub use self::shift::Shift;
 pub use self::subst::Subst;
 
 /// A "folder" is a transformer that can be used to make a copy of
