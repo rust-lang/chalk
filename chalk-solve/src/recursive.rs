@@ -5,27 +5,15 @@ mod search_graph;
 mod solve;
 mod stack;
 
-use self::fulfill::{Fulfill, RecursiveInferenceTable, RecursiveSolver};
-use self::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
+use self::fulfill::RecursiveSolver;
+use self::lib::{Minimums, Solution, UCanonicalGoal};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::stack::{Stack, StackDepth};
-use crate::clauses::program_clauses_for_goal;
-use crate::infer::{InferenceTable, ParameterEnaVariableExt};
-use crate::solve::truncate;
 use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
-use chalk_ir::fold::Fold;
-use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::Visit;
-use chalk_ir::zip::Zip;
+use chalk_ir::interner::Interner;
 use chalk_ir::{debug, debug_heading, info, info_heading};
-use chalk_ir::{
-    Binders, Canonical, ClausePriority, ConstrainedSubst, Constraint, DomainGoal, Environment,
-    Fallible, Floundered, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause,
-    ProgramClauseData, ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
-    VariableKinds,
-};
+use chalk_ir::{Canonical, ConstrainedSubst, Fallible};
 use rustc_hash::FxHashMap;
-use std::fmt::Debug;
 
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,
