@@ -5,9 +5,9 @@ mod search_graph;
 mod solve;
 mod stack;
 
-use self::fulfill::RecursiveSolver;
 use self::lib::{Minimums, Solution, UCanonicalGoal};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
+use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
 use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use chalk_ir::interner::Interner;
@@ -186,7 +186,7 @@ impl<'me, I: Interner> Solver<'me, I> {
     }
 }
 
-impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
+impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
@@ -278,5 +278,9 @@ impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
 
     fn interner(&self) -> &I {
         &self.program.interner()
+    }
+
+    fn db(&self) -> &dyn RustIrDatabase<I> {
+        self.program
     }
 }

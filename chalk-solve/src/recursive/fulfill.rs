@@ -1,4 +1,5 @@
 use super::lib::{Guidance, Minimums, Solution};
+use super::solve::SolveDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -119,16 +120,6 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool;
 }
 
-pub(super) trait RecursiveSolver<I: Interner> {
-    fn solve_goal(
-        &mut self,
-        goal: UCanonical<InEnvironment<Goal<I>>>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>>;
-
-    fn interner(&self) -> &I;
-}
-
 /// A `Fulfill` is where we actually break down complex goals, instantiate
 /// variables, and perform inference. It's highly stateful. It's generally used
 /// in Chalk to try to solve a goal, and then package up what was learned in a
@@ -142,7 +133,7 @@ pub(super) trait RecursiveSolver<I: Interner> {
 pub(super) struct Fulfill<
     's,
     I: Interner,
-    Solver: RecursiveSolver<I>,
+    Solver: SolveDatabase<I>,
     Infer: RecursiveInferenceTable<I>,
 > {
     solver: &'s mut Solver,
@@ -162,7 +153,7 @@ pub(super) struct Fulfill<
     cannot_prove: bool,
 }
 
-impl<'s, I: Interner, Solver: RecursiveSolver<I>, Infer: RecursiveInferenceTable<I>>
+impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I>>
     Fulfill<'s, I, Solver, Infer>
 {
     pub(super) fn new_with_clause(

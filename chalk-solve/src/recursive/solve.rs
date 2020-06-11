@@ -4,7 +4,7 @@ use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
 use super::Solver;
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
-use crate::solve::truncate;
+use crate::{solve::truncate, RustIrDatabase};
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
@@ -12,13 +12,30 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{debug, debug_heading, info_heading};
 use chalk_ir::{
     Binders, Canonical, ClausePriority, Constraint, DomainGoal, Environment, Fallible, Floundered,
-    GenericArg, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
+    GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
     ProgramClauseImplication, Substitution, UCanonical, UniverseMap, VariableKinds,
 };
 use std::fmt::Debug;
 
-impl<'me, I: Interner> Solver<'me, I> {
-    pub(super) fn solve_iteration(
+pub(super) trait SolveDatabase<I: Interner>: Sized {
+    fn solve_goal(
+        &mut self,
+        goal: UCanonical<InEnvironment<Goal<I>>>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution<I>>;
+
+    fn interner(&self) -> &I;
+
+    fn db(&self) -> &dyn RustIrDatabase<I>;
+}
+
+/// The `solve_iteration` method -- implemented for any type that implements
+/// `SolveDb`.
+pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
+    /// Executes one iteration of the recursive solver, computing the current
+    /// solution to the given canonical goal. This is used as part of a loop in
+    /// the case of cyclic goals.
+    fn solve_iteration(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
@@ -32,7 +49,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 },
         } = canonical_goal.clone();
 
-        match goal.data(self.program.interner()) {
+        match goal.data(self.interner()) {
             GoalData::DomainGoal(domain_goal) => {
                 let canonical_goal = UCanonical {
                     universes,
@@ -82,7 +99,17 @@ impl<'me, I: Interner> Solver<'me, I> {
             }
         }
     }
+}
 
+impl<S, I> SolveIteration<I> for S
+where
+    S: SolveDatabase<I>,
+    I: Interner,
+{
+}
+
+/// Helper methods for `solve_iteration`, private to this module.
+trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     fn solve_via_simplification(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
@@ -117,11 +144,11 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
             }
 
-            let res = match program_clause.data(self.program.interner()) {
+            let res = match program_clause.data(self.interner()) {
                 ProgramClauseData::Implies(implication) => self.solve_via_implication(
                     canonical_goal,
                     &Binders::new(
-                        VariableKinds::from(self.program.interner(), vec![]),
+                        VariableKinds::from(self.interner(), vec![]),
                         implication.clone(),
                     ),
                     minimums,
@@ -135,7 +162,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 cur_solution = Some(match cur_solution {
                     None => (solution, priority),
                     Some((cur, cur_priority)) => combine::with_priorities(
-                        self.program.interner(),
+                        self.interner(),
                         &canonical_goal.canonical.value.goal,
                         cur,
                         cur_priority,
@@ -181,7 +208,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         InEnvironment<T::Result>,
     ) {
         let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
-            self.program.interner(),
+            self.interner(),
             ucanonical_goal.universes,
             &ucanonical_goal.canonical,
         );
@@ -194,9 +221,17 @@ impl<'me, I: Interner> Solver<'me, I> {
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        program_clauses_for_goal(self.program, environment, goal)
+        program_clauses_for_goal(self.db(), environment, goal)
     }
 }
+
+impl<S, I> SolveIterationHelpers<I> for S
+where
+    S: SolveDatabase<I>,
+    I: Interner,
+{
+}
+
 struct RecursiveInferenceTableImpl<I: Interner> {
     infer: InferenceTable<I>,
 }
