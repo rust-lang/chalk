@@ -9,8 +9,8 @@ pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 /// The `minimums` struct is used while solving to track whether we encountered
 /// any cycles in the process.
 #[derive(Copy, Clone, Debug)]
-pub struct Minimums {
-    pub positive: DepthFirstNumber,
+pub(super) struct Minimums {
+    pub(super) positive: DepthFirstNumber,
 }
 
 impl Minimums {
