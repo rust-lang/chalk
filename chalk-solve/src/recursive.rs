@@ -196,14 +196,6 @@ impl<'me, I: Interner> Solver<'me, I> {
             self.context.search_graph.rollback_to(dfn + 1);
         }
     }
-
-    fn program_clauses_for_goal(
-        &self,
-        environment: &Environment<I>,
-        goal: &DomainGoal<I>,
-    ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        program_clauses_for_goal(self.program, environment, goal)
-    }
 }
 
 impl<'me, I: Interner> RecursiveSolver<I> for Solver<'me, I> {
