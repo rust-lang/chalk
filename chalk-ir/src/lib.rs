@@ -1732,10 +1732,7 @@ impl std::ops::BitAnd for ClausePriority {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner, Zip)]
-pub enum ProgramClauseData<I: Interner> {
-    Implies(ProgramClauseImplication<I>),
-    ForAll(Binders<ProgramClauseImplication<I>>),
-}
+pub struct ProgramClauseData<I: Interner>(pub Binders<ProgramClauseImplication<I>>);
 
 impl<I: Interner> ProgramClauseImplication<I> {
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseImplication<I> {
@@ -1753,14 +1750,7 @@ impl<I: Interner> ProgramClauseImplication<I> {
 
 impl<I: Interner> ProgramClauseData<I> {
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseData<I> {
-        match self {
-            ProgramClauseData::Implies(implication) => {
-                ProgramClauseData::Implies(implication.into_from_env_clause(interner))
-            }
-            ProgramClauseData::ForAll(binders_implication) => ProgramClauseData::ForAll(
-                binders_implication.map(|i| i.into_from_env_clause(interner)),
-            ),
-        }
+        ProgramClauseData(self.0.map(|i| i.into_from_env_clause(interner)))
     }
 
     pub fn intern(self, interner: &I) -> ProgramClause<I> {

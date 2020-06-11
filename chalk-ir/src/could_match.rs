@@ -68,15 +68,7 @@ where
 
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClauseData<I> {
     fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
-        match self {
-            ProgramClauseData::Implies(implication) => {
-                implication.consequence.could_match(interner, other)
-            }
-
-            ProgramClauseData::ForAll(clause) => {
-                clause.value.consequence.could_match(interner, other)
-            }
-        }
+        self.0.value.consequence.could_match(interner, other)
     }
 }
 

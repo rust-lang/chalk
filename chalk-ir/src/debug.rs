@@ -699,10 +699,7 @@ impl<T: HasInterner + Debug> Debug for Binders<T> {
 
 impl<I: Interner> Debug for ProgramClauseData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self {
-            ProgramClauseData::Implies(pc) => write!(fmt, "{:?}", pc),
-            ProgramClauseData::ForAll(pc) => write!(fmt, "{:?}", pc),
-        }
+        write!(fmt, "{:?}", self.0)
     }
 }
 

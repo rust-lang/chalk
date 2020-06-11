@@ -199,12 +199,13 @@ where
     I: Interner,
 {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData::Implies(ProgramClauseImplication {
+        let implication = ProgramClauseImplication {
             consequence: self.cast(interner),
             conditions: Goals::new(interner),
             priority: ClausePriority::High,
-        })
-        .intern(interner)
+        };
+
+        ProgramClauseData(Binders::empty(interner, implication)).intern(interner)
     }
 }
 
@@ -214,7 +215,7 @@ where
     T: HasInterner<Interner = I> + CastTo<DomainGoal<I>>,
 {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData::ForAll(self.map(|bound| ProgramClauseImplication {
+        ProgramClauseData(self.map(|bound| ProgramClauseImplication {
             consequence: bound.cast(interner),
             conditions: Goals::new(interner),
             priority: ClausePriority::High,
@@ -225,13 +226,13 @@ where
 
 impl<I: Interner> CastTo<ProgramClause<I>> for ProgramClauseImplication<I> {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData::Implies(self).intern(interner)
+        ProgramClauseData(Binders::empty(interner, self)).intern(interner)
     }
 }
 
 impl<I: Interner> CastTo<ProgramClause<I>> for Binders<ProgramClauseImplication<I>> {
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData::ForAll(self).intern(interner)
+        ProgramClauseData(self).intern(interner)
     }
 }
 

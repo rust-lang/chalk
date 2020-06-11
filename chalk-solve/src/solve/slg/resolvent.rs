@@ -83,11 +83,11 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
             consequence,
             conditions,
             priority: _,
-        } = match clause.data(interner) {
-            ProgramClauseData::Implies(implication) => implication.clone(),
-            ProgramClauseData::ForAll(implication) => self
-                .infer
-                .instantiate_binders_existentially(interner, implication),
+        } = {
+            let ProgramClauseData(implication) = clause.data(interner);
+
+            self.infer
+                .instantiate_binders_existentially(interner, implication)
         };
         debug!("consequence = {:?}", consequence);
         debug!("conditions = {:?}", conditions);

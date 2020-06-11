@@ -1671,7 +1671,7 @@ impl LowerClause for Clause {
             .into_iter()
             .map(
                 |implication: chalk_ir::Binders<chalk_ir::ProgramClauseImplication<ChalkIr>>| {
-                    chalk_ir::ProgramClauseData::ForAll(implication).intern(interner)
+                    chalk_ir::ProgramClauseData(implication).intern(interner)
                 },
             )
             .collect();
