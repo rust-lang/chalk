@@ -5,7 +5,7 @@ mod search_graph;
 mod solve;
 mod stack;
 
-use self::lib::{Minimums, Solution, UCanonicalGoal};
+use self::lib::{Solution, UCanonicalGoal};
 use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
@@ -103,8 +103,7 @@ impl<'me, I: Interner> Solver<'me, I> {
     ) -> Fallible<Solution<I>> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
-        let minimums = &mut Minimums::new();
-        self.solve_goal(canonical_goal.clone(), minimums)
+        self.solve_goal(canonical_goal.clone())
     }
 
     fn solve_new_subgoal(
@@ -112,7 +111,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         canonical_goal: UCanonicalGoal<I>,
         depth: StackDepth,
         dfn: DepthFirstNumber,
-    ) -> Minimums {
+    ) {
         debug_heading!(
             "solve_new_subgoal(canonical_goal={:?}, depth={:?}, dfn={:?})",
             canonical_goal,
@@ -129,13 +128,15 @@ impl<'me, I: Interner> Solver<'me, I> {
         // - None < Some(CannotProve)
         // the function which maps the loop iteration to `answer` is a nondecreasing function
         // so this function will eventually be constant and the loop terminates.
-        let minimums = &mut Minimums::new();
         loop {
-            let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
+            assert_eq!(self.context.stack.top_depth(), depth);
+            let (current_answer, current_prio) = self.solve_iteration(&canonical_goal);
+            assert_eq!(self.context.stack.top_depth(), depth);
 
+            let stack_top = self.context.stack.top();
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
-                current_answer, minimums
+                current_answer, stack_top.minimums,
             );
 
             if !self.context.stack[depth].read_and_reset_cycle_flag() {
@@ -143,7 +144,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // We can return.
                 self.context.search_graph[dfn].solution = current_answer;
                 self.context.search_graph[dfn].solution_priority = current_prio;
-                return *minimums;
+                return;
             }
 
             let old_answer = &self.context.search_graph[dfn].solution;
@@ -162,7 +163,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // with the current answer.
             if self.context.search_graph[dfn].solution == current_answer {
                 // Reached a fixed point.
-                return *minimums;
+                return;
             }
 
             let current_answer_is_ambig = match &current_answer {
@@ -177,7 +178,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // in fact we *must* -- otherwise, we sometimes fail to reach a
             // fixed point. See `multiple_ambiguous_cycles` for more.
             if current_answer_is_ambig {
-                return *minimums;
+                return;
             }
 
             // Otherwise: rollback the search tree and try again.
@@ -190,11 +191,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    fn solve_goal(
-        &mut self,
-        goal: UCanonicalGoal<I>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
+    fn solve_goal(&mut self, goal: UCanonicalGoal<I>) -> Fallible<Solution<I>> {
         info_heading!("solve_goal({:?})", goal);
 
         // First check the cache.
@@ -227,7 +224,11 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                 self.context.stack[depth].flag_cycle();
             }
 
-            minimums.update_from(self.context.search_graph[dfn].links);
+            self.context
+                .stack
+                .top_mut()
+                .minimums
+                .update_from(self.context.search_graph[dfn].links);
 
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
@@ -243,11 +244,19 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             let coinductive_goal = goal.is_coinductive(self.program);
             let depth = self.context.stack.push(coinductive_goal);
             let dfn = self.context.search_graph.insert(&goal, depth);
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
+            self.solve_new_subgoal(goal, depth, dfn);
+            let subgoal_minimums = self.context.stack.top().minimums;
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
             self.context.stack.pop(depth);
-            minimums.update_from(subgoal_minimums);
+
+            if !depth.is_root() {
+                self.context
+                    .stack
+                    .top_mut()
+                    .minimums
+                    .update_from(subgoal_minimums);
+            }
 
             // Read final result from table.
             let result = self.context.search_graph[dfn].solution.clone();

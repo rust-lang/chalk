@@ -1,6 +1,6 @@
 use super::combine;
 use super::fulfill::{Fulfill, RecursiveInferenceTable};
-use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
+use super::lib::{Guidance, Solution, UCanonicalGoal};
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};
@@ -17,11 +17,7 @@ use chalk_ir::{
 use std::fmt::Debug;
 
 pub(super) trait SolveDatabase<I: Interner>: Sized {
-    fn solve_goal(
-        &mut self,
-        goal: UCanonical<InEnvironment<Goal<I>>>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>>;
+    fn solve_goal(&mut self, goal: UCanonical<InEnvironment<Goal<I>>>) -> Fallible<Solution<I>>;
 
     fn interner(&self) -> &I;
 
@@ -37,7 +33,6 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
     fn solve_iteration(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
-        minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         let UCanonical {
             universes,
@@ -74,7 +69,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
 
                     let prog_clauses = self.program_clauses_for_goal(environment, &goal);
                     match prog_clauses {
-                        Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
+                        Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses),
                         Err(Floundered) => {
                             (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
                         }
@@ -94,7 +89,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                     },
                 };
 
-                self.solve_via_simplification(&canonical_goal, minimums)
+                self.solve_via_simplification(&canonical_goal)
             }
         }
     }
@@ -112,12 +107,11 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     fn solve_via_simplification(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
-        minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_simplification(self, infer, subst, goal) {
-            Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
+            Ok(fulfill) => (fulfill.solve(), ClausePriority::High),
             Err(e) => (Err(e), ClausePriority::High),
         }
     }
@@ -129,7 +123,6 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clauses: C,
-        minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority)
     where
         C: IntoIterator<Item = ProgramClause<I>>,
@@ -150,10 +143,9 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
                         VariableKinds::from(self.interner(), vec![]),
                         implication.clone(),
                     ),
-                    minimums,
                 ),
                 ProgramClauseData::ForAll(implication) => {
-                    self.solve_via_implication(canonical_goal, implication, minimums)
+                    self.solve_via_implication(canonical_goal, implication)
                 }
             };
             if let (Ok(solution), priority) = res {
@@ -181,7 +173,6 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: &Binders<ProgramClauseImplication<I>>,
-        minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         info_heading!(
             "solve_via_implication(\
@@ -193,7 +184,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
 
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
-            Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
+            Ok(fulfill) => (fulfill.solve(), clause.skip_binders().priority),
             Err(e) => (Err(e), ClausePriority::High),
         }
     }

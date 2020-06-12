@@ -1,4 +1,4 @@
-use super::lib::{Guidance, Minimums, Solution};
+use super::lib::{Guidance, Solution};
 use super::solve::SolveDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
@@ -330,15 +330,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         Ok(())
     }
 
-    fn prove(
-        &mut self,
-        wc: &InEnvironment<Goal<I>>,
-        minimums: &mut Minimums,
-    ) -> Fallible<PositiveSolution<I>> {
+    fn prove(&mut self, wc: &InEnvironment<Goal<I>>) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.interner();
         let (quantified, free_vars) = self.infer.canonicalize(interner, &wc);
         let (quantified, universes) = self.infer.u_canonicalize(interner, &quantified);
-        let result = self.solver.solve_goal(quantified, minimums);
+        let result = self.solver.solve_goal(quantified);
         Ok(PositiveSolution {
             free_vars,
             universes,
@@ -346,11 +342,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         })
     }
 
-    fn refute(
-        &mut self,
-        goal: &InEnvironment<Goal<I>>,
-        minimums: &mut Minimums,
-    ) -> Fallible<NegativeSolution> {
+    fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
         let canonicalized = match self
             .infer
             .invert_then_canonicalize(self.solver.interner(), goal)
@@ -367,7 +359,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         let (quantified, _) = self
             .infer
             .u_canonicalize(self.solver.interner(), &canonicalized);
-        if let Ok(solution) = self.solver.solve_goal(quantified, minimums) {
+        if let Ok(solution) = self.solver.solve_goal(quantified) {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {
@@ -421,7 +413,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         }
     }
 
-    fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome> {
+    fn fulfill(&mut self) -> Fallible<Outcome> {
         debug_heading!("fulfill(obligations={:#?})", self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
@@ -450,7 +442,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                             free_vars,
                             universes,
                             solution,
-                        } = self.prove(wc, minimums)?;
+                        } = self.prove(wc)?;
 
                         if solution.has_definite() {
                             if let Some(constrained_subst) = solution.constrained_subst() {
@@ -462,7 +454,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         solution.is_ambig()
                     }
                     Obligation::Refute(ref goal) => {
-                        let answer = self.refute(goal, minimums)?;
+                        let answer = self.refute(goal)?;
                         answer == NegativeSolution::Ambiguous
                     }
                 };
@@ -492,8 +484,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     /// Try to fulfill all pending obligations and build the resulting
     /// solution. The returned solution will transform `subst` substitution with
     /// the outcome of type inference by updating the replacements it provides.
-    pub(super) fn solve(mut self, minimums: &mut Minimums) -> Fallible<Solution<I>> {
-        let outcome = match self.fulfill(minimums) {
+    pub(super) fn solve(mut self) -> Fallible<Solution<I>> {
+        let outcome = match self.fulfill() {
             Ok(o) => o,
             Err(e) => return Err(e),
         };
@@ -539,7 +531,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         free_vars,
                         universes,
                         solution,
-                    } = self.prove(&goal, minimums).unwrap();
+                    } = self.prove(&goal).unwrap();
                     if let Some(constrained_subst) = solution.constrained_subst() {
                         self.apply_solution(free_vars, universes, constrained_subst);
                         return Ok(Solution::Ambig(Guidance::Suggested(canonical_subst.0)));
