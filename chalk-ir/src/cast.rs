@@ -225,18 +225,6 @@ where
     }
 }
 
-impl<I: Interner> CastTo<ProgramClause<I>> for ProgramClauseImplication<I> {
-    fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData(Binders::empty(interner, self.shifted_in(interner))).intern(interner)
-    }
-}
-
-impl<I: Interner> CastTo<ProgramClause<I>> for Binders<ProgramClauseImplication<I>> {
-    fn cast_to(self, interner: &I) -> ProgramClause<I> {
-        ProgramClauseData(self).intern(interner)
-    }
-}
-
 impl<T, U> CastTo<Option<U>> for Option<T>
 where
     T: CastTo<U>,
