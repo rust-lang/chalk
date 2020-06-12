@@ -131,7 +131,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
+            let current_answer = self.solve_iteration(&canonical_goal, minimums);
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
@@ -142,21 +142,8 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // None of our subgoals depended on us directly.
                 // We can return.
                 self.context.search_graph[dfn].solution = current_answer;
-                self.context.search_graph[dfn].solution_priority = current_prio;
                 return *minimums;
             }
-
-            let old_answer = &self.context.search_graph[dfn].solution;
-            let old_prio = self.context.search_graph[dfn].solution_priority;
-
-            let (current_answer, current_prio) = combine::with_priorities_for_goal(
-                self.program.interner(),
-                &canonical_goal.canonical.value.goal,
-                old_answer.clone(),
-                old_prio,
-                current_answer,
-                current_prio,
-            );
 
             // Some of our subgoals depended on us. We need to re-run
             // with the current answer.
@@ -171,7 +158,6 @@ impl<'me, I: Interner> Solver<'me, I> {
             };
 
             self.context.search_graph[dfn].solution = current_answer;
-            self.context.search_graph[dfn].solution_priority = current_prio;
 
             // Subtle: if our current answer is ambiguous, we can just stop, and
             // in fact we *must* -- otherwise, we sometimes fail to reach a
@@ -231,10 +217,9 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
-            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
             info!(
-                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
-                previous_solution, previous_solution_priority
+                "solve_goal: cycle detected, previous solution {:?}",
+                previous_solution,
             );
             previous_solution
         } else {
@@ -251,7 +236,6 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
             // Read final result from table.
             let result = self.context.search_graph[dfn].solution.clone();
-            let priority = self.context.search_graph[dfn].solution_priority;
 
             // If processing this subgoal did not involve anything
             // outside of its subtree, then we can promote it to the
@@ -271,7 +255,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                 }
             }
 
-            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            info!("solve_goal: solution = {:?}", result);
             result
         }
     }

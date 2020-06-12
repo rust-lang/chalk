@@ -38,7 +38,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> Fallible<Solution<I>> {
         let UCanonical {
             universes,
             canonical:
@@ -69,20 +69,18 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
 
                 let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
 
-                let (prog_solution, prog_prio) = {
+                let prog_solution = {
                     debug_heading!("prog_clauses");
 
                     let prog_clauses = self.program_clauses_for_goal(environment, &goal);
                     match prog_clauses {
                         Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
-                        Err(Floundered) => {
-                            (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
-                        }
+                        Err(Floundered) => Ok(Solution::Ambig(Guidance::Unknown)),
                     }
                 };
                 debug!("prog_solution={:?}", prog_solution);
 
-                (prog_solution, prog_prio)
+                prog_solution
             }
 
             _ => {
@@ -113,12 +111,12 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> Fallible<Solution<I>> {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_simplification(self, infer, subst, goal) {
-            Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
-            Err(e) => (Err(e), ClausePriority::High),
+            Ok(fulfill) => fulfill.solve(minimums),
+            Err(e) => Err(e),
         }
     }
 
@@ -130,7 +128,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clauses: C,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority)
+    ) -> Fallible<Solution<I>>
     where
         C: IntoIterator<Item = ProgramClause<I>>,
     {
@@ -140,7 +138,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
 
             // If we have a completely ambiguous answer, it's not going to get better, so stop
             if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
-                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
+                return Ok(Solution::Ambig(Guidance::Unknown));
             }
 
             let ProgramClauseData(implication) = program_clause.data(self.interner());
@@ -163,7 +161,11 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
                 debug!("error");
             }
         }
-        cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))
+
+        match cur_solution {
+            Some((s, _)) => Ok(s),
+            None => Err(NoSolution),
+        }
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.

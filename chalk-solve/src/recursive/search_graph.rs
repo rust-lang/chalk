@@ -6,7 +6,7 @@ use std::usize;
 use super::lib::{Minimums, Solution, UCanonicalGoal};
 use super::stack::StackDepth;
 use chalk_ir::debug;
-use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
+use chalk_ir::{interner::Interner, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
 
 /// The "search graph" stores in-progress goals that are still
@@ -25,7 +25,6 @@ pub(super) struct Node<I: Interner> {
     pub(crate) goal: UCanonicalGoal<I>,
 
     pub(crate) solution: Fallible<Solution<I>>,
-    pub(crate) solution_priority: ClausePriority,
 
     /// This is `Some(X)` if we are actively exploring this node, or
     /// `None` otherwise.
@@ -67,7 +66,6 @@ impl<I: Interner> SearchGraph<I> {
         let node = Node {
             goal: goal.clone(),
             solution: Err(NoSolution),
-            solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
             links: Minimums { positive: dfn },
         };
