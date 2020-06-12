@@ -1,7 +1,6 @@
 use super::combine;
 use super::fulfill::{Fulfill, RecursiveInferenceTable};
 use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
-use super::Solver;
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};

@@ -346,7 +346,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
+    fn refute(
+        &mut self,
+        goal: &InEnvironment<Goal<I>>,
+        minimums: &mut Minimums,
+    ) -> Fallible<NegativeSolution> {
         let canonicalized = match self
             .infer
             .invert_then_canonicalize(self.solver.interner(), goal)
@@ -363,8 +367,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         let (quantified, _) = self
             .infer
             .u_canonicalize(self.solver.interner(), &canonicalized);
-        let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
-        if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
+        if let Ok(solution) = self.solver.solve_goal(quantified, minimums) {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {
@@ -459,7 +462,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         solution.is_ambig()
                     }
                     Obligation::Refute(ref goal) => {
-                        let answer = self.refute(goal)?;
+                        let answer = self.refute(goal, minimums)?;
                         answer == NegativeSolution::Ambiguous
                     }
                 };

@@ -129,8 +129,8 @@ impl<'me, I: Interner> Solver<'me, I> {
         // - None < Some(CannotProve)
         // the function which maps the loop iteration to `answer` is a nondecreasing function
         // so this function will eventually be constant and the loop terminates.
+        let minimums = &mut Minimums::new();
         loop {
-            let minimums = &mut Minimums::new();
             let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
 
             debug!(
