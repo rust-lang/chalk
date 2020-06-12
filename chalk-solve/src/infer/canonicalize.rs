@@ -89,6 +89,11 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     }
 
     fn add(&mut self, free_var: ParameterEnaVariable<I>) -> usize {
+        self.max_universe = max(
+            self.max_universe,
+            self.table.universe_of_unbound_var(*free_var.skip_kind()),
+        );
+
         self.free_vars
             .iter()
             .position(|v| v.skip_kind() == free_var.skip_kind())

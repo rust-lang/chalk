@@ -19,6 +19,11 @@ impl<I: Interner> InferenceTable<I> {
 
         // First, find all the universes that appear in `value`.
         let mut universes = UniverseMap::new();
+
+        for universe in value0.binders.iter(interner) {
+            universes.add(*universe.skip_kind());
+        }
+
         value0.value.visit_with(
             &mut UCollector {
                 universes: &mut universes,
@@ -45,7 +50,7 @@ impl<I: Interner> InferenceTable<I> {
             value0
                 .binders
                 .iter(interner)
-                .map(|pk| pk.map_ref(|&ui| universes.map_universe_to_canonical(ui))),
+                .map(|pk| pk.map_ref(|&ui| universes.map_universe_to_canonical(ui).unwrap())),
         );
 
         UCanonicalized {
@@ -72,11 +77,16 @@ pub(crate) struct UCanonicalized<T: HasInterner> {
 
 pub(crate) trait UniverseMapExt {
     fn add(&mut self, universe: UniverseIndex);
-    fn map_universe_to_canonical(&self, universe: UniverseIndex) -> UniverseIndex;
+    fn map_universe_to_canonical(&self, universe: UniverseIndex) -> Option<UniverseIndex>;
     fn map_universe_from_canonical(&self, universe: UniverseIndex) -> UniverseIndex;
-    fn map_from_canonical<T, I>(&self, interner: &I, value: &T) -> T::Result
+    fn map_from_canonical<T, I>(
+        &self,
+        interner: &I,
+        canonical_value: &Canonical<T>,
+    ) -> Canonical<T::Result>
     where
-        T: Fold<I>,
+        T: Fold<I> + HasInterner<Interner = I>,
+        T::Result: HasInterner<Interner = I>,
         I: Interner;
 }
 impl UniverseMapExt for UniverseMap {
@@ -91,66 +101,13 @@ impl UniverseMapExt for UniverseMap {
     /// looking for the index I of U in `self.universes`. We will
     /// return the universe with "counter" I. This effectively
     /// "compresses" the range of universes to things from
-    /// `0..self.universes.len()`.
-    ///
-    /// There is one subtle point, though: if we don't find U in the
-    /// vector, what should we return? This can only occur when we are
-    /// mapping the universes for existentially quantified variables
-    /// appearing in the original value. For example, if we have an initial
-    /// query like
-    ///
-    /// ```notrust
-    /// !U1: Foo<?X, !U3>
-    /// ```
-    ///
-    /// where `?X` is an existential variable in universe U2, and
-    /// `!U1` (resp. `!U3`) is a placeholder variable in universe U1
-    /// (resp. U3), then this will be canonicalized to
-    ///
-    /// ```notrust
-    /// exists<U2> { !U1: Foo<?0, !U3>
-    /// ```
-    ///
-    /// We will then collect the universe vector `[Root, 1, 3]`.
-    /// Hence we would remap the inner part to `!U1': Foo<?0, !U2'>`
-    /// (I am using the convention of writing U1' and U2' to indicate
-    /// the target universes that we are mapping to, which are
-    /// logically distinct).  But what universe should we use for the
-    /// `exists` binder? `U2` is not in the set of universes we
-    /// collected initially.  The answer is that we will remap U2 to
-    /// U1' in the final result, giving:
-    ///
-    /// ```notrust
-    /// exists<U1'> { !U1': Foo<?0, !U2'>
-    /// ```
-    ///
-    /// More generally, we pick the highest numbered universe we did
-    /// find that is still lower then the universe U we are
-    /// mapping. Effectively we "remapped" from U2 (in the original
-    /// multiverse) to U1; this is a sound approximation, because all
-    /// names from U1 are visible to U2 (but not vice
-    /// versa). Moreover, since there are no placeholders from U2 in
-    /// the original query, there is no way we would have equated `?0`
-    /// with such a name.
-    fn map_universe_to_canonical(&self, universe: UniverseIndex) -> UniverseIndex {
-        match self.universes.binary_search(&universe) {
-            Ok(index) => UniverseIndex { counter: index },
-
-            // `index` is the location in the vector where universe
-            // *would have* gone.  So, in our example from the comment
-            // above, if we were looking up `U2` we would get back 2,
-            // since it would go between U1 (with index 1) and U3
-            // (with index 2). Therefore, we want to subtract one to
-            // get the biggest universe that is still lower than
-            // `universe`.
-            //
-            // Note that `index` can never be 0: that is always the
-            // root universe, we always add that to the vector.
-            Err(index) => {
-                assert!(index > 0);
-                UniverseIndex { counter: index - 1 }
-            }
-        }
+    /// `0..self.universes.len()`. If the universe is not present in the map,
+    /// we return `None`.
+    fn map_universe_to_canonical(&self, universe: UniverseIndex) -> Option<UniverseIndex> {
+        self.universes
+            .binary_search(&universe)
+            .ok()
+            .map(|index| UniverseIndex { counter: index })
     }
 
     /// Given a "canonical universe" -- one found in the
@@ -201,14 +158,26 @@ impl UniverseMapExt for UniverseMap {
     /// of universes, since that determines visibility, and (b) that
     /// the universe we produce does not correspond to any of the
     /// other original universes.
-    fn map_from_canonical<T, I>(&self, interner: &I, value: &T) -> T::Result
+    fn map_from_canonical<T, I>(
+        &self,
+        interner: &I,
+        canonical_value: &Canonical<T>,
+    ) -> Canonical<T::Result>
     where
-        T: Fold<I>,
+        T: Fold<I> + HasInterner<Interner = I>,
+        T::Result: HasInterner<Interner = I>,
         I: Interner,
     {
-        debug!("map_from_canonical(value={:?})", value);
+        debug!("map_from_canonical(value={:?})", canonical_value);
         debug!("map_from_canonical: universes = {:?}", self.universes);
-        value
+
+        let binders = canonical_value
+            .binders
+            .iter(interner)
+            .map(|cvk| cvk.map_ref(|&universe| self.map_universe_from_canonical(universe)));
+
+        let value = canonical_value
+            .value
             .fold_with(
                 &mut UMapFromCanonical {
                     interner,
@@ -216,7 +185,12 @@ impl UniverseMapExt for UniverseMap {
                 },
                 DebruijnIndex::INNERMOST,
             )
-            .unwrap()
+            .unwrap();
+
+        Canonical {
+            binders: CanonicalVarKinds::from(interner, binders),
+            value,
+        }
     }
 }
 
@@ -272,7 +246,10 @@ where
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
-        let ui = self.universes.map_universe_to_canonical(universe0.ui);
+        let ui = self
+            .universes
+            .map_universe_to_canonical(universe0.ui)
+            .expect("Expected UCollector to encounter this universe");
         Ok(PlaceholderIndex {
             ui,
             idx: universe0.idx,
@@ -285,12 +262,34 @@ where
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
-        let universe = self.universes.map_universe_to_canonical(universe0.ui);
+        let universe = self
+            .universes
+            .map_universe_to_canonical(universe0.ui)
+            .expect("Expected UCollector to encounter this universe");
+
         Ok(PlaceholderIndex {
             ui: universe,
             idx: universe0.idx,
         }
         .to_lifetime(self.interner()))
+    }
+
+    fn fold_free_placeholder_const(
+        &mut self,
+        ty: &Ty<I>,
+        universe0: PlaceholderIndex,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let universe = self
+            .universes
+            .map_universe_to_canonical(universe0.ui)
+            .expect("Expected UCollector to encounter this universe");
+
+        Ok(PlaceholderIndex {
+            ui: universe,
+            idx: universe0.idx,
+        }
+        .to_const(self.interner(), ty.clone()))
     }
 
     fn interner(&self) -> &'i I {
