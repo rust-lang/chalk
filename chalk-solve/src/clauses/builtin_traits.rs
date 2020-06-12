@@ -35,7 +35,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Copy => copy::add_copy_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::Clone => clone::add_clone_program_clauses(db, builder, &trait_ref, ty),
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
-                fn_family::add_fn_trait_program_clauses(db, builder, trait_ref.trait_id, self_ty)?
+                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?
             }
             WellKnownTrait::Unsize => {
                 unsize::add_unsize_program_clauses(db, builder, &trait_ref, ty)
@@ -57,8 +57,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
 ) -> Result<(), Floundered> {
     match well_known {
         WellKnownTrait::FnOnce => {
-            let trait_id = db.well_known_trait_id(well_known).unwrap();
-            fn_family::add_fn_trait_program_clauses(db, builder, trait_id, self_ty)?;
+            fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
         }
         _ => {}
     }

@@ -76,6 +76,7 @@ pub fn add_sized_program_clauses<I: Interner>(
             }
             TypeName::Array
             | TypeName::Never
+            | TypeName::Closure(_)
             | TypeName::FnDef(_)
             | TypeName::Scalar(_)
             | TypeName::Raw(_)

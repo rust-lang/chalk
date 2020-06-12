@@ -279,6 +279,7 @@ id_fold!(TraitId);
 id_fold!(AssocTypeId);
 id_fold!(OpaqueTyId);
 id_fold!(FnDefId);
+id_fold!(ClosureId);
 
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<I> {
     fn super_fold_with<'i>(

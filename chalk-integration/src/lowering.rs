@@ -132,8 +132,8 @@ impl<'k> Env<'k> {
                     actual: 0,
                 });
             } else {
-                return Ok(chalk_ir::TyData::Function(chalk_ir::Fn {
-                    num_binders: k.binders.len(interner),
+                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: chalk_ir::TypeName::FnDef(id.clone()),
                     substitution: chalk_ir::Substitution::empty(interner),
                 })
                 .intern(interner)
@@ -1032,11 +1032,12 @@ impl LowerFnDefn for FnDefn {
         env: &Env,
     ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let args: LowerResult<_> = self.argument_types.iter().map(|t| t.lower(env)).collect();
             let where_clauses = self.lower_where_clauses(env)?;
-            let return_type = self.return_type.lower(env)?;
 
-            let inputs_and_output = env.in_binders(vec![], |_| {
+            let inputs_and_output = env.in_binders(vec![], |env| {
+                let args: LowerResult<_> =
+                    self.argument_types.iter().map(|t| t.lower(env)).collect();
+                let return_type = self.return_type.lower(env)?;
                 Ok(rust_ir::FnDefInputsAndOutputDatum {
                     argument_types: args?,
                     return_type,

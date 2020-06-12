@@ -4,6 +4,7 @@ use crate::ApplicationTy;
 use crate::AssocTypeId;
 use crate::CanonicalVarKind;
 use crate::CanonicalVarKinds;
+use crate::ClosureId;
 use crate::FnDefId;
 use crate::GenericArg;
 use crate::GenericArgData;
@@ -229,6 +230,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     #[allow(unused_variables)]
     fn debug_fn_def_id(
         fn_def_id: FnDefId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    #[allow(unused_variables)]
+    fn debug_closure_id(
+        fn_def_id: ClosureId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None

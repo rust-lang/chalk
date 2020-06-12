@@ -168,6 +168,12 @@ pub struct FnDefDatumBound<I: Interner> {
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
+pub struct ClosureDatum<I: Interner> {
+    pub inputs_and_output: Binders<FnDefInputsAndOutputDatum<I>>,
+
+    pub kind: ClosureKind,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// A rust intermediate representation (rust_ir) of a Trait Definition. For
 /// example, given the following rust code:
@@ -590,4 +596,11 @@ impl Polarity {
             Polarity::Negative => false,
         }
     }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum ClosureKind {
+    Fn,
+    FnMut,
+    FnOnce,
 }

@@ -7,12 +7,13 @@ use crate::{
     tls,
 };
 use chalk_ir::{
-    AdtId, AssocTypeId, Canonical, ConstrainedSubst, Environment, FnDefId, GenericArg, Goal,
-    ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, TraitId, Ty, UCanonical,
+    AdtId, AssocTypeId, Canonical, ClosureId, ConstrainedSubst, Environment, FnDefId, GenericArg,
+    Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, Substitution, TraitId,
+    Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
-    OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureDatum, FnDefDatum,
+    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SolverChoice, SubstitutionResult};
 use salsa::Database;
@@ -153,5 +154,23 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
         self.program_ir().unwrap().is_object_safe(trait_id)
+    }
+
+    fn closure_datum(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: Substitution<ChalkIr>,
+    ) -> Arc<ClosureDatum<ChalkIr>> {
+        self.program_ir().unwrap().closure_datum(closure_id, substs)
+    }
+
+    fn closure_upvars(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        self.program_ir()
+            .unwrap()
+            .closure_upvars(closure_id, substs)
     }
 }

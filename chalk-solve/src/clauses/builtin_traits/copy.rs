@@ -54,6 +54,24 @@ pub fn add_copy_program_clauses<I: Interner>(
             TypeName::FnDef(_) => {
                 builder.push_fact(trait_ref.clone());
             }
+            TypeName::Closure(_) => {
+                let interner = db.interner();
+                match substitution
+                    .parameters(interner)
+                    .last()
+                    .unwrap()
+                    .assert_ty_ref(interner)
+                    .data(interner)
+                {
+                    TyData::Apply(ApplicationTy { name, substitution }) => match name {
+                        TypeName::Tuple(arity) => {
+                            push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
+                        }
+                        _ => panic!("Expected tuple for upvars."),
+                    },
+                    _ => panic!("Expected tuple for upvars."),
+                }
+            }
             _ => return,
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),

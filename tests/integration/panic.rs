@@ -185,6 +185,22 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
         unimplemented!()
     }
+
+    fn closure_datum(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: Substitution<ChalkIr>,
+    ) -> Arc<ClosureDatum<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn closure_upvars(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        unimplemented!()
+    }
 }
 
 fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {

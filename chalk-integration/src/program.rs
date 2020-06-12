@@ -3,13 +3,13 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, FnDefId, GenericArg,
-    Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, ClosureId, FnDefId,
+    GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
-    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureDatum, FnDefDatum,
+    ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -411,5 +411,21 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
         self.object_safe_traits.contains(&trait_id)
+    }
+
+    fn closure_datum(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: Substitution<ChalkIr>,
+    ) -> Arc<ClosureDatum<ChalkIr>> {
+        todo!()
+    }
+
+    fn closure_upvars(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        todo!()
     }
 }

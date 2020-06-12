@@ -101,6 +101,14 @@ pub trait RustIrDatabase<I: Interner>: Debug {
 
     /// Check if a trait is object safe
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;
+
+    fn closure_datum(
+        &self,
+        closure_id: ClosureId<I>,
+        substs: Substitution<I>,
+    ) -> Arc<ClosureDatum<I>>;
+
+    fn closure_upvars(&self, closure_id: ClosureId<I>, substs: Substitution<I>) -> Substitution<I>;
 }
 
 pub use clauses::program_clauses_for_env;
