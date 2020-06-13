@@ -218,5 +218,35 @@ fn infinite_recursion() {
             exists<T> { T: A }
         } yields_all[SolverChoice::slg(10, None)] {
         }
+
+        goal {
+            exists<T> { T: A }
+        } yields[SolverChoice::recursive()] {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn negative_dependency() {
+    test! {
+        program {
+            trait A { }
+            trait B { }
+            trait C { }
+
+            forall<T> { T: A if T: B, T: C }
+            forall<T> { T: B if not { T: A } }
+            forall<T> { T: C }
+        }
+
+        goal {
+            u32: A
+        } yields[SolverChoice::recursive()] {
+            // FIXME -- this is wrong! We can't prove that `u32: A` because that
+            // requires proving that `u32: B` which in turn requires proving
+            // that `not { u32: A }`!
+            "Unique"
+        }
     }
 }
