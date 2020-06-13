@@ -113,7 +113,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
-        debug_heading!(
+        info_heading!(
             "solve_new_subgoal(canonical_goal={:?}, depth={:?}, dfn={:?})",
             canonical_goal,
             depth,
@@ -133,7 +133,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             let minimums = &mut Minimums::new();
             let current_answer = self.solve_iteration(&canonical_goal, minimums);
 
-            debug!(
+            info!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
                 current_answer, minimums
             );
@@ -218,8 +218,8 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
             info!(
-                "solve_goal: cycle detected, previous solution {:?}",
-                previous_solution,
+                "solve_goal: cycle detected, previous solution {:?} at depth {:?}",
+                previous_solution, self.context.search_graph[dfn].stack_depth
             );
             previous_solution
         } else {

@@ -39,6 +39,8 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
+        info_heading!("solve_iteration(canonical_goal={:?})", canonical_goal);
+
         let UCanonical {
             universes,
             canonical:
@@ -78,7 +80,6 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                         Err(Floundered) => Ok(Solution::Ambig(Guidance::Unknown)),
                     }
                 };
-                debug!("prog_solution={:?}", prog_solution);
 
                 prog_solution
             }
