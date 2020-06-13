@@ -56,21 +56,13 @@ pub fn add_copy_program_clauses<I: Interner>(
             }
             TypeName::Closure(_) => {
                 let interner = db.interner();
-                match substitution
+                let last_ty = substitution
                     .parameters(interner)
                     .last()
                     .unwrap()
                     .assert_ty_ref(interner)
-                    .data(interner)
-                {
-                    TyData::Apply(ApplicationTy { name, substitution }) => match name {
-                        TypeName::Tuple(arity) => {
-                            push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
-                        }
-                        _ => panic!("Expected tuple for upvars."),
-                    },
-                    _ => panic!("Expected tuple for upvars."),
-                }
+                    .clone();
+                needs_impl_for_tys(db, builder, trait_ref, Some(last_ty).into_iter());
             }
             _ => return,
         },
