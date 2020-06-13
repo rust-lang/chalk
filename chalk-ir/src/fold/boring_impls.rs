@@ -290,14 +290,7 @@ impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<
         I: 'i,
         TI: 'i,
     {
-        match self {
-            ProgramClauseData::Implies(pci) => Ok(ProgramClauseData::Implies(
-                pci.fold_with(folder, outer_binder)?,
-            )),
-            ProgramClauseData::ForAll(pci) => Ok(ProgramClauseData::ForAll(
-                pci.fold_with(folder, outer_binder)?,
-            )),
-        }
+        Ok(ProgramClauseData(self.0.fold_with(folder, outer_binder)?))
     }
 }
 

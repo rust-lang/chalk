@@ -6,9 +6,9 @@
 
 use crate::{
     AdtId, AssocTypeId, ClausePriority, DebruijnIndex, FloatTy, FnDefId, GenericArg, Goals, ImplId,
-    IntTy, Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauseData,
-    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution, SuperVisit,
-    TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
+    IntTy, Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauses,
+    QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution, SuperVisit, TraitId, UintTy,
+    UniverseIndex, Visit, VisitResult, Visitor,
 };
 use std::{marker::PhantomData, sync::Arc};
 
@@ -247,10 +247,7 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
     {
         let interner = visitor.interner();
 
-        match self.data(interner) {
-            ProgramClauseData::Implies(pci) => pci.visit_with(visitor, outer_binder),
-            ProgramClauseData::ForAll(pci) => pci.visit_with(visitor, outer_binder),
-        }
+        self.data(interner).0.visit_with(visitor, outer_binder)
     }
 }
 

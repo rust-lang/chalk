@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
-use chalk_ir::fold::Fold;
+use chalk_ir::fold::{Fold, Shift};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 
@@ -77,18 +77,20 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
             priority,
         };
 
-        if self.binders.len() == 0 {
-            self.clauses
-                .push(ProgramClauseData::Implies(clause).intern(interner));
+        let clause = if self.binders.is_empty() {
+            // Compensate for the added empty binder
+            clause.shifted_in(interner)
         } else {
-            self.clauses.push(
-                ProgramClauseData::ForAll(Binders::new(
-                    VariableKinds::from(interner, self.binders.clone()),
-                    clause,
-                ))
-                .intern(interner),
-            );
-        }
+            clause
+        };
+
+        self.clauses.push(
+            ProgramClauseData(Binders::new(
+                VariableKinds::from(interner, self.binders.clone()),
+                clause,
+            ))
+            .intern(interner),
+        );
 
         debug!("pushed clause {:?}", self.clauses.last());
     }
