@@ -92,7 +92,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 Ok(())
             }
             TypeName::Closure(closure_id) => {
-                let closure_datum = db.closure_datum(closure_id, apply.substitution.clone());
+                let closure_datum = db.closure_datum(closure_id, &apply.substitution);
                 let trait_matches = match (well_known, closure_datum.kind) {
                     (WellKnownTrait::Fn, ClosureKind::Fn) => true,
                     (WellKnownTrait::FnMut, ClosureKind::FnMut)

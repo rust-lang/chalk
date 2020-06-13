@@ -159,7 +159,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn closure_datum(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: Substitution<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
     ) -> Arc<ClosureDatum<ChalkIr>> {
         self.program_ir().unwrap().closure_datum(closure_id, substs)
     }
@@ -167,8 +167,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     fn closure_upvars(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: Substitution<ChalkIr>,
-    ) -> Substitution<ChalkIr> {
+        substs: &Substitution<ChalkIr>,
+    ) -> Ty<ChalkIr> {
         self.program_ir()
             .unwrap()
             .closure_upvars(closure_id, substs)

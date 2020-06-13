@@ -189,7 +189,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn closure_datum(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: Substitution<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
     ) -> Arc<ClosureDatum<ChalkIr>> {
         unimplemented!()
     }
@@ -197,8 +197,8 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn closure_upvars(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: Substitution<ChalkIr>,
-    ) -> Substitution<ChalkIr> {
+        substs: &Substitution<ChalkIr>,
+    ) -> Ty<ChalkIr> {
         unimplemented!()
     }
 }

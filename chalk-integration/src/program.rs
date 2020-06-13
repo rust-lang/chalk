@@ -29,6 +29,8 @@ pub struct Program {
 
     pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
 
+    pub closure_ids: BTreeMap<Identifier, ClosureId<ChalkIr>>,
+
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
 
@@ -39,6 +41,8 @@ pub struct Program {
     pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
     pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
+
+    pub closure_data: BTreeMap<ClosureId<ChalkIr>, Arc<ClosureDatum<ChalkIr>>>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -416,16 +420,21 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn closure_datum(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: Substitution<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
     ) -> Arc<ClosureDatum<ChalkIr>> {
-        todo!()
+        self.closure_data[&closure_id].clone()
     }
 
     fn closure_upvars(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: Substitution<ChalkIr>,
-    ) -> Substitution<ChalkIr> {
-        todo!()
+        substs: &Substitution<ChalkIr>,
+    ) -> Ty<ChalkIr> {
+        substs
+            .parameters(self.interner())
+            .last()
+            .unwrap()
+            .assert_ty_ref(self.interner())
+            .clone()
     }
 }

@@ -2,8 +2,8 @@ use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
-    QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
+    self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId, ImplId,
+    OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
 };
 use chalk_ir::{debug, debug_heading};
 use chalk_parse::ast::*;
@@ -20,6 +20,7 @@ use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
 type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
 type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
+type ClosureIds = BTreeMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
 type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
@@ -42,6 +43,7 @@ struct Env<'k> {
     fn_def_ids: &'k FnDefIds,
     fn_def_kinds: &'k FnDefKinds,
     fn_def_abis: &'k FnDefAbis,
+    closure_ids: &'k ClosureIds,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
@@ -139,6 +141,26 @@ impl<'k> Env<'k> {
                 .intern(interner)
                 .cast(interner));
             }
+        }
+
+        if let Some(id) = self.closure_ids.get(&name.str) {
+            return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Closure(id.clone()),
+                // XXX closure upvars
+                substitution: chalk_ir::Substitution::from(
+                    interner,
+                    Some(
+                        chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                            name: chalk_ir::TypeName::Tuple(0),
+                            substitution: chalk_ir::Substitution::empty(interner),
+                        })
+                        .intern(interner)
+                        .cast(interner),
+                    ),
+                ),
+            })
+            .intern(interner)
+            .cast(interner));
         }
 
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {
@@ -318,6 +340,7 @@ impl LowerProgram for Program {
 
         let mut adt_ids = BTreeMap::new();
         let mut fn_def_ids = BTreeMap::new();
+        let mut closure_ids = BTreeMap::new();
         let mut trait_ids = BTreeMap::new();
         let mut opaque_ty_ids = BTreeMap::new();
         let mut adt_kinds = BTreeMap::new();
@@ -340,6 +363,10 @@ impl LowerProgram for Program {
                     fn_def_ids.insert(type_kind.name.clone(), id);
                     fn_def_kinds.insert(id, type_kind);
                     fn_def_abis.insert(id, defn.abi.lower()?);
+                }
+                Item::ClosureDefn(defn) => {
+                    let id = ClosureId(raw_id);
+                    closure_ids.insert(defn.name.str.clone(), id);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -364,6 +391,7 @@ impl LowerProgram for Program {
 
         let mut adt_data = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
+        let mut closure_data = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
@@ -379,6 +407,7 @@ impl LowerProgram for Program {
                 fn_def_ids: &fn_def_ids,
                 fn_def_kinds: &fn_def_kinds,
                 fn_def_abis: &fn_def_abis,
+                closure_ids: &closure_ids,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
@@ -397,6 +426,13 @@ impl LowerProgram for Program {
                     fn_def_data.insert(
                         fn_def_id,
                         Arc::new(defn.lower_fn_def(fn_def_id, &empty_env)?),
+                    );
+                }
+                Item::ClosureDefn(ref defn) => {
+                    let closure_def_id = ClosureId(raw_id);
+                    closure_data.insert(
+                        closure_def_id,
+                        Arc::new(defn.lower_closure(closure_def_id, &empty_env)?),
                     );
                 }
                 Item::TraitDefn(ref trait_defn) => {
@@ -556,12 +592,14 @@ impl LowerProgram for Program {
         let program = LoweredProgram {
             adt_ids,
             fn_def_ids,
+            closure_ids,
             trait_ids,
             adt_kinds,
             fn_def_kinds,
             trait_kinds,
             adt_data,
             fn_def_data,
+            closure_data,
             trait_data,
             well_known_traits,
             impl_data,
@@ -1068,6 +1106,51 @@ impl LowerFnAbi for FnAbi {
             "C" => Ok(ChalkFnAbi::C),
             _ => Err(RustIrError::InvalidExternAbi(self.0.clone())),
         }
+    }
+}
+
+trait LowerClosureDefn {
+    fn lower_closure(
+        &self,
+        closure_id: chalk_ir::ClosureId<ChalkIr>,
+        env: &Env,
+    ) -> LowerResult<rust_ir::ClosureDatum<ChalkIr>>;
+}
+
+impl LowerClosureDefn for ClosureDefn {
+    fn lower_closure(
+        &self,
+        closure_id: chalk_ir::ClosureId<ChalkIr>,
+        env: &Env,
+    ) -> LowerResult<rust_ir::ClosureDatum<ChalkIr>> {
+        let inputs_and_output = env.in_binders(vec![], |env| {
+            let args: LowerResult<_> = self.argument_types.iter().map(|t| t.lower(env)).collect();
+            let return_type = self.return_type.lower(env)?;
+            Ok(rust_ir::FnDefInputsAndOutputDatum {
+                argument_types: args?,
+                return_type,
+            })
+        })?;
+
+        Ok(rust_ir::ClosureDatum {
+            id: closure_id,
+            kind: self.kind.lower_closure_kind()?,
+            inputs_and_output,
+        })
+    }
+}
+
+trait LowerClosureKind {
+    fn lower_closure_kind(&self) -> LowerResult<rust_ir::ClosureKind>;
+}
+
+impl LowerClosureKind for ClosureKind {
+    fn lower_closure_kind(&self) -> LowerResult<rust_ir::ClosureKind> {
+        Ok(match self {
+            ClosureKind::Fn => rust_ir::ClosureKind::Fn,
+            ClosureKind::FnMut => rust_ir::ClosureKind::FnMut,
+            ClosureKind::FnOnce => rust_ir::ClosureKind::FnOnce,
+        })
     }
 }
 
@@ -1763,6 +1846,7 @@ impl LowerGoal<LoweredProgram> for Goal {
         let env = Env {
             adt_ids: &program.adt_ids,
             fn_def_ids: &program.fn_def_ids,
+            closure_ids: &program.closure_ids,
             trait_ids: &program.trait_ids,
             opaque_ty_ids: &program.opaque_ty_ids,
             adt_kinds: &program.adt_kinds,

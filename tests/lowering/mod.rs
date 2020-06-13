@@ -717,3 +717,14 @@ fn extern_functions() {
         }
     }
 }
+
+#[test]
+fn closures() {
+    lowering_success! {
+        program {
+            closure foo(self);
+            closure bar(refself);
+            closure baz(mutself);
+        }
+    }
+}

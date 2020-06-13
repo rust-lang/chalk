@@ -54,15 +54,9 @@ pub fn add_copy_program_clauses<I: Interner>(
             TypeName::FnDef(_) => {
                 builder.push_fact(trait_ref.clone());
             }
-            TypeName::Closure(_) => {
-                let interner = db.interner();
-                let last_ty = substitution
-                    .parameters(interner)
-                    .last()
-                    .unwrap()
-                    .assert_ty_ref(interner)
-                    .clone();
-                needs_impl_for_tys(db, builder, trait_ref, Some(last_ty).into_iter());
+            TypeName::Closure(closure_id) => {
+                let upvars = db.closure_upvars(*closure_id, substitution);
+                needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
             }
             _ => return,
         },
