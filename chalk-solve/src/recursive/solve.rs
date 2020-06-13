@@ -1,7 +1,6 @@
 use super::combine;
 use super::fulfill::{Fulfill, RecursiveInferenceTable};
 use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
-use super::Solver;
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};
@@ -13,7 +12,7 @@ use chalk_ir::{debug, debug_heading, info_heading};
 use chalk_ir::{
     Binders, Canonical, ClausePriority, Constraint, DomainGoal, Environment, Fallible, Floundered,
     GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
-    ProgramClauseImplication, Substitution, UCanonical, UniverseMap, VariableKinds,
+    ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
 };
 use std::fmt::Debug;
 
@@ -144,19 +143,9 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
                 return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
             }
 
-            let res = match program_clause.data(self.interner()) {
-                ProgramClauseData::Implies(implication) => self.solve_via_implication(
-                    canonical_goal,
-                    &Binders::new(
-                        VariableKinds::from(self.interner(), vec![]),
-                        implication.clone(),
-                    ),
-                    minimums,
-                ),
-                ProgramClauseData::ForAll(implication) => {
-                    self.solve_via_implication(canonical_goal, implication, minimums)
-                }
-            };
+            let ProgramClauseData(implication) = program_clause.data(self.interner());
+            let res = self.solve_via_implication(canonical_goal, implication, minimums);
+
             if let (Ok(solution), priority) = res {
                 debug!("ok: solution={:?} prio={:?}", solution, priority);
                 cur_solution = Some(match cur_solution {
