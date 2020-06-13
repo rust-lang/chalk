@@ -59,8 +59,13 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
 };
 
+StructRepr: StructRepr = {
+     "#" "[" "repr" "(" "C" ")" "]" => StructRepr::C,
+     "#" "[" "repr" "(" "packed" ")" "]" => StructRepr::Packed,
+};
+
 StructDefn: StructDefn = {
-    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?>
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:StructRepr?>
         "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
@@ -73,6 +78,7 @@ StructDefn: StructDefn = {
             fundamental: fundamental.is_some(),
             phantom_data: phantom_data.is_some(),
         },
+        repr: repr.unwrap_or_default(),
     }
 };
 

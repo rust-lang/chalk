@@ -1113,10 +1113,17 @@ impl LowerAdtDefn for StructDefn {
             phantom_data: self.flags.phantom_data,
         };
 
+        let repr = match self.repr {
+            StructRepr::Rust => rust_ir::AdtRepr::Rust,
+            StructRepr::C => rust_ir::AdtRepr::C,
+            StructRepr::Packed => rust_ir::AdtRepr::Packed,
+        };
+
         Ok(rust_ir::AdtDatum {
             id: adt_id,
             binders,
             flags,
+            repr,
         })
     }
 }

@@ -83,6 +83,7 @@ pub struct AdtDatum<I: Interner> {
     pub binders: Binders<AdtDatumBound<I>>,
     pub id: AdtId<I>,
     pub flags: AdtFlags,
+    pub repr: AdtRepr,
 }
 
 impl<I: Interner> AdtDatum<I> {
@@ -102,6 +103,13 @@ pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
     pub phantom_data: bool,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum AdtRepr {
+    Rust,
+    C,
+    Packed,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

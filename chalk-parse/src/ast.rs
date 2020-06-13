@@ -36,6 +36,7 @@ pub struct StructDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub fields: Vec<Field>,
     pub flags: StructFlags,
+    pub repr: StructRepr,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -43,6 +44,19 @@ pub struct StructFlags {
     pub upstream: bool,
     pub fundamental: bool,
     pub phantom_data: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum StructRepr {
+    Rust,
+    C,
+    Packed,
+}
+
+impl Default for StructRepr {
+    fn default() -> Self {
+        StructRepr::Rust
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

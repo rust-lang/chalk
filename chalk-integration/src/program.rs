@@ -8,8 +8,9 @@ use chalk_ir::{
     ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
-    FnDefInputsAndOutputDatum, ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
+    FnDefDatum, FnDefInputsAndOutputDatum, ImplDatum, ImplType, OpaqueTyDatum, TraitDatum,
+    WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -357,6 +358,10 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         self.adt_data[&id].clone()
+    }
+
+    fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
+        self.adt_data[&id].repr
     }
 
     fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {

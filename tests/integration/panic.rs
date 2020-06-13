@@ -129,6 +129,10 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
+    fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
+        unimplemented!()
+    }
+
     fn fn_def_datum(&self, fn_def_id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
         unimplemented!()
     }

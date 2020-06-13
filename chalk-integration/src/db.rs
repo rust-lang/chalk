@@ -12,8 +12,8 @@ use chalk_ir::{
     Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
-    FnDefInputsAndOutputDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum,
+    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SolverChoice, SubstitutionResult};
 use salsa::Database;
@@ -107,6 +107,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         self.program_ir().unwrap().adt_datum(id)
+    }
+
+    fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
+        self.program_ir().unwrap().adt_datum(id).repr
     }
 
     fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {

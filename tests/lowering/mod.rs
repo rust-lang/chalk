@@ -737,3 +737,16 @@ fn closures() {
         }
     }
 }
+
+#[test]
+fn struct_repr() {
+    lowering_success! {
+        program {
+            #[repr(C)]
+            struct Foo {}
+
+            #[repr(packed)]
+            struct Bar {}
+        }
+    }
+}
