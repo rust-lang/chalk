@@ -250,3 +250,56 @@ fn negative_dependency() {
         }
     }
 }
+
+/// This is adapted from Example 2.3 of EWFS. It shows a negative cycle where we
+/// are able to successfully compute a result, but to do so we have to wait
+/// until the negative cycle is fully resolved. I've modified the setup
+/// to make it more amenable to the recursive solver which does not enumerate
+/// answers.
+#[test]
+fn negative_cycle_figure_2_3() {
+    test! {
+        program {
+            trait W { }
+            trait P { }
+
+            struct A { }
+            struct B { }
+            struct C { }
+
+            forall<> { A: W if B: P, not { B: W } }
+            forall<> { B: W if C: P, not { C: W } }
+            forall<> { C: W if B: P, not { B: W } }
+            forall<> { B: P }
+        }
+
+        // The correct result here is non-obvious, but in short
+        // `A: W` and `C: W` are true, and `B: W` is not.
+        //
+        // How do we know? Well, `B: W` is false because `C: P` is
+        // false, and the rest follows from there.
+        //
+        // The solver gets in a bit of a trap because it encounters
+        // a negative cycle between `B: W` if not `C: W`, and
+        // `C: W` if not `B: W`. But if we wait long enough,
+        // it gets resolved.
+
+        goal {
+            A: W
+        } yields[SolverChoice::recursive()] {
+            "Unique"
+        }
+
+        goal {
+            B: W
+        } yields[SolverChoice::recursive()] {
+            "No possible solution"
+        }
+
+        goal {
+            C: W
+        } yields[SolverChoice::recursive()] {
+            "Unique"
+        }
+    }
+}
