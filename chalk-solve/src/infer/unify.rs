@@ -84,13 +84,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        // TODO: replace with debug_span!
-        // debug_heading!(
-        //     "unify_ty_ty(a={:?}\
-        //      ,\n            b={:?})",
-        //     a,
-        //     b
-        // );
+        debug_span!("unify_ty_ty", ?a, ?b);
+        // let _s = span.enter();
 
         match (a.data(interner), b.data(interner)) {
             // Unifying two inference variables: unify them in the underlying
@@ -324,8 +319,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        // TODO: replace with debug_span!
-        // debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
+        debug_span!("unify_lifetime_lifetime", ?a, ?b);
 
         match (a.data(interner), b.data(interner)) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
@@ -405,13 +399,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        // TODO: replace with debug_span!
-        // debug_heading!(
-        //     "unify_const_const(a={:?}\
-        //      ,\n               b={:?})",
-        //     a,
-        //     b
-        // );
+        debug_span!("unify_const_const", ?a, ?b);
 
         let ConstData {
             ty: a_ty,
@@ -428,7 +416,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (&ConstValue::InferenceVar(var1), &ConstValue::InferenceVar(var2)) => {
-                debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
+                // debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
                 Ok(self

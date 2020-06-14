@@ -222,12 +222,11 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             return table;
         }
 
-        // TODO: replace with info_span!
-        // info_heading!(
-        //     "creating new table {:?} and goal {:#?}",
-        //     self.tables.next_index(),
-        //     goal
-        // );
+        info!(
+            "creating new table {:?} and goal {:#?}",
+            self.tables.next_index(),
+            goal
+        );
         let table = Self::build_table(context, self.tables.next_index(), goal);
         self.tables.insert(table)
     }
@@ -1523,13 +1522,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     /// Removes the subgoal at `subgoal_index` from the strand's
     /// subgoal list and adds it to the strand's floundered subgoal
     /// list.
-    #[instrument(level = "info", skip(self))]
     fn flounder_subgoal(&self, ex_clause: &mut ExClause<I>, subgoal_index: usize) {
-        // info_heading!(
-        //     "flounder_subgoal(answer_time={:?}, subgoal={:?})",
-        //     ex_clause.answer_time,
-        //     ex_clause.subgoals[subgoal_index],
-        // );
+        info_span!(
+            "flounder_subgoal",
+            answer_time = ?ex_clause.answer_time,
+            subgoal = ?ex_clause.subgoals[subgoal_index],
+        );
         let floundered_time = ex_clause.answer_time;
         let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
         ex_clause.floundered_subgoals.push(FlounderedSubgoal {

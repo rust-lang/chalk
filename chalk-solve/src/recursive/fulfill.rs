@@ -419,8 +419,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     }
 
     fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome> {
-        // TODO: replace with debug_span!
-        // debug_heading!("fulfill(obligations={:#?})", self.obligations);
+        debug_span!("fulfill", obligations=?self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
         // iteration. We try to solve each obligation in turn. Anything which is
@@ -432,8 +431,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
 
         while progress {
             progress = false;
-            // TODO: replace with debug_span!
-            // debug_heading!("start of round, {} obligations", self.obligations.len());
+            debug!("start of round, {} obligations", self.obligations.len());
 
             // Take the list of `obligations` to solve this round and replace it
             // with an empty vector. Iterate through each obligation to solve

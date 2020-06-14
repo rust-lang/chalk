@@ -70,8 +70,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                 let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
 
                 let (prog_solution, prog_prio) = {
-                    // TODO: replace with debug_span!
-                    // debug_heading!("prog_clauses");
+                    debug_span!("prog_clauses");
 
                     let prog_clauses = self.program_clauses_for_goal(environment, &goal);
                     match prog_clauses {
@@ -137,8 +136,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     {
         let mut cur_solution = None;
         for program_clause in clauses {
-            // TODO: replace with debug_span!
-            // debug_heading!("clause={:?}", program_clause);
+            debug_span!("solve_from_clauses", clause = ?program_clause);
 
             // If we have a completely ambiguous answer, it's not going to get better, so stop
             if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {

@@ -2,6 +2,10 @@
 
 use crate::rust_ir::*;
 use chalk_ir::interner::Interner;
+
+#[macro_use]
+extern crate chalk_ir;
+
 use chalk_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
