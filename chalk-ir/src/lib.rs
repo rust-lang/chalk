@@ -51,8 +51,9 @@ pub mod fold;
 #[macro_use]
 pub mod visit;
 
-#[macro_use]
-pub mod debug_macros;
+pub mod debug_macros {
+    pub use tracing::{debug, info, instrument};
+}
 
 pub mod cast;
 
