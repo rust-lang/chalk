@@ -47,16 +47,9 @@ pub struct StructFlags {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum StructRepr {
-    Rust,
-    C,
-    Packed,
-}
-
-impl Default for StructRepr {
-    fn default() -> Self {
-        StructRepr::Rust
-    }
+pub struct StructRepr {
+    pub repr_c: bool,
+    pub repr_packed: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

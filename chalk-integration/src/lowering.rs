@@ -412,6 +412,7 @@ impl LowerProgram for Program {
         }
 
         let mut adt_data = BTreeMap::new();
+        let mut adt_reprs = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
         let mut closure_inputs_and_output = BTreeMap::new();
         let mut closure_closure_kind = BTreeMap::new();
@@ -446,6 +447,7 @@ impl LowerProgram for Program {
                 Item::StructDefn(ref d) => {
                     let adt_id = AdtId(raw_id);
                     adt_data.insert(adt_id, Arc::new(d.lower_adt(adt_id, &empty_env)?));
+                    adt_reprs.insert(adt_id, d.lower_adt_repr()?);
                 }
                 Item::FnDefn(ref defn) => {
                     let fn_def_id = FnDefId(raw_id);
@@ -639,6 +641,7 @@ impl LowerProgram for Program {
             fn_def_kinds,
             trait_kinds,
             adt_data,
+            adt_reprs,
             fn_def_data,
             closure_inputs_and_output,
             closure_closure_kind,
@@ -1113,17 +1116,23 @@ impl LowerAdtDefn for StructDefn {
             phantom_data: self.flags.phantom_data,
         };
 
-        let repr = match self.repr {
-            StructRepr::Rust => rust_ir::AdtRepr::Rust,
-            StructRepr::C => rust_ir::AdtRepr::C,
-            StructRepr::Packed => rust_ir::AdtRepr::Packed,
-        };
-
         Ok(rust_ir::AdtDatum {
             id: adt_id,
             binders,
             flags,
-            repr,
+        })
+    }
+}
+
+trait LowerAdtRepr {
+    fn lower_adt_repr(&self) -> LowerResult<rust_ir::AdtRepr>;
+}
+
+impl LowerAdtRepr for StructDefn {
+    fn lower_adt_repr(&self) -> LowerResult<rust_ir::AdtRepr> {
+        Ok(rust_ir::AdtRepr {
+            repr_c: self.repr.repr_c,
+            repr_packed: self.repr.repr_packed,
         })
     }
 }

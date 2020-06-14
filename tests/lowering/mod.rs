@@ -747,6 +747,10 @@ fn struct_repr() {
 
             #[repr(packed)]
             struct Bar {}
+
+            #[repr(C)]
+            #[repr(packed)]
+            struct FooBar {}
         }
     }
 }

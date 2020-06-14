@@ -110,7 +110,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     }
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
-        self.program_ir().unwrap().adt_datum(id).repr
+        self.program_ir().unwrap().adt_repr(id)
     }
 
     fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {

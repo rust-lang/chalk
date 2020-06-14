@@ -45,6 +45,8 @@ pub struct Program {
     /// For each ADT:
     pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
+    pub adt_reprs: BTreeMap<AdtId<ChalkIr>, AdtRepr>,
+
     pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
     pub closure_inputs_and_output:
@@ -361,7 +363,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     }
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
-        self.adt_data[&id].repr
+        self.adt_reprs[&id]
     }
 
     fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
