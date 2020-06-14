@@ -1,11 +1,11 @@
 use crate::infer::InferenceTable;
 use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
+use tracing::{debug, instrument};
 
 use chalk_engine::context;
 use chalk_engine::{ExClause, Literal, TimeStamp};

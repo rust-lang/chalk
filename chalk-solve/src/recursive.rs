@@ -10,10 +10,10 @@ use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
 use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, ConstrainedSubst, Fallible};
 use rustc_hash::FxHashMap;
+use tracing::{debug, info, instrument};
 
 pub(crate) struct RecursiveContext<I: Interner> {
     stack: Stack,

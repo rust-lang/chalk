@@ -6,9 +6,9 @@ use std::collections::hash_map::Entry;
 use std::collections::VecDeque;
 use std::mem;
 
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::{AnswerSubst, Canonical, Goal, InEnvironment, UCanonical};
+use tracing::{debug, info, instrument};
 
 pub(crate) struct Table<I: Interner> {
     /// The goal this table is trying to solve (also the key to look

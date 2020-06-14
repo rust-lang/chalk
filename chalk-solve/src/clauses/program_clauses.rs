@@ -2,10 +2,10 @@ use crate::clauses::builder::ClauseBuilder;
 use crate::rust_ir::*;
 use crate::split::Split;
 use chalk_ir::cast::{Cast, CastTo, Caster};
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::iter;
+use tracing::instrument;
 
 /// Trait for lowering a given piece of rust-ir source (e.g., an impl
 /// or struct definition) into its associated "program clauses" --

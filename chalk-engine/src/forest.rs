@@ -4,9 +4,9 @@ use crate::table::AnswerIndex;
 use crate::tables::Tables;
 use crate::{TableIndex, TimeStamp};
 
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical};
+use tracing::debug;
 
 pub struct Forest<I: Interner, C: Context<I>> {
     pub(crate) tables: Tables<I>,

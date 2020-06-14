@@ -1,7 +1,6 @@
 use super::lib::{Guidance, Minimums, Solution};
 use super::solve::SolveDatabase;
 use chalk_ir::cast::Cast;
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
@@ -13,6 +12,7 @@ use chalk_ir::{
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
+use tracing::debug;
 
 enum Outcome {
     Complete,

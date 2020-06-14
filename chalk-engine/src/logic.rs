@@ -10,12 +10,12 @@ use crate::{
     TimeStamp,
 };
 
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     Canonical, ConstrainedSubst, DomainGoal, Floundered, Goal, GoalData, InEnvironment, NoSolution,
     Substitution, UCanonical, UniverseMap, WhereClause,
 };
+use tracing::{debug, info, instrument};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 

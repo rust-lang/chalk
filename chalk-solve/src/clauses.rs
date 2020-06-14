@@ -5,10 +5,10 @@ use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::could_match::CouldMatch;
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
+use tracing::{debug, instrument};
 
 pub mod builder;
 mod builtin_traits;

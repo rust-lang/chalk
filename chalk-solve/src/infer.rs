@@ -1,7 +1,7 @@
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
+use tracing::{debug, instrument};
 
 pub(crate) mod canonicalize;
 pub(crate) mod instantiate;

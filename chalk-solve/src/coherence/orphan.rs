@@ -3,9 +3,9 @@ use crate::ext::GoalExt;
 use crate::solve::SolverChoice;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
+use tracing::{debug, instrument};
 
 // Test if a local impl violates the orphan rules.
 //

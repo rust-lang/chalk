@@ -3,11 +3,11 @@ use crate::ext::*;
 use crate::rust_ir::*;
 use crate::{goal_builder::GoalBuilder, Solution};
 use chalk_ir::cast::*;
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use itertools::Itertools;
+use tracing::{debug, instrument};
 
 impl<I: Interner> CoherenceSolver<'_, I> {
     pub(super) fn visit_specializations_of_trait(

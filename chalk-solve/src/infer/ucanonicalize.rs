@@ -1,8 +1,8 @@
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
+use tracing::debug;
 
 use super::InferenceTable;
 

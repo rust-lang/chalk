@@ -1,9 +1,9 @@
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
+use tracing::{debug, instrument};
 
 use super::{InferenceTable, ParameterEnaVariable};
 

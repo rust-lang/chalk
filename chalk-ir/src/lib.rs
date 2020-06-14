@@ -52,7 +52,6 @@ pub mod fold;
 pub mod visit;
 
 pub mod debug_macros {
-    pub use tracing::{debug, info, instrument};
     #[macro_export]
     macro_rules! debug_span {
         ($($t: tt)*) => {

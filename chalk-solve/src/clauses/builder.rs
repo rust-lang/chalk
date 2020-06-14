@@ -3,10 +3,10 @@ use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::{Fold, Shift};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
+use tracing::{debug, instrument};
 
 /// The "clause builder" is a useful tool for building up sets of
 /// program clauses. It takes ownership of the output vector while it

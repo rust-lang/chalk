@@ -4,7 +4,6 @@ use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};
-use chalk_ir::debug_macros::*;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
@@ -15,6 +14,7 @@ use chalk_ir::{
     ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
 };
 use std::fmt::Debug;
+use tracing::{debug, instrument};
 
 pub(super) trait SolveDatabase<I: Interner>: Sized {
     fn solve_goal(

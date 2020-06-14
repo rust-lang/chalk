@@ -1,6 +1,5 @@
 use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::debug_macros::*;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
@@ -13,6 +12,7 @@ use chalk_solve::rust_ir::{
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
+use tracing::{debug, instrument};
 
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;

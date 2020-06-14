@@ -5,9 +5,9 @@ use std::usize;
 
 use super::lib::{Minimums, Solution, UCanonicalGoal};
 use super::stack::StackDepth;
-use chalk_ir::debug_macros::*;
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
+use tracing::debug;
 
 /// The "search graph" stores in-progress goals that are still
 /// being solved.

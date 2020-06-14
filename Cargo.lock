@@ -214,7 +214,6 @@ version = "0.14.0-dev.0"
 dependencies = [
  "chalk-derive 0.14.0-dev.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
