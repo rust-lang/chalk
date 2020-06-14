@@ -2,7 +2,7 @@ use crate::context::{Context, ContextOps, InferenceTable};
 use crate::forest::Forest;
 use crate::{ExClause, Literal, TimeStamp};
 
-use chalk_ir::debug;
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     Constraint, DomainGoal, Environment, Fallible, Goal, GoalData, InEnvironment, LifetimeOutlives,

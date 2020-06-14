@@ -7,7 +7,7 @@ use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
 use crate::TyData;
-use chalk_ir::debug;
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::DebruijnIndex;

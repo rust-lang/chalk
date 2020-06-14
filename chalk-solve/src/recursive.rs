@@ -10,8 +10,8 @@ use self::search_graph::{DepthFirstNumber, SearchGraph};
 use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
 use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
-use chalk_ir::{debug, debug_heading, info, info_heading};
 use chalk_ir::{Canonical, ConstrainedSubst, Fallible};
 use rustc_hash::FxHashMap;
 
@@ -107,19 +107,13 @@ impl<'me, I: Interner> Solver<'me, I> {
         self.solve_goal(canonical_goal.clone(), minimums)
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn solve_new_subgoal(
         &mut self,
         canonical_goal: UCanonicalGoal<I>,
         depth: StackDepth,
         dfn: DepthFirstNumber,
     ) -> Minimums {
-        debug_heading!(
-            "solve_new_subgoal(canonical_goal={:?}, depth={:?}, dfn={:?})",
-            canonical_goal,
-            depth,
-            dfn,
-        );
-
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
         // during the solving process, we cache `answer` and try to solve the goal again. We repeat
@@ -190,13 +184,12 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
+    #[instrument(level = "info", skip(self, minimums))]
     fn solve_goal(
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
-        info_heading!("solve_goal({:?})", goal);
-
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
             debug!("solve_reduced_goal: cache hit, value={:?}", value);

@@ -1,11 +1,11 @@
 use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, DebruijnIndex, FnDefId, ImplId, OpaqueTyId,
     QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
 };
-use chalk_ir::{debug, debug_heading};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
     self, Anonymize, AssociatedTyValueId, IntoWhereClauses, OpaqueTyDatum, OpaqueTyDatumBound,
@@ -1591,14 +1591,13 @@ trait LowerImpl {
 }
 
 impl LowerImpl for Impl {
+    #[instrument(level = "debug", skip(self, empty_env, associated_ty_value_ids))]
     fn lower_impl(
         &self,
         empty_env: &Env,
         impl_id: ImplId<ChalkIr>,
         associated_ty_value_ids: &AssociatedTyValueIds,
     ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
-        debug_heading!("LowerImpl::lower_impl(impl_id={:?})", impl_id);
-
         let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;

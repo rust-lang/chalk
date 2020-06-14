@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
+use chalk_ir::debug_macros::*;
 use chalk_ir::fold::{Fold, Shift};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
@@ -116,6 +117,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// The new binders are always pushed onto the end of the internal
     /// list of binders; this means that any extant values where were
     /// created referencing the *old* list of binders are still valid.
+    #[instrument(level = "debug", skip(self, op))]
     pub fn push_binders<R, V>(
         &mut self,
         binders: &Binders<V>,
@@ -125,8 +127,6 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         V: Fold<I> + HasInterner<Interner = I>,
         V::Result: std::fmt::Debug,
     {
-        debug_heading!("push_binders({:?})", binders);
-
         let old_len = self.binders.len();
         let interner = self.interner();
         self.binders.extend(binders.binders.iter(interner).cloned());

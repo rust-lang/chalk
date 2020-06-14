@@ -1,5 +1,6 @@
 use crate::infer::InferenceTable;
 use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
+use chalk_ir::debug_macros::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -54,6 +55,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
     ///
     /// - `goal` is the goal G that we are trying to solve
     /// - `clause` is the program clause that may be useful to that end
+    #[instrument(level = "debug", skip(self, interner, environment, subst))]
     fn resolvent_clause(
         &mut self,
         interner: &I,
@@ -67,14 +69,6 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         // - `goal` G, except with binders for any existential variables.
         //   - Also, we always select the first literal in `ex_clause.literals`, so `i` is 0.
         // - `clause` is C, except with binders for any existential variables.
-
-        debug_heading!(
-            "resolvent_clause(\
-             \n    goal={:?},\
-             \n    clause={:?})",
-            goal,
-            clause,
-        );
 
         // C' in the description above is `consequence :- conditions`.
         //
@@ -202,6 +196,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
     // `Vec<?X>` with `u32` (from the substitution), which will fail. That
     // failure will get propagated back up.
 
+    #[instrument(level = "debug", skip(self, interner))]
     fn apply_answer_subst(
         &mut self,
         interner: &I,
@@ -210,14 +205,10 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
         canonical_answer_subst: &Canonical<AnswerSubst<I>>,
     ) -> Fallible<()> {
-        debug_heading!("apply_answer_subst()");
-        debug!("ex_clause={:?}", ex_clause);
         debug!(
             "selected_goal={:?}",
             self.infer.normalize_deep(interner, selected_goal)
         );
-        debug!("answer_table_goal={:?}", answer_table_goal);
-        debug!("canonical_answer_subst={:?}", canonical_answer_subst);
 
         // C' is now `answer`. No variables in common with G.
         let AnswerSubst {

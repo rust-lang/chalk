@@ -8,6 +8,7 @@ use chalk_ir::zip::{Zip, Zipper};
 use std::fmt::Debug;
 
 impl<I: Interner> InferenceTable<I> {
+    #[instrument(level = "debug", skip(self, interner, environment))]
     pub(crate) fn unify<T>(
         &mut self,
         interner: &I,
@@ -18,12 +19,6 @@ impl<I: Interner> InferenceTable<I> {
     where
         T: ?Sized + Zip<I>,
     {
-        debug_heading!(
-            "unify(a={:?}\
-             ,\n      b={:?})",
-            a,
-            b
-        );
         let snapshot = self.snapshot();
         match Unifier::new(interner, self, environment).unify(a, b) {
             Ok(r) => {
@@ -89,12 +84,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_heading!(
-            "unify_ty_ty(a={:?}\
-             ,\n            b={:?})",
-            a,
-            b
-        );
+        // TODO: replace with debug_span!
+        // debug_heading!(
+        //     "unify_ty_ty(a={:?}\
+        //      ,\n            b={:?})",
+        //     a,
+        //     b
+        // );
 
         match (a.data(interner), b.data(interner)) {
             // Unifying two inference variables: unify them in the underlying
@@ -328,7 +324,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
+        // TODO: replace with debug_span!
+        // debug_heading!("unify_lifetime_lifetime({:?}, {:?})", a, b);
 
         match (a.data(interner), b.data(interner)) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
@@ -367,6 +364,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
+    #[instrument(level = "debug", skip(self, a, b))]
     fn unify_lifetime_var(
         &mut self,
         a: &Lifetime<I>,
@@ -375,12 +373,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
         value: &Lifetime<I>,
         value_ui: UniverseIndex,
     ) -> Fallible<()> {
-        debug_heading!(
-            "unify_lifetime_var(var={:?}, value={:?}, value_ui={:?})",
-            var,
-            value,
-            value_ui
-        );
         let var = EnaVariable::from(var);
         let var_ui = self.table.universe_of_unbound_var(var);
         if var_ui.can_see(value_ui) {
@@ -413,12 +405,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_heading!(
-            "unify_const_const(a={:?}\
-             ,\n               b={:?})",
-            a,
-            b
-        );
+        // TODO: replace with debug_span!
+        // debug_heading!(
+        //     "unify_const_const(a={:?}\
+        //      ,\n               b={:?})",
+        //     a,
+        //     b
+        // );
 
         let ConstData {
             ty: a_ty,

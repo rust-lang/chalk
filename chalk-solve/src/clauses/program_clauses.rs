@@ -2,6 +2,7 @@ use crate::clauses::builder::ClauseBuilder;
 use crate::rust_ir::*;
 use crate::split::Split;
 use chalk_ir::cast::{Cast, CastTo, Caster};
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::iter;
@@ -128,8 +129,8 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// Implemented(!T<..>: B).
     /// ```
     /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
+    #[instrument(level = "debug", skip(builder))]
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
-        debug_heading!("to_program_clauses({:?})", self);
         builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
             let interner = builder.interner();
             let substitution = builder.substitution_in_scope();
@@ -351,9 +352,8 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
     /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
     /// ```
     ///
+    #[instrument(level = "debug", skip(builder))]
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
-        debug_heading!("AdtDatum::to_program_clauses(self={:?})", self);
-
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         let id = self.id;
@@ -441,9 +441,8 @@ impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
     ///     IsFullyVisible(bar<T>) :- IsFullyVisible(T).
     /// }
     /// ```
+    #[instrument(level = "debug", skip(builder))]
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
-        debug_heading!("FnDatum::to_program_clauses(self={:?})", self);
-
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         let id = self.id;
 

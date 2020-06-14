@@ -4,7 +4,7 @@ use crate::table::AnswerIndex;
 use crate::tables::Tables;
 use crate::{TableIndex, TimeStamp};
 
-use chalk_ir::debug;
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical};
 

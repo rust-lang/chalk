@@ -4,11 +4,11 @@ use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};
+use chalk_ir::debug_macros::*;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
-use chalk_ir::{debug, debug_heading, info_heading};
 use chalk_ir::{
     Binders, Canonical, ClausePriority, Constraint, DomainGoal, Environment, Fallible, Floundered,
     GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
@@ -70,7 +70,8 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                 let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
 
                 let (prog_solution, prog_prio) = {
-                    debug_heading!("prog_clauses");
+                    // TODO: replace with debug_span!
+                    // debug_heading!("prog_clauses");
 
                     let prog_clauses = self.program_clauses_for_goal(environment, &goal);
                     match prog_clauses {
@@ -109,12 +110,12 @@ where
 
 /// Helper methods for `solve_iteration`, private to this module.
 trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
+    #[instrument(level = "debug", skip(self, minimums))]
     fn solve_via_simplification(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
-        debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_simplification(self, infer, subst, goal) {
             Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
@@ -136,7 +137,8 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     {
         let mut cur_solution = None;
         for program_clause in clauses {
-            debug_heading!("clause={:?}", program_clause);
+            // TODO: replace with debug_span!
+            // debug_heading!("clause={:?}", program_clause);
 
             // If we have a completely ambiguous answer, it's not going to get better, so stop
             if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
@@ -167,20 +169,13 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     }
 
     /// Modus ponens! That is: try to apply an implication by proving its premises.
+    #[instrument(level = "info", skip(self, minimums))]
     fn solve_via_implication(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: &Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
-        info_heading!(
-            "solve_via_implication(\
-         \n    canonical_goal={:?},\
-         \n    clause={:?})",
-            canonical_goal,
-            clause
-        );
-
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
             Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),

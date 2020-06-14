@@ -1,3 +1,4 @@
+use chalk_ir::debug_macros::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
@@ -143,18 +144,13 @@ where
         true
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
         kind: TyKind,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
-        debug_heading!(
-            "fold_inference_ty(depth={:?}, kind={:?}, binders={:?})",
-            var,
-            kind,
-            outer_binder
-        );
         let interner = self.interner;
         match self.table.probe_var(var) {
             Some(ty) => {
@@ -179,16 +175,12 @@ where
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
-        debug_heading!(
-            "fold_inference_lifetime(depth={:?}, outer_binder={:?})",
-            var,
-            outer_binder
-        );
         let interner = self.interner;
         match self.table.probe_var(var) {
             Some(l) => {
@@ -210,17 +202,13 @@ where
         }
     }
 
+    #[instrument(level = "debug", skip(self, ty))]
     fn fold_inference_const(
         &mut self,
         ty: &Ty<I>,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
-        debug_heading!(
-            "fold_inference_const(depth={:?}, outer_binder={:?})",
-            var,
-            outer_binder
-        );
         let interner = self.interner;
         match self.table.probe_var(var) {
             Some(c) => {

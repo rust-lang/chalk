@@ -1,5 +1,6 @@
 use super::lib::Solution;
-use chalk_ir::debug;
+use chalk_ir::debug_macros::*;
+
 use chalk_ir::interner::Interner;
 use chalk_ir::{ClausePriority, DomainGoal, Fallible, GenericArg, Goal, GoalData};
 

@@ -5,7 +5,7 @@ use std::usize;
 
 use super::lib::{Minimums, Solution, UCanonicalGoal};
 use super::stack::StackDepth;
-use chalk_ir::debug;
+use chalk_ir::debug_macros::*;
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
 

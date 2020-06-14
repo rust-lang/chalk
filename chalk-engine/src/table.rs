@@ -6,8 +6,8 @@ use std::collections::hash_map::Entry;
 use std::collections::VecDeque;
 use std::mem;
 
+use chalk_ir::debug_macros::*;
 use chalk_ir::interner::Interner;
-use chalk_ir::{debug, debug_heading, info};
 use chalk_ir::{AnswerSubst, Canonical, Goal, InEnvironment, UCanonical};
 
 pub(crate) struct Table<I: Interner> {
@@ -133,10 +133,9 @@ impl<I: Interner> Table<I> {
     /// tests trigger this case, and assumptions upstream assume that when
     /// `true` is returned here, that a *new* answer was added (instead of an)
     /// existing answer replaced.
+    #[instrument(level = "debug", skip(self))]
     pub(super) fn push_answer(&mut self, answer: Answer<I>) -> Option<AnswerIndex> {
         assert!(!self.floundered);
-
-        debug_heading!("push_answer(answer={:?})", answer);
         debug!(
             "pre-existing entry: {:?}",
             self.answers_hash.get(&answer.subst)

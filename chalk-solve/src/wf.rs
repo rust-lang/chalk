@@ -7,6 +7,7 @@ use crate::solve::SolverChoice;
 use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
+use chalk_ir::debug_macros::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
