@@ -59,8 +59,8 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
 };
 
-StructReprC: () = "#" "[" "repr" "(" "C" ")" "]";
-StructReprPacked: () = "#" "[" "repr" "(" "packed" ")" "]";
+StructReprC: () = "#" "[" "repr(C)" "]";
+StructReprPacked: () = "#" "[" "repr(packed)" "]";
 
 StructDefn: StructDefn = {
     <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr_c:StructReprC?> <repr_packed:StructReprPacked?>
