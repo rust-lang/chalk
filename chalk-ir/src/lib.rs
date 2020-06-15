@@ -2185,6 +2185,7 @@ pub enum GoalData<I: Interner> {
     /// proven via program clauses
     DomainGoal(DomainGoal<I>),
 
+    /// Adds a region constraint requiring `'a : 'b`, given two lifetimes `'a, 'b`
     AddRegionConstraint(Lifetime<I>, Lifetime<I>),
 
     /// Indicates something that cannot be proven to be true or false
