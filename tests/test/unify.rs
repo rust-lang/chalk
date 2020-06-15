@@ -154,7 +154,7 @@ fn equality_binder() {
                 }
             }
         } yields {
-            "Unique; for<?U1> { \
+            "Unique; for<?U0> { \
                  substitution [?0 := '^0.0], \
                  lifetime constraints [\
                  InEnvironment { environment: Env([]), goal: '!2_0: '^0.0 }, \
