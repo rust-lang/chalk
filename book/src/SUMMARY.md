@@ -30,6 +30,7 @@
     - [The stack](./recursive/stack.md)
     - [Inductive cycles](./recursive/inductive_cycles.md)
     - [The search graph and caching](./recursive/search_graph.md)
+    - [Negative cycles](./recursive/negative_cycles.md)
     - [Coinduction](./recursive/coinduction.md)
 
 ---
