@@ -309,13 +309,12 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.push_obligation(Obligation::Refute(in_env));
             }
-            GoalData::DomainGoal(domain_goal) => match domain_goal {
-                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
-                    self.constraints.insert(InEnvironment::new(
-                        &environment,
-                        Constraint::Outlives(a.clone(), b.clone()),
-                    ));
-                }
+            GoalData::AddRegionConstraint(a, b) => {
+                self.constraints.insert(InEnvironment::new(
+                    &environment,
+                    Constraint::Outlives(a.clone(), b.clone()),
+                ));
+            }
                 _ => {
                     let in_env = InEnvironment::new(environment, goal);
                     self.push_obligation(Obligation::Prove(in_env));

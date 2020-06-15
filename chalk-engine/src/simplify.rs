@@ -69,21 +69,9 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     &goal.b,
                     &mut ex_clause,
                 )?,
-                GoalData::DomainGoal(domain_goal) => match domain_goal {
-                    DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
-                        ex_clause.constraints.push(InEnvironment::new(
-                            &environment,
-                            Constraint::Outlives(a.clone(), b.clone()),
-                        ));
-                    }
-                    _ => {
-                        ex_clause
-                            .subgoals
-                            .push(Literal::Positive(InEnvironment::new(
-                                &environment,
-                                context.into_goal(domain_goal.clone()),
-                            )));
-                    }
+                GoalData::AddRegionConstraint(a, b) => ex_clause.constraints.push(
+                    InEnvironment::new(&environment, Constraint::Outlives(a.clone(), b.clone())),
+                ),
                 },
                 GoalData::CannotProve(()) => {
                     debug!("Marking Strand as ambiguous because of a `CannotProve` subgoal");
