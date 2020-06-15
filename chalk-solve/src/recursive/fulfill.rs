@@ -1,5 +1,6 @@
 use super::lib::{Guidance, Minimums, Solution};
 use super::solve::SolveDatabase;
+use crate::debug_span;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};

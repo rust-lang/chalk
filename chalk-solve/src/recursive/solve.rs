@@ -2,6 +2,7 @@ use super::combine;
 use super::fulfill::{Fulfill, RecursiveInferenceTable};
 use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
 use crate::clauses::program_clauses_for_goal;
+use crate::debug_span;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};
 use chalk_ir::fold::Fold;

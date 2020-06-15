@@ -15,7 +15,7 @@ use chalk_ir::{
     Canonical, ConstrainedSubst, DomainGoal, Floundered, Goal, GoalData, InEnvironment, NoSolution,
     Substitution, UCanonical, UniverseMap, WhereClause,
 };
-use tracing::{debug, info, instrument};
+use tracing::{debug, debug_span, info, instrument};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
 
@@ -1523,11 +1523,13 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     /// subgoal list and adds it to the strand's floundered subgoal
     /// list.
     fn flounder_subgoal(&self, ex_clause: &mut ExClause<I>, subgoal_index: usize) {
-        info_span!(
+        let _s = debug_span!(
             "flounder_subgoal",
             answer_time = ?ex_clause.answer_time,
             subgoal = ?ex_clause.subgoals[subgoal_index],
         );
+        let _s = _s.enter();
+
         let floundered_time = ex_clause.answer_time;
         let floundered_literal = ex_clause.subgoals.remove(subgoal_index);
         ex_clause.floundered_subgoals.push(FlounderedSubgoal {

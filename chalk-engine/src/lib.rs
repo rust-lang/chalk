@@ -64,9 +64,6 @@ use chalk_ir::{
     Substitution,
 };
 
-#[macro_use]
-extern crate chalk_ir;
-
 pub mod context;
 mod derived;
 pub mod forest;

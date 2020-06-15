@@ -51,32 +51,6 @@ pub mod fold;
 #[macro_use]
 pub mod visit;
 
-pub mod debug_macros {
-    #[macro_export]
-    macro_rules! debug_span {
-        ($($t: tt)*) => {
-            let __span = tracing::debug_span!($($t)*);
-            let __span = __span.enter();
-        };
-    }
-
-    #[macro_export]
-    macro_rules! info_span {
-        ($($t: tt)*) => {
-            let __span = tracing::info_span!($($t)*);
-            let __span = __span.enter();
-        };
-    }
-
-    #[macro_export]
-    macro_rules! trace_span {
-        ($($t: tt)*) => {
-            let __span = tracing::trace_span!($($t)*);
-            let __span = __span.enter();
-        }
-    }
-}
-
 pub mod cast;
 
 pub mod interner;

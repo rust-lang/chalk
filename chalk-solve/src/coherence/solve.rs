@@ -1,4 +1,5 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
+use crate::debug_span;
 use crate::ext::*;
 use crate::rust_ir::*;
 use crate::{goal_builder::GoalBuilder, Solution};

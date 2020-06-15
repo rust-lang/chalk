@@ -1,5 +1,6 @@
 use super::var::*;
 use super::*;
+use crate::debug_span;
 use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
@@ -285,7 +286,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// - `ty` does not reference anything in a lifetime that could not be named in `var`
     ///   (the extended `OccursCheck` created to handle universes)
     fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
-        debug!("unify_var_ty(var={:?}, ty={:?})", var, ty);
+        debug_span!("unify_var_ty", ?var, ?ty);
 
         let interner = self.interner;
         let var = EnaVariable::from(var);
