@@ -131,7 +131,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let current_answer = self.solve_iteration(&canonical_goal, minimums);
+            let current_answer = self.solve_iteration(dfn, &canonical_goal, minimums);
 
             info!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",

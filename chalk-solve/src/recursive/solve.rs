@@ -1,6 +1,9 @@
 use super::combine;
 use super::fulfill::{Fulfill, RecursiveInferenceTable};
-use super::lib::{Guidance, Minimums, Solution, UCanonicalGoal};
+use super::{
+    lib::{Guidance, Minimums, Solution, UCanonicalGoal},
+    search_graph::DepthFirstNumber,
+};
 use crate::clauses::program_clauses_for_goal;
 use crate::infer::{InferenceTable, ParameterEnaVariableExt};
 use crate::{solve::truncate, RustIrDatabase};
@@ -36,6 +39,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
     /// the case of cyclic goals.
     fn solve_iteration(
         &mut self,
+        dfn: DepthFirstNumber,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
@@ -76,7 +80,9 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
 
                     let prog_clauses = self.program_clauses_for_goal(environment, &goal);
                     match prog_clauses {
-                        Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
+                        Ok(clauses) => {
+                            self.solve_from_clauses(dfn, &canonical_goal, clauses, minimums)
+                        }
                         Err(Floundered) => Ok(Solution::Ambig(Guidance::Unknown)),
                     }
                 };
@@ -93,7 +99,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                     },
                 };
 
-                self.solve_via_simplification(&canonical_goal, minimums)
+                self.solve_via_simplification(dfn, &canonical_goal, minimums)
             }
         }
     }
@@ -110,12 +116,13 @@ where
 trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     fn solve_via_simplification(
         &mut self,
+        dfn: DepthFirstNumber,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
         debug_heading!("solve_via_simplification({:?})", canonical_goal);
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
-        match Fulfill::new_with_simplification(self, infer, subst, goal) {
+        match Fulfill::new_with_simplification(self, infer, subst, dfn, goal) {
             Ok(fulfill) => fulfill.solve(minimums),
             Err(e) => Err(e),
         }
@@ -126,6 +133,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     /// them.
     fn solve_from_clauses<C>(
         &mut self,
+        dfn: DepthFirstNumber,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clauses: C,
         minimums: &mut Minimums,
@@ -143,8 +151,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             }
 
             let ProgramClauseData(implication) = program_clause.data(self.interner());
-            let res = self.solve_via_implication(canonical_goal, implication, minimums);
-
+            let res = self.solve_via_implication(dfn, canonical_goal, implication, minimums);
             if let (Ok(solution), priority) = res {
                 debug!("ok: solution={:?} prio={:?}", solution, priority);
                 cur_solution = Some(match cur_solution {
@@ -172,6 +179,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     /// Modus ponens! That is: try to apply an implication by proving its premises.
     fn solve_via_implication(
         &mut self,
+        dfn: DepthFirstNumber,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         clause: &Binders<ProgramClauseImplication<I>>,
         minimums: &mut Minimums,
@@ -185,7 +193,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         );
 
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
-        match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
+        match Fulfill::new_with_clause(self, infer, subst, dfn, goal, clause) {
             Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
             Err(e) => (Err(e), ClausePriority::High),
         }

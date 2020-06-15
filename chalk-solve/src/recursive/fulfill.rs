@@ -1,5 +1,5 @@
 use super::lib::{Guidance, Minimums, Solution};
-use super::solve::SolveDatabase;
+use super::{search_graph::DepthFirstNumber, solve::SolveDatabase};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -140,6 +140,10 @@ pub(super) struct Fulfill<
     subst: Substitution<I>,
     infer: Infer,
 
+    /// The dfn of the current goal being solved.
+    /// Used to detect negative cycles.
+    dfn: DepthFirstNumber,
+
     /// The remaining goals to prove or refute
     obligations: Vec<Obligation<I>>,
 
@@ -160,6 +164,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         solver: &'s mut Solver,
         infer: Infer,
         subst: Substitution<I>,
+        dfn: DepthFirstNumber,
         canonical_goal: InEnvironment<DomainGoal<I>>,
         clause: &Binders<ProgramClauseImplication<I>>,
     ) -> Fallible<Self> {
@@ -167,6 +172,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             solver,
             infer,
             subst,
+            dfn,
             obligations: vec![],
             constraints: FxHashSet::default(),
             cannot_prove: false,
@@ -204,12 +210,14 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         solver: &'s mut Solver,
         infer: Infer,
         subst: Substitution<I>,
+        dfn: DepthFirstNumber,
         canonical_goal: InEnvironment<Goal<I>>,
     ) -> Fallible<Self> {
         let mut fulfill = Fulfill {
             solver,
             infer,
             subst,
+            dfn,
             obligations: vec![],
             constraints: FxHashSet::default(),
             cannot_prove: false,
