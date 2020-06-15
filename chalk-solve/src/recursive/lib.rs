@@ -10,18 +10,55 @@ pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 /// any cycles in the process.
 #[derive(Copy, Clone, Debug)]
 pub(super) struct Minimums {
+    /// Minimum depth on the stack reached via positive (monotonic) goals.
+    /// In particular, if that goal produces a new answer, then we might
+    /// produce more answers.
     pub(super) positive: DepthFirstNumber,
+
+    /// Minimum depth reached with at least one negative edge. In this case, the
+    /// relationship is not monotonic: if that goal produces more answers, we
+    /// might produce *less*!
+    pub(super) negative: DepthFirstNumber,
 }
 
 impl Minimums {
-    pub fn new() -> Self {
+    /// Returns a `Minimums` with both positive/negative at MAX. This is
+    /// appropriate as an initial value that you plan to update with the
+    /// minimums from goals as you go along.
+    pub fn max() -> Self {
+        Self::new(DepthFirstNumber::MAX)
+    }
+
+    /// Returns a `Minimums` with positive at `positive` and negative at MAX.
+    /// This is appopriate to indicate a value dependent on `positive`.
+    pub fn new(positive: DepthFirstNumber) -> Self {
         Minimums {
-            positive: DepthFirstNumber::MAX,
+            positive,
+            negative: DepthFirstNumber::MAX,
         }
     }
 
+    /// Updates with the minimum values from `minimums`. This is appropriate
+    /// when the current goal dependend positively on some other goal G, and
+    /// `minimums` represents the stack depth reached in computing the answer to
+    /// G.
     pub fn update_from(&mut self, minimums: Minimums) {
-        self.positive = ::std::cmp::min(self.positive, minimums.positive);
+        self.positive = std::cmp::min(self.positive, minimums.positive);
+        self.negative = std::cmp::min(self.negative, minimums.negative);
+    }
+
+    /// Updates `self.negative` only with the minimum values from `minimums`.
+    /// This is appropriate when the current goal dependend *negatively* on some
+    /// other goal G, and `minimums` represents the stack depth reached in
+    /// computing the answer to G.
+    pub fn update_from_negative(&mut self, minimums: Minimums) {
+        self.negative = std::cmp::min(self.negative, minimums.positive);
+        self.negative = std::cmp::min(self.negative, minimums.negative);
+    }
+
+    /// Returns the minimum of either the position or negative field.
+    pub fn min_depth(&self) -> DepthFirstNumber {
+        self.positive.min(self.negative)
     }
 }
 

@@ -67,7 +67,7 @@ impl<I: Interner> SearchGraph<I> {
             goal: goal.clone(),
             solution: Err(NoSolution),
             stack_depth: Some(stack_depth),
-            links: Minimums { positive: dfn },
+            links: Minimums::new(dfn),
         };
         self.nodes.push(node);
         let previous_index = self.indices.insert(goal.clone(), dfn);
@@ -91,11 +91,24 @@ impl<I: Interner> SearchGraph<I> {
     ) {
         debug!("move_to_cache(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
-        for node in self.nodes.drain(dfn.index..) {
+        for (node_dfn_index, node) in (dfn.index..).zip(self.nodes.drain(dfn.index..)) {
             assert!(node.stack_depth.is_none());
             assert!(node.links.positive >= dfn);
-            debug!("caching solution {:?} for {:?}", node.solution, node.goal);
-            cache.insert(node.goal, node.solution);
+            if node.links.negative.index < node_dfn_index {
+                // If the solution we have was dependent on a negative cycle,
+                // then we cannot cache it. If this goal is recomputed, however,
+                // then this next time it may not being recorded as a negative
+                // cycle, because it will be relying on a cached value.
+                // See the [chalk book chapter] for more details.
+                debug!(
+                    "not caching solution {:?} for node {:?} with goal {:?} \
+                    because it relied negatively on {:?}",
+                    node.solution, node_dfn_index, node.goal, node.links.negative
+                );
+            } else {
+                debug!("caching solution {:?} for {:?}", node.solution, node.goal);
+                cache.insert(node.goal, node.solution);
+            }
         }
     }
 }

@@ -354,7 +354,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
+    fn refute(
+        &mut self,
+        goal: &InEnvironment<Goal<I>>,
+        minimums: &mut Minimums,
+    ) -> Fallible<NegativeSolution> {
         let canonicalized = match self
             .infer
             .invert_then_canonicalize(self.solver.interner(), goal)
@@ -371,8 +375,33 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         let (quantified, _) = self
             .infer
             .u_canonicalize(self.solver.interner(), &canonicalized);
-        let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
-        if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
+        let mut neg_minimums = Minimums::max();
+        let result = self.solver.solve_goal(quantified, &mut neg_minimums);
+        minimums.update_from_negative(neg_minimums);
+
+        debug!("neg_minimums = {:?} self.dfn={:?}", neg_minimums, self.dfn);
+
+        // Watch out for negative cycles: if we are negatively dependent on some
+        // goal G higher up in our stack, then we have a non-monotonic
+        // relationship with G -- as G gets more answers, we may get fewer.
+        // Therefore, we have to return *Ambiguous* right now regardless of what
+        // result G has. The only way we can prove a refutation is if
+        //
+        // 1. we wait until the value of G completely resolved without relying
+        //    on a precise result from any negative cycles (i.e., with all
+        //    negative cycles being ambiguous)
+        // 2. that result is either ERR (no possible answers) or UNIQUE (we have
+        //    a specific answer)
+        //
+        // In our solve, we figure out that we are in state 1 because the value
+        // will be in the global cache, and hence accessing it will not generate
+        // any update to `neg_minimums` (clearly not the case yet).
+        if neg_minimums.min_depth() <= self.dfn {
+            debug!("negative cycle detected, returning ambiguous");
+            return Ok(NegativeSolution::Ambiguous);
+        }
+
+        if let Ok(solution) = result {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {
@@ -449,6 +478,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             // directly.
             assert!(obligations.is_empty());
             while let Some(obligation) = self.obligations.pop() {
+                debug_heading!("obligation = {:?}", obligation);
+
                 let ambiguous = match obligation {
                     Obligation::Prove(ref wc) => {
                         let PositiveSolution {
@@ -467,7 +498,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         solution.is_ambig()
                     }
                     Obligation::Refute(ref goal) => {
-                        let answer = self.refute(goal)?;
+                        let answer = self.refute(goal, minimums)?;
                         answer == NegativeSolution::Ambiguous
                     }
                 };

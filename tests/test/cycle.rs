@@ -243,9 +243,35 @@ fn negative_dependency() {
         goal {
             u32: A
         } yields[SolverChoice::recursive()] {
-            // FIXME -- this is wrong! We can't prove that `u32: A` because that
-            // requires proving that `u32: B` which in turn requires proving
-            // that `not { u32: A }`!
+            "Ambiguous"
+        }
+    }
+}
+
+/// This example comes from the recursive solver documentation.
+#[test]
+fn negative_cycle_unprovable_subgoal() {
+    test! {
+        program {
+            trait G1 { }
+            trait G2 { }
+            trait G3 { }
+
+            struct A { }
+
+            forall<> { A: G1 if not { A: G2 }, A: G3  }
+            forall<> { A: G2 if not { A: G1 } }
+        }
+
+        goal {
+            A: G1
+        } yields[SolverChoice::recursive()] {
+            "No possible solution"
+        }
+
+        goal {
+            A: G2
+        } yields[SolverChoice::recursive()] {
             "Unique"
         }
     }
@@ -257,7 +283,7 @@ fn negative_dependency() {
 /// to make it more amenable to the recursive solver which does not enumerate
 /// answers.
 #[test]
-fn negative_cycle_figure_2_3() {
+fn negative_cycle_figure_2_3_forward() {
     test! {
         program {
             trait W { }
@@ -267,9 +293,9 @@ fn negative_cycle_figure_2_3() {
             struct B { }
             struct C { }
 
-            forall<> { A: W if B: P, not { B: W } }
-            forall<> { B: W if C: P, not { C: W } }
-            forall<> { C: W if B: P, not { B: W } }
+            forall<> { A: W if not { B: W }, B: P  }
+            forall<> { B: W if not { C: W }, C: P  }
+            forall<> { C: W if not { B: W }, B: P  }
             forall<> { B: P }
         }
 
@@ -296,10 +322,77 @@ fn negative_cycle_figure_2_3() {
             "No possible solution"
         }
 
+        // This is an important test when caching is involved: computing `A: W`
+        // winds up computing, as an intermediate value, `C: W` and *in that
+        // computation* the result is ambiguous, because it relies on a negative
+        // cycle. But we don't cache that result, so now, when we recompute `C:
+        // W`, it depends on a cached value of `A: W`, and we are able to get
+        // the correct value. (If we did cache the result of `C: W` earlier, we
+        // would be getting ambiguous here.)
         goal {
             C: W
         } yields[SolverChoice::recursive()] {
             "Unique"
+        }
+    }
+}
+
+/// Same as `negative_cycle_figure_2_3_forward` except
+/// for the clause order. This is because we sometimes
+/// don't even encounter the negative cycle if we do
+/// things in the "wrong" order.
+#[test]
+fn negative_cycle_figure_2_3_reverse() {
+    test! {
+        program {
+            trait W { }
+            trait P { }
+
+            struct A { }
+            struct B { }
+            struct C { }
+
+            forall<> { A: W if B: P, not { B: W } }
+            forall<> { B: W if C: P, not { C: W } }
+            forall<> { C: W if B: P, not { B: W } }
+            forall<> { B: P }
+        }
+
+        goal {
+            A: W
+        } yields[SolverChoice::recursive()] {
+            "Unique"
+        }
+
+        goal {
+            B: W
+        } yields[SolverChoice::recursive()] {
+            "No possible solution"
+        }
+
+        goal {
+            C: W
+        } yields[SolverChoice::recursive()] {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn negative_self_cycle() {
+    test! {
+        program {
+            trait W { }
+
+            struct A { }
+
+            forall<> { A: W if not { A: W } }
+        }
+
+        goal {
+            A: W
+        } yields[SolverChoice::recursive()] {
+            "Ambiguous"
         }
     }
 }

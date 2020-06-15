@@ -11,7 +11,7 @@ use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
 use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use chalk_ir::interner::Interner;
-use chalk_ir::{debug, debug_heading, info, info_heading};
+use chalk_ir::{debug, info, info_heading};
 use chalk_ir::{Canonical, ConstrainedSubst, Fallible};
 use rustc_hash::FxHashMap;
 
@@ -103,7 +103,7 @@ impl<'me, I: Interner> Solver<'me, I> {
     ) -> Fallible<Solution<I>> {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
-        let minimums = &mut Minimums::new();
+        let minimums = &mut Minimums::max();
         self.solve_goal(canonical_goal.clone(), minimums)
     }
 
@@ -130,7 +130,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         // the function which maps the loop iteration to `answer` is a nondecreasing function
         // so this function will eventually be constant and the loop terminates.
         loop {
-            let minimums = &mut Minimums::new();
+            let minimums = &mut Minimums::max();
             let current_answer = self.solve_iteration(dfn, &canonical_goal, minimums);
 
             info!(
@@ -241,7 +241,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // outside of its subtree, then we can promote it to the
             // cache now. This is a sort of hack to alleviate the
             // worst of the repeated work that we do during tabling.
-            if subgoal_minimums.positive >= dfn {
+            if subgoal_minimums.min_depth() >= dfn {
                 if self.context.caching_enabled {
                     self.context
                         .search_graph
