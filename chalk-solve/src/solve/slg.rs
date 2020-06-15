@@ -359,7 +359,6 @@ fn into_ex_clause<I: Interner>(
             .casted(interner)
             .map(Literal::Positive),
     );
-    ex_clause.constraints.extend(result.constraints);
 }
 
 trait SubstitutionExt<I: Interner> {

@@ -37,15 +37,13 @@ impl<I: Interner> InferenceTable<I> {
 struct Unifier<'t, I: Interner> {
     table: &'t mut InferenceTable<I>,
     environment: &'t Environment<I>,
-    goals: Vec<InEnvironment<DomainGoal<I>>>,
-    constraints: Vec<InEnvironment<Constraint<I>>>,
+    goals: Vec<InEnvironment<Goal<I>>>,
     interner: &'t I,
 }
 
 #[derive(Debug)]
 pub(crate) struct UnificationResult<I: Interner> {
-    pub(crate) goals: Vec<InEnvironment<DomainGoal<I>>>,
-    pub(crate) constraints: Vec<InEnvironment<Constraint<I>>>,
+    pub(crate) goals: Vec<InEnvironment<Goal<I>>>,
 }
 
 impl<'t, I: Interner> Unifier<'t, I> {
@@ -58,7 +56,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
             environment: environment,
             table: table,
             goals: vec![],
-            constraints: vec![],
             interner,
         }
     }
@@ -71,10 +68,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         T: ?Sized + Zip<I>,
     {
         Zip::zip_with(&mut self, a, b)?;
-        Ok(UnificationResult {
-            goals: self.goals,
-            constraints: self.constraints,
-        })
+        Ok(UnificationResult { goals: self.goals })
     }
 
     fn unify_ty_ty(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
@@ -344,7 +338,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_eq_constraint(a.clone(), b.clone()))
+                    Ok(self.push_lifetime_eq_subgoal(a.clone(), b.clone()))
                 } else {
                     Ok(())
                 }
@@ -388,7 +382,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "unify_lifetime_var: {:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_eq_constraint(a.clone(), b.clone()))
+            Ok(self.push_lifetime_eq_subgoal(a.clone(), b.clone()))
         }
     }
 
@@ -478,15 +472,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
-    fn push_lifetime_eq_constraint(&mut self, a: Lifetime<I>, b: Lifetime<I>) {
-        self.constraints.push(InEnvironment::new(
-            self.environment,
-            Constraint::Outlives(a.clone(), b.clone()),
-        ));
-        self.constraints.push(InEnvironment::new(
-            self.environment,
-            Constraint::Outlives(b, a),
-        ));
+    fn push_lifetime_eq_subgoal(&mut self, a: Lifetime<I>, b: Lifetime<I>) {
+        let interner = self.interner;
+        let b_outlives_a = GoalData::AddRegionConstraint(b.clone(), a.clone()).intern(interner);
+        self.goals
+            .push(InEnvironment::new(self.environment, b_outlives_a));
+        let a_outlives_b = GoalData::AddRegionConstraint(a, b).intern(interner);
+        self.goals
+            .push(InEnvironment::new(self.environment, a_outlives_b));
     }
 }
 
@@ -588,10 +581,8 @@ where
             // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
-            self.unifier.push_lifetime_eq_constraint(
-                tick_x.to_lifetime(interner),
-                ui.to_lifetime(interner),
-            );
+            self.unifier
+                .push_lifetime_eq_subgoal(tick_x.to_lifetime(interner), ui.to_lifetime(interner));
             Ok(tick_x.to_lifetime(interner))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name

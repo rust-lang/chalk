@@ -99,10 +99,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
         environment: &Environment<I>,
         a: &T,
         b: &T,
-    ) -> Fallible<(
-        Vec<InEnvironment<DomainGoal<I>>>,
-        Vec<InEnvironment<Constraint<I>>>,
-    )>
+    ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
     where
         T: ?Sized + Zip<I>;
 
@@ -259,13 +256,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     where
         T: ?Sized + Zip<I> + Debug,
     {
-        let (goals, constraints) = self
+        let goals = self
             .infer
             .unify(self.solver.interner(), environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
-        debug!("unify: constraints={:?}", constraints);
-        self.constraints.extend(constraints);
         for goal in goals {
             let goal = goal.cast(self.solver.interner());
             self.push_obligation(Obligation::Prove(goal));
