@@ -315,6 +315,12 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                     Constraint::Outlives(a.clone(), b.clone()),
                 ));
             }
+            GoalData::DomainGoal(domain_goal) => match domain_goal {
+                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
+                    let add_constraint =
+                        GoalData::AddRegionConstraint(a.clone(), b.clone()).intern(interner);
+                    self.push_goal(environment, add_constraint)?
+                }
                 _ => {
                     let in_env = InEnvironment::new(environment, goal);
                     self.push_obligation(Obligation::Prove(in_env));

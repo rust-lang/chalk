@@ -4,8 +4,7 @@ use crate::{ExClause, Literal, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Constraint, DomainGoal, Environment, Fallible, Goal, GoalData, InEnvironment, LifetimeOutlives,
-    QuantifierKind, Substitution, WhereClause,
+    Constraint, Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
 };
 use tracing::debug;
 
@@ -72,7 +71,14 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 GoalData::AddRegionConstraint(a, b) => ex_clause.constraints.push(
                     InEnvironment::new(&environment, Constraint::Outlives(a.clone(), b.clone())),
                 ),
-                },
+                GoalData::DomainGoal(domain_goal) => {
+                    ex_clause
+                        .subgoals
+                        .push(Literal::Positive(InEnvironment::new(
+                            &environment,
+                            context.into_goal(domain_goal.clone()),
+                        )));
+                }
                 GoalData::CannotProve(()) => {
                     debug!("Marking Strand as ambiguous because of a `CannotProve` subgoal");
                     ex_clause.ambiguous = true;
