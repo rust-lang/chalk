@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate serde_derive;
 
-use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::process::exit;
@@ -14,7 +13,7 @@ use chalk_solve::ext::*;
 use chalk_solve::{RustIrDatabase, SolverChoice};
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
-use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::FmtSubscriber;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
@@ -297,23 +296,13 @@ impl Args {
     }
 }
 
-fn log_level() -> LevelFilter {
-    env::var("CHALK_DEBUG")
-        .ok()
-        .and_then(|value| value.parse::<u32>().ok())
-        .and_then(|level| match level {
-            0 => None,
-            1 => Some(LevelFilter::INFO),
-            2 => Some(LevelFilter::DEBUG),
-            _ => Some(LevelFilter::TRACE),
-        })
-        .unwrap_or(LevelFilter::OFF)
-}
-
 fn main() {
     use std::io::Write;
-
-    FmtSubscriber::builder().with_max_level(log_level()).init();
+    let filter = EnvFilter::from_env("CHALK_DEBUG");
+    FmtSubscriber::builder()
+        .with_env_filter(filter)
+        .without_time()
+        .init();
 
     ::std::process::exit(match run() {
         Ok(_) => 0,
