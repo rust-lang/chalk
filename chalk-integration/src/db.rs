@@ -8,12 +8,13 @@ use crate::{
 };
 use chalk_ir::{
     AdtId, ApplicationTy, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId,
-    ConstrainedSubst, Environment, FnDefId, GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId,
-    ProgramClause, ProgramClauses, Substitution, TraitId, Ty, UCanonical,
+    ConstrainedSubst, Environment, FnDefId, GeneratorId, GenericArg, Goal, ImplId, InEnvironment,
+    OpaqueTyId, ProgramClause, ProgramClauses, Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
-    FnDefDatum, FnDefInputsAndOutputDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
+    OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
 use salsa::Database;
@@ -104,6 +105,17 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         self.program_ir().unwrap().adt_datum(id)
+    }
+
+    fn generator_datum(&self, id: GeneratorId<ChalkIr>) -> Arc<GeneratorDatum<ChalkIr>> {
+        self.program_ir().unwrap().generator_datum(id)
+    }
+
+    fn generator_witness_datum(
+        &self,
+        id: GeneratorId<ChalkIr>,
+    ) -> Arc<GeneratorWitnessDatum<ChalkIr>> {
+        self.program_ir().unwrap().generator_witness_datum(id)
     }
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {

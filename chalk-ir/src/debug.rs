@@ -35,6 +35,13 @@ impl<I: Interner> Debug for ClosureId<I> {
     }
 }
 
+impl<I: Interner> Debug for GeneratorId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        I::debug_generator_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "GeneratorId({:?})", self.0))
+    }
+}
+
 impl<I: Interner> Debug for ForeignDefId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
         I::debug_foreign_def_id(*self, fmt)
@@ -205,6 +212,8 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Never => write!(fmt, "Never"),
             TypeName::Array => write!(fmt, "{{array}}"),
             TypeName::Closure(id) => write!(fmt, "{{closure:{:?}}}", id),
+            TypeName::Generator(generator) => write!(fmt, "{:?}", generator),
+            TypeName::GeneratorWitness(witness) => write!(fmt, "{:?}", witness),
             TypeName::Foreign(foreign_ty) => write!(fmt, "{:?}", foreign_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }

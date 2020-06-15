@@ -218,6 +218,8 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             TypeName::FnDef(_) => write!(f, "<fn_def>")?,
             TypeName::Closure(..) => write!(f, "<closure>")?,
             TypeName::Foreign(_) => write!(f, "<foreign>")?,
+            TypeName::Generator(..) => write!(f, "<generator>")?,
+            TypeName::GeneratorWitness(..) => write!(f, "<generator_witness>")?,
 
             TypeName::Array => write!(
                 f,

@@ -53,6 +53,7 @@ pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
                     .fn_def_datum(fn_def)
                     .visit_with(&mut collector, DebruijnIndex::INNERMOST);
             }
+            RecordedItemId::Generator(_generator_id) => unimplemented!(),
             RecordedItemId::Trait(trait_id) => {
                 let trait_datum = collector.db.trait_datum(trait_id);
 

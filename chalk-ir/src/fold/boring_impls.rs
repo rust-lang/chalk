@@ -303,6 +303,7 @@ id_fold!(AssocTypeId);
 id_fold!(OpaqueTyId);
 id_fold!(FnDefId);
 id_fold!(ClosureId);
+id_fold!(GeneratorId);
 id_fold!(ForeignDefId);
 
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for ProgramClauseData<I> {

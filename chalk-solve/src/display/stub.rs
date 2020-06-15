@@ -2,6 +2,7 @@
 //! queried.
 use std::sync::Arc;
 
+use crate::rust_ir::{GeneratorDatum, GeneratorWitnessDatum};
 use crate::{
     rust_ir::{
         AdtDatumBound, AdtKind, AdtVariantDatum, AssociatedTyDatumBound, FnDefDatumBound,
@@ -10,7 +11,8 @@ use crate::{
     RustIrDatabase,
 };
 use chalk_ir::{
-    interner::Interner, ApplicationTy, Binders, CanonicalVarKinds, TypeName, VariableKinds,
+    interner::Interner, ApplicationTy, Binders, CanonicalVarKinds, GeneratorId, TypeName,
+    VariableKinds,
 };
 
 #[derive(Debug)]
@@ -207,6 +209,17 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         _substs: &chalk_ir::Substitution<I>,
     ) -> chalk_ir::Binders<chalk_ir::Ty<I>> {
         unimplemented!("cannot stub closures")
+    }
+
+    fn generator_datum(&self, _generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>> {
+        unimplemented!("cannot stub generator")
+    }
+
+    fn generator_witness_datum(
+        &self,
+        _generator_id: GeneratorId<I>,
+    ) -> Arc<GeneratorWitnessDatum<I>> {
+        unimplemented!("cannot stub generator witness")
     }
 
     fn closure_fn_substitution(

@@ -10,6 +10,7 @@ use crate::Constraint;
 use crate::Constraints;
 use crate::FnDefId;
 use crate::ForeignDefId;
+use crate::GeneratorId;
 use crate::GenericArg;
 use crate::GenericArgData;
 use crate::Goal;
@@ -258,6 +259,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Prints the debug representation of an alias.
     /// Returns `None` to fallback to the default debug output.
+    #[allow(unused_variables)]
+    fn debug_generator_id(
+        generator_id: GeneratorId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of an alias. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific interner (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
     fn debug_alias(alias: &AliasTy<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None

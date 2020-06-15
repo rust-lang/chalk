@@ -709,6 +709,9 @@ impl LowerWithEnv for Ty {
                     TypeLookup::Opaque(id) => {
                         (chalk_ir::TypeName::OpaqueType(id), env.opaque_kind(id))
                     }
+                    TypeLookup::Generator(id) => {
+                        (chalk_ir::TypeName::Generator(id), env.generator_kind(id))
+                    }
 
                     TypeLookup::Foreign(_) | TypeLookup::Trait(_) => {
                         panic!("Unexpected apply type")
@@ -1070,6 +1073,8 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         closure_ids: &program.closure_ids,
         trait_ids: &program.trait_ids,
         opaque_ty_ids: &program.opaque_ty_ids,
+        generator_ids: &program.generator_ids,
+        generator_kinds: &program.generator_kinds,
         adt_kinds: &program.adt_kinds,
         fn_def_kinds: &program.fn_def_kinds,
         closure_kinds: &program.closure_kinds,
