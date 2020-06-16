@@ -5,6 +5,7 @@ use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
+use tracing::{debug, instrument};
 
 // Test if a local impl violates the orphan rules.
 //
@@ -13,13 +14,12 @@ use chalk_ir::*;
 //     forall<T> { LocalImplAllowed(MyType<T>: Trait) }
 //
 // This must be provable in order to pass the orphan check.
+#[instrument(level = "debug", skip(db, solver_choice))]
 pub fn perform_orphan_check<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     solver_choice: SolverChoice,
     impl_id: ImplId<I>,
 ) -> Result<(), CoherenceError<I>> {
-    debug_heading!("orphan_check(impl={:#?})", impl_id);
-
     let impl_datum = db.impl_datum(impl_id);
     debug!("impl_datum={:#?}", impl_datum);
 

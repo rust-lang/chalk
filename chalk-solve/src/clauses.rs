@@ -8,6 +8,7 @@ use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
+use tracing::{debug, instrument};
 
 pub mod builder;
 mod builtin_traits;
@@ -46,13 +47,12 @@ pub mod program_clauses;
 ///         Implemented(Box<Option<MyList<T>>>: Send).
 /// }
 /// ```
+#[instrument(level = "debug", skip(builder))]
 pub fn push_auto_trait_impls<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
     adt_id: AdtId<I>,
 ) {
-    debug_heading!("push_auto_trait_impls({:?}, {:?})", auto_trait_id, adt_id);
-
     let adt_datum = &builder.db.adt_datum(adt_id);
     let interner = builder.interner();
 
@@ -118,17 +118,12 @@ pub fn push_auto_trait_impls<I: Interner>(
 /// ```notrust
 /// Foo: Send :- Bar: Send
 /// ```
+#[instrument(level = "debug", skip(builder))]
 pub fn push_auto_trait_impls_opaque<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
     opaque_id: OpaqueTyId<I>,
 ) {
-    debug_heading!(
-        "push_auto_trait_impls_opaque({:?}, {:?})",
-        auto_trait_id,
-        opaque_id
-    );
-
     let opaque_ty_datum = &builder.db.opaque_ty_data(opaque_id);
     let interner = builder.interner();
 
@@ -172,16 +167,12 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
 /// to this goal from the Rust program. So for example if the goal
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
+#[instrument(level = "debug", skip(db))]
 pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
 ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-    debug_heading!(
-        "program_clauses_for_goal(goal={:?}, environment={:?})",
-        goal,
-        environment
-    );
     let interner = db.interner();
 
     let custom_clauses = db.custom_clauses().into_iter();
@@ -207,6 +198,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
 /// `goal`. This can be any superset of the correct set, but the
 /// more precise you can make it, the more efficient solving will
 /// be.
+#[instrument(level = "debug", skip(db, environment))]
 fn program_clauses_that_could_match<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     environment: &Environment<I>,
@@ -215,8 +207,6 @@ fn program_clauses_that_could_match<I: Interner>(
     let interner = db.interner();
     let mut clauses: Vec<ProgramClause<I>> = vec![];
     let builder = &mut ClauseBuilder::new(db, &mut clauses);
-
-    debug_heading!("program_clauses_that_could_match(goal={:?})", goal);
 
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
@@ -401,19 +391,12 @@ fn program_clauses_that_could_match<I: Interner>(
 ///     type Item = Bar; // <-- associated type value
 /// }
 /// ```
+#[instrument(level = "debug", skip(builder))]
 fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
     trait_parameters: &[GenericArg<I>],
 ) {
-    debug_heading!(
-        "push_program_clauses_for_associated_type_values_in_impls_of(\
-         trait_id={:?}, \
-         trait_parameters={:?})",
-        trait_id,
-        trait_parameters,
-    );
-
     for impl_id in builder.db.impls_for_trait(trait_id, trait_parameters) {
         let impl_datum = builder.db.impl_datum(impl_id);
         if !impl_datum.is_positive() {

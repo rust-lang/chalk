@@ -1,8 +1,8 @@
 use super::search_graph::DepthFirstNumber;
-use chalk_ir::debug;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
 use std::fmt;
+use tracing::debug;
 
 pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 

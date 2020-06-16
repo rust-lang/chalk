@@ -13,6 +13,7 @@ edition = "2018"
 ena = "0.14.0"
 itertools = "0.9.0"
 petgraph = "0.5.0"
+tracing = "0.1"
 rustc-hash = { version = "1.0.0" }
 
 chalk-derive = { version = "0.14.0-dev.0", path = "../chalk-derive" }

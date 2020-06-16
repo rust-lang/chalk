@@ -1,4 +1,5 @@
 use crate::coherence::{CoherenceError, CoherenceSolver};
+use crate::debug_span;
 use crate::ext::*;
 use crate::rust_ir::*;
 use crate::{goal_builder::GoalBuilder, Solution};
@@ -7,6 +8,7 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use itertools::Itertools;
+use tracing::{debug, instrument};
 
 impl<I: Interner> CoherenceSolver<'_, I> {
     pub(super) fn visit_specializations_of_trait(
@@ -80,9 +82,8 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     //  Generates:
     //      not { compatible { exists<T> { exists<U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } } }
     //
+    #[instrument(level = "debug", skip(self))]
     fn disjoint(&self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
-        debug_heading!("overlaps(lhs={:#?}, rhs={:#?})", lhs, rhs);
-
         let interner = self.db.interner();
 
         let (lhs_binders, lhs_bound) = lhs.binders.as_ref().into();
@@ -193,14 +194,11 @@ impl<I: Interner> CoherenceSolver<'_, I> {
     //  }
     // }
     // ```
+    #[instrument(level = "debug", skip(self))]
     fn specializes(&self, less_special_id: ImplId<I>, more_special_id: ImplId<I>) -> bool {
         let more_special = &self.db.impl_datum(more_special_id);
         let less_special = &self.db.impl_datum(less_special_id);
-        debug_heading!(
-            "specializes(less_special={:#?}, more_special={:#?})",
-            less_special,
-            more_special
-        );
+        debug_span!("specializes", ?less_special, ?more_special);
 
         let interner = self.db.interner();
 

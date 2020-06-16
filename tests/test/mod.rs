@@ -7,6 +7,7 @@ use chalk_integration::query::LoweringDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
+use tracing_subscriber::{filter::EnvFilter, FmtSubscriber};
 
 use crate::test_util::assert_same;
 
@@ -207,93 +208,109 @@ macro_rules! test {
 }
 
 fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
-    println!("program {}", program_text);
-    assert!(program_text.starts_with("{"));
-    assert!(program_text.ends_with("}"));
+    let filter = EnvFilter::from_env("CHALK_DEBUG");
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(filter)
+        .with_ansi(false)
+        .without_time()
+        .finish();
+    tracing::subscriber::with_default(subscriber, || {
+        println!("program {}", program_text);
+        assert!(program_text.starts_with("{"));
+        assert!(program_text.ends_with("}"));
 
-    let mut db = ChalkDatabase::with(
-        &program_text[1..program_text.len() - 1],
-        SolverChoice::default(),
-    );
+        let mut db = ChalkDatabase::with(
+            &program_text[1..program_text.len() - 1],
+            SolverChoice::default(),
+        );
 
-    let program = db.checked_program().unwrap();
+        let program = db.checked_program().unwrap();
 
-    for (goal_text, solver_choice, expected) in goals {
-        match (&solver_choice, &expected) {
-            (SolverChoice::Recursive { .. }, TestGoal::All(_))
-            | (SolverChoice::Recursive { .. }, TestGoal::First(_)) => {
-                panic!("cannot test the recursive solver with yields_first or yields_all");
-            }
-            _ => {}
-        };
-
-        if db.solver_choice() != solver_choice {
-            db.set_solver_choice(solver_choice);
-        }
-
-        chalk_integration::tls::set_current_program(&program, || {
-            println!("----------------------------------------------------------------------");
-            println!("goal {}", goal_text);
-            assert!(goal_text.starts_with("{"));
-            assert!(goal_text.ends_with("}"));
-            let goal = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1])
-                .unwrap()
-                .lower(&*program)
-                .unwrap();
-
-            println!("using solver: {:?}", solver_choice);
-            let peeled_goal = goal.into_peeled_goal(db.interner());
-            match expected {
-                TestGoal::Aggregated(expected) => {
-                    let result = db.solve(&peeled_goal);
-                    assert_result(result, expected);
+        for (goal_text, solver_choice, expected) in goals {
+            match (&solver_choice, &expected) {
+                (SolverChoice::Recursive { .. }, TestGoal::All(_))
+                | (SolverChoice::Recursive { .. }, TestGoal::First(_)) => {
+                    panic!("cannot test the recursive solver with yields_first or yields_all");
                 }
-                TestGoal::All(expected) => {
-                    let mut expected = expected.into_iter();
-                    assert!(
+                _ => {}
+            };
+
+            if db.solver_choice() != solver_choice {
+                db.set_solver_choice(solver_choice);
+            }
+
+            chalk_integration::tls::set_current_program(&program, || {
+                println!("----------------------------------------------------------------------");
+                println!("goal {}", goal_text);
+                assert!(goal_text.starts_with("{"));
+                assert!(goal_text.ends_with("}"));
+                let goal = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1])
+                    .unwrap()
+                    .lower(&*program)
+                    .unwrap();
+
+                println!("using solver: {:?}", solver_choice);
+                let peeled_goal = goal.into_peeled_goal(db.interner());
+                match expected {
+                    TestGoal::Aggregated(expected) => {
+                        let result = db.solve(&peeled_goal);
+                        assert_result(result, expected);
+                    }
+                    TestGoal::All(expected) => {
+                        let mut expected = expected.into_iter();
+                        assert!(
+                            db.solve_multiple(&peeled_goal, |result, next_result| {
+                                match expected.next() {
+                                    Some(expected) => {
+                                        assert_same(
+                                            &format!(
+                                                "{}",
+                                                result.as_ref().map(|v| v.display(&ChalkIr))
+                                            ),
+                                            expected,
+                                        );
+                                    }
+                                    None => {
+                                        assert!(!next_result, "Unexpected next solution");
+                                    }
+                                }
+                                true
+                            }),
+                            "Not all solutions processed"
+                        );
+                        if expected.next().is_some() {
+                            panic!("Not all solutions processed");
+                        }
+                    }
+                    TestGoal::First(expected) => {
+                        let mut expected = expected.into_iter();
                         db.solve_multiple(&peeled_goal, |result, next_result| {
                             match expected.next() {
-                                Some(expected) => {
+                                Some(solution) => {
                                     assert_same(
                                         &format!(
                                             "{}",
                                             result.as_ref().map(|v| v.display(&ChalkIr))
                                         ),
-                                        expected,
+                                        solution,
                                     );
+                                    if !next_result {
+                                        assert!(
+                                            expected.next().is_none(),
+                                            "Not enough solutions found"
+                                        );
+                                    }
+                                    true
                                 }
-                                None => {
-                                    assert!(!next_result, "Unexpected next solution");
-                                }
+                                None => false,
                             }
-                            true
-                        }),
-                        "Not all solutions processed"
-                    );
-                    if expected.next().is_some() {
-                        panic!("Not all solutions processed");
+                        });
+                        assert!(expected.next().is_none(), "Not enough solutions found");
                     }
                 }
-                TestGoal::First(expected) => {
-                    let mut expected = expected.into_iter();
-                    db.solve_multiple(&peeled_goal, |result, next_result| match expected.next() {
-                        Some(solution) => {
-                            assert_same(
-                                &format!("{}", result.as_ref().map(|v| v.display(&ChalkIr))),
-                                solution,
-                            );
-                            if !next_result {
-                                assert!(expected.next().is_none(), "Not enough solutions found");
-                            }
-                            true
-                        }
-                        None => false,
-                    });
-                    assert!(expected.next().is_none(), "Not enough solutions found");
-                }
-            }
-        });
-    }
+            });
+        }
+    })
 }
 
 mod arrays;

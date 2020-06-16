@@ -11,6 +11,7 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
+use tracing::debug;
 
 #[derive(Debug)]
 pub enum WfError<I: Interner> {

@@ -12,4 +12,3 @@ edition = "2018"
 [dependencies]
 lazy_static = "1.4.0"
 chalk-derive = { version = "0.14.0-dev.0", path = "../chalk-derive" }
-

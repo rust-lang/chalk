@@ -7,11 +7,11 @@ use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
 use crate::TyData;
-use chalk_ir::debug;
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::DebruijnIndex;
 use rustc_hash::FxHashSet;
+use tracing::debug;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
 /// found in the environment.

@@ -2,6 +2,7 @@
 
 use crate::rust_ir::*;
 use chalk_ir::interner::Interner;
+
 use chalk_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -110,3 +111,14 @@ pub use solve::Solution;
 pub use solve::Solver;
 pub use solve::SolverChoice;
 pub use solve::SubstitutionResult;
+
+#[macro_use]
+mod debug_macros {
+    #[macro_export]
+    macro_rules! debug_span {
+        ($($t: tt)*) => {
+            let __span = tracing::debug_span!($($t)*);
+            let __span = __span.enter();
+        };
+    }
+}

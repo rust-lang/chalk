@@ -3,6 +3,7 @@ use crate::RustIrDatabase;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::sync::Arc;
+use tracing::{debug, instrument};
 
 /// Methods for splitting up the projections for associated types from
 /// the surrounding context.
@@ -120,16 +121,13 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     ///
     /// * the parameters that apply to the impl (`Y`, in our example)
     /// * the projection `<Vec<Y> as Iterable>::Iter<'x>`
+    #[instrument(level = "debug", skip(self, associated_ty_value))]
     fn impl_parameters_and_projection_from_associated_ty_value<'p>(
         &self,
         parameters: &'p [GenericArg<I>],
         associated_ty_value: &AssociatedTyValue<I>,
     ) -> (&'p [GenericArg<I>], ProjectionTy<I>) {
         let interner = self.interner();
-        debug_heading!(
-            "impl_parameters_and_projection_from_associated_ty_value(parameters={:?})",
-            parameters,
-        );
 
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
 

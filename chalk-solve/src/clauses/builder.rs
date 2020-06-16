@@ -6,6 +6,7 @@ use crate::RustIrDatabase;
 use chalk_ir::fold::{Fold, Shift};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
+use tracing::{debug, instrument};
 
 /// The "clause builder" is a useful tool for building up sets of
 /// program clauses. It takes ownership of the output vector while it
@@ -116,6 +117,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// The new binders are always pushed onto the end of the internal
     /// list of binders; this means that any extant values where were
     /// created referencing the *old* list of binders are still valid.
+    #[instrument(level = "debug", skip(self, op))]
     pub fn push_binders<R, V>(
         &mut self,
         binders: &Binders<V>,
@@ -125,8 +127,6 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         V: Fold<I> + HasInterner<Interner = I>,
         V::Result: std::fmt::Debug,
     {
-        debug_heading!("push_binders({:?})", binders);
-
         let old_len = self.binders.len();
         let interner = self.interner();
         self.binders.extend(binders.binders.iter(interner).cloned());

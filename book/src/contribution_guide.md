@@ -48,7 +48,27 @@ $ cargo run
 Unique; substitution [], lifetime constraints []
 ```
 
-More logging can be enabled by setting the `CHALK_DEBUG` environment variable. Set `CHALK_DEBUG=1` to see `info!(...)` output, and `CHALK_DEBUG=2` to see `debug!(...)` output as well.
+More logging can be enabled by setting the `CHALK_DEBUG` environment variable. Set `CHALK_DEBUG=3` or `CHALK_DEBUG=info` to see `info!(...)` output, and `CHALK_DEBUG=4` or `CHALK_DEBUG=debug` to see `debug!(...)` output as well. In addition, logs may be filtered in a number of ways. The syntax for filtering logs is:
+
+```notrust
+ target[span{field=value}]=level
+```
+
+(Note: all parts of the filter are optional )
+
+In more detail, the filter may consist of:
+
+- A target (location of origin)
+  - For example setting `CHALK_DEBUG='chalk_solve::infer::unify'` will filter logs to show only output originating from `chalk_solve::infer::unify`.
+- A span (name provided to the logging macros, for instance `unify_var_ty` in `debug_span!("unify_var_ty")`)
+  - For example setting `CHALK_DEBUG='[unify_ty_ty]'` will show only logs where the span contains `unify_ty_ty`.
+- A list of fields (variables recorded in the logs), for instance `ty` in `debug!("unify_var_ty", ?ty)` with values optionally specified
+  - For example setting `CHALK_DEBUG='[{ty}]'` will show only logs which contain a variable `ty`
+  - Setting `CHALK_DEBUG='[{ty=Bar}]'` will show only logs which contain a variable `ty` with the value `Bar`
+- A maximum log level (one of `info`, `debug`, `trace`) which shows logs at or below the given level
+
+More documentation on the syntax and options can be found [here](https://docs.rs/tracing-subscriber/latest/tracing_subscriber/filter/struct.EnvFilter.html#Directives).
+
 
 ## Pull Requests
 [pull-requests]: #pull-requests
