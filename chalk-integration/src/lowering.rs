@@ -147,13 +147,22 @@ impl<'k> Env<'k> {
         }
 
         if let Some(id) = self.closure_ids.get(&name.str) {
-            return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Closure(id.clone()),
-                // See note in `program`. Unlike rustc, we store upvars separately.
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
-            .intern(interner)
-            .cast(interner));
+            let k = self.closure_kind(*id);
+            if k.binders.len(interner) > 0 {
+                return Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name.clone(),
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                });
+            } else {
+                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: chalk_ir::TypeName::Closure(id.clone()),
+                    // See note in `program`. Unlike rustc, we store upvars separately.
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner)
+                .cast(interner));
+            }
         }
 
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {

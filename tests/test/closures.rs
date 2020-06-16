@@ -69,6 +69,7 @@ fn closure_is_copy() {
                 u8;
                 &'a u16
             }
+            closure with_ty<T>(self,) { T }
         }
 
         // A closure with no upvars is also copy, regardless of kind
@@ -90,13 +91,27 @@ fn closure_is_copy() {
 
         // A closure with non-Copy upvars is not copy
         goal {
-            foobuzz: Copy
+            forall<'a> {
+                foobuzz<'a>: Copy
+            }
         } yields {
             "No possible solution"
         }
         // A closure with only Copy upvars is copy
         goal {
-            foobar: Copy
+            forall<'a> {
+                foobar<'a>: Copy
+            }
+        } yields {
+            "Unique"
+        }
+        goal {
+            forall<T> { with_ty<T>: Copy }
+        } yields {
+            "No possible solution"
+        }
+        goal {
+            forall<T> { if (T: Copy) { with_ty<T>: Copy } }
         } yields {
             "Unique"
         }
@@ -229,12 +244,9 @@ fn closure_implements_fn_traits() {
         }
         // A closure also implements the `Fn` traits regardless of upvars
         goal {
-            foobar: FnOnce<(u8, f32)>
-        } yields {
-            "Unique"
-        }
-        goal {
-            Normalize(<foobar as FnOnce<(u8, f32)>>::Output -> u32)
+            forall<'a> {
+                foobar<'a>: FnOnce<(u8, f32)>
+            }
         } yields {
             "Unique"
         }
@@ -246,12 +258,23 @@ fn closure_implements_fn_traits() {
             "Unique"
         }
         goal {
-            foobuzz: FnOnce<(u8, f32)>
+            forall<'a> {
+                Normalize(<foobar<'a> as FnOnce<(u8, f32)>>::Output -> u32)
+            }
         } yields {
             "Unique"
         }
         goal {
-            Normalize(<foobuzz as FnOnce<(u8, f32)>>::Output -> u32)
+            forall<'a> {
+                foobuzz<'a>: FnOnce<(u8, f32)>
+            }
+        } yields {
+            "Unique"
+        }
+        goal {
+            forall<'a> {
+                Normalize(<foobuzz<'a> as FnOnce<(u8, f32)>>::Output -> u32)
+            }
         } yields {
             "Unique"
         }

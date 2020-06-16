@@ -102,12 +102,18 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Check if a trait is object safe
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;
 
+    /// Gets the `ClosureDatum` for a given closure id and substitution. We
+    /// pass both the `ClosureId` and it's `Substituion` to give implementors
+    /// the freedom to store associated data in the substitution (like rustc) or
+    /// separately (like chalk-integration).
     fn closure_datum(
         &self,
         closure_id: ClosureId<I>,
         substs: &Substitution<I>,
     ) -> Arc<ClosureDatum<I>>;
 
+    /// Gets the upvars as a `Ty` for a given closure id and substitution. There
+    /// are no restrictions on the type of upvars.
     fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>>;
 }
 

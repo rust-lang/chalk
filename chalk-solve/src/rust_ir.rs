@@ -168,12 +168,28 @@ pub struct FnDefDatumBound<I: Interner> {
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
+/// Represents a closure.
+/// For example, for the following rust code:
+/// ```ignore
+/// let mut a = 0;
+/// let foo = |b: &mut u32| -> u32 { a += 1; b += 1; 0 };
+/// let mut b = 0;
+/// foo(&mut b);
+/// ```
+///
+/// This declares a closure `foo` with one bound lifetime, an input of
+/// `&mut u32`, an output of `u32`, and a kind of `ClosureKind::FnMut`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ClosureDatum<I: Interner> {
+    /// The id of the closure.
     pub id: ClosureId<I>,
 
+    /// The inputs and outputs of closure, in `Binders`. See `FnDef` for a bit
+    /// more detailed explanation.
     pub inputs_and_output: Binders<FnDefInputsAndOutputDatum<I>>,
 
+    /// The kind of the closure. This is calculated based on the upvars that
+    /// are captured.
     pub kind: ClosureKind,
 }
 
@@ -601,6 +617,9 @@ impl Polarity {
     }
 }
 
+/// Indicates the "most permissive" Fn-like trait that the closure implements.
+/// If the closure kind for a closure is FnMut, for example, then the closure
+/// implements FnMut and FnOnce.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub enum ClosureKind {
     Fn,

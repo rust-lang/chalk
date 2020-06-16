@@ -1,6 +1,6 @@
 use crate::clauses::ClauseBuilder;
 use crate::infer::instantiate::IntoBindersAndValue;
-use crate::rust_ir::{ClosureKind, WellKnownTrait};
+use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
@@ -53,6 +53,30 @@ fn push_clauses<I: Interner>(
     }
 }
 
+fn push_clauses_for_apply<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    builder: &mut ClauseBuilder<'_, I>,
+    well_known: WellKnownTrait,
+    trait_id: TraitId<I>,
+    self_ty: Ty<I>,
+    inputs_and_output: &Binders<FnDefInputsAndOutputDatum<I>>,
+) {
+    let interner = db.interner();
+    builder.push_binders(inputs_and_output, |builder, inputs_and_output| {
+        let arg_sub = inputs_and_output
+            .argument_types
+            .iter()
+            .cloned()
+            .map(|ty| ty.cast(interner));
+        let arg_sub = Substitution::from(interner, arg_sub);
+        let output_ty = inputs_and_output.return_type;
+
+        push_clauses(
+            db, builder, well_known, trait_id, self_ty, arg_sub, output_ty,
+        );
+    });
+}
+
 /// Handles clauses for FnOnce/FnMut/Fn.
 /// If `self_ty` is a function, we push a clause of the form
 /// `fn(A1, A2, ..., AN) -> O: FnTrait<(A1, A2, ..., AN)>`, where `FnTrait`
@@ -78,26 +102,19 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 let bound = fn_def_datum
                     .binders
                     .substitute(builder.interner(), &apply.substitution);
-                let inputs_and_output = &bound.inputs_and_output;
-                builder.push_binders(inputs_and_output, |builder, inputs_and_output| {
-                    let self_ty = ApplicationTy {
-                        name: apply.name,
-                        substitution: builder.substitution_in_scope(),
-                    }
-                    .intern(interner);
-
-                    let arg_sub = inputs_and_output
-                        .argument_types
-                        .iter()
-                        .cloned()
-                        .map(|ty| ty.cast(interner));
-                    let arg_sub = Substitution::from(interner, arg_sub);
-                    let output_ty = inputs_and_output.return_type;
-
-                    push_clauses(
-                        db, builder, well_known, trait_id, self_ty, arg_sub, output_ty,
-                    );
-                });
+                let self_ty = ApplicationTy {
+                    name: apply.name,
+                    substitution: builder.substitution_in_scope(),
+                }
+                .intern(interner);
+                push_clauses_for_apply(
+                    db,
+                    builder,
+                    well_known,
+                    trait_id,
+                    self_ty,
+                    &bound.inputs_and_output,
+                );
                 Ok(())
             }
             TypeName::Closure(closure_id) => {
@@ -112,20 +129,14 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 if !trait_matches {
                     return Ok(());
                 }
-                let inputs_and_output = &closure_datum.inputs_and_output;
-                builder.push_binders(inputs_and_output, |builder, inputs_and_output| {
-                    let arg_sub = inputs_and_output
-                        .argument_types
-                        .iter()
-                        .cloned()
-                        .map(|ty| ty.cast(interner));
-                    let arg_sub = Substitution::from(interner, arg_sub);
-                    let output_ty = inputs_and_output.return_type;
-
-                    push_clauses(
-                        db, builder, well_known, trait_id, self_ty, arg_sub, output_ty,
-                    );
-                });
+                push_clauses_for_apply(
+                    db,
+                    builder,
+                    well_known,
+                    trait_id,
+                    self_ty,
+                    &closure_datum.inputs_and_output,
+                );
                 Ok(())
             }
             _ => Ok(()),
