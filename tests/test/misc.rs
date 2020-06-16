@@ -672,3 +672,29 @@ fn not_really_ambig() {
         }
     }
 }
+
+#[test]
+fn canonicalization_regression() {
+    test! {
+        program {
+            trait ForAny<X> {}
+            trait ForSame<X> {}
+
+            impl<X, Y> ForAny<X> for Y {}
+            impl<X> ForSame<X> for X {}
+        }
+
+        goal {
+            forall<A> {
+                forall<B> {
+                    exists<E> {
+                        A: ForAny<E>,
+                        B: ForSame<E>
+                    }
+                }
+            }
+        } yields {
+            "Unique; substitution [?0 := !2_0], lifetime constraints []"
+        }
+    }
+}
