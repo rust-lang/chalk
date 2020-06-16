@@ -59,8 +59,10 @@ pub struct FnDefn {
 pub struct ClosureDefn {
     pub name: Identifier,
     pub kind: ClosureKind,
+    pub variable_kinds: Vec<VariableKind>,
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
+    pub upvars: Vec<Ty>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]

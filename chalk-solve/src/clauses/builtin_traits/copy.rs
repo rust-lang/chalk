@@ -56,7 +56,9 @@ pub fn add_copy_program_clauses<I: Interner>(
             }
             TypeName::Closure(closure_id) => {
                 let upvars = db.closure_upvars(*closure_id, substitution);
-                needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
+                builder.push_binders(&upvars, |builder, upvars| {
+                    needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
+                })
             }
             _ => return,
         },

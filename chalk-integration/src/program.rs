@@ -3,8 +3,8 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, ClosureId, FnDefId,
-    GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
+    FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
@@ -30,6 +30,10 @@ pub struct Program {
     pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
 
     pub closure_ids: BTreeMap<Identifier, ClosureId<ChalkIr>>,
+
+    pub closure_upvars: BTreeMap<ClosureId<ChalkIr>, Binders<Ty<ChalkIr>>>,
+
+    pub closure_kinds: BTreeMap<ClosureId<ChalkIr>, TypeKind>,
 
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
@@ -420,7 +424,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn closure_datum(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: &Substitution<ChalkIr>,
+        _substs: &Substitution<ChalkIr>,
     ) -> Arc<ClosureDatum<ChalkIr>> {
         self.closure_data[&closure_id].clone()
     }
@@ -428,13 +432,12 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn closure_upvars(
         &self,
         closure_id: ClosureId<ChalkIr>,
-        substs: &Substitution<ChalkIr>,
-    ) -> Ty<ChalkIr> {
-        substs
-            .parameters(self.interner())
-            .last()
-            .unwrap()
-            .assert_ty_ref(self.interner())
-            .clone()
+        _substs: &Substitution<ChalkIr>,
+    ) -> Binders<Ty<ChalkIr>> {
+        // This is different to how rustc does it. In rustc,
+        // upvars are stored in the last substitution parameter.
+        // It's just easier this way, and from `chalk-solve`s POV,
+        // this is opaque anyways.
+        self.closure_upvars[&closure_id].clone()
     }
 }

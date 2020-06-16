@@ -104,18 +104,25 @@ FnArgs: Vec<Ty> = {
 };
 
 ClosureDefn: ClosureDefn = {
-    "closure" <n:Id> "(" <s:ClosureSelf> ")" ";" => ClosureDefn {
+    "closure" <n:Id> <p:Angle<VariableKind>> "(" <s:ClosureSelf> <args:ClosureArgs> ")" <ret_ty:FnReturn?>
+        "{" <upvars:SemiColon<Ty>> "}" => ClosureDefn {
         name: n,
         kind: s,
-        argument_types: vec![],
-        return_type: Ty::Tuple { types: Vec::new() },
+        variable_kinds: p,
+        argument_types: args,
+        return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
+        upvars: upvars,
     }
 }
 
 ClosureSelf: ClosureKind = {
     "self" => ClosureKind::FnOnce,
-    "mutself" => ClosureKind::FnMut,
-    "refself" => ClosureKind::Fn,
+    "&" "mut" "self" => ClosureKind::FnMut,
+    "&" "self" => ClosureKind::Fn,
+}
+
+ClosureArgs: Vec<Ty> = {
+    "," <args:FnArgs> => args,
 }
 
 TraitDefn: TraitDefn = {

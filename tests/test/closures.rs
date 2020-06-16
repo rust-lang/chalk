@@ -4,9 +4,9 @@ use super::*;
 fn closure_is_well_formed() {
     test! {
         program {
-            closure foo(self);
-            closure bar(refself);
-            closure baz(mutself);
+            closure foo(self,) {}
+            closure bar(&self,) {}
+            closure baz(&mut self,) {}
         }
 
         goal {
@@ -34,7 +34,7 @@ fn closure_is_sized() {
             #[lang(sized)]
             trait Sized { }
 
-            closure foo(self);
+            closure foo(self,) {}
         }
 
         goal {
@@ -51,12 +51,27 @@ fn closure_is_copy() {
         program {
             #[lang(copy)]
             trait Copy { }
+            impl<'a, T> Copy for &'a T {}
+            impl Copy for u8 {}
+            impl Copy for u16 {}
+            impl Copy for u32 {}
 
-            closure foo(self);
-            closure bar(refself);
-            closure baz(mutself);
+            closure foo(self,) {}
+            closure bar(&self,) {}
+            closure baz(&mut self,) {}
+
+            closure foobuzz<'a>(self, a: u8, b: f32) -> u32 {
+                u8;
+                &'a u16;
+                &'a mut u32
+            }
+            closure foobar<'a>(self, a: u8, b: f32) -> u32 {
+                u8;
+                &'a u16
+            }
         }
 
+        // A closure with no upvars is also copy, regardless of kind
         goal {
             foo: Copy
         } yields {
@@ -72,6 +87,19 @@ fn closure_is_copy() {
         } yields {
             "Unique"
         }
+
+        // A closure with non-Copy upvars is not copy
+        goal {
+            foobuzz: Copy
+        } yields {
+            "No possible solution"
+        }
+        // A closure with only Copy upvars is copy
+        goal {
+            foobar: Copy
+        } yields {
+            "Unique"
+        }
     }
 }
 
@@ -82,9 +110,9 @@ fn closure_is_clone() {
             #[lang(clone)]
             trait Clone { }
 
-            closure foo(self);
-            closure bar(refself);
-            closure baz(mutself);
+            closure foo(self,) {}
+            closure bar(&self,) {}
+            closure baz(&mut self,) {}
         }
         goal {
             foo: Clone
@@ -119,11 +147,22 @@ fn closure_implements_fn_traits() {
             #[lang(fn)]
             trait Fn<Args> where Self: FnMut<Args> { }
 
-            closure foo(self);
-            closure bar(refself);
-            closure baz(mutself);
+            closure foo(self,) {}
+            closure bar(&self,) {}
+            closure baz(&mut self,) {}
+
+            closure foobuzz<'a>(self, a: u8, b: f32) -> u32 {
+                u8;
+                &'a u16;
+                &'a mut u32
+            }
+            closure foobar<'a>(self, a: u8, b: f32) -> u32 {
+                u8;
+                &'a u16
+            }
         }
 
+        // A closure with kind `FnOnce` only implements `FnOnce`
         goal {
             foo: Fn<()>
         } yields {
@@ -145,6 +184,7 @@ fn closure_implements_fn_traits() {
             "Unique"
         }
 
+        // A closure with kind `Fn` implements all `Fn` traits
         goal {
             bar: Fn<()>
         } yields {
@@ -166,6 +206,7 @@ fn closure_implements_fn_traits() {
             "Unique"
         }
 
+        // A closure with kind `FnMut` implements `FnMut` and `FnOnce`
         goal {
             baz: Fn<()>
         } yields {
@@ -183,6 +224,34 @@ fn closure_implements_fn_traits() {
         }
         goal {
             Normalize(<baz as FnOnce<()>>::Output -> ())
+        } yields {
+            "Unique"
+        }
+        // A closure also implements the `Fn` traits regardless of upvars
+        goal {
+            foobar: FnOnce<(u8, f32)>
+        } yields {
+            "Unique"
+        }
+        goal {
+            Normalize(<foobar as FnOnce<(u8, f32)>>::Output -> u32)
+        } yields {
+            "Unique"
+        }
+        goal {
+            forall<'a> {
+                Normalize(<foobar<'a> as FnOnce<(u8, f32)>>::Output -> u32)
+            }
+        } yields {
+            "Unique"
+        }
+        goal {
+            foobuzz: FnOnce<(u8, f32)>
+        } yields {
+            "Unique"
+        }
+        goal {
+            Normalize(<foobuzz as FnOnce<(u8, f32)>>::Output -> u32)
         } yields {
             "Unique"
         }

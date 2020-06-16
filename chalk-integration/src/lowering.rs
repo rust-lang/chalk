@@ -26,6 +26,7 @@ type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
 type FnDefAbis = BTreeMap<FnDefId<ChalkIr>, <ChalkIr as Interner>::FnAbi>;
+type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
@@ -44,6 +45,7 @@ struct Env<'k> {
     fn_def_kinds: &'k FnDefKinds,
     fn_def_abis: &'k FnDefAbis,
     closure_ids: &'k ClosureIds,
+    closure_kinds: &'k ClosureKinds,
     trait_ids: &'k TraitIds,
     trait_kinds: &'k TraitKinds,
     opaque_ty_ids: &'k OpaqueTyIds,
@@ -82,6 +84,7 @@ struct AssociatedTyLookup {
 enum ApplyTypeLookup {
     Adt(AdtId<ChalkIr>),
     FnDef(FnDefId<ChalkIr>),
+    Closure(ClosureId<ChalkIr>),
     Opaque(OpaqueTyId<ChalkIr>),
 }
 
@@ -146,18 +149,8 @@ impl<'k> Env<'k> {
         if let Some(id) = self.closure_ids.get(&name.str) {
             return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Closure(id.clone()),
-                // XXX closure upvars
-                substitution: chalk_ir::Substitution::from(
-                    interner,
-                    Some(
-                        chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::Tuple(0),
-                            substitution: chalk_ir::Substitution::empty(interner),
-                        })
-                        .intern(interner)
-                        .cast(interner),
-                    ),
-                ),
+                // See note in `program`. Unlike rustc, we store upvars separately.
+                substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)
             .cast(interner));
@@ -193,6 +186,10 @@ impl<'k> Env<'k> {
             return Ok(ApplyTypeLookup::FnDef(*id));
         }
 
+        if let Some(id) = self.closure_ids.get(&name.str) {
+            return Ok(ApplyTypeLookup::Closure(*id));
+        }
+
         if let Some(id) = self.opaque_ty_ids.get(&name.str) {
             return Ok(ApplyTypeLookup::Opaque(*id));
         }
@@ -226,6 +223,10 @@ impl<'k> Env<'k> {
 
     fn fn_def_kind(&self, id: chalk_ir::FnDefId<ChalkIr>) -> &TypeKind {
         &self.fn_def_kinds[&id]
+    }
+
+    fn closure_kind(&self, id: chalk_ir::ClosureId<ChalkIr>) -> &TypeKind {
+        &self.closure_kinds[&id]
     }
 
     fn opaque_kind(&self, id: chalk_ir::OpaqueTyId<ChalkIr>) -> &TypeKind {
@@ -346,6 +347,7 @@ impl LowerProgram for Program {
         let mut adt_kinds = BTreeMap::new();
         let mut fn_def_kinds = BTreeMap::new();
         let mut fn_def_abis = BTreeMap::new();
+        let mut closure_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
         let mut object_safe_traits = HashSet::new();
@@ -365,8 +367,10 @@ impl LowerProgram for Program {
                     fn_def_abis.insert(id, defn.abi.lower()?);
                 }
                 Item::ClosureDefn(defn) => {
+                    let type_kind = defn.lower_type_kind()?;
                     let id = ClosureId(raw_id);
                     closure_ids.insert(defn.name.str.clone(), id);
+                    closure_kinds.insert(id, type_kind);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -392,6 +396,7 @@ impl LowerProgram for Program {
         let mut adt_data = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
         let mut closure_data = BTreeMap::new();
+        let mut closure_upvars = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
@@ -408,6 +413,7 @@ impl LowerProgram for Program {
                 fn_def_kinds: &fn_def_kinds,
                 fn_def_abis: &fn_def_abis,
                 closure_ids: &closure_ids,
+                closure_kinds: &closure_kinds,
                 trait_ids: &trait_ids,
                 trait_kinds: &trait_kinds,
                 opaque_ty_ids: &opaque_ty_ids,
@@ -434,6 +440,20 @@ impl LowerProgram for Program {
                         closure_def_id,
                         Arc::new(defn.lower_closure(closure_def_id, &empty_env)?),
                     );
+                    let upvars = empty_env.in_binders(defn.all_parameters(), |env| {
+                        let upvar_tys: LowerResult<Vec<chalk_ir::Ty<ChalkIr>>> =
+                            defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
+                        let substitution = chalk_ir::Substitution::from(
+                            &ChalkIr,
+                            upvar_tys?.into_iter().map(|ty| ty.cast(&ChalkIr)),
+                        );
+                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                            name: chalk_ir::TypeName::Tuple(defn.upvars.len()),
+                            substitution,
+                        })
+                        .intern(&ChalkIr))
+                    })?;
+                    closure_upvars.insert(closure_def_id, upvars);
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
@@ -593,6 +613,8 @@ impl LowerProgram for Program {
             adt_ids,
             fn_def_ids,
             closure_ids,
+            closure_upvars,
+            closure_kinds,
             trait_ids,
             adt_kinds,
             fn_def_kinds,
@@ -686,6 +708,16 @@ impl LowerParameterMap for StructDefn {
 }
 
 impl LowerParameterMap for FnDefn {
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
+        None
+    }
+
+    fn declared_parameters(&self) -> &[VariableKind] {
+        &self.variable_kinds
+    }
+}
+
+impl LowerParameterMap for ClosureDefn {
     fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
@@ -829,6 +861,20 @@ impl LowerTypeKind for FnDefn {
 impl LowerWhereClauses for FnDefn {
     fn where_clauses(&self) -> &[QuantifiedWhereClause] {
         &self.where_clauses
+    }
+}
+
+impl LowerTypeKind for ClosureDefn {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+        let interner = &ChalkIr;
+        Ok(TypeKind {
+            sort: TypeSort::Closure,
+            name: self.name.str.clone(),
+            binders: chalk_ir::Binders::new(
+                chalk_ir::VariableKinds::from(interner, self.all_parameters().anonymize()),
+                crate::Unit,
+            ),
+        })
     }
 }
 
@@ -1123,7 +1169,7 @@ impl LowerClosureDefn for ClosureDefn {
         closure_id: chalk_ir::ClosureId<ChalkIr>,
         env: &Env,
     ) -> LowerResult<rust_ir::ClosureDatum<ChalkIr>> {
-        let inputs_and_output = env.in_binders(vec![], |env| {
+        let inputs_and_output = env.in_binders(self.all_parameters(), |env| {
             let args: LowerResult<_> = self.argument_types.iter().map(|t| t.lower(env)).collect();
             let return_type = self.return_type.lower(env)?;
             Ok(rust_ir::FnDefInputsAndOutputDatum {
@@ -1452,6 +1498,9 @@ impl LowerTy for Ty {
                     ApplyTypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
                     ApplyTypeLookup::FnDef(id) => {
                         (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id))
+                    }
+                    ApplyTypeLookup::Closure(id) => {
+                        (chalk_ir::TypeName::Closure(id), env.closure_kind(id))
                     }
                     ApplyTypeLookup::Opaque(id) => {
                         (chalk_ir::TypeName::OpaqueType(id), env.opaque_kind(id))
@@ -1852,6 +1901,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             adt_kinds: &program.adt_kinds,
             fn_def_kinds: &program.fn_def_kinds,
             fn_def_abis: &fn_def_abis,
+            closure_kinds: &program.closure_kinds,
             trait_kinds: &program.trait_kinds,
             opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,

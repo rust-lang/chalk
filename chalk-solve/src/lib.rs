@@ -108,7 +108,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         substs: &Substitution<I>,
     ) -> Arc<ClosureDatum<I>>;
 
-    fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Ty<I>;
+    fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>>;
 }
 
 pub use clauses::program_clauses_for_env;

@@ -7,9 +7,9 @@ use crate::{
     tls,
 };
 use chalk_ir::{
-    AdtId, AssocTypeId, Canonical, ClosureId, ConstrainedSubst, Environment, FnDefId, GenericArg,
-    Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses, Substitution, TraitId,
-    Ty, UCanonical,
+    AdtId, AssocTypeId, Binders, Canonical, ClosureId, ConstrainedSubst, Environment, FnDefId,
+    GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses,
+    Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureDatum, FnDefDatum,
@@ -168,7 +168,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         &self,
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
-    ) -> Ty<ChalkIr> {
+    ) -> Binders<Ty<ChalkIr>> {
         self.program_ir()
             .unwrap()
             .closure_upvars(closure_id, substs)

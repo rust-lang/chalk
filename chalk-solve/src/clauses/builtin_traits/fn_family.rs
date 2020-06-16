@@ -4,9 +4,54 @@ use crate::rust_ir::{ClosureKind, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Substitution, Ty, TyData,
-    TypeName, VariableKinds,
+    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Substitution, TraitId,
+    Ty, TyData, TypeName, VariableKinds,
 };
+
+fn push_clauses<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    builder: &mut ClauseBuilder<'_, I>,
+    well_known: WellKnownTrait,
+    trait_id: TraitId<I>,
+    self_ty: Ty<I>,
+    arg_sub: Substitution<I>,
+    return_type: Ty<I>,
+) {
+    let interner = db.interner();
+    let tupled = TyData::Apply(ApplicationTy {
+        name: TypeName::Tuple(arg_sub.len(interner)),
+        substitution: arg_sub,
+    })
+    .intern(interner);
+    let substitution =
+        Substitution::from(interner, &[self_ty.cast(interner), tupled.cast(interner)]);
+    builder.push_fact(TraitRef {
+        trait_id,
+        substitution: substitution.clone(),
+    });
+
+    // The `Output` type is defined on the `FnOnce`
+    if let WellKnownTrait::FnOnce = well_known {
+        let trait_datum = db.trait_datum(trait_id);
+        assert_eq!(
+            trait_datum.associated_ty_ids.len(),
+            1,
+            "FnOnce trait should have exactly one associated type, found {:?}",
+            trait_datum.associated_ty_ids
+        );
+        // Constructs the alias. For `Fn`, for example, this would look like
+        // `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
+        let output_id = trait_datum.associated_ty_ids[0];
+        let alias = AliasTy::Projection(ProjectionTy {
+            associated_ty_id: output_id,
+            substitution,
+        });
+        builder.push_fact(Normalize {
+            alias,
+            ty: return_type,
+        });
+    }
+}
 
 /// Handles clauses for FnOnce/FnMut/Fn.
 /// If `self_ty` is a function, we push a clause of the form
@@ -26,44 +71,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     let interner = db.interner();
     let trait_id = db.well_known_trait_id(well_known).unwrap();
 
-    let push_clauses = |builder: &mut ClauseBuilder<'_, I>,
-                        self_ty: Ty<I>,
-                        arg_sub: Substitution<I>,
-                        return_type| {
-        let tupled = TyData::Apply(ApplicationTy {
-            name: TypeName::Tuple(arg_sub.len(interner)),
-            substitution: arg_sub,
-        })
-        .intern(interner);
-        let substitution =
-            Substitution::from(interner, &[self_ty.cast(interner), tupled.cast(interner)]);
-        builder.push_fact(TraitRef {
-            trait_id,
-            substitution: substitution.clone(),
-        });
-
-        // The `Output` type is defined on the `FnOnce`
-        if let WellKnownTrait::FnOnce = well_known {
-            let trait_datum = db.trait_datum(trait_id);
-            assert_eq!(
-                trait_datum.associated_ty_ids.len(),
-                1,
-                "FnOnce trait should have exactly one associated type, found {:?}",
-                trait_datum.associated_ty_ids
-            );
-            // Constructs the alias. For `Fn`, for example, this would look like
-            // `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
-            let output_id = trait_datum.associated_ty_ids[0];
-            let alias = AliasTy::Projection(ProjectionTy {
-                associated_ty_id: output_id,
-                substitution,
-            });
-            builder.push_fact(Normalize {
-                alias,
-                ty: return_type,
-            });
-        }
-    };
     match self_ty.data(interner) {
         TyData::Apply(apply) => match apply.name {
             TypeName::FnDef(fn_def_id) => {
@@ -87,7 +94,9 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     let arg_sub = Substitution::from(interner, arg_sub);
                     let output_ty = inputs_and_output.return_type;
 
-                    push_clauses(builder, self_ty, arg_sub, output_ty);
+                    push_clauses(
+                        db, builder, well_known, trait_id, self_ty, arg_sub, output_ty,
+                    );
                 });
                 Ok(())
             }
@@ -113,7 +122,9 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     let arg_sub = Substitution::from(interner, arg_sub);
                     let output_ty = inputs_and_output.return_type;
 
-                    push_clauses(builder, self_ty, arg_sub, output_ty);
+                    push_clauses(
+                        db, builder, well_known, trait_id, self_ty, arg_sub, output_ty,
+                    );
                 });
                 Ok(())
             }
@@ -130,7 +141,15 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 let arg_sub = Substitution::from(interner, arg_sub);
                 let output_ty = fn_output_ty[0].assert_ty_ref(interner).clone();
 
-                push_clauses(builder, self_ty.clone(), arg_sub, output_ty);
+                push_clauses(
+                    db,
+                    builder,
+                    well_known,
+                    trait_id,
+                    self_ty.clone(),
+                    arg_sub,
+                    output_ty,
+                );
             });
             Ok(())
         }
