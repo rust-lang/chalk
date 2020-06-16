@@ -642,3 +642,33 @@ fn lifetime_outlives_constraints() {
         }
     }
 }
+
+/// Example of fundamental ambiguity in the recursive solver, used in the
+/// recursive solver book documentation.
+#[test]
+fn not_really_ambig() {
+    test! {
+        program {
+            struct Vec<T> { }
+
+            trait A { }
+            trait B { }
+
+            impl<T> A for Vec<T> where T: A, T: B { }
+
+            impl A for u32 { }
+            impl B for u32 { }
+
+            impl A for i32 { }
+            impl B for i8 { }
+        }
+
+        goal {
+            exists<T> { Vec<T>: A }
+        } yields[SolverChoice::slg_default()] {
+            "Unique; substitution [?0 := Uint(U32)], lifetime constraints []"
+        } yields[SolverChoice::recursive()] {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
