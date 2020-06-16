@@ -7,8 +7,8 @@
 use crate::{
     AdtId, AssocTypeId, ClausePriority, ClosureId, DebruijnIndex, FloatTy, FnDefId, GenericArg,
     Goals, ImplId, IntTy, Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause,
-    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar,
-    Substitution, SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
+    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution, SuperVisit,
+    TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
 };
 use std::{marker::PhantomData, sync::Arc};
 
