@@ -84,11 +84,12 @@ impl A for u32 { }
 impl B for u32 { }
 
 impl A for i32 { }
+impl B for i8 { }
 ```
 
 In the recursive solver, with a goal of `Implemented(Vec<?X>: A)`, we
-recursively try to prove `Implemented(?X: A)` and get ambiguity, and we get
-stuck there.
+recursively try to prove `Implemented(?X: A)` and `Implemented(?X: B)`, which
+are both ambiguous, and we get stuck there.
 
 The [SLG solver] in contrast starts by exploring `?X = u32` and finds
 that it works, and then later tries to explore `?X = i32` and finds that it
