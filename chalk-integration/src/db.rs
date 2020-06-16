@@ -12,8 +12,8 @@ use chalk_ir::{
     Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureDatum, FnDefDatum,
-    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SolverChoice, SubstitutionResult};
 use salsa::Database;
@@ -156,12 +156,22 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().is_object_safe(trait_id)
     }
 
-    fn closure_datum(
+    fn closure_inputs_and_output(
         &self,
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
-    ) -> Arc<ClosureDatum<ChalkIr>> {
-        self.program_ir().unwrap().closure_datum(closure_id, substs)
+    ) -> Binders<FnDefInputsAndOutputDatum<ChalkIr>> {
+        self.program_ir()
+            .unwrap()
+            .closure_inputs_and_output(closure_id, substs)
+    }
+
+    fn closure_kind(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> ClosureKind {
+        self.program_ir().unwrap().closure_kind(closure_id, substs)
     }
 
     fn closure_upvars(
@@ -172,5 +182,15 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir()
             .unwrap()
             .closure_upvars(closure_id, substs)
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        self.program_ir()
+            .unwrap()
+            .closure_fn_substitution(closure_id, substs)
     }
 }

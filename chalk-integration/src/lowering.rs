@@ -404,7 +404,8 @@ impl LowerProgram for Program {
 
         let mut adt_data = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
-        let mut closure_data = BTreeMap::new();
+        let mut closure_inputs_and_output = BTreeMap::new();
+        let mut closure_closure_kind = BTreeMap::new();
         let mut closure_upvars = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
@@ -445,10 +446,9 @@ impl LowerProgram for Program {
                 }
                 Item::ClosureDefn(ref defn) => {
                     let closure_def_id = ClosureId(raw_id);
-                    closure_data.insert(
-                        closure_def_id,
-                        Arc::new(defn.lower_closure(closure_def_id, &empty_env)?),
-                    );
+                    let (kind, inputs_and_output) = defn.lower_closure(&empty_env)?;
+                    closure_closure_kind.insert(closure_def_id, kind);
+                    closure_inputs_and_output.insert(closure_def_id, inputs_and_output);
                     let upvars = empty_env.in_binders(defn.all_parameters(), |env| {
                         let upvar_tys: LowerResult<Vec<chalk_ir::Ty<ChalkIr>>> =
                             defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
@@ -630,7 +630,8 @@ impl LowerProgram for Program {
             trait_kinds,
             adt_data,
             fn_def_data,
-            closure_data,
+            closure_inputs_and_output,
+            closure_closure_kind,
             trait_data,
             well_known_traits,
             impl_data,
@@ -1167,17 +1168,21 @@ impl LowerFnAbi for FnAbi {
 trait LowerClosureDefn {
     fn lower_closure(
         &self,
-        closure_id: chalk_ir::ClosureId<ChalkIr>,
         env: &Env,
-    ) -> LowerResult<rust_ir::ClosureDatum<ChalkIr>>;
+    ) -> LowerResult<(
+        rust_ir::ClosureKind,
+        chalk_ir::Binders<rust_ir::FnDefInputsAndOutputDatum<ChalkIr>>,
+    )>;
 }
 
 impl LowerClosureDefn for ClosureDefn {
     fn lower_closure(
         &self,
-        closure_id: chalk_ir::ClosureId<ChalkIr>,
         env: &Env,
-    ) -> LowerResult<rust_ir::ClosureDatum<ChalkIr>> {
+    ) -> LowerResult<(
+        rust_ir::ClosureKind,
+        chalk_ir::Binders<rust_ir::FnDefInputsAndOutputDatum<ChalkIr>>,
+    )> {
         let inputs_and_output = env.in_binders(self.all_parameters(), |env| {
             let args: LowerResult<_> = self.argument_types.iter().map(|t| t.lower(env)).collect();
             let return_type = self.return_type.lower(env)?;
@@ -1187,11 +1192,7 @@ impl LowerClosureDefn for ClosureDefn {
             })
         })?;
 
-        Ok(rust_ir::ClosureDatum {
-            id: closure_id,
-            kind: self.kind.lower_closure_kind()?,
-            inputs_and_output,
-        })
+        Ok((self.kind.lower_closure_kind()?, inputs_and_output))
     }
 }
 

@@ -8,8 +8,8 @@ use chalk_ir::{
     ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureDatum, FnDefDatum,
-    ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -46,7 +46,11 @@ pub struct Program {
 
     pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
-    pub closure_data: BTreeMap<ClosureId<ChalkIr>, Arc<ClosureDatum<ChalkIr>>>,
+    pub closure_inputs_and_output:
+        BTreeMap<ClosureId<ChalkIr>, Binders<FnDefInputsAndOutputDatum<ChalkIr>>>,
+
+    // Weird name, but otherwise would overlap with `closure_kinds` above.
+    pub closure_closure_kind: BTreeMap<ClosureId<ChalkIr>, ClosureKind>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -421,12 +425,25 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.object_safe_traits.contains(&trait_id)
     }
 
-    fn closure_datum(
+    // For all the closure functions: this is different than how rustc does it.
+    // In rustc, the substitution, closure kind, fnsig, and upvars are stored
+    // together. Here, we store the closure kind, signature, and upvars
+    // separately, since it's easier. And this is opaque to `chalk-solve`.
+
+    fn closure_inputs_and_output(
         &self,
         closure_id: ClosureId<ChalkIr>,
         _substs: &Substitution<ChalkIr>,
-    ) -> Arc<ClosureDatum<ChalkIr>> {
-        self.closure_data[&closure_id].clone()
+    ) -> Binders<FnDefInputsAndOutputDatum<ChalkIr>> {
+        self.closure_inputs_and_output[&closure_id].clone()
+    }
+
+    fn closure_kind(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        _substs: &Substitution<ChalkIr>,
+    ) -> ClosureKind {
+        self.closure_closure_kind[&closure_id]
     }
 
     fn closure_upvars(
@@ -434,10 +451,14 @@ impl RustIrDatabase<ChalkIr> for Program {
         closure_id: ClosureId<ChalkIr>,
         _substs: &Substitution<ChalkIr>,
     ) -> Binders<Ty<ChalkIr>> {
-        // This is different to how rustc does it. In rustc,
-        // upvars are stored in the last substitution parameter.
-        // It's just easier this way, and from `chalk-solve`s POV,
-        // this is opaque anyways.
         self.closure_upvars[&closure_id].clone()
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        _closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        substs.clone()
     }
 }

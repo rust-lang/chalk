@@ -102,19 +102,38 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Check if a trait is object safe
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;
 
-    /// Gets the `ClosureDatum` for a given closure id and substitution. We
+    /// Gets the `ClosureKind` for a given closure and substitution.
+    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind;
+
+    /// Gets the inputs and output for a given closure id and substitution. We
     /// pass both the `ClosureId` and it's `Substituion` to give implementors
     /// the freedom to store associated data in the substitution (like rustc) or
     /// separately (like chalk-integration).
-    fn closure_datum(
+    fn closure_inputs_and_output(
         &self,
         closure_id: ClosureId<I>,
         substs: &Substitution<I>,
-    ) -> Arc<ClosureDatum<I>>;
+    ) -> Binders<FnDefInputsAndOutputDatum<I>>;
 
     /// Gets the upvars as a `Ty` for a given closure id and substitution. There
     /// are no restrictions on the type of upvars.
     fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>>;
+
+    /// Gets the substitution for the closure when used as a function.
+    /// For example, for the following (not-quite-)rust code:
+    /// ```ignore
+    /// let foo = |a: &mut u32| { a += 1; };
+    /// let c: &'a u32 = &0;
+    /// foo(c);
+    /// ```
+    ///
+    /// This would return a `Substitution` of `[&'a]`. This could either be
+    /// substituted into the inputs and output, or into the upvars.
+    fn closure_fn_substitution(
+        &self,
+        closure_id: ClosureId<I>,
+        substs: &Substitution<I>,
+    ) -> Substitution<I>;
 }
 
 pub use clauses::program_clauses_for_env;

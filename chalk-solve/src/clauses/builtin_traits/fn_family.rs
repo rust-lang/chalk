@@ -118,8 +118,8 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 Ok(())
             }
             TypeName::Closure(closure_id) => {
-                let closure_datum = db.closure_datum(closure_id, &apply.substitution);
-                let trait_matches = match (well_known, closure_datum.kind) {
+                let closure_kind = db.closure_kind(closure_id, &apply.substitution);
+                let trait_matches = match (well_known, closure_kind) {
                     (WellKnownTrait::Fn, ClosureKind::Fn) => true,
                     (WellKnownTrait::FnMut, ClosureKind::FnMut)
                     | (WellKnownTrait::FnMut, ClosureKind::Fn) => true,
@@ -129,13 +129,15 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 if !trait_matches {
                     return Ok(());
                 }
+                let closure_inputs_and_output =
+                    db.closure_inputs_and_output(closure_id, &apply.substitution);
                 push_clauses_for_apply(
                     db,
                     builder,
                     well_known,
                     trait_id,
                     self_ty,
-                    &closure_datum.inputs_and_output,
+                    &closure_inputs_and_output,
                 );
                 Ok(())
             }

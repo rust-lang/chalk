@@ -186,11 +186,19 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
-    fn closure_datum(
+    fn closure_inputs_and_output(
         &self,
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
-    ) -> Arc<ClosureDatum<ChalkIr>> {
+    ) -> Binders<FnDefInputsAndOutputDatum<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn closure_kind(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> ClosureKind {
         unimplemented!()
     }
 
@@ -199,6 +207,14 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
     ) -> Binders<Ty<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
         unimplemented!()
     }
 }
