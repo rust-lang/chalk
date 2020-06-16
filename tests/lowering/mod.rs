@@ -717,3 +717,23 @@ fn extern_functions() {
         }
     }
 }
+
+#[test]
+fn closures() {
+    lowering_success! {
+        program {
+            closure foo(self,) {}
+            closure bar(&self,) {}
+            closure baz(&mut self,) {}
+
+            closure buzz(self,) -> u32 {}
+            closure foobar<'a>(self,) -> u32 {}
+            closure foobaz<'a>(self, a: u8, b: f32) -> u32 {}
+            closure foobuzz<'a>(self, a: u8, b: f32) -> u32 {
+                u8;
+                &'a u16;
+                &'a mut u32
+            }
+        }
+    }
+}

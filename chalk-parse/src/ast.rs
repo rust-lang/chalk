@@ -22,6 +22,7 @@ pub struct Program {
 pub enum Item {
     StructDefn(StructDefn),
     FnDefn(FnDefn),
+    ClosureDefn(ClosureDefn),
     TraitDefn(TraitDefn),
     OpaqueTyDefn(OpaqueTyDefn),
     Impl(Impl),
@@ -52,6 +53,16 @@ pub struct FnDefn {
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
     pub abi: FnAbi,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ClosureDefn {
+    pub name: Identifier,
+    pub kind: ClosureKind,
+    pub variable_kinds: Vec<VariableKind>,
+    pub argument_types: Vec<Ty>,
+    pub return_type: Ty,
+    pub upvars: Vec<Ty>,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -408,4 +419,11 @@ pub enum Goal {
 
     // Additional kinds of goals:
     Leaf(LeafGoal),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ClosureKind {
+    Fn,
+    FnMut,
+    FnOnce,
 }

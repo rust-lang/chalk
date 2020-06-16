@@ -591,3 +591,13 @@ impl Polarity {
         }
     }
 }
+
+/// Indicates the "most permissive" Fn-like trait that the closure implements.
+/// If the closure kind for a closure is FnMut, for example, then the closure
+/// implements FnMut and FnOnce.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum ClosureKind {
+    Fn,
+    FnMut,
+    FnOnce,
+}

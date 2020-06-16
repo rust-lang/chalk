@@ -15,6 +15,7 @@ Item: Option<Item> = {
     Comment => None,
     StructDefn => Some(Item::StructDefn(<>)),
     FnDefn => Some(Item::FnDefn(<>)),
+    ClosureDefn => Some(Item::ClosureDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
     OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
     Impl => Some(Item::Impl(<>)),
@@ -101,6 +102,28 @@ FnArg: Ty = {
 FnArgs: Vec<Ty> = {
     <Comma<FnArg>>
 };
+
+ClosureDefn: ClosureDefn = {
+    "closure" <n:Id> <p:Angle<VariableKind>> "(" <s:ClosureSelf> <args:ClosureArgs> ")" <ret_ty:FnReturn?>
+        "{" <upvars:SemiColon<Ty>> "}" => ClosureDefn {
+        name: n,
+        kind: s,
+        variable_kinds: p,
+        argument_types: args,
+        return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
+        upvars: upvars,
+    }
+}
+
+ClosureSelf: ClosureKind = {
+    "self" => ClosureKind::FnOnce,
+    "&" "mut" "self" => ClosureKind::FnMut,
+    "&" "self" => ClosureKind::Fn,
+}
+
+ClosureArgs: Vec<Ty> = {
+    "," <args:FnArgs> => args,
+}
 
 TraitDefn: TraitDefn = {
     <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <object_safe:ObjectSafeKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<VariableKind>>

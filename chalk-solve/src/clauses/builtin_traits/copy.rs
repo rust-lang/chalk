@@ -35,8 +35,6 @@ pub fn add_copy_program_clauses<I: Interner>(
     trait_ref: &TraitRef<I>,
     ty: &TyData<I>,
 ) {
-    let _interner = db.interner();
-
     match ty {
         TyData::Apply(ApplicationTy { name, substitution }) => match name {
             TypeName::Tuple(arity) => {
@@ -53,6 +51,12 @@ pub fn add_copy_program_clauses<I: Interner>(
             }
             TypeName::FnDef(_) => {
                 builder.push_fact(trait_ref.clone());
+            }
+            TypeName::Closure(closure_id) => {
+                let closure_fn_substitution = db.closure_fn_substitution(*closure_id, substitution);
+                let upvars = db.closure_upvars(*closure_id, substitution);
+                let upvars = upvars.substitute(db.interner(), &closure_fn_substitution);
+                needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
             }
             _ => return,
         },

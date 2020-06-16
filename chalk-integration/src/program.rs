@@ -3,13 +3,13 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, FnDefId, GenericArg,
-    Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
+    FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum, ImplDatum,
-    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -29,6 +29,12 @@ pub struct Program {
 
     pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
 
+    pub closure_ids: BTreeMap<Identifier, ClosureId<ChalkIr>>,
+
+    pub closure_upvars: BTreeMap<ClosureId<ChalkIr>, Binders<Ty<ChalkIr>>>,
+
+    pub closure_kinds: BTreeMap<ClosureId<ChalkIr>, TypeKind>,
+
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
 
@@ -39,6 +45,12 @@ pub struct Program {
     pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
     pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
+
+    pub closure_inputs_and_output:
+        BTreeMap<ClosureId<ChalkIr>, Binders<FnDefInputsAndOutputDatum<ChalkIr>>>,
+
+    // Weird name, but otherwise would overlap with `closure_kinds` above.
+    pub closure_closure_kind: BTreeMap<ClosureId<ChalkIr>, ClosureKind>,
 
     /// For each impl:
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
@@ -411,5 +423,42 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
         self.object_safe_traits.contains(&trait_id)
+    }
+
+    // For all the closure functions: this is different than how rustc does it.
+    // In rustc, the substitution, closure kind, fnsig, and upvars are stored
+    // together. Here, we store the closure kind, signature, and upvars
+    // separately, since it's easier. And this is opaque to `chalk-solve`.
+
+    fn closure_inputs_and_output(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        _substs: &Substitution<ChalkIr>,
+    ) -> Binders<FnDefInputsAndOutputDatum<ChalkIr>> {
+        self.closure_inputs_and_output[&closure_id].clone()
+    }
+
+    fn closure_kind(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        _substs: &Substitution<ChalkIr>,
+    ) -> ClosureKind {
+        self.closure_closure_kind[&closure_id]
+    }
+
+    fn closure_upvars(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        _substs: &Substitution<ChalkIr>,
+    ) -> Binders<Ty<ChalkIr>> {
+        self.closure_upvars[&closure_id].clone()
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        _closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        substs.clone()
     }
 }

@@ -185,6 +185,38 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
         unimplemented!()
     }
+
+    fn closure_inputs_and_output(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Binders<FnDefInputsAndOutputDatum<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn closure_kind(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> ClosureKind {
+        unimplemented!()
+    }
+
+    fn closure_upvars(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Binders<Ty<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        closure_id: ClosureId<ChalkIr>,
+        substs: &Substitution<ChalkIr>,
+    ) -> Substitution<ChalkIr> {
+        unimplemented!()
+    }
 }
 
 fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {

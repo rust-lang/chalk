@@ -20,6 +20,7 @@ pub use interner::{Identifier, RawId};
 pub enum TypeSort {
     Struct,
     FnDef,
+    Closure,
     Trait,
     Opaque,
 }
