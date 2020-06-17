@@ -76,7 +76,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto1 + 'a: Unsize<dyn Auto1 + Principal + 'a>
             }
         } yields {
-            "No possible solution"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
         }
 
         // See above
@@ -85,7 +85,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto2 + Auto1 + 'a: Unsize<dyn Principal + Auto1 + Auto2 + 'a>
             }
         } yields {
-            "No possible solution"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
         }
 
         // Source has a subset of auto traits of target
