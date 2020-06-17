@@ -69,8 +69,6 @@ fn dyn_to_dyn_unsizing() {
         }
 
         // Different order of traits in target and source
-        // FIXME: this doesn't work because trait object unification
-        // respects where clause order, which it shouldn't
         goal {
             forall<'a> {
                 dyn Principal + Auto1 + 'a: Unsize<dyn Auto1 + Principal + 'a>
