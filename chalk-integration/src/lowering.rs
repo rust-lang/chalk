@@ -181,7 +181,6 @@ impl<'k> Env<'k> {
     }
 
     fn auto_trait(&self, id: chalk_ir::TraitId<ChalkIr>) -> bool {
-        println!("Looking UP {:?}", id);
         self.auto_traits[&id]
     }
 
@@ -1793,10 +1792,7 @@ impl LowerGoal<LoweredProgram> for Goal {
         let auto_traits = program
             .trait_data
             .iter()
-            .map(|(&trait_id, datum)| {
-                println!("DATA: {:?}", trait_id);
-                (trait_id, datum.flags.auto)
-            })
+            .map(|(&trait_id, datum)| (trait_id, datum.flags.auto))
             .collect();
 
         let fn_def_abis: BTreeMap<_, _> = program
