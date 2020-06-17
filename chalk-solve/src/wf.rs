@@ -280,7 +280,7 @@ fn impl_header_wf_goal<I: Interner>(
 
                 // Things to prove well-formed: input types of the where-clauses, projection types
                 // appearing in the header, associated type values, and of course the trait ref.
-                debug!("verify_trait_impl: input_types={:?}", types);
+                debug!(input_types=?types);
                 let goals = types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))

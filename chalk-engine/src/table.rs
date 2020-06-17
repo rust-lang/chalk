@@ -157,8 +157,8 @@ impl<I: Interner> Table<I> {
         };
 
         info!(
-            "new answer to table with goal {:?}: answer={:?}",
-            self.table_goal, answer,
+            goal = ?self.table_goal, ?answer,
+            "new answer to table",
         );
         if !added {
             return None;

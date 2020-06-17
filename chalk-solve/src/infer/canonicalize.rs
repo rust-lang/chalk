@@ -1,3 +1,4 @@
+use crate::debug_span;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
@@ -31,7 +32,7 @@ impl<I: Interner> InferenceTable<I> {
         T: Fold<I>,
         T::Result: HasInterner<Interner = I>,
     {
-        debug!("canonicalize({:#?})", value);
+        debug_span!("canonicalize", "{:#?}", value);
         let mut q = Canonicalizer {
             table: self,
             free_vars: Vec::new(),
@@ -174,7 +175,7 @@ where
                     ParameterEnaVariable::new(VariableKind::Ty(kind), self.table.unify.find(var));
 
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
-                debug!("not yet unified: position={:?}", bound_var);
+                debug!(position=?bound_var, "not yet unified");
                 Ok(TyData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
             }
         }
@@ -198,7 +199,7 @@ where
                 let free_var =
                     ParameterEnaVariable::new(VariableKind::Lifetime, self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
-                debug!("not yet unified: position={:?}", bound_var);
+                debug!(position=?bound_var, "not yet unified");
                 Ok(
                     LifetimeData::BoundVar(bound_var.shifted_in_from(outer_binder))
                         .intern(interner),
@@ -228,7 +229,7 @@ where
                     self.table.unify.find(var),
                 );
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
-                debug!("not yet unified: position={:?}", bound_var);
+                debug!(position = ?bound_var, "not yet unified");
                 Ok(bound_var
                     .shifted_in_from(outer_binder)
                     .to_const(interner, ty.clone()))

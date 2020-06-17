@@ -13,7 +13,7 @@ use chalk_ir::{
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 enum Outcome {
     Complete,
@@ -270,12 +270,12 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
 
     /// Create obligations for the given goal in the given environment. This may
     /// ultimately create any number of obligations.
+    #[instrument(level = "debug", skip(self))]
     pub(super) fn push_goal(
         &mut self,
         environment: &Environment<I>,
         goal: Goal<I>,
     ) -> Fallible<()> {
-        debug!("push_goal({:?}, {:?})", goal, environment);
         let interner = self.interner();
         match goal.data(interner) {
             GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {

@@ -76,7 +76,7 @@ impl<I: Interner> InferenceTable<I> {
     pub(crate) fn new_universe(&mut self) -> UniverseIndex {
         let u = self.max_universe.next();
         self.max_universe = u;
-        debug!("new_universe: {:?}", u);
+        debug!("created new universe: {:?}", u);
         u
     }
 
@@ -86,7 +86,7 @@ impl<I: Interner> InferenceTable<I> {
     pub(crate) fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable<I> {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
-        debug!("new_variable: var={:?} ui={:?}", var, ui);
+        debug!(?var, ?ui, "created new variable");
         var
     }
 

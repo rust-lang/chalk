@@ -83,8 +83,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
             self.infer
                 .instantiate_binders_existentially(interner, implication)
         };
-        debug!("consequence = {:?}", consequence);
-        debug!("conditions = {:?}", conditions);
+        debug!(?consequence, ?conditions);
 
         // Unify the selected literal Li with C'.
         let unification_result = self
@@ -205,10 +204,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
         canonical_answer_subst: &Canonical<AnswerSubst<I>>,
     ) -> Fallible<()> {
-        debug!(
-            "selected_goal={:?}",
-            self.infer.normalize_deep(interner, selected_goal)
-        );
+        debug!(selected_goal = ?self.infer.normalize_deep(interner, selected_goal));
 
         // C' is now `answer`. No variables in common with G.
         let AnswerSubst {

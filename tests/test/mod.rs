@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use crate::test_util::assert_same;
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::LowerGoal;
@@ -8,8 +9,6 @@ use chalk_solve::ext::*;
 use chalk_solve::logging::with_tracing_logs;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
-
-use crate::test_util::assert_same;
 
 #[cfg(feature = "bench")]
 mod bench;

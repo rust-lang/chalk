@@ -1795,7 +1795,7 @@ impl LowerImpl for Impl {
         let polarity = self.polarity.lower();
         let binders = empty_env.in_binders(self.all_parameters(), |env| {
             let trait_ref = self.trait_ref.lower(env)?;
-            debug!("trait_ref = {:?}", trait_ref);
+            debug!(?trait_ref);
 
             if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
                 Err(RustIrError::NegativeImplAssociatedValues(
@@ -1804,7 +1804,7 @@ impl LowerImpl for Impl {
             }
 
             let where_clauses = self.lower_where_clauses(&env)?;
-            debug!("where_clauses = {:?}", trait_ref);
+            debug!(where_clauses = ?trait_ref);
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
                 where_clauses,
@@ -1820,7 +1820,7 @@ impl LowerImpl for Impl {
             .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str.clone())])
             .collect();
 
-        debug!("associated_ty_value_ids = {:?}", associated_ty_value_ids);
+        debug!(?associated_ty_value_ids);
 
         Ok(rust_ir::ImplDatum {
             polarity,
@@ -1917,7 +1917,7 @@ impl LowerTrait for TraitDefn {
             well_known: self.well_known.map(|t| t.lower()),
         };
 
-        debug!("trait_datum={:?}", trait_datum);
+        debug!(?trait_datum);
 
         Ok(trait_datum)
     }

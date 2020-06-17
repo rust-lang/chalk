@@ -21,7 +21,7 @@ pub fn perform_orphan_check<I: Interner>(
     impl_id: ImplId<I>,
 ) -> Result<(), CoherenceError<I>> {
     let impl_datum = db.impl_datum(impl_id);
-    debug!("impl_datum={:#?}", impl_datum);
+    debug!(?impl_datum);
 
     let impl_allowed: Goal<I> = impl_datum
         .binders

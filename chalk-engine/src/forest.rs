@@ -6,7 +6,6 @@ use crate::{TableIndex, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical};
-use tracing::debug;
 
 pub struct Forest<I: Interner, C: Context<I>> {
     pub(crate) tables: Tables<I>,
@@ -76,7 +75,7 @@ impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    debug!("Answer: {:?}", &answer);
+                    // debug!("Answer: {:?}", &answer);
                     return AnswerResult::Answer(answer);
                 }
 

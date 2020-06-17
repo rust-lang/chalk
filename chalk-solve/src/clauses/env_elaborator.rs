@@ -6,12 +6,12 @@ use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
-use crate::TyData;
+use crate::{debug_span, TyData};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::DebruijnIndex;
 use rustc_hash::FxHashSet;
-use tracing::debug;
+use tracing::instrument;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
 /// found in the environment.
@@ -56,9 +56,8 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     fn interner(&self) -> &'me I {
         self.db.interner()
     }
-
+    #[instrument(level = "debug", skip(self, _outer_binder))]
     fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
-        debug!("EnvElaborator::visit_ty(ty={:?})", ty);
         let interner = self.db.interner();
         match ty.data(interner) {
             TyData::Apply(application_ty) => {
@@ -77,7 +76,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
 
     fn visit_domain_goal(&mut self, domain_goal: &DomainGoal<I>, outer_binder: DebruijnIndex) {
         if let DomainGoal::FromEnv(from_env) = domain_goal {
-            debug!("EnvElaborator::visit_domain_goal(from_env={:?})", from_env);
+            debug_span!("visit_domain_goal", ?from_env);
             match from_env {
                 FromEnv::Trait(trait_ref) => {
                     let trait_datum = self.db.trait_datum(trait_ref.trait_id);
