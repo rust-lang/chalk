@@ -28,6 +28,7 @@ type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
 type FnDefAbis = BTreeMap<FnDefId<ChalkIr>, <ChalkIr as Interner>::FnAbi>;
 type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
+type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
 type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
@@ -51,6 +52,7 @@ struct Env<'k> {
     opaque_ty_ids: &'k OpaqueTyIds,
     opaque_ty_kinds: &'k OpaqueTyKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
+    auto_traits: &'k AutoTraits,
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
@@ -206,6 +208,10 @@ impl<'k> Env<'k> {
         Err(RustIrError::NotStruct(name.clone()))
     }
 
+    fn auto_trait(&self, id: chalk_ir::TraitId<ChalkIr>) -> bool {
+        self.auto_traits[&id]
+    }
+
     fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
         if let Some(_) = self.parameter_map.get(&name.str) {
             return Err(RustIrError::NotTrait(name.clone()));
@@ -352,6 +358,7 @@ impl LowerProgram for Program {
         let mut fn_def_ids = BTreeMap::new();
         let mut closure_ids = BTreeMap::new();
         let mut trait_ids = BTreeMap::new();
+        let mut auto_traits = BTreeMap::new();
         let mut opaque_ty_ids = BTreeMap::new();
         let mut adt_kinds = BTreeMap::new();
         let mut fn_def_kinds = BTreeMap::new();
@@ -360,6 +367,7 @@ impl LowerProgram for Program {
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
         let mut object_safe_traits = HashSet::new();
+
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             match item {
                 Item::StructDefn(defn) => {
@@ -386,6 +394,7 @@ impl LowerProgram for Program {
                     let id = TraitId(raw_id);
                     trait_ids.insert(type_kind.name.clone(), id);
                     trait_kinds.insert(id, type_kind);
+                    auto_traits.insert(id, defn.flags.auto);
 
                     if defn.flags.object_safe {
                         object_safe_traits.insert(id);
@@ -430,6 +439,7 @@ impl LowerProgram for Program {
                 opaque_ty_kinds: &opaque_ty_kinds,
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
+                auto_traits: &auto_traits,
             };
 
             match *item {
@@ -1352,7 +1362,32 @@ trait LowerQuantifiedInlineBoundVec {
 
 impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
     fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>> {
-        self.iter().map(|b| b.lower(env)).collect()
+        fn trait_identifier(bound: &InlineBound) -> &Identifier {
+            return match bound {
+                InlineBound::TraitBound(tb) => &tb.trait_name,
+                InlineBound::AliasEqBound(ab) => &ab.trait_bound.trait_name,
+            };
+        }
+
+        let mut regular_traits = Vec::new();
+        let mut auto_traits = Vec::new();
+
+        for b in self {
+            let id = env.lookup_trait(trait_identifier(&b.bound))?;
+            if env.auto_trait(id) {
+                auto_traits.push((b, id))
+            } else {
+                regular_traits.push((b, id))
+            }
+        }
+
+        auto_traits.sort_by_key(|b| b.1);
+
+        regular_traits
+            .iter()
+            .chain(auto_traits.iter())
+            .map(|(b, _)| b.lower(env))
+            .collect()
     }
 }
 
@@ -1895,6 +1930,13 @@ impl LowerGoal<LoweredProgram> for Goal {
                 ((datum.trait_id, datum.name.clone()), lookup)
             })
             .collect();
+
+        let auto_traits = program
+            .trait_data
+            .iter()
+            .map(|(&trait_id, datum)| (trait_id, datum.flags.auto))
+            .collect();
+
         let fn_def_abis: BTreeMap<_, _> = program
             .fn_def_data
             .iter()
@@ -1915,6 +1957,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,
             parameter_map: BTreeMap::new(),
+            auto_traits: &auto_traits,
         };
 
         self.lower(&env)
