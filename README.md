@@ -4,8 +4,7 @@
 
 # chalk
 
-A [Prolog-ish][Prolog] interpreter written in Rust, intended perhaps for use in
-the compiler, but also for experimentation.
+Chalk is a library that implements the Rust trait system, based on [Prolog-ish][Prolog] logic rules.
 
 See the [Chalk book](https://rust-lang.github.io/chalk/book/) for more information.
 
