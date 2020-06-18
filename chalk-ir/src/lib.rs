@@ -71,6 +71,8 @@ pub struct Environment<I: Interner> {
     pub clauses: ProgramClauses<I>,
 }
 
+impl<I: Interner> Copy for Environment<I> where I::InternedProgramClauses: Copy {}
+
 impl<I: Interner> Environment<I> {
     /// Creates a new environment.
     pub fn new(interner: &I) -> Self {
@@ -97,6 +99,11 @@ impl<I: Interner> Environment<I> {
 pub struct InEnvironment<G: HasInterner> {
     pub environment: Environment<G::Interner>,
     pub goal: G,
+}
+
+impl<G: HasInterner<Interner = I> + Copy, I: Interner> Copy for InEnvironment<G> where
+    I::InternedProgramClauses: Copy
+{
 }
 
 impl<G: HasInterner> InEnvironment<G> {
@@ -482,6 +489,15 @@ pub enum TyData<I: Interner> {
     InferenceVar(InferenceVar, TyKind),
 }
 
+impl<I: Interner> Copy for TyData<I>
+where
+    I::InternedLifetime: Copy,
+    I::InternedSubstitution: Copy,
+    I::InternedVariableKinds: Copy,
+    I::InternedQuantifiedWhereClauses: Copy,
+{
+}
+
 impl<I: Interner> TyData<I> {
     /// Casts the type data to a type.
     pub fn intern(self, interner: &I) -> Ty<I> {
@@ -770,6 +786,14 @@ pub struct DynTy<I: Interner> {
     pub lifetime: Lifetime<I>,
 }
 
+impl<I: Interner> Copy for DynTy<I>
+where
+    I::InternedLifetime: Copy,
+    I::InternedQuantifiedWhereClauses: Copy,
+    I::InternedVariableKinds: Copy,
+{
+}
+
 /// A type, lifetime or constant whose value is being inferred.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct InferenceVar {
@@ -817,8 +841,10 @@ pub struct Fn<I: Interner> {
     pub substitution: Substitution<I>,
 }
 
+impl<I: Interner> Copy for Fn<I> where I::InternedSubstitution: Copy {}
+
 /// Constants.
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Const<I: Interner> {
     interned: I::InternedConst,
 }
@@ -893,6 +919,8 @@ pub enum ConstValue<I: Interner> {
     Concrete(ConcreteConst<I>),
 }
 
+impl<I: Interner> Copy for ConstValue<I> where I::InternedConcreteConst: Copy {}
+
 impl<I: Interner> ConstData<I> {
     /// Wraps the constant data in a `Const`.
     pub fn intern(self, interner: &I) -> Const<I> {
@@ -902,7 +930,7 @@ impl<I: Interner> ConstData<I> {
 
 /// Concrete constant, whose value is known (as opposed to
 /// inferred constants and placeholders).
-#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ConcreteConst<I: Interner> {
     /// The interned constant.
     pub interned: I::InternedConcreteConst,
@@ -1032,6 +1060,8 @@ pub struct ApplicationTy<I: Interner> {
     pub substitution: Substitution<I>,
 }
 
+impl<I: Interner> Copy for ApplicationTy<I> where I::InternedSubstitution: Copy {}
+
 impl<I: Interner> ApplicationTy<I> {
     /// Create an interned type from this application type.
     pub fn intern(self, interner: &I) -> Ty<I> {
@@ -1083,6 +1113,8 @@ pub enum VariableKind<I: Interner> {
     Lifetime,
     Const(Ty<I>),
 }
+
+impl<I: Interner> Copy for VariableKind<I> where I::InternedType: Copy {}
 
 impl<I: Interner> VariableKind<I> {
     fn to_bound_variable(&self, interner: &I, bound_var: BoundVar) -> GenericArg<I> {
@@ -1189,6 +1221,14 @@ pub enum GenericArgData<I: Interner> {
     Const(Const<I>),
 }
 
+impl<I: Interner> Copy for GenericArgData<I>
+where
+    I::InternedType: Copy,
+    I::InternedLifetime: Copy,
+    I::InternedConst: Copy,
+{
+}
+
 impl<I: Interner> GenericArgData<I> {
     /// Create an interned type.
     pub fn intern(self, interner: &I) -> GenericArg<I> {
@@ -1204,6 +1244,8 @@ pub struct WithKind<I: Interner, T> {
     /// The wrapped value.
     value: T,
 }
+
+impl<I: Interner, T: Copy> Copy for WithKind<I, T> where I::InternedType: Copy {}
 
 impl<I: Interner, T> HasInterner for WithKind<I, T> {
     type Interner = I;
@@ -1262,6 +1304,8 @@ pub enum AliasTy<I: Interner> {
     Opaque(OpaqueTy<I>),
 }
 
+impl<I: Interner> Copy for AliasTy<I> where I::InternedSubstitution: Copy {}
+
 impl<I: Interner> AliasTy<I> {
     /// Create an interned type for this alias.
     pub fn intern(self, interner: &I) -> Ty<I> {
@@ -1291,6 +1335,8 @@ pub struct ProjectionTy<I: Interner> {
     pub substitution: Substitution<I>,
 }
 
+impl<I: Interner> Copy for ProjectionTy<I> where I::InternedSubstitution: Copy {}
+
 /// An opaque type `opaque type T<..>: Trait = HiddenTy`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct OpaqueTy<I: Interner> {
@@ -1299,6 +1345,8 @@ pub struct OpaqueTy<I: Interner> {
     /// The substitution for the opaque type.
     pub substitution: Substitution<I>,
 }
+
+impl<I: Interner> Copy for OpaqueTy<I> where I::InternedSubstitution: Copy {}
 
 /// A trait reference describes the relationship between a type and a trait.
 /// This can be used in two forms:
@@ -1313,6 +1361,8 @@ pub struct TraitRef<I: Interner> {
     /// The substitution, containing both the `Self` type and the parameters.
     pub substitution: Substitution<I>,
 }
+
+impl<I: Interner> Copy for TraitRef<I> where I::InternedSubstitution: Copy {}
 
 impl<I: Interner> TraitRef<I> {
     /// Gets all type parameters in this trait ref, including `Self`.
@@ -1347,6 +1397,9 @@ pub struct LifetimeOutlives<I: Interner> {
     pub a: Lifetime<I>,
     pub b: Lifetime<I>,
 }
+
+impl<I: Interner> Copy for LifetimeOutlives<I> where I::InternedLifetime: Copy {}
+
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
@@ -1356,6 +1409,14 @@ pub enum WhereClause<I: Interner> {
     AliasEq(AliasEq<I>),
     /// One lifetime outlives another.
     LifetimeOutlives(LifetimeOutlives<I>),
+}
+
+impl<I: Interner> Copy for WhereClause<I>
+where
+    I::InternedSubstitution: Copy,
+    I::InternedLifetime: Copy,
+    I::InternedType: Copy,
+{
 }
 
 /// Checks whether a type or trait ref is well-formed.
@@ -1389,6 +1450,13 @@ pub enum WellFormed<I: Interner> {
     Ty(Ty<I>),
 }
 
+impl<I: Interner> Copy for WellFormed<I>
+where
+    I::InternedType: Copy,
+    I::InternedSubstitution: Copy,
+{
+}
+
 /// Checks whether a type or trait ref can be derived from the contents of the environment.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum FromEnv<I: Interner> {
@@ -1417,6 +1485,13 @@ pub enum FromEnv<I: Interner> {
     /// }
     /// ```
     Ty(Ty<I>),
+}
+
+impl<I: Interner> Copy for FromEnv<I>
+where
+    I::InternedType: Copy,
+    I::InternedSubstitution: Copy,
+{
 }
 
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
@@ -1494,6 +1569,14 @@ pub enum DomainGoal<I: Interner> {
 
     /// Used to indicate that a trait is object safe.
     ObjectSafe(TraitId<I>),
+}
+
+impl<I: Interner> Copy for DomainGoal<I>
+where
+    I::InternedSubstitution: Copy,
+    I::InternedLifetime: Copy,
+    I::InternedType: Copy,
+{
 }
 
 /// A where clause that can contain `forall<>` or `exists<>` quantifiers.
@@ -1647,6 +1730,8 @@ pub struct EqGoal<I: Interner> {
     pub b: GenericArg<I>,
 }
 
+impl<I: Interner> Copy for EqGoal<I> where I::InternedGenericArg: Copy {}
+
 /// Proves that the given type alias **normalizes** to the given
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
@@ -1658,12 +1743,26 @@ pub struct Normalize<I: Interner> {
     pub ty: Ty<I>,
 }
 
+impl<I: Interner> Copy for Normalize<I>
+where
+    I::InternedSubstitution: Copy,
+    I::InternedType: Copy,
+{
+}
+
 /// Proves **equality** between an alias and a type.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 #[allow(missing_docs)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,
+}
+
+impl<I: Interner> Copy for AliasEq<I>
+where
+    I::InternedSubstitution: Copy,
+    I::InternedType: Copy,
+{
 }
 
 impl<I: Interner> HasInterner for AliasEq<I> {
@@ -1684,6 +1783,11 @@ pub struct Binders<T: HasInterner> {
 
     /// The value being quantified over.
     value: T,
+}
+
+impl<T: HasInterner + Copy> Copy for Binders<T> where
+    <T::Interner as Interner>::InternedVariableKinds: Copy
+{
 }
 
 impl<T: HasInterner> HasInterner for Binders<T> {
@@ -2457,6 +2561,19 @@ pub enum GoalData<I: Interner> {
     CannotProve(()),
 }
 
+impl<I: Interner> Copy for GoalData<I>
+where
+    I::InternedType: Copy,
+    I::InternedLifetime: Copy,
+    I::InternedGenericArg: Copy,
+    I::InternedSubstitution: Copy,
+    I::InternedGoal: Copy,
+    I::InternedGoals: Copy,
+    I::InternedProgramClauses: Copy,
+    I::InternedVariableKinds: Copy,
+{
+}
+
 impl<I: Interner> GoalData<I> {
     /// Create an interned goal.
     pub fn intern(self, interner: &I) -> Goal<I> {
@@ -2497,6 +2614,8 @@ pub enum Constraint<I: Interner> {
     /// a superset of the value of `'b`.
     Outlives(Lifetime<I>, Lifetime<I>),
 }
+
+impl<I: Interner> Copy for Constraint<I> where I::InternedLifetime: Copy {}
 
 /// A mapping of inference variables to instantiations thereof.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
