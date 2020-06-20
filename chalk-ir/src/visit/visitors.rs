@@ -2,9 +2,9 @@
 
 use crate::{BoundVar, DebruijnIndex, Interner, Visit, VisitResult, Visitor};
 
-/// Visitor extensions
+/// Visitor extensions.
 pub trait VisitExt<I: Interner>: Visit<I> {
-    /// Check whether there are free (non-bound) variables
+    /// Check whether there are free (non-bound) variables.
     fn has_free_vars(&self, interner: &I) -> bool {
         self.visit_with(
             &mut FindFreeVarsVisitor { interner },
@@ -16,7 +16,7 @@ pub trait VisitExt<I: Interner>: Visit<I> {
 
 impl<T, I: Interner> VisitExt<I> for T where T: Visit<I> {}
 
-/// Helper visitor for finding a specific value
+/// Helper visitor for finding a specific value.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(missing_docs)]
 pub struct FindAny {
@@ -24,10 +24,10 @@ pub struct FindAny {
 }
 
 impl FindAny {
-    /// Visitor has found the value
+    /// Visitor has found the value.
     pub const FOUND: FindAny = FindAny { found: true };
 
-    /// Checks whether the value has been found
+    /// Checks whether the value has been found.
     pub fn to_bool(&self) -> bool {
         self.found
     }

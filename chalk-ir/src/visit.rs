@@ -17,7 +17,7 @@ pub use visitors::VisitExt;
 /// are doing. A common choice is `FindAny`, which indicates that the visitor
 /// is searching for something and that the visitor should stop once it is found.
 pub trait VisitResult: Sized {
-    /// Creates a new visitor result
+    /// Creates a new visitor result.
     fn new() -> Self;
 
     /// Returns true if this result is "complete" and we can stop visiting any
@@ -25,7 +25,7 @@ pub trait VisitResult: Sized {
     /// stop the search after a match has been found.
     fn return_early(&self) -> bool;
 
-    /// Combines two visitor results
+    /// Combines two visitor results.
     fn combine(self, other: Self) -> Self;
 
     /// Convenience helper for use in writing `Visitor` impls. Returns `self`
@@ -74,7 +74,7 @@ pub trait Visitor<'i, I: Interner>
 where
     I: 'i,
 {
-    /// The type of result that this visitor produces
+    /// The type of result that this visitor produces.
     type Result: VisitResult;
 
     /// Creates a `dyn` value from this visitor. Unfortunately, this
@@ -128,7 +128,7 @@ where
         goal.super_visit_with(self.as_dyn(), outer_binder)
     }
 
-    /// Invoked for each domain goal
+    /// Invoked for each domain goal.
     fn visit_domain_goal(
         &mut self,
         domain_goal: &DomainGoal<I>,
@@ -177,7 +177,7 @@ where
         }
     }
 
-    /// Invoked for each where clause
+    /// Invoked for each where clause.
     fn visit_where_clause(
         &mut self,
         where_clause: &WhereClause<I>,
@@ -207,7 +207,7 @@ where
         }
     }
 
-    /// Gets the visitor's interner
+    /// Gets the visitor's interner.
     fn interner(&self) -> &'i I;
 }
 
@@ -232,7 +232,7 @@ pub trait Visit<I: Interner>: Debug {
 /// `SuperVisit` trait captures the recursive behavior that visits all
 /// the contents of the type.
 pub trait SuperVisit<I: Interner>: Visit<I> {
-    /// Recursively visits the type contents
+    /// Recursively visits the type contents.
     fn super_visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,

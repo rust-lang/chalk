@@ -764,9 +764,9 @@ impl DebruijnIndex {
 /// level of binder).
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct DynTy<I: Interner> {
-    /// The unknown self type
+    /// The unknown self type.
     pub bounds: Binders<QuantifiedWhereClauses<I>>,
-    /// Lifetime of the `DynTy`
+    /// Lifetime of the `DynTy`.
     pub lifetime: Lifetime<I>,
 }
 
@@ -817,7 +817,7 @@ pub struct Fn<I: Interner> {
     pub substitution: Substitution<I>,
 }
 
-/// Constants
+/// Constants.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Const<I: Interner> {
     interned: I::InternedConst,
@@ -975,11 +975,11 @@ impl<I: Interner> Lifetime<I> {
 pub enum LifetimeData<I: Interner> {
     /// See TyData::BoundVar.
     BoundVar(BoundVar),
-    /// Lifetime whose value is being inferred
+    /// Lifetime whose value is being inferred.
     InferenceVar(InferenceVar),
-    /// Lifetime on some yet-unknown placeholder
+    /// Lifetime on some yet-unknown placeholder.
     Placeholder(PlaceholderIndex),
-    /// Lifetime on phantom data
+    /// Lifetime on phantom data.
     Phantom(Void, PhantomData<I>),
 }
 
@@ -1196,7 +1196,7 @@ impl<I: Interner> GenericArgData<I> {
     }
 }
 
-/// A value with an associated variable kind
+/// A value with an associated variable kind.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct WithKind<I: Interner, T> {
     /// The associated variable kind.
@@ -1350,11 +1350,11 @@ pub struct LifetimeOutlives<I: Interner> {
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
-    /// Type implements a trait
+    /// Type implements a trait.
     Implemented(TraitRef<I>),
-    /// Type is equal to an alias
+    /// Type is equal to an alias.
     AliasEq(AliasEq<I>),
-    /// One lifetime outlives another
+    /// One lifetime outlives another.
     LifetimeOutlives(LifetimeOutlives<I>),
 }
 
@@ -1929,7 +1929,7 @@ impl std::ops::BitAnd for ClausePriority {
     }
 }
 
-/// Contains the data for a program clause
+/// Contains the data for a program clause.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner, Zip)]
 pub struct ProgramClauseData<I: Interner>(pub Binders<ProgramClauseImplication<I>>);
 
@@ -1993,7 +1993,7 @@ impl<I: Interner> ProgramClause<I> {
     }
 }
 
-/// List of program clauses
+/// List of program clauses.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClauses<I: Interner> {
     interned: I::InternedProgramClauses,
@@ -2226,7 +2226,7 @@ impl<T: HasInterner> UCanonical<T> {
         subst.is_identity_subst(interner)
     }
 
-    /// Creates an identity substitution
+    /// Creates an identity substitution.
     pub fn trivial_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
         let binders = &self.canonical.binders;
         Substitution::from(
@@ -2458,7 +2458,7 @@ pub enum GoalData<I: Interner> {
 }
 
 impl<I: Interner> GoalData<I> {
-    /// Create an interned goal
+    /// Create an interned goal.
     pub fn intern(self, interner: &I) -> Goal<I> {
         Goal::new(interner, self)
     }
@@ -2758,7 +2758,7 @@ pub struct ConstrainedSubst<I: Interner> {
     /// NB: The `is_trivial` routine relies on the fact that `subst` is folded first.
     pub subst: Substitution<I>, /*  */
 
-    /// Region constraints that constrain the substitution
+    /// Region constraints that constrain the substitution.
     pub constraints: Vec<InEnvironment<Constraint<I>>>,
 }
 

@@ -361,7 +361,7 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
 /// `SuperFold` trait captures the recursive behavior that folds all
 /// the contents of the type.
 pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
-    /// Recursively folds the value
+    /// Recursively folds the value.
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
