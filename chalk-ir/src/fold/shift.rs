@@ -1,3 +1,5 @@
+//! Shifting of debruijn indices
+
 use super::Fold;
 use crate::*;
 

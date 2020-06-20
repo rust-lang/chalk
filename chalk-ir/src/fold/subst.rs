@@ -1,6 +1,7 @@
 use super::*;
 use crate::fold::shift::Shift;
 
+/// Substitution used during folding
 pub struct Subst<'s, 'i, I: Interner> {
     /// Values to substitute. A reference to a free variable with
     /// index `i` will be mapped to `parameters[i]` -- if `i >
@@ -10,6 +11,7 @@ pub struct Subst<'s, 'i, I: Interner> {
 }
 
 impl<I: Interner> Subst<'_, '_, I> {
+    /// Applies the substitution by folding
     pub fn apply<T: Fold<I, I>>(
         interner: &I,
         parameters: &[GenericArg<I>],

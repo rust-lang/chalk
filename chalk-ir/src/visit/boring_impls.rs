@@ -179,6 +179,7 @@ impl<I: Interner> Visit<I> for Goals<I> {
     }
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! const_visit {
     ($t:ty) => {
@@ -211,6 +212,7 @@ const_visit!(IntTy);
 const_visit!(FloatTy);
 const_visit!(Mutability);
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! id_visit {
     ($t:ident) => {

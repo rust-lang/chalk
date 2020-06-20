@@ -1,3 +1,5 @@
+//! Encapsulates the concrete representation of core types such as types and goals.
+
 use crate::AdtId;
 use crate::AliasTy;
 use crate::ApplicationTy;
@@ -169,8 +171,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// The ID type for ADTs
     type InternedAdtId: Debug + Copy + Eq + Ord + Hash;
 
+    /// Representation of identifiers.
     type Identifier: Debug + Clone + Eq + Hash;
 
+    /// Representation of function ABI (e.g. calling convention).
     type FnAbi: Debug + Copy + Eq + Hash;
 
     /// Prints the debug representation of a type-kind-id. To get good
@@ -227,6 +231,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a function-def-id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
     fn debug_fn_def_id(
         fn_def_id: FnDefId<Self>,
@@ -235,6 +246,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a closure id. To get good
+    /// results, this requires inspecting TLS, and is difficult to
+    /// code without reference to a specific type-family (and hence
+    /// fully known types).
+    ///
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
     fn debug_closure_id(
         fn_def_id: ClosureId<Self>,
@@ -539,6 +557,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
     fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
+    /// Deterermine whether two concrete const values are equal.
     fn const_eq(
         &self,
         ty: &Self::InternedType,
@@ -670,19 +689,31 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ) -> &'a [CanonicalVarKind<Self>];
 }
 
+/// "Target" interner, used to specify the interner of the folded value.
+/// In most cases, both interners are the same, but in some cases you want
+/// to change a value to a different internal representation, and as such
+/// a different target interner.
+///
+/// Contains several methods to transfer types from another interner to
+/// the `TargetInterner`.
 pub trait TargetInterner<I: Interner>: Interner {
+    /// Transfer a `DefId` to the target interner.
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
 
+    /// Transfer an AdtId to the target interner.
     fn transfer_adt_id(adt_id: I::InternedAdtId) -> Self::InternedAdtId;
 
+    /// Transfer variable kinds to the target interner.
     fn transfer_variable_kinds(
         variable_kinds: I::InternedVariableKinds,
     ) -> Self::InternedVariableKinds;
 
+    /// Transfer canonical var kinds to the target interner.
     fn transfer_canonical_var_kinds(
         variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
 
+    /// Transfer constant values to the target interner.
     fn transfer_const(
         &self,
         const_evaluated: &I::InternedConcreteConst,
@@ -725,6 +756,7 @@ impl<I: Interner> TargetInterner<I> for I {
 /// It's particularly useful for writing `Fold` impls for generic types like
 /// `Binder<T>`, since it allows us to figure out the interner of `T`.
 pub trait HasInterner {
+    /// The interner associated with the type.
     type Interner: Interner;
 }
 

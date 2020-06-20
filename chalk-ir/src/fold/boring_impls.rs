@@ -213,6 +213,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for QuantifiedWhereClauses<
     }
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {
@@ -247,6 +248,7 @@ copy_fold!(Scalar);
 copy_fold!(ClausePriority);
 copy_fold!(Mutability);
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! id_fold {
     ($t:ident) => {
