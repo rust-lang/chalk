@@ -1,15 +1,19 @@
 #![allow(unused_macros)]
 
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
+
 macro_rules! lowering_success {
     (program $program:tt) => {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let result = chalk_integration::db::ChalkDatabase::with(
-            &program_text[1..program_text.len() - 1],
-            chalk_solve::SolverChoice::default(),
-        )
-        .checked_program();
+        let result = $crate::test_util::with_tracing_logs(|| {
+            chalk_integration::db::ChalkDatabase::with(
+                &program_text[1..program_text.len() - 1],
+                chalk_solve::SolverChoice::default(),
+            )
+            .checked_program()
+        });
         if let Err(ref e) = result {
             println!("lowering error: {}", e);
         }
@@ -22,16 +26,30 @@ macro_rules! lowering_error {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let error = chalk_integration::db::ChalkDatabase::with(
-            &program_text[1..program_text.len() - 1],
-            chalk_solve::SolverChoice::default(),
-        )
-        .checked_program()
-        .unwrap_err()
-        .to_string();
+        let error = $crate::test_util::with_tracing_logs(|| {
+            chalk_integration::db::ChalkDatabase::with(
+                &program_text[1..program_text.len() - 1],
+                chalk_solve::SolverChoice::default(),
+            )
+            .checked_program()
+            .unwrap_err()
+            .to_string()
+        });
         let expected = $expected.to_string();
         crate::test_util::assert_same(&error, &expected);
     };
+}
+
+/// Run an action with a tracing log subscriber. The logging level is loaded
+/// from `CHALK_DEBUG`.
+pub fn with_tracing_logs<T>(action: impl FnOnce() -> T) -> T {
+    let filter = EnvFilter::from_env("CHALK_DEBUG");
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(filter)
+        .with_ansi(false)
+        .without_time()
+        .finish();
+    tracing::subscriber::with_default(subscriber, action)
 }
 
 pub fn assert_same(result: &str, expected: &str) {

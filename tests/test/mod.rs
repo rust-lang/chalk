@@ -7,9 +7,8 @@ use chalk_integration::query::LoweringDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::{Solution, SolverChoice};
-use tracing_subscriber::{filter::EnvFilter, FmtSubscriber};
 
-use crate::test_util::assert_same;
+use crate::test_util::{assert_same, with_tracing_logs};
 
 #[cfg(feature = "bench")]
 mod bench;
@@ -208,13 +207,7 @@ macro_rules! test {
 }
 
 fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
-    let filter = EnvFilter::from_env("CHALK_DEBUG");
-    let subscriber = FmtSubscriber::builder()
-        .with_env_filter(filter)
-        .with_ansi(false)
-        .without_time()
-        .finish();
-    tracing::subscriber::with_default(subscriber, || {
+    with_tracing_logs(|| {
         println!("program {}", program_text);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
