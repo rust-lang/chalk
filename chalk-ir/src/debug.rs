@@ -477,7 +477,7 @@ impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
 }
 
 impl<I: Interner> Substitution<I> {
-    ///
+    /// Show debug output for the substitution.
     pub fn debug<'a>(&'a self, interner: &'a I) -> SubstitutionDebug<'a, I> {
         SubstitutionDebug {
             substitution: self,
@@ -494,7 +494,7 @@ impl Debug for PlaceholderIndex {
 }
 
 impl<I: Interner> TraitRef<I> {
-    /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`
+    /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`.
     pub fn with_as(&self) -> impl std::fmt::Debug + '_ {
         SeparatorTraitRef {
             trait_ref: self,
@@ -502,7 +502,7 @@ impl<I: Interner> TraitRef<I> {
         }
     }
 
-    /// Returns a "Debuggable" type that prints like `P0: Trait<P1..>`
+    /// Returns a "Debuggable" type that prints like `P0: Trait<P1..>`.
     pub fn with_colon(&self) -> impl std::fmt::Debug + '_ {
         SeparatorTraitRef {
             trait_ref: self,
@@ -519,14 +519,14 @@ impl<I: Interner> Debug for TraitRef<I> {
 
 /// Trait ref with associated separator used for debug output.
 pub struct SeparatorTraitRef<'me, I: Interner> {
-    /// The `TraitRef` itself
+    /// The `TraitRef` itself.
     pub trait_ref: &'me TraitRef<I>,
 
-    /// The separator used for displaying the `TraitRef`
+    /// The separator used for displaying the `TraitRef`.
     pub separator: &'me str,
 }
 
-/// Helper struct for showing debug output for the `SeperatorTraitRef`
+/// Helper struct for showing debug output for the `SeperatorTraitRef`.
 pub struct SeparatorTraitRefDebug<'a, 'me, I: Interner> {
     separator_trait_ref: &'a SeparatorTraitRef<'me, I>,
     interner: &'a I,
@@ -554,7 +554,7 @@ impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
 }
 
 impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
-    /// Show debug output for the `SeperatorTraitRef`
+    /// Show debug output for the `SeperatorTraitRef`.
     pub fn debug<'a>(&'a self, interner: &'a I) -> SeparatorTraitRefDebug<'a, 'me, I> {
         SeparatorTraitRefDebug {
             separator_trait_ref: self,
@@ -622,7 +622,7 @@ impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
 }
 
 impl<I: Interner> OpaqueTy<I> {
-    /// Show debug output for the opaque type
+    /// Show debug output for the opaque type.
     pub fn debug<'a>(&'a self, interner: &'a I) -> OpaqueTyDebug<'a, I> {
         OpaqueTyDebug {
             opaque_ty: self,
@@ -631,7 +631,7 @@ impl<I: Interner> OpaqueTy<I> {
     }
 }
 
-/// Wraps debug output in angle brackets (`<>`)
+/// Wraps debug output in angle brackets (`<>`).
 pub struct Angle<'a, T>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
