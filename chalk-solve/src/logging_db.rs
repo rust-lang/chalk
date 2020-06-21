@@ -208,6 +208,36 @@ where
     fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
         self.db.borrow().fn_def_name(fn_def_id)
     }
+
+    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind {
+        // TODO: record closure IDs
+        self.db.borrow().closure_kind(closure_id, substs)
+    }
+
+    fn closure_inputs_and_output(
+        &self,
+        closure_id: ClosureId<I>,
+        substs: &Substitution<I>,
+    ) -> Binders<FnDefInputsAndOutputDatum<I>> {
+        // TODO: record closure IDs
+        self.db
+            .borrow()
+            .closure_inputs_and_output(closure_id, substs)
+    }
+
+    fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>> {
+        // TODO: record closure IDs
+        self.db.borrow().closure_upvars(closure_id, substs)
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        closure_id: ClosureId<I>,
+        substs: &Substitution<I>,
+    ) -> Substitution<I> {
+        // TODO: record closure IDs
+        self.db.borrow().closure_fn_substitution(closure_id, substs)
+    }
 }
 
 /// Wraps a [`RustIrDatabase`], and, when dropped, writes out all used
@@ -381,6 +411,33 @@ where
 
     fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
         self.db.borrow().fn_def_name(fn_def_id)
+    }
+
+    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind {
+        // TODO: record closure IDs
+        self.db.borrow().closure_kind(closure_id, substs)
+    }
+
+    fn closure_inputs_and_output(
+        &self,
+        closure_id: ClosureId<I>,
+        substs: &Substitution<I>,
+    ) -> Binders<FnDefInputsAndOutputDatum<I>> {
+        self.db
+            .borrow()
+            .closure_inputs_and_output(closure_id, substs)
+    }
+
+    fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>> {
+        self.db.borrow().closure_upvars(closure_id, substs)
+    }
+
+    fn closure_fn_substitution(
+        &self,
+        closure_id: ClosureId<I>,
+        substs: &Substitution<I>,
+    ) -> Substitution<I> {
+        self.db.borrow().closure_fn_substitution(closure_id, substs)
     }
 }
 

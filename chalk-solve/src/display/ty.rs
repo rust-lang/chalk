@@ -201,6 +201,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             TypeName::Error => write!(f, "{{error}}")?,
             TypeName::Never => todo!("never type"),
             TypeName::FnDef(_) => todo!("fn def type"),
+            TypeName::Closure(..) => todo!("closure type"),
             TypeName::Array => write!(
                 f,
                 "[{}; {}]",
