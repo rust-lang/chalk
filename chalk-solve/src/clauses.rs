@@ -327,7 +327,7 @@ fn program_clauses_that_could_match<I: Interner>(
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::DownstreamType(ty)
         | DomainGoal::IsFullyVisible(ty)
-        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, goal, ty)?,
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {
@@ -485,7 +485,6 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
 fn match_ty<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     environment: &Environment<I>,
-    goal: &DomainGoal<I>,
     ty: &Ty<I>,
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
@@ -508,15 +507,10 @@ fn match_ty<I: Interner>(
                 .substitution
                 .iter(interner)
                 .map(|p| p.assert_ty_ref(interner))
-                .map(|ty| match_ty(builder, environment, goal, &ty))
+                .map(|ty| match_ty(builder, environment, &ty))
                 .collect::<Result<_, Floundered>>()?;
         }
-        TyData::BoundVar(_) => {
-            if let DomainGoal::IsLocal(_) = goal {
-                return Err(Floundered);
-            }
-        }
-        TyData::InferenceVar(_, _) => return Err(Floundered),
+        TyData::BoundVar(_) | TyData::InferenceVar(_, _) => return Err(Floundered),
         TyData::Dyn(_) => {}
     })
 }
