@@ -327,7 +327,7 @@ fn program_clauses_that_could_match<I: Interner>(
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::DownstreamType(ty)
         | DomainGoal::IsFullyVisible(ty)
-        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, goal, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {
@@ -363,6 +363,13 @@ fn program_clauses_that_could_match<I: Interner>(
                     )?;
                 }
 
+                push_clauses_for_compatible_normalize(
+                    builder,
+                    interner,
+                    trait_id,
+                    proj.associated_ty_id,
+                );
+
                 push_program_clauses_for_associated_type_values_in_impls_of(
                     builder,
                     trait_id,
@@ -375,6 +382,57 @@ fn program_clauses_that_could_match<I: Interner>(
     };
 
     Ok(clauses)
+}
+
+/// Adds the clause:
+///
+/// forall<T1, T2> Normalize(<T1 as Trait>::Item -> T2)
+///     :- Implemented(T1: Trait), Compatible, DownstreamType(T1), CannotProve
+fn push_clauses_for_compatible_normalize<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    interner: &I,
+    trait_id: TraitId<I>,
+    associated_ty_id: AssocTypeId<I>,
+) {
+    // FIXME: Simplify?
+    builder.push_binders(
+        &Binders::new(
+            VariableKinds::from(
+                interner,
+                vec![
+                    VariableKind::Ty(TyKind::General),
+                    VariableKind::Ty(TyKind::General),
+                ],
+            ),
+            vec![
+                TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner),
+                TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 1)).intern(interner),
+            ],
+        ),
+        |builder, mut tys| {
+            let ty1 = tys.remove(0);
+            let ty2 = tys.remove(0);
+            builder.push_clause(
+                DomainGoal::Normalize(Normalize {
+                    ty: ty2,
+                    alias: AliasTy::Projection(ProjectionTy {
+                        associated_ty_id,
+                        substitution: Substitution::from(interner, Some(ty1.clone())),
+                    }),
+                }),
+                &[
+                    WhereClause::Implemented(TraitRef {
+                        trait_id,
+                        substitution: Substitution::from(interner, Some(ty1.clone())),
+                    })
+                    .cast(interner),
+                    DomainGoal::Compatible(()).cast(interner),
+                    DomainGoal::DownstreamType(ty1).cast(interner),
+                    GoalData::CannotProve(()).intern(interner),
+                ],
+            );
+        },
+    );
 }
 
 /// Generate program clauses from the associated-type values
@@ -427,6 +485,7 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
 fn match_ty<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     environment: &Environment<I>,
+    goal: &DomainGoal<I>,
     ty: &Ty<I>,
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
@@ -449,10 +508,15 @@ fn match_ty<I: Interner>(
                 .substitution
                 .iter(interner)
                 .map(|p| p.assert_ty_ref(interner))
-                .map(|ty| match_ty(builder, environment, &ty))
+                .map(|ty| match_ty(builder, environment, goal, &ty))
                 .collect::<Result<_, Floundered>>()?;
         }
-        TyData::BoundVar(_) | TyData::InferenceVar(_, _) => return Err(Floundered),
+        TyData::BoundVar(_) => {
+            if let DomainGoal::IsLocal(_) = goal {
+                return Err(Floundered);
+            }
+        }
+        TyData::InferenceVar(_, _) => return Err(Floundered),
         TyData::Dyn(_) => {}
     })
 }

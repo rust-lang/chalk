@@ -325,6 +325,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 self.unify(&environment, &a, &b)?;
             }
             GoalData::CannotProve(()) => {
+                debug!("Pushed a CannotProve goal, setting cannot_prove = true");
                 self.cannot_prove = true;
             }
         }
@@ -497,6 +498,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         };
 
         if self.cannot_prove {
+            debug!("Goal cannot be proven (cannot_prove = true), returning ambiguous");
             return Ok(Solution::Ambig(Guidance::Unknown));
         }
 
