@@ -5,11 +5,13 @@ macro_rules! lowering_success {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let result = chalk_integration::db::ChalkDatabase::with(
-            &program_text[1..program_text.len() - 1],
-            chalk_solve::SolverChoice::default(),
-        )
-        .checked_program();
+        let result = chalk_solve::logging::with_tracing_logs(|| {
+            chalk_integration::db::ChalkDatabase::with(
+                &program_text[1..program_text.len() - 1],
+                chalk_solve::SolverChoice::default(),
+            )
+            .checked_program()
+        });
         if let Err(ref e) = result {
             println!("lowering error: {}", e);
         }
@@ -22,13 +24,15 @@ macro_rules! lowering_error {
         let program_text = stringify!($program);
         assert!(program_text.starts_with("{"));
         assert!(program_text.ends_with("}"));
-        let error = chalk_integration::db::ChalkDatabase::with(
-            &program_text[1..program_text.len() - 1],
-            chalk_solve::SolverChoice::default(),
-        )
-        .checked_program()
-        .unwrap_err()
-        .to_string();
+        let error = chalk_solve::logging::with_tracing_logs(|| {
+            chalk_integration::db::ChalkDatabase::with(
+                &program_text[1..program_text.len() - 1],
+                chalk_solve::SolverChoice::default(),
+            )
+            .checked_program()
+            .unwrap_err()
+            .to_string()
+        });
         let expected = $expected.to_string();
         crate::test_util::assert_same(&error, &expected);
     };
