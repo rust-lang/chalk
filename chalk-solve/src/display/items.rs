@@ -293,22 +293,27 @@ impl<I: Interner> RenderAsRust<I> for FnDefDatum<I> {
         let binders = s.binder_var_display(&self.binders.binders);
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
 
-        // arguments
-        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
-        //          ^^^^^^^^^^^^^^^^^^^
-        let arguments = bound_datum
-            .argument_types
-            .iter()
-            .enumerate()
-            .map(|(idx, arg)| format!("arg_{}: {}", idx, arg.display(s)))
-            .format(", ");
+        {
+            let s = &s.add_debrujin_index(None);
+            let inputs_and_output = bound_datum.inputs_and_output.skip_binders();
 
-        write!(f, "({})", arguments)?;
+            // arguments
+            // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+            //          ^^^^^^^^^^^^^^^^^^^
+            let arguments = inputs_and_output
+                .argument_types
+                .iter()
+                .enumerate()
+                .map(|(idx, arg)| format!("arg_{}: {}", idx, arg.display(s)))
+                .format(", ");
 
-        // return Type
-        // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
-        //                             ^^^^^^^^^^^^^
-        write!(f, " -> {}", bound_datum.return_type.display(s))?;
+            write!(f, "({})", arguments)?;
+
+            // return Type
+            // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar
+            //                             ^^^^^^^^^^^^^
+            write!(f, " -> {}", inputs_and_output.return_type.display(s))?;
+        }
 
         // where clause
         // fn foo<T>(arg: u32, arg2: T) -> Result<T> where T: Bar

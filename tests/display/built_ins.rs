@@ -18,6 +18,18 @@ fn test_function_type() {
 }
 
 #[test]
+fn test_function_type_generic() {
+    reparse_test!(
+        program {
+            struct Foo<'a, T>
+            {
+                bar: fn(&'a T) -> &'a (T, T)
+            }
+        }
+    );
+}
+
+#[test]
 fn test_scalar_types() {
     let basic = vec!["bool", "char", "f32", "f64"];
     let sizes = vec!["size", "8", "16", "32", "64", "128"];
