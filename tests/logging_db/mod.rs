@@ -60,7 +60,6 @@ fn records_fn_def() {
 }
 
 #[test]
-#[ignore]
 fn records_parents_parent() {
     logging_db_output_sufficient! {
         program {

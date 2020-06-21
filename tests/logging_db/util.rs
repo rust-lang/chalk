@@ -37,7 +37,7 @@ pub fn logging_db_output_sufficient(
             SolverChoice::default(),
         );
 
-        let program = db.checked_program().unwrap();
+        let program = db.program_ir().unwrap();
         let wrapped = LoggingRustIrDatabase::<_, Program, _>::new(program.clone());
         for (goal_text, solver_choice, expected) in goals.clone() {
             let mut solver = solver_choice.into_solver();
@@ -73,7 +73,9 @@ pub fn logging_db_output_sufficient(
 
     let db = ChalkDatabase::with(&output_text, SolverChoice::default());
 
-    let new_program = match db.checked_program() {
+    // Note: we are explicitly not calling `.checked_program()`, as our output
+    // is not intended to be well formed.
+    let new_program = match db.program_ir() {
         Ok(v) => v,
         Err(e) => panic!("Error checking recreated chalk program: {}", e),
     };

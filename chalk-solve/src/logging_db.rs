@@ -15,6 +15,8 @@ use crate::rust_ir::*;
 use crate::{display, RustIrDatabase};
 use chalk_ir::{interner::Interner, *};
 
+mod id_collector;
+
 /// Wraps another `RustIrDatabase` (`DB`) and records which definitions are
 /// used.
 ///
@@ -58,6 +60,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let def_ids = self.def_ids.lock().unwrap();
+        let stub_ids = id_collector::collect_unrecorded_ids(self.db.borrow(), &def_ids);
+        display::write_stub_items(f, self.db.borrow(), stub_ids)?;
         display::write_items(f, self.db.borrow(), def_ids.iter().copied())
     }
 }

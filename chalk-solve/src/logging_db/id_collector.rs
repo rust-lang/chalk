@@ -1,0 +1,147 @@
+use super::RecordedItemId;
+use crate::RustIrDatabase;
+use chalk_ir::{
+    interner::Interner,
+    visit::Visitor,
+    visit::{SuperVisit, Visit},
+    AliasTy, DebruijnIndex, TyData, TypeName, WhereClause,
+};
+use std::collections::BTreeSet;
+
+/// Collects the identifiers needed to resolve all the names for a given
+/// set of identifers, excluding identifiers we already have.
+///
+/// For instance, if we have:
+///
+/// ```rust,ignore
+/// struct S {}
+///
+/// trait Parent {}
+/// trait Child where Self: Parent {}
+/// impl Parent for S {}
+/// impl Child for S {}
+/// ```
+/// If we render the identifiers for only for `S`, `impl Child for S`, and
+/// `trait Child`, it will not parse because the `Child` trait's definition
+/// references parent. IdCollector solves this by collecting all of the directly
+/// related identifiers, allowing those to be rendered as well, ensuring name
+/// resolution is successful.
+pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
+    db: &'i DB,
+    identifiers: &'_ BTreeSet<RecordedItemId<I>>,
+) -> BTreeSet<RecordedItemId<I>> {
+    let mut collector = IdCollector {
+        db,
+        found_identifiers: BTreeSet::new(),
+    };
+    for id in identifiers {
+        match *id {
+            RecordedItemId::Adt(adt_id) => {
+                collector
+                    .db
+                    .adt_datum(adt_id)
+                    .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+            }
+            RecordedItemId::FnDef(fn_def) => {
+                collector
+                    .db
+                    .fn_def_datum(fn_def)
+                    .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+            }
+            RecordedItemId::Trait(trait_id) => {
+                let trait_datum = collector.db.trait_datum(trait_id);
+
+                trait_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+            }
+            RecordedItemId::OpaqueTy(opaque_id) => {
+                collector
+                    .db
+                    .opaque_ty_data(opaque_id)
+                    .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+            }
+            RecordedItemId::Impl(impl_id) => {
+                collector
+                    .db
+                    .impl_datum(impl_id)
+                    .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+            }
+        }
+    }
+    collector
+        .found_identifiers
+        .difference(identifiers)
+        .copied()
+        .collect()
+}
+
+struct IdCollector<'i, I: Interner, DB: RustIrDatabase<I>> {
+    db: &'i DB,
+    found_identifiers: BTreeSet<RecordedItemId<I>>,
+}
+
+impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {
+    fn record(&mut self, id: impl Into<RecordedItemId<I>>) {
+        self.found_identifiers.insert(id.into());
+    }
+}
+
+impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<'i, I> for IdCollector<'i, I, DB>
+where
+    I: 'i,
+{
+    type Result = ();
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
+        self
+    }
+    fn interner(&self) -> &'i I {
+        self.db.interner()
+    }
+
+    fn visit_ty(
+        &mut self,
+        ty: &chalk_ir::Ty<I>,
+        outer_binder: chalk_ir::DebruijnIndex,
+    ) -> Self::Result {
+        let ty_data = ty.data(self.db.interner());
+        match ty_data {
+            TyData::Apply(apply_ty) => match apply_ty.name {
+                TypeName::Adt(adt) => self.record(adt),
+                TypeName::FnDef(fn_def) => self.record(fn_def),
+                TypeName::OpaqueType(opaque) => self.record(opaque),
+                _ => {}
+            },
+            TyData::Alias(alias) => match alias {
+                AliasTy::Projection(projection_ty) => {
+                    let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
+                    self.record(assoc_ty_datum.trait_id)
+                }
+                AliasTy::Opaque(_opaque_ty) => todo!("opaque types!"),
+            },
+            TyData::BoundVar(..) => (),
+            TyData::Dyn(..) => (),
+            TyData::Function(..) => (),
+            TyData::InferenceVar(..) => (),
+            TyData::Placeholder(..) => (),
+        }
+        ty.super_visit_with(self, outer_binder)
+    }
+
+    fn visit_where_clause(
+        &mut self,
+        where_clause: &WhereClause<I>,
+        outer_binder: DebruijnIndex,
+    ) -> Self::Result {
+        match where_clause {
+            WhereClause::Implemented(trait_ref) => self.record(trait_ref.trait_id),
+            WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
+                AliasTy::Projection(projection_ty) => {
+                    let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
+                    self.record(assoc_ty_datum.trait_id)
+                }
+                AliasTy::Opaque(_opaque_ty) => todo!("opaque types!"),
+            },
+            WhereClause::LifetimeOutlives(_lifetime_outlives) => (),
+        }
+        where_clause.super_visit_with(self.as_dyn(), outer_binder)
+    }
+}
