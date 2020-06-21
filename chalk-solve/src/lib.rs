@@ -17,6 +17,7 @@ mod coinductive_goal;
 pub mod ext;
 pub mod goal_builder;
 mod infer;
+pub mod logging;
 #[cfg(feature = "recursive-solver")]
 pub mod recursive;
 pub mod rust_ir;
