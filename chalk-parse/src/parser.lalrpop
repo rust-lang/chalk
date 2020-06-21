@@ -59,11 +59,10 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
 };
 
-StructReprC: () = "#" "[" "repr(C)" "]";
-StructReprPacked: () = "#" "[" "repr(packed)" "]";
+StructRepr: Atom = "#" "[" "repr" "(" <name:Id> ")" "]" => name.str;
 
 StructDefn: StructDefn = {
-    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr_c:StructReprC?> <repr_packed:StructReprPacked?>
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:StructRepr*>
         "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
@@ -77,8 +76,8 @@ StructDefn: StructDefn = {
             phantom_data: phantom_data.is_some(),
         },
         repr: StructRepr {
-            repr_c: repr_c.is_some(),
-            repr_packed: repr_packed.is_some(),
+            repr_c: repr.iter().any(|s| s == "C"),
+            repr_packed: repr.iter().any(|s| s == "packed"),
         },
     }
 };
