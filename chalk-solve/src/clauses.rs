@@ -386,8 +386,8 @@ fn program_clauses_that_could_match<I: Interner>(
 
 /// Adds the clause:
 ///
-/// forall<T1, T2> Normalize(<T1 as Trait>::Item -> T2)
-///     :- Implemented(T1: Trait), Compatible, DownstreamType(T1), CannotProve
+/// for<type, type> Normalize(<^0.0 as Trait>::Item -> ^0.1)
+///     :- Implemented(^0.0: Trait), Compatible, DownstreamType(^0.0), CannotProve
 fn push_clauses_for_compatible_normalize<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     interner: &I,
