@@ -217,8 +217,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
             .bounds
             .iter()
             .map(|bound| bound.display(s).to_string())
-            .collect::<Vec<String>>()
-            .join(" + ");
+            .format(" + ");
         write!(f, "{}", bounds)?;
 
         // where_clause is 'X: Y, Z: D'

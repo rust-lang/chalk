@@ -96,8 +96,7 @@ impl<I: Interner> RenderAsRust<I> for Fn<I> {
                 "for<{}> ",
                 (0..self.num_binders)
                     .map(|n| format!("'{}", s.name_for_introduced_bound_var(n)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
+                    .format(", ")
             )?;
         }
         write!(

@@ -139,8 +139,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                     })
                     .to_string()
                 })
-                .collect::<Vec<_>>()
-                .join(" + ")
+                .format(" + ")
         )
     })
 }

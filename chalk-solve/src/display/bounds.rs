@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter, Result};
 
 use crate::rust_ir::*;
 use chalk_ir::{interner::Interner, *};
+use itertools::Itertools;
 
 use super::{
     display_trait_with_assoc_ty_value, display_trait_with_generics, render_trait::RenderAsRust,
@@ -47,9 +48,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedWhereClause<I> {
             write!(
                 f,
                 "forall<{}> ",
-                s.binder_var_display(&self.binders)
-                    .collect::<Vec<_>>()
-                    .join(", ")
+                s.binder_var_display(&self.binders).format(", ")
             )?;
         }
         self.skip_binders().fmt(s, f)
@@ -64,9 +63,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
             write!(
                 f,
                 "forall<{}> ",
-                s.binder_var_display(&self.binders)
-                    .collect::<Vec<_>>()
-                    .join(", ")
+                s.binder_var_display(&self.binders).format(", ")
             )?;
         }
         self.skip_binders().fmt(s, f)
@@ -80,8 +77,7 @@ impl<I: Interner> RenderAsRust<I> for Vec<QuantifiedWhereClause<I>> {
             "{}",
             self.iter()
                 .map(|where_clause| { format!("{}{}", s.indent(), where_clause.display(s)) })
-                .collect::<Vec<String>>()
-                .join(",\n")
+                .format(",\n")
         )?;
         Ok(())
     }
