@@ -2,38 +2,38 @@
 fn test_forall_in_dyn() {
     reparse_test!(
         program {
-            trait Foo {}
+            trait Foo<'t> {}
             trait Bar<'a> {}
-            impl Foo for dyn forall<'a> Bar<'a> {}
+            impl<'t> Foo<'t> for dyn forall<'a> Bar<'a> + 't {}
         }
     );
     reparse_test!(
         program {
-            struct Foo {
-                field: dyn forall<'a> Baz<'a>
+            struct Foo<'t> {
+                field: dyn forall<'a> Baz<'a> + 't
             }
             trait Baz<'a> {}
         }
     );
     reparse_test!(
         program {
-            trait Foo {}
+            trait Foo<'t> {}
             trait Bax<'a, 'b> {}
-            impl Foo for dyn forall<'a, 'b> Bax<'a, 'b> {}
+            impl<'t> Foo<'t> for dyn forall<'a, 'b> Bax<'a, 'b> + 't {}
         }
     );
     reparse_test!(
         program {
-            struct Foo {
-                field: dyn forall<'a, 'b> Bix<'a, 'b>
+            struct Foo<'t> {
+                field: dyn forall<'a, 'b> Bix<'a, 'b> + 't
             }
             trait Bix<'a, 'b> {}
         }
     );
     reparse_test!(
         program {
-            struct Foo {
-                field: dyn forall<'a> Bex<'a> + forall<'b> Byx<'b>
+            struct Foo<'t> {
+                field: dyn forall<'a> Bex<'a> + forall<'b> Byx<'b> + 't
             }
             trait Bex<'a> {}
             trait Byx<'a> {}
@@ -41,8 +41,8 @@ fn test_forall_in_dyn() {
     );
     reparse_test!(
         program {
-            struct Foo {
-                field: dyn forall<'a, 'b> Bux<'a, 'b> + forall<'b, 'c> Brx<'b, 'c>
+            struct Foo<'t> {
+                field: dyn forall<'a, 'b> Bux<'a, 'b> + forall<'b, 'c> Brx<'b, 'c> + 't
             }
             trait Bux<'a, 'b> {}
             trait Brx<'a, 'b> {}
@@ -51,7 +51,7 @@ fn test_forall_in_dyn() {
     reparse_test!(
         program {
             struct Foo<'a> {
-                field: dyn forall<'b> Bpx<'a, 'b>
+                field: dyn forall<'b> Bpx<'a, 'b> + 'a
             }
             trait Bpx<'a, 'b> {}
         }
@@ -62,8 +62,8 @@ fn test_forall_in_dyn() {
 fn test_simple_dyn() {
     reparse_test!(
         program {
-            struct Foo {
-                field: dyn Bax
+            struct Foo<'a> {
+                field: dyn Bax + 'a
             }
             trait Bax {}
         }
@@ -71,7 +71,7 @@ fn test_simple_dyn() {
     reparse_test!(
         program {
             struct Foo<'a> {
-                field: dyn Bix<'a>
+                field: dyn Bix<'a> + 'a
             }
             trait Bix<'a> {}
         }

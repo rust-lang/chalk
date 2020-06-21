@@ -58,9 +58,9 @@ fn test_dyn_on_left() {
         program {
             struct Foo { }
             trait Bar { }
-            impl Bar for Foo
+            impl<'a> Bar for Foo
             where
-                dyn Bar: Bar
+                dyn Bar + 'a: Bar
             {
             }
         }
@@ -69,10 +69,10 @@ fn test_dyn_on_left() {
         program {
             struct Foo { }
             trait Bar { }
-            trait Baz {
+            trait Baz<'a> {
                 type Assoc<T>
                 where
-                    dyn Bar: Bar;
+                    dyn Bar + 'a: Bar;
             }
         }
     );
@@ -84,10 +84,10 @@ fn test_generic_vars_inside_assoc_bounds() {
         program {
             struct Foo { }
             trait Bar<T> { }
-            trait Baz {
+            trait Baz<'a> {
                 type Assoc<T>
                 where
-                    dyn Bar<T>: Bar<T>,
+                    dyn Bar<T> + 'a: Bar<T>,
                     T: Bar<Foo>,
                     Foo: Bar<T>;
             }
@@ -97,10 +97,10 @@ fn test_generic_vars_inside_assoc_bounds() {
         program {
             struct Foo { }
             trait Bar<T> { }
-            trait Baz<U> {
+            trait Baz<'a, U> {
                 type Assoc<T>
                 where
-                    dyn Bar<U>: Bar<T>,
+                    dyn Bar<U> + 'a: Bar<T>,
                     T: Bar<Foo>,
                     Foo: Bar<U>;
             }
@@ -136,12 +136,12 @@ fn test_complicated_bounds() {
             trait Bar { }
             trait Baz<T> { }
             trait Bax<T> { type BaxT; }
-            trait Test {
+            trait Test<'a> {
                 type Assoc<T>: Bar + Baz<Foo> + Bax<T, BaxT=T>
                     where
                         Foo: Bax<T, BaxT=T>,
                         Foo: Bar,
-                        dyn Bar: Baz<Foo>;
+                        dyn Bar + 'a: Baz<Foo>;
             }
         }
         produces {
@@ -149,13 +149,13 @@ fn test_complicated_bounds() {
             trait Bar { }
             trait Baz<T> { }
             trait Bax<T> { type BaxT; }
-            trait Test {
+            trait Test<'a> {
                 type Assoc<T>: Bar + Baz<Foo> + Bax<T, BaxT=T>
                     where
                         Foo: Bax<T, BaxT=T>,
                         Foo: Bax<T>,
                         Foo: Bar,
-                        dyn Bar: Baz<Foo>;
+                        dyn Bar + 'a: Baz<Foo>;
             }
         }
     );
@@ -203,7 +203,7 @@ fn test_trait_projection() {
 fn test_trait_projection_with_dyn_arg() {
     reparse_test!(
         program {
-            struct Foo<T, U> where U: Bez<T>, <U as Bez<T>>::Assoc<dyn Baz>: Baz { }
+            struct Foo<'a, T, U> where U: Bez<T>, <U as Bez<T>>::Assoc<dyn Baz + 'a>: Baz { }
             trait Baz { }
             trait Bez<T> {
                 type Assoc<U>;

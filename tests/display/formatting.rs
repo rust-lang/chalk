@@ -51,11 +51,11 @@ fn test_where_clause_formatting() {
     reparse_test!(
     program {
         struct Foo where Foo: Baz, Foo: Bar {}
-        trait Bar where Foo: Baz, dyn Baz: Bar {}
+        trait Bar where Foo: Baz, forall<'a> dyn Baz + 'a: Bar {}
         trait Baz {}
         impl Bar for Foo where Foo: Baz, (): Baz {}
         impl Baz for Foo {}
-        impl Bar for dyn Baz {}
+        impl<'a> Bar for dyn Baz + 'a {}
     }
     formatting matches
 r#"struct [a-zA-Z0-9_-]+
@@ -66,7 +66,7 @@ where
 trait [a-zA-Z0-9_-]+
 where
   [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+,
-  dyn [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+
+  forall<'[a-zA-Z0-9_-]+> dyn [a-zA-Z0-9_-]+ \+ '[a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+
 \{\s*\}
 trait [a-zA-Z0-9_-]+ \{\}
 impl [a-zA-Z0-9_-]+ for [a-zA-Z0-9_-]+
@@ -75,7 +75,7 @@ where
   \(\): [a-zA-Z0-9_-]+
 \{\}
 impl [a-zA-Z0-9_-]+ for [a-zA-Z0-9_-]+ \{\}
-impl [a-zA-Z0-9_-]+ for dyn [a-zA-Z0-9_-]+ \{\}"#
+impl<'[a-zA-Z0-9_-]+> [a-zA-Z0-9_-]+ for dyn [a-zA-Z0-9_-]+ \+ '[a-zA-Z0-9_-]+ \{\}"#
     );
 }
 
@@ -87,7 +87,7 @@ fn test_assoc_ty_where_clause() {
             trait Fuzz {
                 type Assoc
                 where
-                    dyn Bar: Bar,
+                    u32: Bar,
                     Self: Bar;
             }
         }
@@ -96,7 +96,7 @@ r#"trait [a-zA-Z0-9_-]+ \{\s*\}
 trait [a-zA-Z0-9_-]+ \{
   type [a-zA-Z0-9_-]+
   where
-    dyn [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+,
+    u32: [a-zA-Z0-9_-]+,
     [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+;
 \}
 "#
@@ -108,16 +108,16 @@ fn test_fn_where_clause() {
     reparse_test!(
         program {
             trait Bar {}
-            fn foo<T>() -> T
+            fn foo<'a, T>() -> T
             where
-                dyn Bar: Bar,
+                dyn Bar + 'a: Bar,
                 T: Bar;
         }
         formatting matches
 r#"trait [a-zA-Z0-9_-]+ \{\s*\}
-fn foo<[a-zA-Z0-9_-]+>\(\) -> [a-zA-Z0-9_-]+
+fn foo<'[a-zA-Z0-9_-]+, [a-zA-Z0-9_-]+>\(\) -> [a-zA-Z0-9_-]+
 where
-  dyn [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+,
+  dyn [a-zA-Z0-9_-]+ \+ '[a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+,
   [a-zA-Z0-9_-]+: [a-zA-Z0-9_-]+;
 "#
     );

@@ -49,8 +49,8 @@ fn test_self_in_dyn() {
     reparse_test!(
         program {
             trait Bun<T> {}
-            trait Foo<T> {
-                type Assoc<U> where dyn Bun<Self>: Bun<U>;
+            trait Foo<'a, T> {
+                type Assoc<U> where dyn Bun<Self> + 'a: Bun<U>;
             }
         }
     );
@@ -58,9 +58,9 @@ fn test_self_in_dyn() {
         program {
             trait Has<T> {}
             trait Bun<T, U> {}
-            trait Fiz<T> {
-                type Assoc1<U>: Has<dyn Bun<Self, U>>;
-                type Assoc2<N>: Has<dyn Bun<T, Self>>;
+            trait Fiz<'a, T> {
+                type Assoc1<U>: Has<dyn Bun<Self, U> + 'a>;
+                type Assoc2<N>: Has<dyn Bun<T, Self> + 'a>;
             }
         }
     );

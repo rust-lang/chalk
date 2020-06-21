@@ -10,7 +10,7 @@ fn test_various_forall() {
             }
             impl<'a> Baz<'a> for for<'b> fn(Foo<'b>) { }
             impl<'a> Bax<'a> for fn(Foo<'a>) { }
-            impl<'a> Bax<'a> for dyn forall<'b> Baz<'b> { }
+            impl<'a> Bax<'a> for dyn forall<'b> Baz<'b> + 'a { }
         }
     );
 }

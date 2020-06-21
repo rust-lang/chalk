@@ -14,14 +14,21 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
         let interner = s.db.interner();
         match self {
             TyData::Dyn(dyn_ty) => {
-                let s = &s.add_debrujin_index(None);
-                // dyn_ty.bounds.binders creates a Self binding for the trait
-                let bounds = dyn_ty.bounds.skip_binders();
-                write!(
-                    f,
-                    "dyn {}",
-                    display_self_where_clauses_as_bounds(s, bounds.as_slice(interner))
-                )?;
+                // the lifetime needs to be outside of the bounds, so we
+                // introduce a new scope for the bounds
+                {
+                    let s = &s.add_debrujin_index(None);
+                    // dyn_ty.bounds.binders creates a Self binding for the trait
+                    let bounds = dyn_ty.bounds.skip_binders();
+
+                    write!(
+                        f,
+                        "dyn {}",
+                        display_self_where_clauses_as_bounds(s, bounds.as_slice(interner)),
+                    )?;
+                }
+
+                write!(f, " + {}", dyn_ty.lifetime.display(s))?;
                 Ok(())
             }
             TyData::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
@@ -99,15 +106,15 @@ impl<I: Interner> RenderAsRust<I> for Fn<I> {
                     .format(", ")
             )?;
         }
+        let parameters = self.substitution.parameters(interner);
         write!(
             f,
-            "fn({})",
-            self.substitution
-                .parameters(interner)
+            "fn({}) -> {}",
+            parameters[..parameters.len() - 1]
                 .iter()
-                .map(|param| param.display(s).to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+                .map(|param| param.display(s))
+                .format(", "),
+            parameters[parameters.len() - 1].display(s),
         )
     }
 }
