@@ -72,7 +72,7 @@ and
 
 ```rust,ignore
 impl<I: Interner> TyData<I> {
-  fn intern(&self, I: &I) -> Ty<I> {
+  fn intern(&self, i: &I) -> Ty<I> {
     Ty(i.intern_ty(self))
   }
 }
