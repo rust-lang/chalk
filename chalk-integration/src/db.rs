@@ -12,8 +12,8 @@ use chalk_ir::{
     Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, FnDefDatum,
-    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
+    FnDefDatum, FnDefInputsAndOutputDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SolverChoice, SubstitutionResult};
 use salsa::Database;
