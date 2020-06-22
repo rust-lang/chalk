@@ -1774,7 +1774,7 @@ impl<T: HasInterner> Binders<T> {
             self.binders
                 .iter(interner)
                 .enumerate()
-                .map(|(i, pk)| (pk, i).to_generic_arg(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         )
     }
 
@@ -1817,7 +1817,7 @@ where
                 .binders
                 .iter(interner)
                 .enumerate()
-                .map(|(i, pk)| (pk, i + num_binders).to_generic_arg(interner)),
+                .map(|(i, pk)| (i + num_binders, pk).to_generic_arg(interner)),
         );
         let value = self.value.substitute(interner, &subst);
         let binders = VariableKinds::from(
@@ -2690,9 +2690,9 @@ pub trait ToGenericArg<I: Interner> {
     fn to_generic_arg_at_depth(&self, interner: &I, debruijn: DebruijnIndex) -> GenericArg<I>;
 }
 
-impl<'a, I: Interner> ToGenericArg<I> for (&'a VariableKind<I>, usize) {
+impl<'a, I: Interner> ToGenericArg<I> for (usize, &'a VariableKind<I>) {
     fn to_generic_arg_at_depth(&self, interner: &I, debruijn: DebruijnIndex) -> GenericArg<I> {
-        let &(binder, index) = self;
+        let &(index, binder) = self;
         let bound_var = BoundVar::new(debruijn, index);
         binder.to_bound_variable(interner, bound_var)
     }

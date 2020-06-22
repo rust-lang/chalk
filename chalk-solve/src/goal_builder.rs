@@ -137,7 +137,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
             binders
                 .binders
                 .iter(interner)
-                .zip(0..)
+                .enumerate()
                 .map(|p| p.to_generic_arg(interner)),
         );
 
