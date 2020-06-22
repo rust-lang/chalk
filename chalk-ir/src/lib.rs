@@ -2756,7 +2756,7 @@ pub struct ConstrainedSubst<I: Interner> {
     /// The substitution that is being constrained.
     ///
     /// NB: The `is_trivial` routine relies on the fact that `subst` is folded first.
-    pub subst: Substitution<I>, /*  */
+    pub subst: Substitution<I>,
 
     /// Region constraints that constrain the substitution.
     pub constraints: Vec<InEnvironment<Constraint<I>>>,
