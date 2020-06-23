@@ -59,8 +59,10 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
 };
 
+StructRepr: Atom = "#" "[" "repr" "(" <name:Id> ")" "]" => name.str;
+
 StructDefn: StructDefn = {
-    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?>
+    <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:StructRepr*>
         "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => StructDefn
     {
@@ -72,6 +74,10 @@ StructDefn: StructDefn = {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
             phantom_data: phantom_data.is_some(),
+        },
+        repr: StructRepr {
+            repr_c: repr.iter().any(|s| s == "C"),
+            repr_packed: repr.iter().any(|s| s == "packed"),
         },
     }
 };

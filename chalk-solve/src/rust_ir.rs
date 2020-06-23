@@ -104,6 +104,12 @@ pub struct AdtFlags {
     pub phantom_data: bool,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AdtRepr {
+    pub repr_c: bool,
+    pub repr_packed: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// A rust intermediate represention (rust_ir) of a function definition/declaration.
 /// For example, in the following rust code:
