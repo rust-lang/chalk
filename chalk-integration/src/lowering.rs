@@ -696,7 +696,7 @@ trait LowerParameterMap {
         self.all_parameters()
             .anonymize()
             .iter()
-            .zip(0..)
+            .enumerate()
             .map(|p| p.to_generic_arg(self.interner()))
             .collect()
     }

@@ -172,6 +172,7 @@ where
         }
     }
 
+    /// As `fold_free_var_ty`, but for constants.
     fn fold_free_var_const(
         &mut self,
         ty: &Ty<I>,
@@ -233,6 +234,7 @@ where
         }
     }
 
+    /// As with `fold_free_placeholder_ty`, but for constants.
     #[allow(unused_variables)]
     fn fold_free_placeholder_const(
         &mut self,
@@ -278,7 +280,7 @@ where
         }
     }
 
-    /// As with `fold_free_inference_ty`, but for lifetimes.
+    /// As with `fold_inference_ty`, but for lifetimes.
     #[allow(unused_variables)]
     fn fold_inference_lifetime(
         &mut self,
@@ -292,6 +294,7 @@ where
         }
     }
 
+    /// As with `fold_inference_ty`, but for constants.
     #[allow(unused_variables)]
     fn fold_inference_const(
         &mut self,
@@ -309,8 +312,10 @@ where
         }
     }
 
+    /// Gets the interner that is being folded from.
     fn interner(&self) -> &'i I;
 
+    /// Gets the interner that is being folded to.
     fn target_interner(&self) -> &'i TI;
 }
 
@@ -356,6 +361,7 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
 /// `SuperFold` trait captures the recursive behavior that folds all
 /// the contents of the type.
 pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
+    /// Recursively folds the value.
     fn super_fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,

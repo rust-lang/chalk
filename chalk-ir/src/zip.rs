@@ -1,3 +1,5 @@
+//! Traits for "zipping" types, walking through two structures and checking that they match.
+
 use crate::fold::Fold;
 use crate::*;
 use std::fmt::Debug;
@@ -78,6 +80,7 @@ pub trait Zip<I>: Debug
 where
     I: Interner,
 {
+    /// Uses the zipper to walk through two values, ensuring that they match.
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i;

@@ -1,4 +1,7 @@
+//! Defines the IR for types and logical predicates.
+
 #![deny(rust_2018_idioms)]
+#![warn(missing_docs)]
 
 // Allows macros to refer to this crate as `::chalk_ir`
 extern crate self as chalk_ir;
@@ -13,6 +16,7 @@ use std::marker::PhantomData;
 
 pub use crate::debug::SeparatorTraitRef;
 
+/// Uninhabited (empty) type, used in combination with `PhantomData`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
 
@@ -63,16 +67,19 @@ pub mod debug;
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
 pub struct Environment<I: Interner> {
+    /// The clauses in the environment.
     pub clauses: ProgramClauses<I>,
 }
 
 impl<I: Interner> Environment<I> {
+    /// Creates a new environment.
     pub fn new(interner: &I) -> Self {
         Environment {
             clauses: ProgramClauses::new(interner),
         }
     }
 
+    /// Adds (an iterator of) clauses to the environment.
     pub fn add_clauses<II>(&self, interner: &I, clauses: II) -> Self
     where
         II: IntoIterator<Item = ProgramClause<I>>,
@@ -84,13 +91,16 @@ impl<I: Interner> Environment<I> {
     }
 }
 
+/// A goal with an environment to solve it in.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+#[allow(missing_docs)]
 pub struct InEnvironment<G: HasInterner> {
     pub environment: Environment<G::Interner>,
     pub goal: G,
 }
 
 impl<G: HasInterner> InEnvironment<G> {
+    /// Creates a new environment/goal pair.
     pub fn new(environment: &Environment<G::Interner>, goal: G) -> Self {
         InEnvironment {
             environment: environment.clone(),
@@ -98,6 +108,7 @@ impl<G: HasInterner> InEnvironment<G> {
         }
     }
 
+    /// Maps the goal without touching the environment.
     pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
     where
         OP: FnOnce(G) -> H,
@@ -114,7 +125,9 @@ impl<G: HasInterner> HasInterner for InEnvironment<G> {
     type Interner = G::Interner;
 }
 
+/// Different signed int types.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
 pub enum IntTy {
     Isize,
     I8,
@@ -124,7 +137,9 @@ pub enum IntTy {
     I128,
 }
 
+/// Different unsigned int types.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
 pub enum UintTy {
     Usize,
     U8,
@@ -134,13 +149,17 @@ pub enum UintTy {
     U128,
 }
 
+/// Different kinds of float types.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
 pub enum FloatTy {
     F32,
     F64,
 }
 
+/// Types of scalar values.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
 pub enum Scalar {
     Bool,
     Char,
@@ -149,12 +168,16 @@ pub enum Scalar {
     Float(FloatTy),
 }
 
+/// Whether a type is mutable or not.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Mutability {
+    /// Mutable
     Mut,
+    /// Immutable
     Not,
 }
 
+/// Different kinds of Rust types.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, Visit)]
 pub enum TypeName<I: Interner> {
     /// Abstract data types, i.e., structs, unions, or enumerations.
@@ -215,20 +238,25 @@ impl<I: Interner> HasInterner for TypeName<I> {
 /// See https://rustc-dev-guide.rust-lang.org/borrow_check/region_inference.html#placeholders-and-universes for more.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
+    /// The counter for the universe index, starts with 0.
     pub counter: usize,
 }
 
 impl UniverseIndex {
+    /// Root universe index (0).
     pub const ROOT: UniverseIndex = UniverseIndex { counter: 0 };
 
+    /// Root universe index (0).
     pub fn root() -> UniverseIndex {
         Self::ROOT
     }
 
+    /// Whether one universe can "see" another.
     pub fn can_see(self, ui: UniverseIndex) -> bool {
         self.counter >= ui.counter
     }
 
+    /// Increases the index counter.
     pub fn next(self) -> UniverseIndex {
         UniverseIndex {
             counter: self.counter + 1,
@@ -250,6 +278,7 @@ pub struct UniverseMap {
 }
 
 impl UniverseMap {
+    /// Creates a new universe map.
     pub fn new() -> Self {
         UniverseMap {
             universes: vec![UniverseIndex::root()],
@@ -261,6 +290,8 @@ impl UniverseMap {
         self.universes.len()
     }
 }
+
+/// The id for an Abstract Data Type (i.e. structs, unions and enums).
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AdtId<I: Interner>(pub I::InternedAdtId);
 
@@ -271,9 +302,11 @@ pub struct AdtId<I: Interner>(pub I::InternedAdtId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TraitId<I: Interner>(pub I::DefId);
 
+/// The id for an impl.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ImplId<I: Interner>(pub I::DefId);
 
+/// Id for a specific clause.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClauseId<I: Interner>(pub I::DefId);
 
@@ -284,41 +317,50 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
+/// Id for an opaque type.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OpaqueTyId<I: Interner>(pub I::DefId);
 
+/// Function definition id.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FnDefId<I: Interner>(pub I::DefId);
 
+/// Id for Rust closures.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClosureId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
+/// A Rust type. The actual type data is stored in `TyData`.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
 
 impl<I: Interner> Ty<I> {
+    /// Creates a type from `TyData`.
     pub fn new(interner: &I, data: impl CastTo<TyData<I>>) -> Self {
         Ty {
             interned: I::intern_ty(interner, data.cast(interner)),
         }
     }
 
+    /// Gets the interned type.
     pub fn interned(&self) -> &I::InternedType {
         &self.interned
     }
 
+    /// Gets the underlying type data.
     pub fn data(&self, interner: &I) -> &TyData<I> {
         I::ty_data(interner, &self.interned)
     }
 
+    /// Creates a `FromEnv` constraint using this type.
     pub fn from_env(&self) -> FromEnv<I> {
         FromEnv::Ty(self.clone())
     }
 
+    /// Creates a WF-constraint for this type.
     pub fn well_formed(&self) -> WellFormed<I> {
         WellFormed::Ty(self.clone())
     }
@@ -354,6 +396,7 @@ impl<I: Interner> Ty<I> {
         }
     }
 
+    /// Returns true if this is an `Alias`.
     pub fn is_alias(&self, interner: &I) -> bool {
         match self.data(interner) {
             TyData::Alias(..) => true,
@@ -361,7 +404,7 @@ impl<I: Interner> Ty<I> {
         }
     }
 
-    /// Returns true if this is an `IntTy` or `UintTy`
+    /// Returns true if this is an `IntTy` or `UintTy`.
     pub fn is_integer(&self, interner: &I) -> bool {
         match self.data(interner) {
             TyData::Apply(ApplicationTy {
@@ -376,7 +419,7 @@ impl<I: Interner> Ty<I> {
         }
     }
 
-    /// Returns true if this is a `FloatTy`
+    /// Returns true if this is a `FloatTy`.
     pub fn is_float(&self, interner: &I) -> bool {
         match self.data(interner) {
             TyData::Apply(ApplicationTy {
@@ -395,6 +438,7 @@ impl<I: Interner> Ty<I> {
     }
 }
 
+/// Type data, which holds the actual type information.
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub enum TyData<I: Interner> {
     /// An "application" type is one that applies the set of type
@@ -439,6 +483,7 @@ pub enum TyData<I: Interner> {
 }
 
 impl<I: Interner> TyData<I> {
+    /// Casts the type data to a type.
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
     }
@@ -470,23 +515,29 @@ impl<I: Interner> TyData<I> {
 /// indices identify the location *within* that binder.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BoundVar {
+    /// Debruijn index, which identifies the binder.
     pub debruijn: DebruijnIndex,
+    /// Index within the binder.
     pub index: usize,
 }
 
 impl BoundVar {
+    /// Creates a new bound variable.
     pub fn new(debruijn: DebruijnIndex, index: usize) -> Self {
         Self { debruijn, index }
     }
 
+    /// Casts the bound variable to a type.
     pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
         TyData::<I>::BoundVar(self).intern(interner)
     }
 
+    /// Wrap the bound variable in a lifetime.
     pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
         LifetimeData::<I>::BoundVar(self).intern(interner)
     }
 
+    /// Wraps the bound variable in a constant.
     pub fn to_const<I: Interner>(self, interner: &I, ty: Ty<I>) -> Const<I> {
         ConstData {
             ty,
@@ -559,13 +610,18 @@ pub struct DebruijnIndex {
 }
 
 impl DebruijnIndex {
+    /// Innermost index.
     pub const INNERMOST: DebruijnIndex = DebruijnIndex { depth: 0 };
+    /// One level higher than the innermost index.
     pub const ONE: DebruijnIndex = DebruijnIndex { depth: 1 };
 
+    /// Creates a new de Bruijn index with a given depth.
     pub fn new(depth: u32) -> Self {
         DebruijnIndex { depth }
     }
 
+    /// Depth of the De Bruijn index, counting from 0 starting with
+    /// the innermost binder.
     pub fn depth(self) -> u32 {
         self.depth
     }
@@ -685,10 +741,10 @@ impl DebruijnIndex {
 
 /// A "DynTy" represents a trait object (`dyn Trait`). Trait objects
 /// are conceptually very related to an "existential type" of the form
-/// `exists<T> { T: Trait }` (another exaple of such type is `impl Trait`).
+/// `exists<T> { T: Trait }` (another example of such type is `impl Trait`).
 /// `DynTy` represents the bounds on that type.
 ///
-/// The "binder" here represents the unknown self type. So, a type like
+/// The "bounds" here represents the unknown self type. So, a type like
 /// `dyn for<'a> Fn(&'a u32)` would be represented with two-levels of
 /// binder, as "depicted" here:
 ///
@@ -708,10 +764,13 @@ impl DebruijnIndex {
 /// level of binder).
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct DynTy<I: Interner> {
+    /// The unknown self type.
     pub bounds: Binders<QuantifiedWhereClauses<I>>,
+    /// Lifetime of the `DynTy`.
     pub lifetime: Lifetime<I>,
 }
 
+/// A type, lifetime or constant whose value is being inferred.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct InferenceVar {
     index: u32,
@@ -724,18 +783,22 @@ impl From<u32> for InferenceVar {
 }
 
 impl InferenceVar {
+    /// Gets the underlying index value.
     pub fn index(self) -> u32 {
         self.index
     }
 
+    /// Wraps the inference variable in a type.
     pub fn to_ty<I: Interner>(self, interner: &I, kind: TyKind) -> Ty<I> {
         TyData::<I>::InferenceVar(self, kind).intern(interner)
     }
 
+    /// Wraps the inference variable in a lifetime.
     pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
         LifetimeData::<I>::InferenceVar(self).intern(interner)
     }
 
+    /// Wraps the inference variable in a constant.
     pub fn to_const<I: Interner>(self, interner: &I, ty: Ty<I>) -> Const<I> {
         ConstData {
             ty,
@@ -748,27 +811,32 @@ impl InferenceVar {
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
+#[allow(missing_docs)]
 pub struct Fn<I: Interner> {
     pub num_binders: usize,
     pub substitution: Substitution<I>,
 }
 
+/// Constants.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Const<I: Interner> {
     interned: I::InternedConst,
 }
 
 impl<I: Interner> Const<I> {
+    /// Create a `Const` using something that can be cast to const data.
     pub fn new(interner: &I, data: impl CastTo<ConstData<I>>) -> Self {
         Const {
             interned: I::intern_const(interner, data.cast(interner)),
         }
     }
 
+    /// Gets the interned constant.
     pub fn interned(&self) -> &I::InternedConst {
         &self.interned
     }
 
+    /// Gets the constant data from the interner.
     pub fn data(&self, interner: &I) -> &ConstData<I> {
         I::const_data(interner, &self.interned)
     }
@@ -803,53 +871,71 @@ impl<I: Interner> Const<I> {
     }
 }
 
+/// Constant data, containing the constant's type and value.
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub struct ConstData<I: Interner> {
+    /// Type that holds the constant.
     pub ty: Ty<I>,
+    /// The value of the constant.
     pub value: ConstValue<I>,
 }
 
+/// A constant value, not necessarily concrete.
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub enum ConstValue<I: Interner> {
+    /// Bound var (e.g. a parameter).
     BoundVar(BoundVar),
+    /// Constant whose value is being inferred.
     InferenceVar(InferenceVar),
+    /// Lifetime on some yet-unknown placeholder.
     Placeholder(PlaceholderIndex),
+    /// Concrete constant value.
     Concrete(ConcreteConst<I>),
 }
 
 impl<I: Interner> ConstData<I> {
+    /// Wraps the constant data in a `Const`.
     pub fn intern(self, interner: &I) -> Const<I> {
         Const::new(interner, self)
     }
 }
 
+/// Concrete constant, whose value is known (as opposed to
+/// inferred constants and placeholders).
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ConcreteConst<I: Interner> {
+    /// The interned constant.
     pub interned: I::InternedConcreteConst,
 }
 
 impl<I: Interner> ConcreteConst<I> {
+    /// Checks whether two concrete constants are equal.
     pub fn const_eq(&self, ty: &Ty<I>, other: &ConcreteConst<I>, interner: &I) -> bool {
         interner.const_eq(&ty.interned, &self.interned, &other.interned)
     }
 }
 
+/// A Rust lifetime.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Lifetime<I: Interner> {
     interned: I::InternedLifetime,
 }
 
 impl<I: Interner> Lifetime<I> {
+    /// Create a lifetime from lifetime data
+    /// (or something that can be cast to lifetime data).
     pub fn new(interner: &I, data: impl CastTo<LifetimeData<I>>) -> Self {
         Lifetime {
             interned: I::intern_lifetime(interner, data.cast(interner)),
         }
     }
 
+    /// Gets the interned value.
     pub fn interned(&self) -> &I::InternedLifetime {
         &self.interned
     }
 
+    /// Gets the lifetime data.
     pub fn data(&self, interner: &I) -> &LifetimeData<I> {
         I::lifetime_data(interner, &self.interned)
     }
@@ -884,16 +970,21 @@ impl<I: Interner> Lifetime<I> {
     }
 }
 
+/// Lifetime data, including what kind of lifetime it is and what it points to.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub enum LifetimeData<I: Interner> {
-    /// See TyData::Var(_).
+    /// See TyData::BoundVar.
     BoundVar(BoundVar),
+    /// Lifetime whose value is being inferred.
     InferenceVar(InferenceVar),
+    /// Lifetime on some yet-unknown placeholder.
     Placeholder(PlaceholderIndex),
+    /// Lifetime on phantom data.
     Phantom(Void, PhantomData<I>),
 }
 
 impl<I: Interner> LifetimeData<I> {
+    /// Wrap the lifetime data in a lifetime.
     pub fn intern(self, interner: &I) -> Lifetime<I> {
         Lifetime::new(interner, self)
     }
@@ -911,14 +1002,17 @@ pub struct PlaceholderIndex {
 }
 
 impl PlaceholderIndex {
+    /// Wrap the placeholder instance in a lifetime.
     pub fn to_lifetime<I: Interner>(self, interner: &I) -> Lifetime<I> {
         LifetimeData::<I>::Placeholder(self).intern(interner)
     }
 
+    /// Create an interned type.
     pub fn to_ty<I: Interner>(self, interner: &I) -> Ty<I> {
         TyData::Placeholder(self).intern(interner)
     }
 
+    /// Wrap the placeholder index in a constant.
     pub fn to_const<I: Interner>(self, interner: &I, ty: Ty<I>) -> Const<I> {
         ConstData {
             ty,
@@ -928,18 +1022,23 @@ impl PlaceholderIndex {
     }
 }
 
-// Fold derive intentionally omitted, folded through Ty
+/// Normal Rust types, containing the type name and zero or more generic arguments.
+/// For example, in `Vec<u32>` those would be `Vec` and `[u32]` respectively.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct ApplicationTy<I: Interner> {
+    /// The type name.
     pub name: TypeName<I>,
+    /// The substitution containing the generic arguments.
     pub substitution: Substitution<I>,
 }
 
 impl<I: Interner> ApplicationTy<I> {
+    /// Create an interned type from this application type.
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
     }
 
+    /// Gets an iterator of all type parameters.
     pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
         self.substitution
             .iter(interner)
@@ -947,10 +1046,12 @@ impl<I: Interner> ApplicationTy<I> {
             .cloned()
     }
 
+    /// Gets the first type parameter.
     pub fn first_type_parameter(&self, interner: &I) -> Option<Ty<I>> {
         self.type_parameters(interner).next()
     }
 
+    /// Gets the number of type parameters.
     pub fn len_type_parameters(&self, interner: &I) -> usize {
         self.type_parameters(interner).count()
     }
@@ -967,13 +1068,16 @@ impl<I: Interner> ApplicationTy<I> {
 /// `Index` impl for. `i` would have a `TyKind` of `Integer` to guide the
 /// inference process.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[allow(missing_docs)]
 pub enum TyKind {
     General,
     Integer,
     Float,
 }
 
+/// The "kind" of variable. Type, lifetime or constant.
 #[derive(Clone, PartialEq, Eq, Hash)]
+#[allow(missing_docs)]
 pub enum VariableKind<I: Interner> {
     Ty(TyKind),
     Lifetime,
@@ -1002,37 +1106,45 @@ impl<I: Interner> VariableKind<I> {
     }
 }
 
+/// A generic argument, see `GenericArgData` for more information.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct GenericArg<I: Interner> {
     interned: I::InternedGenericArg,
 }
 
 impl<I: Interner> GenericArg<I> {
+    /// Constructs a generic argument using `GenericArgData`.
     pub fn new(interner: &I, data: GenericArgData<I>) -> Self {
         let interned = I::intern_generic_arg(interner, data);
         GenericArg { interned }
     }
 
+    /// Gets the interned value.
     pub fn interned(&self) -> &I::InternedGenericArg {
         &self.interned
     }
 
+    /// Gets the underlying data.
     pub fn data(&self, interner: &I) -> &GenericArgData<I> {
         I::generic_arg_data(interner, &self.interned)
     }
 
+    /// Asserts that this is a type argument.
     pub fn assert_ty_ref(&self, interner: &I) -> &Ty<I> {
         self.ty(interner).unwrap()
     }
 
+    /// Asserts that this is a lifetime argument.
     pub fn assert_lifetime_ref(&self, interner: &I) -> &Lifetime<I> {
         self.lifetime(interner).unwrap()
     }
 
+    /// Asserts that this is a constant argument.
     pub fn assert_const_ref(&self, interner: &I) -> &Const<I> {
         self.constant(interner).unwrap()
     }
 
+    /// Checks whether the generic argument is a type.
     pub fn is_ty(&self, interner: &I) -> bool {
         match self.data(interner) {
             GenericArgData::Ty(_) => true,
@@ -1041,6 +1153,7 @@ impl<I: Interner> GenericArg<I> {
         }
     }
 
+    /// Returns the type if it is one, `None` otherwise.
     pub fn ty(&self, interner: &I) -> Option<&Ty<I>> {
         match self.data(interner) {
             GenericArgData::Ty(t) => Some(t),
@@ -1048,6 +1161,7 @@ impl<I: Interner> GenericArg<I> {
         }
     }
 
+    /// Returns the lifetime if it is one, `None` otherwise.
     pub fn lifetime(&self, interner: &I) -> Option<&Lifetime<I>> {
         match self.data(interner) {
             GenericArgData::Lifetime(t) => Some(t),
@@ -1055,6 +1169,7 @@ impl<I: Interner> GenericArg<I> {
         }
     }
 
+    /// Returns the constant if it is one, `None` otherwise.
     pub fn constant(&self, interner: &I) -> Option<&Const<I>> {
         match self.data(interner) {
             GenericArgData::Const(c) => Some(c),
@@ -1063,22 +1178,30 @@ impl<I: Interner> GenericArg<I> {
     }
 }
 
+/// Generic arguments data.
 #[derive(Clone, PartialEq, Eq, Hash, Visit, Fold, Zip)]
 pub enum GenericArgData<I: Interner> {
+    /// Type argument
     Ty(Ty<I>),
+    /// Lifetime argument
     Lifetime(Lifetime<I>),
+    /// Constant argument
     Const(Const<I>),
 }
 
 impl<I: Interner> GenericArgData<I> {
+    /// Create an interned type.
     pub fn intern(self, interner: &I) -> GenericArg<I> {
         GenericArg::new(interner, self)
     }
 }
 
+/// A value with an associated variable kind.
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct WithKind<I: Interner, T> {
+    /// The associated variable kind.
     pub kind: VariableKind<I>,
+    /// The wrapped value.
     value: T,
 }
 
@@ -1093,10 +1216,12 @@ impl<I: Interner, T> From<WithKind<I, T>> for (VariableKind<I>, T) {
 }
 
 impl<I: Interner, T> WithKind<I, T> {
+    /// Creates a `WithKind` from a variable kind and a value.
     pub fn new(kind: VariableKind<I>, value: T) -> Self {
         Self { kind, value }
     }
 
+    /// Maps the value in `WithKind`.
     pub fn map<U, OP>(self, op: OP) -> WithKind<I, U>
     where
         OP: FnOnce(T) -> U,
@@ -1107,6 +1232,7 @@ impl<I: Interner, T> WithKind<I, T> {
         }
     }
 
+    /// Maps a function taking `WithKind<I, &T>` over `&WithKind<I, T>`.
     pub fn map_ref<U, OP>(&self, op: OP) -> WithKind<I, U>
     where
         OP: FnOnce(&T) -> U,
@@ -1117,25 +1243,32 @@ impl<I: Interner, T> WithKind<I, T> {
         }
     }
 
+    /// Extract the value, ignoring the variable kind.
     pub fn skip_kind(&self) -> &T {
         &self.value
     }
 }
 
+/// A variable kind with universe index.
 #[allow(type_alias_bounds)]
 pub type CanonicalVarKind<I: Interner> = WithKind<I, UniverseIndex>;
 
+/// An alias, which is a trait indirection such as a projection or opaque type.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum AliasTy<I: Interner> {
+    /// An associated type projection.
     Projection(ProjectionTy<I>),
+    /// An opaque type.
     Opaque(OpaqueTy<I>),
 }
 
 impl<I: Interner> AliasTy<I> {
+    /// Create an interned type for this alias.
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
     }
 
+    /// Gets the type parameters of the `Self` type in this alias type.
     pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
         match self {
             AliasTy::Projection(projection_ty) => projection_ty
@@ -1149,25 +1282,40 @@ impl<I: Interner> AliasTy<I> {
     }
 }
 
+/// A projection `<P0 as TraitName<P1..Pn>>::AssocItem<Pn+1..Pm>`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct ProjectionTy<I: Interner> {
+    /// The id for the associated type member.
     pub associated_ty_id: AssocTypeId<I>,
+    /// The substitution for the projection.
     pub substitution: Substitution<I>,
 }
 
+/// An opaque type `opaque type T<..>: Trait = HiddenTy`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct OpaqueTy<I: Interner> {
+    /// The id for the opaque type.
     pub opaque_ty_id: OpaqueTyId<I>,
+    /// The substitution for the opaque type.
     pub substitution: Substitution<I>,
 }
 
+/// A trait reference describes the relationship between a type and a trait.
+/// This can be used in two forms:
+/// - `P0: Trait<P1..Pn>` (e.g. `i32: Copy`), which mentions that the type
+///   implements the trait.
+/// - `<P0 as Trait<P1..Pn>>` (e.g. `i32 as Copy`), which casts the type to
+///   that specific trait.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct TraitRef<I: Interner> {
+    /// The trait id.
     pub trait_id: TraitId<I>,
+    /// The substitution, containing both the `Self` type and the parameters.
     pub substitution: Substitution<I>,
 }
 
 impl<I: Interner> TraitRef<I> {
+    /// Gets all type parameters in this trait ref, including `Self`.
     pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
         self.substitution
             .iter(interner)
@@ -1175,20 +1323,26 @@ impl<I: Interner> TraitRef<I> {
             .cloned()
     }
 
+    /// Gets the type parameters of the `Self` type in this trait ref.
     pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
         self.type_parameters(interner).next().unwrap()
     }
 
+    /// Construct a `FromEnv` using this trait ref.
     pub fn from_env(self) -> FromEnv<I> {
         FromEnv::Trait(self)
     }
 
+    /// Construct a `WellFormed` using this trait ref.
     pub fn well_formed(self) -> WellFormed<I> {
         WellFormed::Trait(self)
     }
 }
 
+/// Lifetime outlives, which for `'a: 'b`` checks that the lifetime `'a`
+/// is a superset of the value of `'b`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[allow(missing_docs)]
 pub struct LifetimeOutlives<I: Interner> {
     pub a: Lifetime<I>,
     pub b: Lifetime<I>,
@@ -1196,11 +1350,15 @@ pub struct LifetimeOutlives<I: Interner> {
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
+    /// Type implements a trait.
     Implemented(TraitRef<I>),
+    /// Type is equal to an alias.
     AliasEq(AliasEq<I>),
+    /// One lifetime outlives another.
     LifetimeOutlives(LifetimeOutlives<I>),
 }
 
+/// Checks whether a type or trait ref is well-formed.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum WellFormed<I: Interner> {
     /// A predicate which is true when some trait ref is well-formed.
@@ -1231,6 +1389,7 @@ pub enum WellFormed<I: Interner> {
     Ty(Ty<I>),
 }
 
+/// Checks whether a type or trait ref can be derived from the contents of the environment.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum FromEnv<I: Interner> {
     /// A predicate which enables deriving everything which should be true if we *know* that
@@ -1265,12 +1424,16 @@ pub enum FromEnv<I: Interner> {
 /// decomposing this enum, and instead treat its values opaquely.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum DomainGoal<I: Interner> {
+    /// Simple goal that is true if the where clause is true.
     Holds(WhereClause<I>),
 
+    /// True if the type or trait ref is well-formed.
     WellFormed(WellFormed<I>),
 
+    /// True if the trait ref can be derived from in-scope where clauses.
     FromEnv(FromEnv<I>),
 
+    /// True if the alias type can be normalized to some other type
     Normalize(Normalize<I>),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
@@ -1333,6 +1496,7 @@ pub enum DomainGoal<I: Interner> {
     ObjectSafe(TraitId<I>),
 }
 
+/// A where clause that can contain `forall<>` or `exists<>` quantifiers.
 pub type QuantifiedWhereClause<I> = Binders<WhereClause<I>>;
 
 impl<I: Interner> WhereClause<I> {
@@ -1355,7 +1519,7 @@ impl<I: Interner> WhereClause<I> {
         }
     }
 
-    /// If where clause is a `TraitRef`, returns its trait id
+    /// If where clause is a `TraitRef`, returns its trait id.
     pub fn trait_id(&self) -> Option<TraitId<I>> {
         match self {
             WhereClause::Implemented(trait_ref) => Some(trait_ref.trait_id),
@@ -1382,26 +1546,30 @@ impl<I: Interner> QuantifiedWhereClause<I> {
         self.map(|wc| wc.into_from_env_goal(interner))
     }
 
-    /// If the underlying where clause is a `TraitRef`, returns its trait id
+    /// If the underlying where clause is a `TraitRef`, returns its trait id.
     pub fn trait_id(&self) -> Option<TraitId<I>> {
         self.skip_binders().trait_id()
     }
 }
 
+/// List of quantified (forall/exists) where clauses.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct QuantifiedWhereClauses<I: Interner> {
     interned: I::InternedQuantifiedWhereClauses,
 }
 
 impl<I: Interner> QuantifiedWhereClauses<I> {
+    /// Creates an empty list of quantified where clauses.
     pub fn new(interner: &I) -> Self {
         Self::from(interner, None::<QuantifiedWhereClause<I>>)
     }
 
+    /// Get the interned quantified where clauses.
     pub fn interned(&self) -> &I::InternedQuantifiedWhereClauses {
         &self.interned
     }
 
+    /// Creates a list of quantified where clauses from an iterator.
     pub fn from(
         interner: &I,
         clauses: impl IntoIterator<Item = impl CastTo<QuantifiedWhereClause<I>>>,
@@ -1415,6 +1583,7 @@ impl<I: Interner> QuantifiedWhereClauses<I> {
         .unwrap()
     }
 
+    /// Tries to create a list of quantified where clauses from an iterator.
     pub fn from_fallible<E>(
         interner: &I,
         clauses: impl IntoIterator<Item = Result<impl CastTo<QuantifiedWhereClause<I>>, E>>,
@@ -1428,18 +1597,22 @@ impl<I: Interner> QuantifiedWhereClauses<I> {
         })
     }
 
+    /// Get an iterator over the list of quantified where clauses.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, QuantifiedWhereClause<I>> {
         self.as_slice(interner).iter()
     }
 
+    /// Checks whether the list of quantified where clauses is empty.
     pub fn is_empty(&self, interner: &I) -> bool {
         self.as_slice(interner).is_empty()
     }
 
+    /// Returns the number of quantified where clauses.
     pub fn len(&self, interner: &I) -> usize {
         self.as_slice(interner).len()
     }
 
+    /// Returns a slice containing the quantified where clauses.
     pub fn as_slice(&self, interner: &I) -> &[QuantifiedWhereClause<I>] {
         interner.quantified_where_clauses_data(&self.interned)
     }
@@ -1455,6 +1628,7 @@ impl<I: Interner> DomainGoal<I> {
         }
     }
 
+    /// Lists generic arguments that are inputs to this domain goal.
     pub fn inputs(&self, interner: &I) -> Vec<GenericArg<I>> {
         match self {
             DomainGoal::Holds(WhereClause::AliasEq(alias_eq)) => {
@@ -1465,7 +1639,9 @@ impl<I: Interner> DomainGoal<I> {
     }
 }
 
+/// Equality goal: tries to prove that two values are equal.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
+#[allow(missing_docs)]
 pub struct EqGoal<I: Interner> {
     pub a: GenericArg<I>,
     pub b: GenericArg<I>,
@@ -1476,6 +1652,7 @@ pub struct EqGoal<I: Interner> {
 /// **match it to an impl** and that impl has a `type Foo = V` where
 /// `U = V`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
+#[allow(missing_docs)]
 pub struct Normalize<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,
@@ -1483,6 +1660,7 @@ pub struct Normalize<I: Interner> {
 
 /// Proves **equality** between an alias and a type.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
+#[allow(missing_docs)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,
     pub ty: Ty<I>,
@@ -1501,7 +1679,10 @@ impl<I: Interner> HasInterner for AliasEq<I> {
 /// of `self.binders`.)
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Binders<T: HasInterner> {
+    /// The binders that quantify over the value.
     pub binders: VariableKinds<T::Interner>,
+
+    /// The value being quantified over.
     value: T,
 }
 
@@ -1510,6 +1691,7 @@ impl<T: HasInterner> HasInterner for Binders<T> {
 }
 
 impl<T: HasInterner> Binders<T> {
+    /// Create new binders.
     pub fn new(binders: VariableKinds<T::Interner>, value: T) -> Self {
         Self { binders, value }
     }
@@ -1547,6 +1729,7 @@ impl<T: HasInterner> Binders<T> {
         }
     }
 
+    /// Maps the binders by applying a function.
     pub fn map<U, OP>(self, op: OP) -> Binders<U>
     where
         OP: FnOnce(T) -> U,
@@ -1573,6 +1756,7 @@ impl<T: HasInterner> Binders<T> {
         })
     }
 
+    /// Maps a function taking `Binders<&T>` over `&Binders<T>`.
     pub fn map_ref<'a, U, OP>(&'a self, op: OP) -> Binders<U>
     where
         OP: FnOnce(&'a T) -> U,
@@ -1590,7 +1774,7 @@ impl<T: HasInterner> Binders<T> {
             self.binders
                 .iter(interner)
                 .enumerate()
-                .map(|(i, pk)| (pk, i).to_generic_arg(interner)),
+                .map(|p| p.to_generic_arg(interner)),
         )
     }
 
@@ -1611,6 +1795,7 @@ impl<T: HasInterner> Binders<T> {
         Binders { binders, value }
     }
 
+    /// Returns the number of binders.
     pub fn len(&self, interner: &T::Interner) -> usize {
         self.binders.len(interner)
     }
@@ -1632,7 +1817,7 @@ where
                 .binders
                 .iter(interner)
                 .enumerate()
-                .map(|(i, pk)| (pk, i + num_binders).to_generic_arg(interner)),
+                .map(|(i, pk)| (i + num_binders, pk).to_generic_arg(interner)),
         );
         let value = self.value.substitute(interner, &subst);
         let binders = VariableKinds::from(
@@ -1690,6 +1875,7 @@ where
     }
 }
 
+/// `IntoIterator` for binders.
 pub struct BindersIntoIterator<V: HasInterner + IntoIterator> {
     iter: <V as IntoIterator>::IntoIter,
     binders: VariableKinds<V::Interner>,
@@ -1713,14 +1899,23 @@ where
 /// conditions.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct ProgramClauseImplication<I: Interner> {
+    /// The consequence of the clause, which holds if the conditions holds.
     pub consequence: DomainGoal<I>,
+
+    /// The condition goals that should hold.
     pub conditions: Goals<I>,
+
+    /// The relative priority of the implication.
     pub priority: ClausePriority,
 }
 
+/// Specifies how important an implication is.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ClausePriority {
+    /// High priority, the solver should prioritize this.
     High,
+
+    /// Low priority, this implication has lower chance to be relevant to the goal.
     Low,
 }
 
@@ -1734,10 +1929,12 @@ impl std::ops::BitAnd for ClausePriority {
     }
 }
 
+/// Contains the data for a program clause.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, HasInterner, Zip)]
 pub struct ProgramClauseData<I: Interner>(pub Binders<ProgramClauseImplication<I>>);
 
 impl<I: Interner> ProgramClauseImplication<I> {
+    /// Change the implication into an application holding a `FromEnv` goal.
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseImplication<I> {
         if self.conditions.is_empty(interner) {
             ProgramClauseImplication {
@@ -1752,10 +1949,12 @@ impl<I: Interner> ProgramClauseImplication<I> {
 }
 
 impl<I: Interner> ProgramClauseData<I> {
+    /// Change the program clause data into a `FromEnv` program clause.
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClauseData<I> {
         ProgramClauseData(self.0.map(|i| i.into_from_env_clause(interner)))
     }
 
+    /// Intern the program clause data.
     pub fn intern(self, interner: &I) -> ProgramClause<I> {
         ProgramClause {
             interned: interner.intern_program_clause(self),
@@ -1763,46 +1962,55 @@ impl<I: Interner> ProgramClauseData<I> {
     }
 }
 
+/// A program clause is a logic expression used to describe a part of the program.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClause<I: Interner> {
     interned: I::InternedProgramClause,
 }
 
 impl<I: Interner> ProgramClause<I> {
+    /// Create a new program clause using `ProgramClauseData`.
     pub fn new(interner: &I, clause: ProgramClauseData<I>) -> Self {
         let interned = interner.intern_program_clause(clause);
         Self { interned }
     }
 
+    /// Change the clause into a `FromEnv` clause.
     pub fn into_from_env_clause(self, interner: &I) -> ProgramClause<I> {
         let program_clause_data = self.data(interner);
         let new_clause = program_clause_data.clone().into_from_env_clause(interner);
         Self::new(interner, new_clause)
     }
 
+    /// Get the interned program clause.
     pub fn interned(&self) -> &I::InternedProgramClause {
         &self.interned
     }
 
+    /// Get the program clause data.
     pub fn data(&self, interner: &I) -> &ProgramClauseData<I> {
         interner.program_clause_data(&self.interned)
     }
 }
 
+/// List of program clauses.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClauses<I: Interner> {
     interned: I::InternedProgramClauses,
 }
 
 impl<I: Interner> ProgramClauses<I> {
+    /// Creates an empty list of program clauses.
     pub fn new(interner: &I) -> Self {
         Self::from(interner, None::<ProgramClause<I>>)
     }
 
+    /// Get the interned program clauses.
     pub fn interned(&self) -> &I::InternedProgramClauses {
         &self.interned
     }
 
+    /// Creates a list of program clauses from an iterator.
     pub fn from(
         interner: &I,
         clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>,
@@ -1816,6 +2024,7 @@ impl<I: Interner> ProgramClauses<I> {
         .unwrap()
     }
 
+    /// Tries to create a list of program clauses from an iterator.
     pub fn from_fallible<E>(
         interner: &I,
         clauses: impl IntoIterator<Item = Result<impl CastTo<ProgramClause<I>>, E>>,
@@ -1826,37 +2035,45 @@ impl<I: Interner> ProgramClauses<I> {
         })
     }
 
+    /// Get an iterator over the list of program clauses.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ProgramClause<I>> {
         self.as_slice(interner).iter()
     }
 
+    /// Checks whether the list of program clauses is empty.
     pub fn is_empty(&self, interner: &I) -> bool {
         self.as_slice(interner).is_empty()
     }
 
+    /// Returns the number of program clauses.
     pub fn len(&self, interner: &I) -> usize {
         self.as_slice(interner).len()
     }
 
+    /// Returns a slice containing the program clauses.
     pub fn as_slice(&self, interner: &I) -> &[ProgramClause<I>] {
         interner.program_clauses_data(&self.interned)
     }
 }
 
+/// List of variable kinds.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct VariableKinds<I: Interner> {
     interned: I::InternedVariableKinds,
 }
 
 impl<I: Interner> VariableKinds<I> {
+    /// Creates an empty list of canonical variable kinds.
     pub fn new(interner: &I) -> Self {
         Self::from(interner, None::<VariableKind<I>>)
     }
 
+    /// Get the interned variable kinds.
     pub fn interned(&self) -> &I::InternedVariableKinds {
         &self.interned
     }
 
+    /// Creates a list of variable kinds using an iterator.
     pub fn from(interner: &I, variable_kinds: impl IntoIterator<Item = VariableKind<I>>) -> Self {
         Self::from_fallible(
             interner,
@@ -1867,6 +2084,7 @@ impl<I: Interner> VariableKinds<I> {
         .unwrap()
     }
 
+    /// Tries to create a list of variable kinds using an iterator.
     pub fn from_fallible<E>(
         interner: &I,
         variable_kinds: impl IntoIterator<Item = Result<VariableKind<I>, E>>,
@@ -1876,37 +2094,45 @@ impl<I: Interner> VariableKinds<I> {
         })
     }
 
+    /// Get an iterator over the list of variable kinds.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, VariableKind<I>> {
         self.as_slice(interner).iter()
     }
 
+    /// Checks whether the list of variable kinds is empty.
     pub fn is_empty(&self, interner: &I) -> bool {
         self.as_slice(interner).is_empty()
     }
 
+    /// Returns the number of variable kinds.
     pub fn len(&self, interner: &I) -> usize {
         self.as_slice(interner).len()
     }
 
+    /// Returns a slice containing the list of variable kinds.
     pub fn as_slice(&self, interner: &I) -> &[VariableKind<I>] {
         interner.variable_kinds_data(&self.interned)
     }
 }
 
+/// List of variable kinds with universe index. Wraps `InternedCanonicalVarKinds`.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct CanonicalVarKinds<I: Interner> {
     interned: I::InternedCanonicalVarKinds,
 }
 
 impl<I: Interner> CanonicalVarKinds<I> {
+    /// Creates an empty list of canonical variable kinds.
     pub fn new(interner: &I) -> Self {
         Self::from(interner, None::<CanonicalVarKind<I>>)
     }
 
+    /// Get the interned canonical variable kinds.
     pub fn interned(&self) -> &I::InternedCanonicalVarKinds {
         &self.interned
     }
 
+    /// Creates a list of canonical variable kinds using an iterator.
     pub fn from(
         interner: &I,
         variable_kinds: impl IntoIterator<Item = CanonicalVarKind<I>>,
@@ -1920,6 +2146,7 @@ impl<I: Interner> CanonicalVarKinds<I> {
         .unwrap()
     }
 
+    /// Tries to create a list of canonical variable kinds using an iterator.
     pub fn from_fallible<E>(
         interner: &I,
         variable_kinds: impl IntoIterator<Item = Result<CanonicalVarKind<I>, E>>,
@@ -1929,18 +2156,22 @@ impl<I: Interner> CanonicalVarKinds<I> {
         })
     }
 
+    /// Get an iterator over the list of canonical variable kinds.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, CanonicalVarKind<I>> {
         self.as_slice(interner).iter()
     }
 
+    /// Checks whether the list of canonical variable kinds is empty.
     pub fn is_empty(&self, interner: &I) -> bool {
         self.as_slice(interner).is_empty()
     }
 
+    /// Returns the number of canonical variable kinds.
     pub fn len(&self, interner: &I) -> usize {
         self.as_slice(interner).len()
     }
 
+    /// Returns a slice containing the canonical variable kinds.
     pub fn as_slice(&self, interner: &I) -> &[CanonicalVarKind<I>] {
         interner.canonical_var_kinds_data(&self.interned)
     }
@@ -1953,7 +2184,10 @@ impl<I: Interner> CanonicalVarKinds<I> {
 /// `binders` field.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Canonical<T: HasInterner> {
+    /// The item that is canonicalized.
     pub value: T,
+
+    /// The kind/universe of the variable.
     pub binders: CanonicalVarKinds<T::Interner>,
 }
 
@@ -1969,11 +2203,16 @@ impl<T: HasInterner> HasInterner for Canonical<T> {
 /// To produce one of these values, use the `u_canonicalize` method.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct UCanonical<T: HasInterner> {
+    /// The wrapped `Canonical`.
     pub canonical: Canonical<T>,
+
+    /// The number of universes that have been collapsed.
     pub universes: usize,
 }
 
 impl<T: HasInterner> UCanonical<T> {
+    /// Checks whether the universe canonical value is a trivial
+    /// substitution (e.g. an identity substitution).
     pub fn is_trivial_substitution(
         &self,
         interner: &T::Interner,
@@ -1987,6 +2226,7 @@ impl<T: HasInterner> UCanonical<T> {
         subst.is_identity_subst(interner)
     }
 
+    /// Creates an identity substitution.
     pub fn trivial_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
         let binders = &self.canonical.binders;
         Substitution::from(
@@ -2027,14 +2267,17 @@ pub struct Goals<I: Interner> {
 }
 
 impl<I: Interner> Goals<I> {
+    /// Creates an empty list of goals.
     pub fn new(interner: &I) -> Self {
         Self::from(interner, None::<Goal<I>>)
     }
 
+    /// Get the interned list of goals.
     pub fn interned(&self) -> &I::InternedGoals {
         &self.interned
     }
 
+    /// Creates `Goals` using an iterator of goal-like things.
     pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
         Self::from_fallible(
             interner,
@@ -2045,6 +2288,7 @@ impl<I: Interner> Goals<I> {
         .unwrap()
     }
 
+    /// Tries to create a `Goals` using an iterator of goal-like things.
     pub fn from_fallible<E>(
         interner: &I,
         goals: impl IntoIterator<Item = Result<impl CastTo<Goal<I>>, E>>,
@@ -2055,18 +2299,22 @@ impl<I: Interner> Goals<I> {
         })
     }
 
+    /// Get an iterator over the list of goals.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Goal<I>> {
         self.as_slice(interner).iter()
     }
 
+    /// Checks whether the list of goals is empty.
     pub fn is_empty(&self, interner: &I) -> bool {
         self.as_slice(interner).is_empty()
     }
 
+    /// Returns the number of goals.
     pub fn len(&self, interner: &I) -> usize {
         self.as_slice(interner).len()
     }
 
+    /// Returns a slice containing the list of goals.
     pub fn as_slice(&self, interner: &I) -> &[Goal<I>] {
         interner.goals_data(&self.interned)
     }
@@ -2079,19 +2327,23 @@ pub struct Goal<I: Interner> {
 }
 
 impl<I: Interner> Goal<I> {
+    /// Create a new goal using `GoalData`.
     pub fn new(interner: &I, interned: GoalData<I>) -> Self {
         let interned = I::intern_goal(interner, interned);
         Self { interned }
     }
 
+    /// Gets the interned goal.
     pub fn interned(&self) -> &I::InternedGoal {
         &self.interned
     }
 
+    /// Gets the interned goal data.
     pub fn data(&self, interner: &I) -> &GoalData<I> {
         interner.goal_data(&self.interned)
     }
 
+    /// Create a goal using a `forall` or `exists` quantifier.
     pub fn quantify(
         self,
         interner: &I,
@@ -2101,7 +2353,7 @@ impl<I: Interner> Goal<I> {
         GoalData::Quantified(kind, Binders::new(binders, self)).intern(interner)
     }
 
-    /// Takes a goal `G` and turns it into `not { G }`
+    /// Takes a goal `G` and turns it into `not { G }`.
     pub fn negate(self, interner: &I) -> Self {
         GoalData::Not(self).intern(interner)
     }
@@ -2126,6 +2378,7 @@ impl<I: Interner> Goal<I> {
         .intern(interner)
     }
 
+    /// Create an implication goal that holds if the predicates are true.
     pub fn implied_by(self, interner: &I, predicates: ProgramClauses<I>) -> Goal<I> {
         GoalData::Implies(predicates, self).intern(interner)
     }
@@ -2144,6 +2397,7 @@ impl<I> Goal<I>
 where
     I: Interner,
 {
+    /// Creates a single goal that only holds if a list of goals holds.
     pub fn all<II>(interner: &I, iter: II) -> Self
     where
         II: IntoIterator<Item = Goal<I>>,
@@ -2174,8 +2428,14 @@ pub enum GoalData<I: Interner> {
     /// Introduces a binding at depth 0, shifting other bindings up
     /// (deBruijn index).
     Quantified(QuantifierKind, Binders<Goal<I>>),
+
+    /// A goal that holds given some clauses (like an if-statement).
     Implies(ProgramClauses<I>, Goal<I>),
+
+    /// List of goals that all should hold.
     All(Goals<I>),
+
+    /// Negation: the inner goal should not hold.
     Not(Goal<I>),
 
     /// Make two things equal; the rules for doing so are well known to the logic
@@ -2198,14 +2458,30 @@ pub enum GoalData<I: Interner> {
 }
 
 impl<I: Interner> GoalData<I> {
+    /// Create an interned goal.
     pub fn intern(self, interner: &I) -> Goal<I> {
         Goal::new(interner, self)
     }
 }
 
+/// Kinds of quantifiers in the logic, such as `forall` and `exists`.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum QuantifierKind {
+    /// Universal quantifier `ForAll`.
+    ///
+    /// A formula with the universal quantifier `forall(x). P(x)` is satisfiable
+    /// if and only if the subformula `P(x)` is true for all possible values for x.
     ForAll,
+
+    /// Existential quantifier `Exists`.
+    ///
+    /// A formula with the existential quantifier `exists(x). P(x)` is satisfiable
+    /// if and only if there exists at least one value for all possible values of x
+    /// which satisfies the subformula `P(x)`.
+
+    /// In the context of chalk, the existential quantifier usually demands the
+    /// existence of exactly one instance (i.e. type) that satisfies the formula
+    /// (i.e. type constraints). More than one instance means that the result is ambiguous.
     Exists,
 }
 
@@ -2217,6 +2493,8 @@ pub enum QuantifierKind {
 /// checking in the compiler.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub enum Constraint<I: Interner> {
+    /// Outlives constraint `'a: 'b`, indicating that the value of `'a` must be
+    /// a superset of the value of `'b`.
     Outlives(Lifetime<I>, Lifetime<I>),
 }
 
@@ -2230,6 +2508,7 @@ pub struct Substitution<I: Interner> {
 }
 
 impl<I: Interner> Substitution<I> {
+    /// Create a substitution from parameters.
     pub fn from(
         interner: &I,
         parameters: impl IntoIterator<Item = impl CastTo<GenericArg<I>>>,
@@ -2243,6 +2522,7 @@ impl<I: Interner> Substitution<I> {
         .unwrap()
     }
 
+    /// Try to create a substitution from parameters.
     pub fn from_fallible<E>(
         interner: &I,
         parameters: impl IntoIterator<Item = Result<impl CastTo<GenericArg<I>>, E>>,
@@ -2253,35 +2533,42 @@ impl<I: Interner> Substitution<I> {
         })
     }
 
+    /// Get the interned representation of the substitution.
     pub fn interned(&self) -> &I::InternedSubstitution {
         &self.interned
     }
 
-    /// Index into the list of parameters
+    /// Index into the list of parameters.
     pub fn at(&self, interner: &I, index: usize) -> &GenericArg<I> {
         &self.parameters(interner)[index]
     }
 
+    /// Create a substitution from a single parameter.
     pub fn from1(interner: &I, parameter: impl CastTo<GenericArg<I>>) -> Self {
         Self::from(interner, Some(parameter))
     }
 
+    /// Create an empty substitution.
     pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<GenericArg<I>>)
     }
 
+    /// Check whether this is an empty substitution.
     pub fn is_empty(&self, interner: &I) -> bool {
         self.parameters(interner).is_empty()
     }
 
+    /// Get an iterator over the parameters of the substitution.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, GenericArg<I>> {
         self.parameters(interner).iter()
     }
 
+    /// Get the parameters associated with a substitution.
     pub fn parameters(&self, interner: &I) -> &[GenericArg<I>] {
         interner.substitution_data(&self.interned)
     }
 
+    /// Get the length of the substitution (number of parameters).
     pub fn len(&self, interner: &I) -> usize {
         self.parameters(interner).len()
     }
@@ -2318,6 +2605,7 @@ impl<I: Interner> Substitution<I> {
         })
     }
 
+    /// Apply the substitution to a value.
     pub fn apply<T>(&self, value: &T, interner: &I) -> T::Result
     where
         T: Fold<I, I>,
@@ -2340,14 +2628,16 @@ struct SubstFolder<'i, I: Interner> {
 }
 
 impl<I: Interner> SubstFolder<'_, I> {
-    /// Index into the list of parameters
+    /// Index into the list of parameters.
     pub fn at(&self, index: usize) -> &GenericArg<I> {
         let interner = self.interner;
         &self.subst.parameters(interner)[index]
     }
 }
 
+/// Convert a value to a list of parameters.
 pub trait AsParameters<I: Interner> {
+    /// Convert the current value to parameters.
     fn as_parameters(&self, interner: &I) -> &[GenericArg<I>];
 }
 
@@ -2385,22 +2675,24 @@ where
     }
 }
 
+/// Utility for converting a list of all the binders into scope
+/// into references to those binders. Simply pair the binders with
+/// the indices, and invoke `to_generic_arg()` on the `(binder,
+/// index)` pair. The result will be a reference to a bound
+/// variable of appropriate kind at the corresponding index.
 pub trait ToGenericArg<I: Interner> {
-    /// Utility for converting a list of all the binders into scope
-    /// into references to those binders. Simply pair the binders with
-    /// the indices, and invoke `to_generic_arg()` on the `(binder,
-    /// index)` pair. The result will be a reference to a bound
-    /// variable of appropriate kind at the corresponding index.
+    /// Converts the binders in scope to references to those binders.
     fn to_generic_arg(&self, interner: &I) -> GenericArg<I> {
         self.to_generic_arg_at_depth(interner, DebruijnIndex::INNERMOST)
     }
 
+    /// Converts the binders at the specified depth to references to those binders.
     fn to_generic_arg_at_depth(&self, interner: &I, debruijn: DebruijnIndex) -> GenericArg<I>;
 }
 
-impl<'a, I: Interner> ToGenericArg<I> for (&'a VariableKind<I>, usize) {
+impl<'a, I: Interner> ToGenericArg<I> for (usize, &'a VariableKind<I>) {
     fn to_generic_arg_at_depth(&self, interner: &I, debruijn: DebruijnIndex) -> GenericArg<I> {
-        let &(binder, index) = self;
+        let &(index, binder) = self;
         let bound_var = BoundVar::new(debruijn, index);
         binder.to_bound_variable(interner, bound_var)
     }
@@ -2461,13 +2753,26 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
 /// additionally be solved.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct ConstrainedSubst<I: Interner> {
-    pub subst: Substitution<I>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
+    /// The substitution that is being constrained.
+    ///
+    /// NB: The `is_trivial` routine relies on the fact that `subst` is folded first.
+    pub subst: Substitution<I>,
+
+    /// Region constraints that constrain the substitution.
     pub constraints: Vec<InEnvironment<Constraint<I>>>,
 }
 
+/// The resulting substitution after solving a goal.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct AnswerSubst<I: Interner> {
-    pub subst: Substitution<I>, /* NB: The `is_trivial` routine relies on the fact that `subst` is folded first. */
+    /// The substitution result.
+    ///
+    /// NB: The `is_trivial` routine relies on the fact that `subst` is folded first.
+    pub subst: Substitution<I>,
+
+    /// List of constraints that are part of the answer.
     pub constraints: Vec<InEnvironment<Constraint<I>>>,
+
+    /// Delayed subgoals, used when the solver answered with an (incomplete) `Answer` (instead of a `CompleteAnswer`).
     pub delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
 }

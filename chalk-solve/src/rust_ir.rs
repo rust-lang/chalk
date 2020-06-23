@@ -479,7 +479,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
             interner,
             binders
                 .iter(interner)
-                .zip(0..)
+                .enumerate()
                 .map(|p| p.to_generic_arg(interner)),
         );
 

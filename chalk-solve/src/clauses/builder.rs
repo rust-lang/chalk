@@ -135,7 +135,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .binders
                 .iter(interner)
                 .zip(old_len..)
-                .map(|p| p.to_generic_arg(interner)),
+                .map(|(pk, i)| (i, pk).to_generic_arg(interner)),
         );
 
         let value = binders.substitute(self.interner(), &self.parameters[old_len..]);

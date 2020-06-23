@@ -1,3 +1,5 @@
+//! Debug impls for types.
+
 use std::fmt::{Debug, Display, Error, Formatter};
 
 use super::*;
@@ -251,6 +253,7 @@ impl<I: Interner> VariableKinds<I> {
         VariableKindsDebug(self)
     }
 
+    /// Helper method for debugging variable kinds.
     pub fn inner_debug<'a>(&'a self, interner: &'a I) -> VariableKindsInnerDebug<'a, I> {
         VariableKindsInnerDebug {
             variable_kinds: self,
@@ -268,6 +271,7 @@ impl<'a, I: Interner> Debug for VariableKindsDebug<'a, I> {
     }
 }
 
+/// Helper struct for showing debug output for `VariableKinds`.
 pub struct VariableKindsInnerDebug<'a, I: Interner> {
     variable_kinds: &'a VariableKinds<I>,
     interner: &'a I,
@@ -327,6 +331,7 @@ impl<I: Interner> Debug for GoalData<I> {
     }
 }
 
+/// Helper struct for showing debug output for `Goals`.
 pub struct GoalsDebug<'a, I: Interner> {
     goals: &'a Goals<I>,
     interner: &'a I,
@@ -347,6 +352,7 @@ impl<'a, I: Interner> Debug for GoalsDebug<'a, I> {
 }
 
 impl<I: Interner> Goals<I> {
+    /// Show debug output for `Goals`.
     pub fn debug<'a>(&'a self, interner: &'a I) -> GoalsDebug<'a, I> {
         GoalsDebug {
             goals: self,
@@ -355,6 +361,7 @@ impl<I: Interner> Goals<I> {
     }
 }
 
+/// Helper struct for showing debug output for `GenericArgData`.
 pub struct GenericArgDataInnerDebug<'a, I: Interner>(&'a GenericArgData<I>);
 
 impl<'a, I: Interner> Debug for GenericArgDataInnerDebug<'a, I> {
@@ -368,11 +375,13 @@ impl<'a, I: Interner> Debug for GenericArgDataInnerDebug<'a, I> {
 }
 
 impl<I: Interner> GenericArgData<I> {
+    /// Helper method for debugging `GenericArgData`.
     pub fn inner_debug(&self) -> GenericArgDataInnerDebug<'_, I> {
         GenericArgDataInnerDebug(self)
     }
 }
 
+/// Helper struct for showing debug output for program clause implications.
 pub struct ProgramClauseImplicationDebug<'a, I: Interner> {
     pci: &'a ProgramClauseImplication<I>,
     interner: &'a I,
@@ -399,6 +408,7 @@ impl<'a, I: Interner> Debug for ProgramClauseImplicationDebug<'a, I> {
 }
 
 impl<I: Interner> ProgramClauseImplication<I> {
+    /// Show debug output for the program clause implication.
     pub fn debug<'a>(&'a self, interner: &'a I) -> ProgramClauseImplicationDebug<'a, I> {
         ProgramClauseImplicationDebug {
             pci: self,
@@ -407,6 +417,7 @@ impl<I: Interner> ProgramClauseImplication<I> {
     }
 }
 
+/// Helper struct for showing debug output for application types.
 pub struct ApplicationTyDebug<'a, I: Interner> {
     application_ty: &'a ApplicationTy<I>,
     interner: &'a I,
@@ -424,6 +435,7 @@ impl<'a, I: Interner> Debug for ApplicationTyDebug<'a, I> {
 }
 
 impl<I: Interner> ApplicationTy<I> {
+    /// Show debug output for the application type.
     pub fn debug<'a>(&'a self, interner: &'a I) -> ApplicationTyDebug<'a, I> {
         ApplicationTyDebug {
             application_ty: self,
@@ -432,6 +444,7 @@ impl<I: Interner> ApplicationTy<I> {
     }
 }
 
+/// Helper struct for showing debug output for substitutions.
 pub struct SubstitutionDebug<'a, I: Interner> {
     substitution: &'a Substitution<I>,
     interner: &'a I,
@@ -464,6 +477,7 @@ impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
 }
 
 impl<I: Interner> Substitution<I> {
+    /// Show debug output for the substitution.
     pub fn debug<'a>(&'a self, interner: &'a I) -> SubstitutionDebug<'a, I> {
         SubstitutionDebug {
             substitution: self,
@@ -480,7 +494,7 @@ impl Debug for PlaceholderIndex {
 }
 
 impl<I: Interner> TraitRef<I> {
-    /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`
+    /// Returns a "Debuggable" type that prints like `P0 as Trait<P1..>`.
     pub fn with_as(&self) -> impl std::fmt::Debug + '_ {
         SeparatorTraitRef {
             trait_ref: self,
@@ -488,7 +502,7 @@ impl<I: Interner> TraitRef<I> {
         }
     }
 
-    /// Returns a "Debuggable" type that prints like `P0: Trait<P1..>`
+    /// Returns a "Debuggable" type that prints like `P0: Trait<P1..>`.
     pub fn with_colon(&self) -> impl std::fmt::Debug + '_ {
         SeparatorTraitRef {
             trait_ref: self,
@@ -503,11 +517,16 @@ impl<I: Interner> Debug for TraitRef<I> {
     }
 }
 
+/// Trait ref with associated separator used for debug output.
 pub struct SeparatorTraitRef<'me, I: Interner> {
+    /// The `TraitRef` itself.
     pub trait_ref: &'me TraitRef<I>,
+
+    /// The separator used for displaying the `TraitRef`.
     pub separator: &'me str,
 }
 
+/// Helper struct for showing debug output for the `SeperatorTraitRef`.
 pub struct SeparatorTraitRefDebug<'a, 'me, I: Interner> {
     separator_trait_ref: &'a SeparatorTraitRef<'me, I>,
     interner: &'a I,
@@ -535,6 +554,7 @@ impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
 }
 
 impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
+    /// Show debug output for the `SeperatorTraitRef`.
     pub fn debug<'a>(&'a self, interner: &'a I) -> SeparatorTraitRefDebug<'a, 'me, I> {
         SeparatorTraitRefDebug {
             separator_trait_ref: self,
@@ -549,6 +569,7 @@ impl<I: Interner> Debug for LifetimeOutlives<I> {
     }
 }
 
+/// Helper struct for showing debug output for projection types.
 pub struct ProjectionTyDebug<'a, I: Interner> {
     projection_ty: &'a ProjectionTy<I>,
     interner: &'a I,
@@ -570,6 +591,7 @@ impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
 }
 
 impl<I: Interner> ProjectionTy<I> {
+    /// Show debug output for the projection type.
     pub fn debug<'a>(&'a self, interner: &'a I) -> ProjectionTyDebug<'a, I> {
         ProjectionTyDebug {
             projection_ty: self,
@@ -578,6 +600,7 @@ impl<I: Interner> ProjectionTy<I> {
     }
 }
 
+/// Helper struct for showing debug output for opaque types.
 pub struct OpaqueTyDebug<'a, I: Interner> {
     opaque_ty: &'a OpaqueTy<I>,
     interner: &'a I,
@@ -599,6 +622,7 @@ impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
 }
 
 impl<I: Interner> OpaqueTy<I> {
+    /// Show debug output for the opaque type.
     pub fn debug<'a>(&'a self, interner: &'a I) -> OpaqueTyDebug<'a, I> {
         OpaqueTyDebug {
             opaque_ty: self,
@@ -607,6 +631,7 @@ impl<I: Interner> OpaqueTy<I> {
     }
 }
 
+/// Wraps debug output in angle brackets (`<>`).
 pub struct Angle<'a, T>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
@@ -724,6 +749,7 @@ impl<I: Interner> Debug for CanonicalVarKinds<I> {
 }
 
 impl<T: HasInterner + Display> Canonical<T> {
+    /// Display the canonicalized item.
     pub fn display<'a>(&'a self, interner: &'a T::Interner) -> CanonicalDisplay<'a, T> {
         CanonicalDisplay {
             canonical: self,
@@ -732,6 +758,7 @@ impl<T: HasInterner + Display> Canonical<T> {
     }
 }
 
+/// Helper struct for displaying canonicalized items.
 pub struct CanonicalDisplay<'a, T: HasInterner> {
     canonical: &'a Canonical<T>,
     interner: &'a T::Interner,

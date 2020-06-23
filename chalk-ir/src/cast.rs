@@ -1,3 +1,5 @@
+//! Upcasts, to avoid writing out wrapper types.
+
 use crate::*;
 use std::marker::PhantomData;
 
@@ -38,6 +40,7 @@ use std::marker::PhantomData;
 /// This split setup allows us to write `foo.cast::<T>()` to mean
 /// "cast to T".
 pub trait Cast: Sized {
+    /// Cast a value to type `U` using `CastTo`.
     fn cast<U>(self, interner: &U::Interner) -> U
     where
         Self: CastTo<U>,
@@ -54,6 +57,7 @@ impl<T> Cast for T {}
 /// functions that take (e.g.) an `impl CastTo<Goal<_>>` or something
 /// like that.
 pub trait CastTo<T: HasInterner>: Sized {
+    /// Cast a value to type `T`.
     fn cast_to(self, interner: &T::Interner) -> T;
 }
 
@@ -333,6 +337,7 @@ where
     }
 }
 
+/// An iterator that casts each element to some other type.
 pub struct Casted<'i, IT, U: HasInterner> {
     interner: &'i U::Interner,
     iterator: IT,
@@ -358,6 +363,7 @@ where
 /// An iterator adapter that casts each element we are iterating over
 /// to some other type.
 pub trait Caster: Iterator + Sized {
+    /// Cast each element in this iterator.
     fn casted<U>(self, interner: &U::Interner) -> Casted<'_, Self, U>
     where
         Self::Item: CastTo<U>,

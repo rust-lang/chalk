@@ -1,3 +1,5 @@
+//! Encapsulates the concrete representation of core types such as types and goals.
+
 use crate::AdtId;
 use crate::AliasTy;
 use crate::ApplicationTy;
@@ -169,29 +171,21 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// The ID type for ADTs
     type InternedAdtId: Debug + Copy + Eq + Ord + Hash;
 
+    /// Representation of identifiers.
     type Identifier: Debug + Clone + Eq + Hash;
 
+    /// Representation of function ABI (e.g. calling convention).
     type FnAbi: Debug + Copy + Eq + Hash;
 
-    /// Prints the debug representation of a type-kind-id. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a type-kind-id.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_adt_id(adt_id: AdtId<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a type-kind-id. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a type-kind-id.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_trait_id(
         trait_id: TraitId<Self>,
@@ -200,10 +194,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a type-kind-id. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
+    /// Prints the debug representation of a type-kind-id.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_assoc_type_id(
         type_id: AssocTypeId<Self>,
@@ -212,13 +204,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an opaque type. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific type-family (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of an opaque type.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_opaque_ty_id(
         opaque_ty_id: OpaqueTyId<Self>,
@@ -227,6 +214,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a function-def-id.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_fn_def_id(
         fn_def_id: FnDefId<Self>,
@@ -235,6 +224,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of a closure id.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_closure_id(
         fn_def_id: ClosureId<Self>,
@@ -243,25 +234,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an alias. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of an alias.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_alias(alias: &AliasTy<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a ProjectionTy. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a ProjectionTy.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_projection_ty(
         projection_ty: &ProjectionTy<Self>,
@@ -270,13 +251,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an OpaqueTy. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of an OpaqueTy.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_opaque_ty(
         opaque_ty: &OpaqueTy<Self>,
@@ -285,25 +261,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a type. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a type.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_ty(ty: &Ty<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a lifetime. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a lifetime.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_lifetime(
         lifetime: &Lifetime<Self>,
@@ -312,25 +278,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a const. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a const.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_const(constant: &Const<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of an parameter. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of an parameter.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_generic_arg(
         generic_arg: &GenericArg<Self>,
@@ -339,13 +295,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a parameter kinds list. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a parameter kinds list.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_variable_kinds(
         variable_kinds: &VariableKinds<Self>,
@@ -355,12 +306,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     }
 
     /// Prints the debug representation of a parameter kinds list, with angle brackets.
-    /// To get good results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_variable_kinds_with_angles(
         variable_kinds: &VariableKinds<Self>,
@@ -370,12 +316,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     }
 
     /// Prints the debug representation of an parameter kinds list with universe index.
-    /// To get good results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_canonical_var_kinds(
         canonical_var_kinds: &CanonicalVarKinds<Self>,
@@ -384,37 +325,22 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an goal. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of an goal.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_goal(goal: &Goal<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a list of goals. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a list of goals.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_goals(goals: &Goals<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a ProgramClauseImplication. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a ProgramClauseImplication.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_program_clause_implication(
         pci: &ProgramClauseImplication<Self>,
@@ -423,13 +349,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a ProgramClause. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a ProgramClause.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_program_clause(
         clause: &ProgramClause<Self>,
@@ -438,13 +359,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a ProgramClauses. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a ProgramClauses.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_program_clauses(
         clauses: &ProgramClauses<Self>,
@@ -453,13 +369,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an ApplicationTy. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of an ApplicationTy.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_application_ty(
         application_ty: &ApplicationTy<Self>,
@@ -468,13 +379,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a Substitution. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a Substitution.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_substitution(
         substitution: &Substitution<Self>,
@@ -483,13 +389,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a SeparatorTraitRef. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a SeparatorTraitRef.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_separator_trait_ref(
         separator_trait_ref: &SeparatorTraitRef<'_, Self>,
@@ -498,13 +399,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a QuantifiedWhereClauses. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
-    /// Returns `None` to fallback to the default debug output (e.g.,
-    /// if no info about current program is available from TLS).
+    /// Prints the debug representation of a QuantifiedWhereClauses.
+    /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_quantified_where_clauses(
         clauses: &QuantifiedWhereClauses<Self>,
@@ -539,6 +435,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
     fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
+    /// Deterermine whether two concrete const values are equal.
     fn const_eq(
         &self,
         ty: &Self::InternedType,
@@ -670,19 +567,31 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ) -> &'a [CanonicalVarKind<Self>];
 }
 
+/// "Target" interner, used to specify the interner of the folded value.
+/// In most cases, both interners are the same, but in some cases you want
+/// to change a value to a different internal representation, and as such
+/// a different target interner.
+///
+/// Contains several methods to transfer types from another interner to
+/// the `TargetInterner`.
 pub trait TargetInterner<I: Interner>: Interner {
+    /// Transfer a `DefId` to the target interner.
     fn transfer_def_id(def_id: I::DefId) -> Self::DefId;
 
+    /// Transfer an AdtId to the target interner.
     fn transfer_adt_id(adt_id: I::InternedAdtId) -> Self::InternedAdtId;
 
+    /// Transfer variable kinds to the target interner.
     fn transfer_variable_kinds(
         variable_kinds: I::InternedVariableKinds,
     ) -> Self::InternedVariableKinds;
 
+    /// Transfer canonical var kinds to the target interner.
     fn transfer_canonical_var_kinds(
         variable_kinds: I::InternedCanonicalVarKinds,
     ) -> Self::InternedCanonicalVarKinds;
 
+    /// Transfer constant values to the target interner.
     fn transfer_const(
         &self,
         const_evaluated: &I::InternedConcreteConst,
@@ -725,6 +634,7 @@ impl<I: Interner> TargetInterner<I> for I {
 /// It's particularly useful for writing `Fold` impls for generic types like
 /// `Binder<T>`, since it allows us to figure out the interner of `T`.
 pub trait HasInterner {
+    /// The interner associated with the type.
     type Interner: Interner;
 }
 
