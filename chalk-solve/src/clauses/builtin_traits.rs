@@ -57,11 +57,17 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
 ) -> Result<(), Floundered> {
     match well_known {
         WellKnownTrait::FnOnce => {
-            fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
+            // If `self_ty` contains bound vars, we want to universally quantify them.
+            // `Generalize` collects them for us.
+            let generalized = generalize::Generalize::apply(db.interner(), &self_ty);
+
+            builder.push_binders(&generalized, |builder, self_ty| {
+                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
+                Ok(())
+            })
         }
-        _ => {}
+        _ => Ok(()),
     }
-    Ok(())
 }
 
 /// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form

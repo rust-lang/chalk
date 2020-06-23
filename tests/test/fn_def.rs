@@ -96,5 +96,73 @@ fn fn_def_implements_fn_traits() {
         } yields {
             "Unique"
         }
+
+        goal {
+            bar: Fn<(i32,)>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Normalize(<bar as FnOnce<(i32,)>>::Output -> ())
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            baz: Fn<(i32,)>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Normalize(<baz as FnOnce<(i32,)>>::Output -> u8)
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn generic_fn_implements_fn_traits() {
+    test! {
+        program {
+            #[lang(fn_once)]
+            trait FnOnce<Args> {
+                type Output;
+            }
+
+            #[lang(fn_mut)]
+            trait FnMut<Args> where Self: FnOnce<Args> { }
+
+            #[lang(fn)]
+            trait Fn<Args> where Self: FnMut<Args> { }
+
+            fn foo<T>(t: T) -> T;
+        }
+
+        goal {
+            exists<T> { foo<T>: Fn<(T,)> }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> { foo<T>: Fn<(T,)> }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            exists<T> { Normalize(<foo<T> as FnOnce<(T,)>>::Output -> T) }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> { Normalize(<foo<T> as FnOnce<(T,)>>::Output -> T) }
+        } yields {
+            "Unique"
+        }
     }
 }

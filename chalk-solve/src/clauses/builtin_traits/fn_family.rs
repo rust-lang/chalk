@@ -102,11 +102,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 let bound = fn_def_datum
                     .binders
                     .substitute(builder.interner(), &apply.substitution);
-                let self_ty = ApplicationTy {
-                    name: apply.name,
-                    substitution: builder.substitution_in_scope(),
-                }
-                .intern(interner);
                 push_clauses_for_apply(
                     db,
                     builder,
