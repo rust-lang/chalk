@@ -12,8 +12,8 @@ use crate::{
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Canonical, ConstrainedSubst, DomainGoal, Floundered, Goal, GoalData, InEnvironment, NoSolution,
-    Substitution, UCanonical, UniverseMap, WhereClause,
+    Canonical, ConstrainedSubst, Floundered, Goal, GoalData, InEnvironment, NoSolution,
+    Substitution, UCanonical, UniverseMap,
 };
 use tracing::{debug, debug_span, info, instrument};
 
@@ -251,16 +251,8 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         let (mut infer, subst, environment, goal) = context.instantiate_ucanonical_goal(&goal);
         let goal_data = goal.data(context.interner());
 
-        let is_outlives_goal = |dg: &DomainGoal<I>| {
-            if let DomainGoal::Holds(WhereClause::LifetimeOutlives(_)) = dg {
-                true
-            } else {
-                false
-            }
-        };
-
         match goal_data {
-            GoalData::DomainGoal(domain_goal) if !is_outlives_goal(domain_goal) => {
+            GoalData::DomainGoal(domain_goal) => {
                 match context.program_clauses(&environment, &domain_goal, &mut infer) {
                     Ok(clauses) => {
                         for clause in clauses {

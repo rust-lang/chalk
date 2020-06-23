@@ -145,7 +145,7 @@ with unification. As described in the
 section, unification is basically a procedure with a signature like this:
 
 ```text
-Unify(A, B) = Result<(Subgoals, RegionConstraints), NoSolution>
+Unify(A, B) = Result<Subgoals, NoSolution>
 ```
 
 In other words, we try to unify two things A and B. That procedure
@@ -153,8 +153,7 @@ might just fail, in which case we get back `Err(NoSolution)`. This
 would happen, for example, if we tried to unify `u32` and `i32`.
 
 The key point is that, on success, unification can also give back to
-us a set of subgoals that still remain to be proven. (It can also give
-back region constraints, but those are not relevant here).
+us a set of subgoals that still remain to be proven.
 
 Whenever unification encounters a non-placeholder associated type
 projection P being equated with some other type T, it always succeeds,

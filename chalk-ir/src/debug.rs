@@ -326,6 +326,9 @@ impl<I: Interner> Debug for GoalData<I> {
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::AddRegionConstraint(ref a, ref b) => {
+                write!(fmt, "AddRegionConstraint({:?}: {:?})", a, b)
+            }
             GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }
