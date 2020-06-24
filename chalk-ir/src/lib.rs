@@ -2008,6 +2008,9 @@ pub struct ProgramClauseImplication<I: Interner> {
     /// The condition goals that should hold.
     pub conditions: Goals<I>,
 
+    /// The lifetime constraints that should be proven.
+    pub constraints: Vec<InEnvironment<Constraint<I>>>,
+
     /// The relative priority of the implication.
     pub priority: ClausePriority,
 }
@@ -2043,6 +2046,7 @@ impl<I: Interner> ProgramClauseImplication<I> {
             ProgramClauseImplication {
                 consequence: self.consequence.into_from_env_goal(interner),
                 conditions: self.conditions.clone(),
+                constraints: self.constraints.clone(),
                 priority: self.priority,
             }
         } else {
@@ -2617,7 +2621,7 @@ pub enum QuantifierKind {
 /// lifetime constraints, instead gathering them up to return with our solution
 /// for later checking. This allows for decoupling between type and region
 /// checking in the compiler.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum Constraint<I: Interner> {
     /// Outlives constraint `'a: 'b`, indicating that the value of `'a` must be
     /// a superset of the value of `'b`.

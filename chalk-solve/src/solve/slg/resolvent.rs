@@ -76,6 +76,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         let ProgramClauseImplication {
             consequence,
             conditions,
+            constraints,
             priority: _,
         } = {
             let ProgramClauseData(implication) = clause.data(interner);
@@ -83,7 +84,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
             self.infer
                 .instantiate_binders_existentially(interner, implication)
         };
-        debug!(?consequence, ?conditions);
+        debug!(?consequence, ?conditions, ?constraints);
 
         // Unify the selected literal Li with C'.
         let unification_result = self
@@ -103,6 +104,8 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
 
         // Add the subgoals/region-constraints that unification gave us.
         slg::into_ex_clause(interner, unification_result, &mut ex_clause);
+
+        ex_clause.constraints.extend(constraints);
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause

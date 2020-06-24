@@ -176,10 +176,13 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         let ProgramClauseImplication {
             consequence,
             conditions,
+            constraints,
             priority: _,
         } = fulfill
             .infer
             .instantiate_binders_existentially(fulfill.solver.interner(), clause);
+
+        fulfill.constraints.extend(constraints);
 
         debug!("the subst is {:?}", fulfill.subst);
 

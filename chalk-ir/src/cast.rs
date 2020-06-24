@@ -206,6 +206,7 @@ where
         let implication = ProgramClauseImplication {
             consequence: self.cast(interner),
             conditions: Goals::empty(interner),
+            constraints: Vec::new(),
             priority: ClausePriority::High,
         };
 
@@ -223,6 +224,7 @@ where
         ProgramClauseData(self.map(|bound| ProgramClauseImplication {
             consequence: bound.cast(interner),
             conditions: Goals::empty(interner),
+            constraints: Vec::new(),
             priority: ClausePriority::High,
         }))
         .intern(interner)
