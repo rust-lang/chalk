@@ -43,9 +43,10 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_fact_with_priority(
         &mut self,
         consequence: impl CastTo<DomainGoal<I>>,
+        constraints: impl IntoIterator<Item = InEnvironment<Constraint<I>>>,
         priority: ClausePriority,
     ) {
-        self.push_clause_with_priority(consequence, None::<Goal<_>>, priority);
+        self.push_clause_with_priority(consequence, None::<Goal<_>>, constraints, priority);
     }
 
     /// Pushes a clause `forall<..> { consequence :- conditions }`
@@ -57,23 +58,34 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
-        self.push_clause_with_priority(consequence, conditions, ClausePriority::High)
+        self.push_clause_with_priority(consequence, conditions, None, ClausePriority::High)
     }
 
-    /// Pushes a clause `forall<..> { consequence :- conditions }`
+    pub fn push_fact_with_constraints(
+        &mut self,
+        consequence: impl CastTo<DomainGoal<I>>,
+        constraints: impl IntoIterator<Item = InEnvironment<Constraint<I>>>,
+    ) {
+        self.push_fact_with_priority(consequence, constraints, ClausePriority::High)
+    }
+
+    /// Pushes a clause `forall<..> { consequence :- conditions ; constraints }`
     /// into the set of program clauses, meaning that `consequence`
-    /// can be proven if `conditions` are all true.  The `forall<..>`
-    /// binders will be whichever binders have been pushed (see `push_binders`).
+    /// can be proven if `conditions` are all true and `constraints`
+    /// are proven to hold.  The `forall<..>` binders will be whichever binders
+    /// have been pushed (see `push_binders`).
     pub fn push_clause_with_priority(
         &mut self,
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
+        constraints: impl IntoIterator<Item = InEnvironment<Constraint<I>>>,
         priority: ClausePriority,
     ) {
         let interner = self.db.interner();
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(interner),
             conditions: Goals::from(interner, conditions),
+            constraints: constraints.into_iter().collect(),
             priority,
         };
 

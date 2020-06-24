@@ -313,7 +313,18 @@ fn program_clauses_that_could_match<I: Interner>(
                 .opaque_ty_data(opaque_ty.opaque_ty_id)
                 .to_program_clauses(builder),
         },
-        DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { .. })) => {}
+        DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
+            builder.push_fact_with_constraints(
+                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives {
+                    a: a.clone(),
+                    b: b.clone(),
+                })),
+                Some(InEnvironment::new(
+                    environment,
+                    Constraint::Outlives(a.clone(), b.clone()),
+                )),
+            );
+        }
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)
