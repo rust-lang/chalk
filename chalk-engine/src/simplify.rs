@@ -4,7 +4,7 @@ use crate::{ExClause, Literal, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Constraint, Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
 };
 use tracing::debug;
 
@@ -68,9 +68,6 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     &goal.b,
                     &mut ex_clause,
                 )?,
-                GoalData::AddRegionConstraint(a, b) => ex_clause.constraints.push(
-                    InEnvironment::new(&environment, Constraint::Outlives(a.clone(), b.clone())),
-                ),
                 GoalData::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals

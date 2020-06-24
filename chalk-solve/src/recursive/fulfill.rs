@@ -8,8 +8,8 @@ use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible,
-    GenericArg, Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution,
-    ProgramClauseImplication, QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
+    GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
+    QuantifierKind, Substitution, UCanonical, UniverseMap,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -99,7 +99,10 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
         environment: &Environment<I>,
         a: &T,
         b: &T,
-    ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
+    ) -> Fallible<(
+        Vec<InEnvironment<Goal<I>>>,
+        Vec<InEnvironment<Constraint<I>>>,
+    )>
     where
         T: ?Sized + Zip<I>;
 
@@ -256,11 +259,13 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     where
         T: ?Sized + Zip<I> + Debug,
     {
-        let goals = self
+        let (goals, constraints) = self
             .infer
             .unify(self.solver.interner(), environment, a, b)?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
+        debug!("unify: constraints={:?}", constraints);
+        self.constraints.extend(constraints);
         for goal in goals {
             let goal = goal.cast(self.solver.interner());
             self.push_obligation(Obligation::Prove(goal));
@@ -304,23 +309,10 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.push_obligation(Obligation::Refute(in_env));
             }
-            GoalData::AddRegionConstraint(a, b) => {
-                self.constraints.insert(InEnvironment::new(
-                    &environment,
-                    Constraint::Outlives(a.clone(), b.clone()),
-                ));
+            GoalData::DomainGoal(_) => {
+                let in_env = InEnvironment::new(environment, goal);
+                self.push_obligation(Obligation::Prove(in_env));
             }
-            GoalData::DomainGoal(domain_goal) => match domain_goal {
-                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
-                    let add_constraint =
-                        GoalData::AddRegionConstraint(a.clone(), b.clone()).intern(interner);
-                    self.push_goal(environment, add_constraint)?
-                }
-                _ => {
-                    let in_env = InEnvironment::new(environment, goal);
-                    self.push_obligation(Obligation::Prove(in_env));
-                }
-            },
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
             }
