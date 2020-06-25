@@ -35,6 +35,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
     /// Executes one iteration of the recursive solver, computing the current
     /// solution to the given canonical goal. This is used as part of a loop in
     /// the case of cyclic goals.
+    #[instrument(level = "debug", skip(self))]
     fn solve_iteration(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,

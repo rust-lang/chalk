@@ -8,8 +8,8 @@ use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible,
-    GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, UCanonical, UniverseMap,
+    GenericArg, Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution,
+    ProgramClauseImplication, QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -157,6 +157,7 @@ pub(super) struct Fulfill<
 impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I>>
     Fulfill<'s, I, Solver, Infer>
 {
+    #[instrument(level = "debug", skip(solver, infer))]
     pub(super) fn new_with_clause(
         solver: &'s mut Solver,
         infer: Infer,
@@ -182,6 +183,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             .infer
             .instantiate_binders_existentially(fulfill.solver.interner(), clause);
 
+        debug!(?consequence, ?conditions, ?constraints);
         fulfill.constraints.extend(constraints);
 
         debug!("the subst is {:?}", fulfill.subst);
@@ -312,10 +314,17 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.push_obligation(Obligation::Refute(in_env));
             }
-            GoalData::DomainGoal(_) => {
-                let in_env = InEnvironment::new(environment, goal);
-                self.push_obligation(Obligation::Prove(in_env));
-            }
+            GoalData::DomainGoal(dg) => match dg {
+                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
+                    let constraint =
+                        InEnvironment::new(environment, Constraint::Outlives(a.clone(), b.clone()));
+                    self.constraints.insert(constraint);
+                }
+                _ => {
+                    let in_env = InEnvironment::new(environment, goal);
+                    self.push_obligation(Obligation::Prove(in_env));
+                }
+            },
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
             }
