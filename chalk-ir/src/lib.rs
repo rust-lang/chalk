@@ -1062,7 +1062,7 @@ impl PlaceholderIndex {
 
 /// Normal Rust types, containing the type name and zero or more generic arguments.
 /// For example, in `Vec<u32>` those would be `Vec` and `[u32]` respectively.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct ApplicationTy<I: Interner> {
     /// The type name.
     pub name: TypeName<I>,
@@ -1337,7 +1337,7 @@ impl<I: Interner> AliasTy<I> {
 }
 
 /// A projection `<P0 as TraitName<P1..Pn>>::AssocItem<Pn+1..Pm>`.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct ProjectionTy<I: Interner> {
     /// The id for the associated type member.
     pub associated_ty_id: AssocTypeId<I>,
@@ -1348,7 +1348,7 @@ pub struct ProjectionTy<I: Interner> {
 impl<I: Interner> Copy for ProjectionTy<I> where I::InternedSubstitution: Copy {}
 
 /// An opaque type `opaque type T<..>: Trait = HiddenTy`.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct OpaqueTy<I: Interner> {
     /// The id for the opaque type.
     pub opaque_ty_id: OpaqueTyId<I>,
@@ -1364,7 +1364,7 @@ impl<I: Interner> Copy for OpaqueTy<I> where I::InternedSubstitution: Copy {}
 ///   implements the trait.
 /// - `<P0 as Trait<P1..Pn>>` (e.g. `i32 as Copy`), which casts the type to
 ///   that specific trait.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct TraitRef<I: Interner> {
     /// The trait id.
     pub trait_id: TraitId<I>,

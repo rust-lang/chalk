@@ -21,7 +21,7 @@ use std::sync::Arc;
 /// represented by two distinct `ItemId` values, and the impl for
 /// `ItemId` requires that all `ItemId` in the two zipped values match
 /// up.
-pub trait Zipper<'i, I: Interner> {
+pub trait Zipper<'i, I: Interner + 'i> {
     /// Indicates that the two types `a` and `b` were found in matching spots.
     fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()>;
 
@@ -46,13 +46,24 @@ pub trait Zipper<'i, I: Interner> {
     where
         T: HasInterner<Interner = I> + Zip<I> + Fold<I, I, Result = T>;
 
+    /// Zips two substs
+    fn zip_substs(&mut self, a: &[GenericArg<I>], b: &[GenericArg<I>]) -> Fallible<()>
+    where
+        Self: Sized,
+    {
+        for (a, b) in a.iter().zip(b.iter()) {
+            Zip::zip_with(self, Variance::Invariant, a, b)?;
+        }
+        Ok(())
+    }
+
     /// Retreives the interner from the underlying zipper object
     fn interner(&self) -> &'i I;
 }
 
 impl<'f, 'i, Z, I> Zipper<'i, I> for &'f mut Z
 where
-    I: Interner,
+    I: Interner + 'i,
     Z: Zipper<'i, I>,
 {
     fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
@@ -121,7 +132,10 @@ impl<'a, T: ?Sized + Zip<I>, I: Interner> Zip<I> for &'a T {
 }
 
 impl<I: Interner> Zip<I> for () {
-    fn zip_with<'i, Z: Zipper<'i, I>>(_: &mut Z, _: Variance, _: &Self, _: &Self) -> Fallible<()> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(_: &mut Z, _: Variance, _: &Self, _: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
         Ok(())
     }
 }
@@ -398,21 +412,6 @@ impl<I: Interner> Zip<I> for QuantifiedWhereClauses<I> {
     }
 }
 
-impl<I: Interner> Zip<I> for Substitution<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(
-        zipper: &mut Z,
-        variance: Variance,
-        a: &Self,
-        b: &Self,
-    ) -> Fallible<()>
-    where
-        I: 'i,
-    {
-        let interner = zipper.interner();
-        Zip::zip_with(zipper, variance, a.as_slice(interner), b.as_slice(interner))
-    }
-}
-
 // Annoyingly, Goal cannot use `enum_zip` because some variants have
 // two parameters, and I'm too lazy to make the macro account for the
 // relevant name mangling.
@@ -482,5 +481,81 @@ impl<I: Interner> Zip<I> for ProgramClause<I> {
     {
         let interner = zipper.interner();
         Zip::zip_with(zipper, variance, a.data(interner), b.data(interner))
+    }
+}
+
+impl<I: Interner> Zip<I> for TraitRef<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(
+        zipper: &mut Z,
+        variance: Variance,
+        a: &Self,
+        b: &Self,
+    ) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, variance, &a.trait_id, &b.trait_id)?;
+        zipper.zip_substs(
+            a.substitution.as_slice(interner),
+            b.substitution.as_slice(interner),
+        )
+    }
+}
+
+impl<I: Interner> Zip<I> for ProjectionTy<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(
+        zipper: &mut Z,
+        variance: Variance,
+        a: &Self,
+        b: &Self,
+    ) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, variance, &a.associated_ty_id, &b.associated_ty_id)?;
+        zipper.zip_substs(
+            a.substitution.as_slice(interner),
+            b.substitution.as_slice(interner),
+        )
+    }
+}
+
+impl<I: Interner> Zip<I> for OpaqueTy<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(
+        zipper: &mut Z,
+        variance: Variance,
+        a: &Self,
+        b: &Self,
+    ) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, variance, &a.opaque_ty_id, &b.opaque_ty_id)?;
+        zipper.zip_substs(
+            a.substitution.as_slice(interner),
+            b.substitution.as_slice(interner),
+        )
+    }
+}
+
+impl<I: Interner> Zip<I> for ApplicationTy<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(
+        zipper: &mut Z,
+        variance: Variance,
+        a: &Self,
+        b: &Self,
+    ) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, variance, &a.name, &b.name)?;
+        zipper.zip_substs(
+            a.substitution.as_slice(interner),
+            b.substitution.as_slice(interner),
+        )
     }
 }

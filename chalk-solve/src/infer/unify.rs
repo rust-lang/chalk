@@ -130,7 +130,21 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::Function(ref fn1), &TyData::Function(ref fn2)) => {
-                self.unify_binders(variance, fn1, fn2)
+                // Copied from `unify_binders`, since `Substitution` doesn't implement `Zip`
+                let interner = self.interner;
+
+                {
+                    let a_universal = self.table.instantiate_binders_universally(interner, fn1);
+                    let b_existential = self.table.instantiate_binders_existentially(interner, fn2);
+                    self.zip_substs(&a_universal.as_slice(interner), &b_existential.as_slice(interner))?;
+                }
+
+                {
+                    let b_universal = self.table.instantiate_binders_universally(interner, fn2);
+                    let a_existential = self.table.instantiate_binders_existentially(interner, fn1);
+                    self.zip_substs(&a_existential.as_slice(interner), &b_universal.as_slice(interner))?;
+                }
+                Ok(())
             }
 
             // This would correspond to unifying a `fn` type with a non-fn
