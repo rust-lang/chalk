@@ -25,11 +25,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub(crate) fn instantiate_canonical<T>(
-        &mut self,
-        interner: &I,
-        bound: &Canonical<T>,
-    ) -> T::Result
+    pub fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
     where
         T: HasInterner<Interner = I> + Fold<I> + Debug,
     {
@@ -62,7 +58,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
-    pub(crate) fn instantiate_binders_existentially<'a, T>(
+    pub fn instantiate_binders_existentially<'a, T>(
         &mut self,
         interner: &'a I,
         arg: impl IntoBindersAndValue<'a, I, Value = T>,
@@ -75,7 +71,7 @@ impl<I: Interner> InferenceTable<I> {
         self.instantiate_in(interner, max_universe, binders, &value)
     }
 
-    pub(crate) fn instantiate_binders_universally<'a, T>(
+    pub fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
         arg: impl IntoBindersAndValue<'a, I, Value = T>,
@@ -106,7 +102,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 }
 
-pub(crate) trait IntoBindersAndValue<'a, I: Interner> {
+pub trait IntoBindersAndValue<'a, I: Interner> {
     type Binders: IntoIterator<Item = VariableKind<I>>;
     type Value;
 

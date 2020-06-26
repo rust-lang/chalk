@@ -1,7 +1,10 @@
 use chalk_integration::interner::{ChalkIr, RawId};
+use chalk_integration::SolverChoice;
+use chalk_integration::SolverImpl;
 use chalk_ir::*;
 use chalk_solve::rust_ir::*;
-use chalk_solve::{RustIrDatabase, SolverChoice};
+use chalk_solve::RustIrDatabase;
+use chalk_solve::Solver;
 use std::sync::Arc;
 
 // FIXME: some of these are probably redundant, so we should figure out which panic in the same place in `chalk-engine`
@@ -280,7 +283,7 @@ fn custom_clauses_panics() {
     use std::panic;
 
     let peeled_goal = prepare_goal();
-    let mut solver = SolverChoice::slg_default().into_solver();
+    let mut solver: SolverImpl = SolverChoice::slg_default().into();
 
     // solve goal but this will panic
     let mut db = MockDatabase {
@@ -301,7 +304,7 @@ fn trait_datum_panics() {
     use std::panic;
 
     let peeled_goal = prepare_goal();
-    let mut solver = SolverChoice::slg_default().into_solver();
+    let mut solver: SolverImpl = SolverChoice::slg_default().into();
 
     // solve goal but this will panic
     let mut db = MockDatabase {
@@ -322,7 +325,7 @@ fn impl_datum_panics() {
     use std::panic;
 
     let peeled_goal = prepare_goal();
-    let mut solver = SolverChoice::slg_default().into_solver();
+    let mut solver: SolverImpl = SolverChoice::slg_default().into();
 
     // solve goal but this will panic
     let mut db = MockDatabase {
@@ -343,7 +346,7 @@ fn impls_for_trait() {
     use std::panic;
 
     let peeled_goal = prepare_goal();
-    let mut solver = SolverChoice::slg_default().into_solver();
+    let mut solver: SolverImpl = SolverChoice::slg_default().into();
 
     // solve goal but this will panic
     let mut db = MockDatabase {
@@ -364,7 +367,7 @@ fn program_clauses_for_env() {
     use std::panic;
 
     let peeled_goal = prepare_goal();
-    let mut solver = SolverChoice::slg_default().into_solver();
+    let mut solver: SolverImpl = SolverChoice::slg_default().into();
 
     // solve goal but this will panic
     let mut db = MockDatabase {
@@ -385,7 +388,7 @@ fn interner() {
     use std::panic;
 
     let peeled_goal = prepare_goal();
-    let mut solver = SolverChoice::slg_default().into_solver();
+    let mut solver: SolverImpl = SolverChoice::slg_default().into();
 
     // solve goal but this will panic
     let mut db = MockDatabase {

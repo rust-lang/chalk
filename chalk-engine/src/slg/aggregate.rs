@@ -1,14 +1,14 @@
-use crate::ext::*;
-use crate::infer::InferenceTable;
-use crate::solve::slg::SlgContextOps;
-use crate::solve::slg::SubstitutionExt;
-use crate::solve::{Guidance, Solution};
+use crate::context::{self, AnswerResult, ContextOps};
+use crate::slg::SlgContextOps;
+use crate::slg::SubstitutionExt;
+use crate::CompleteAnswer;
 use chalk_ir::cast::Cast;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
+use chalk_solve::ext::*;
+use chalk_solve::infer::InferenceTable;
+use chalk_solve::solve::{Guidance, Solution};
 
-use chalk_engine::context::{self, AnswerResult, ContextOps};
-use chalk_engine::CompleteAnswer;
 use std::fmt::Debug;
 
 /// Methods for combining solutions to yield an aggregate solution.
@@ -507,63 +507,71 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     }
 }
 
-/// Test the equivalent of `Vec<i32>` vs `Vec<u32>`
-#[test]
-fn vec_i32_vs_vec_u32() {
-    use chalk_integration::interner::ChalkIr;
-    let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
-    let mut anti_unifier = AntiUnifier {
-        infer: &mut infer,
-        universe: UniverseIndex::root(),
-        interner: &ChalkIr,
-    };
+#[cfg(test)]
+mod test {
+    use crate::slg::aggregate::AntiUnifier;
+    use chalk_integration::{arg, ty, ty_name};
+    use chalk_ir::UniverseIndex;
+    use chalk_solve::infer::InferenceTable;
 
-    let ty = anti_unifier.aggregate_tys(
-        &ty!(apply (item 0) (apply (item 1))),
-        &ty!(apply (item 0) (apply (item 2))),
-    );
-    assert_eq!(ty!(apply (item 0) (infer 0)), ty);
-}
+    /// Test the equivalent of `Vec<i32>` vs `Vec<u32>`
+    #[test]
+    fn vec_i32_vs_vec_u32() {
+        use chalk_integration::interner::ChalkIr;
+        let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
+        let mut anti_unifier = AntiUnifier {
+            infer: &mut infer,
+            universe: UniverseIndex::root(),
+            interner: &ChalkIr,
+        };
 
-/// Test the equivalent of `Vec<i32>` vs `Vec<i32>`
-#[test]
-fn vec_i32_vs_vec_i32() {
-    use chalk_integration::interner::ChalkIr;
-    let interner = &ChalkIr;
-    let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
-    let mut anti_unifier = AntiUnifier {
-        interner,
-        infer: &mut infer,
-        universe: UniverseIndex::root(),
-    };
+        let ty = anti_unifier.aggregate_tys(
+            &ty!(apply (item 0) (apply (item 1))),
+            &ty!(apply (item 0) (apply (item 2))),
+        );
+        assert_eq!(ty!(apply (item 0) (infer 0)), ty);
+    }
 
-    let ty = anti_unifier.aggregate_tys(
-        &ty!(apply (item 0) (apply (item 1))),
-        &ty!(apply (item 0) (apply (item 1))),
-    );
-    assert_eq!(ty!(apply (item 0) (apply (item 1))), ty);
-}
+    /// Test the equivalent of `Vec<i32>` vs `Vec<i32>`
+    #[test]
+    fn vec_i32_vs_vec_i32() {
+        use chalk_integration::interner::ChalkIr;
+        let interner = &ChalkIr;
+        let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
+        let mut anti_unifier = AntiUnifier {
+            interner,
+            infer: &mut infer,
+            universe: UniverseIndex::root(),
+        };
 
-/// Test the equivalent of `Vec<X>` vs `Vec<Y>`
-#[test]
-fn vec_x_vs_vec_y() {
-    use chalk_integration::interner::ChalkIr;
-    let interner = &ChalkIr;
-    let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
-    let mut anti_unifier = AntiUnifier {
-        interner,
-        infer: &mut infer,
-        universe: UniverseIndex::root(),
-    };
+        let ty = anti_unifier.aggregate_tys(
+            &ty!(apply (item 0) (apply (item 1))),
+            &ty!(apply (item 0) (apply (item 1))),
+        );
+        assert_eq!(ty!(apply (item 0) (apply (item 1))), ty);
+    }
 
-    // Note that the `var 0` and `var 1` in these types would be
-    // referring to canonicalized free variables, not variables in
-    // `infer`.
-    let ty = anti_unifier.aggregate_tys(
-        &ty!(apply (item 0) (infer 0)),
-        &ty!(apply (item 0) (infer 1)),
-    );
+    /// Test the equivalent of `Vec<X>` vs `Vec<Y>`
+    #[test]
+    fn vec_x_vs_vec_y() {
+        use chalk_integration::interner::ChalkIr;
+        let interner = &ChalkIr;
+        let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
+        let mut anti_unifier = AntiUnifier {
+            interner,
+            infer: &mut infer,
+            universe: UniverseIndex::root(),
+        };
 
-    // But this `var 0` is from `infer.
-    assert_eq!(ty!(apply (item 0) (infer 0)), ty);
+        // Note that the `var 0` and `var 1` in these types would be
+        // referring to canonicalized free variables, not variables in
+        // `infer`.
+        let ty = anti_unifier.aggregate_tys(
+            &ty!(apply (item 0) (infer 0)),
+            &ty!(apply (item 0) (infer 1)),
+        );
+
+        // But this `var 0` is from `infer.
+        assert_eq!(ty!(apply (item 0) (infer 0)), ty);
+    }
 }

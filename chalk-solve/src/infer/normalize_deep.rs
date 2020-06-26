@@ -17,7 +17,8 @@ impl<I: Interner> InferenceTable<I> {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    pub(crate) fn normalize_deep<T: Fold<I>>(&mut self, interner: &I, value: &T) -> T::Result {
+    // XXX: can be moved to chalk-engine
+    pub fn normalize_deep<T: Fold<I>>(&mut self, interner: &I, value: &T) -> T::Result {
         value
             .fold_with(
                 &mut DeepNormalizer {

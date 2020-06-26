@@ -15,7 +15,7 @@ use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Fallible};
 use rustc_hash::FxHashMap;
 use tracing::{debug, info, instrument};
 
-pub(crate) struct RecursiveContext<I: Interner> {
+pub struct RecursiveContext<I: Interner> {
     stack: Stack,
 
     /// The "search graph" stores "in-progress results" that are still being
@@ -61,7 +61,7 @@ impl<T> MergeWith<T> for Fallible<T> {
 }
 
 impl<I: Interner> RecursiveContext<I> {
-    pub(crate) fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
+    pub fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),

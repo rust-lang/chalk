@@ -19,7 +19,6 @@ tracing-tree = { version = "0.1.1", optional = true }
 rustc-hash = { version = "1.0.0" }
 
 chalk-derive = { version = "0.17.0-dev.0", path = "../chalk-derive" }
-chalk-engine = { version = "0.17.0-dev.0", path = "../chalk-engine", optional = true }
 chalk-ir = { version = "0.17.0-dev.0", path = "../chalk-ir" }
 
 [dev-dependencies]
@@ -28,6 +27,6 @@ chalk-integration = { path = "../chalk-integration" }
 [features]
 default = ["slg-solver", "recursive-solver", "tracing-full"]
 
-slg-solver = ["chalk-engine"]
+slg-solver = []
 recursive-solver = []
 tracing-full = ["tracing-subscriber", "tracing-tree"]
