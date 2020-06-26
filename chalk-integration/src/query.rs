@@ -7,6 +7,8 @@ use crate::lowering::LowerProgram;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::tls;
+use crate::SolverChoice;
+use crate::SolverImpl;
 use chalk_ir::TraitId;
 use chalk_solve::clauses::builder::ClauseBuilder;
 use chalk_solve::clauses::program_clauses::ToProgramClauses;
@@ -14,8 +16,6 @@ use chalk_solve::coherence::orphan;
 use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_solve::wf;
 use chalk_solve::RustIrDatabase;
-use chalk_solve::Solver;
-use chalk_solve::SolverChoice;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -51,7 +51,7 @@ pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
     /// volatile, thus ensuring that the solver is recreated in every
     /// revision (i.e., each time source program changes).
     #[salsa::volatile]
-    fn solver(&self) -> Arc<Mutex<Solver<ChalkIr>>>;
+    fn solver(&self) -> Arc<Mutex<SolverImpl>>;
 }
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
@@ -65,7 +65,11 @@ fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
         for impl_id in local_impls {
-            orphan::perform_orphan_check(db, db.solver_choice(), impl_id)?;
+            orphan::perform_orphan_check::<ChalkIr, SolverImpl, SolverChoice>(
+                db,
+                db.solver_choice(),
+                impl_id,
+            )?;
         }
         Ok(())
     })
@@ -81,7 +85,8 @@ fn coherence(
             .trait_data
             .keys()
             .map(|&trait_id| {
-                let solver = CoherenceSolver::new(db, db.solver_choice(), trait_id);
+                let solver: CoherenceSolver<ChalkIr, SolverImpl, SolverChoice> =
+                    CoherenceSolver::new(db, db.solver_choice(), trait_id);
                 let priorities = solver.specialization_priorities()?;
                 Ok((trait_id, priorities))
             })
@@ -99,7 +104,8 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
     db.coherence()?;
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
-        let solver = wf::WfSolver::new(db, db.solver_choice());
+        let solver: wf::WfSolver<ChalkIr, SolverImpl, SolverChoice> =
+            wf::WfSolver::new(db, db.solver_choice());
         for &id in program.adt_data.keys() {
             solver.verify_adt_decl(id)?;
         }
@@ -166,7 +172,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
-fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver<ChalkIr>>> {
+fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<SolverImpl>> {
     let choice = db.solver_choice();
-    Arc::new(Mutex::new(choice.into_solver()))
+    Arc::new(Mutex::new(choice.into()))
 }

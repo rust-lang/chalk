@@ -69,6 +69,8 @@ mod derived;
 pub mod forest;
 mod logic;
 mod simplify;
+pub mod slg;
+pub mod solve;
 mod stack;
 mod strand;
 mod table;

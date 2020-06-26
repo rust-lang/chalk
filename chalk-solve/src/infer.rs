@@ -3,25 +3,25 @@ use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 use tracing::{debug, instrument};
 
-pub(crate) mod canonicalize;
-pub(crate) mod instantiate;
+pub mod canonicalize;
+pub mod instantiate;
 mod invert;
 mod normalize_deep;
 mod test;
-pub(crate) mod ucanonicalize;
-pub(crate) mod unify;
-pub(crate) mod var;
+pub mod ucanonicalize;
+pub mod unify;
+pub mod var;
 
 use self::var::*;
 
 #[derive(Clone)]
-pub(crate) struct InferenceTable<I: Interner> {
+pub struct InferenceTable<I: Interner> {
     unify: ena::unify::InPlaceUnificationTable<EnaVariable<I>>,
     vars: Vec<EnaVariable<I>>,
     max_universe: UniverseIndex,
 }
 
-pub(crate) struct InferenceSnapshot<I: Interner> {
+pub struct InferenceSnapshot<I: Interner> {
     unify_snapshot: ena::unify::Snapshot<ena::unify::InPlace<EnaVariable<I>>>,
     max_universe: UniverseIndex,
     vars: Vec<EnaVariable<I>>,
@@ -32,7 +32,7 @@ pub(crate) type ParameterEnaVariable<I: Interner> = WithKind<I, EnaVariable<I>>;
 
 impl<I: Interner> InferenceTable<I> {
     /// Create an empty inference table with no variables.
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         InferenceTable {
             unify: ena::unify::UnificationTable::new(),
             vars: vec![],
@@ -47,7 +47,7 @@ impl<I: Interner> InferenceTable<I> {
     /// the substitution mapping from each canonical binder to its
     /// corresponding existential variable, along with the
     /// instantiated result.
-    pub(crate) fn from_canonical<T>(
+    pub fn from_canonical<T>(
         interner: &I,
         num_universes: usize,
         canonical: &Canonical<T>,
@@ -83,7 +83,7 @@ impl<I: Interner> InferenceTable<I> {
     /// Creates a new inference variable and returns its index. The
     /// kind of the variable should be known by the caller, but is not
     /// tracked directly by the inference table.
-    pub(crate) fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable<I> {
+    pub fn new_variable(&mut self, ui: UniverseIndex) -> EnaVariable<I> {
         let var = self.unify.new_key(InferenceValue::Unbound(ui));
         self.vars.push(var);
         debug!("new_variable: var={:?} ui={:?}", var, ui);
@@ -115,16 +115,16 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Make permanent the changes made since the snapshot was taken.
-    pub(crate) fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
+    pub fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
         self.unify.commit(snapshot.unify_snapshot);
     }
 
-    pub(crate) fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+    pub fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_ty_ref(interner).clone())
     }
 
-    pub(crate) fn normalize_lifetime_shallow(
+    pub fn normalize_lifetime_shallow(
         &mut self,
         interner: &I,
         leaf: &Lifetime<I>,
@@ -133,11 +133,7 @@ impl<I: Interner> InferenceTable<I> {
             .map(|p| p.assert_lifetime_ref(interner).clone())
     }
 
-    pub(crate) fn normalize_const_shallow(
-        &mut self,
-        interner: &I,
-        leaf: &Const<I>,
-    ) -> Option<Const<I>> {
+    pub fn normalize_const_shallow(&mut self, interner: &I, leaf: &Const<I>) -> Option<Const<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_const_ref(interner).clone())
     }

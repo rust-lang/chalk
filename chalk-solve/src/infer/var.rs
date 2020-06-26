@@ -36,7 +36,7 @@ use std::u32;
 ///     "downcast" the resulting variable using
 ///     e.g. `value.ty().unwrap()`.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) struct EnaVariable<I: Interner> {
+pub struct EnaVariable<I: Interner> {
     var: InferenceVar,
     phantom: PhantomData<I>,
 }
@@ -54,28 +54,28 @@ impl<I: Interner> EnaVariable<I> {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
-    pub(crate) fn to_ty_with_kind(self, interner: &I, kind: TyKind) -> Ty<I> {
+    pub fn to_ty_with_kind(self, interner: &I, kind: TyKind) -> Ty<I> {
         self.var.to_ty(interner, kind)
     }
 
     /// Same as `to_ty_with_kind`, but the kind is set to `TyKind::General`.
     /// This should be used instead of `to_ty_with_kind` when creating a new
     /// inference variable (when the kind is not known).
-    pub(crate) fn to_ty(self, interner: &I) -> Ty<I> {
+    pub fn to_ty(self, interner: &I) -> Ty<I> {
         self.var.to_ty(interner, TyKind::General)
     }
 
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub(crate) fn to_lifetime(self, interner: &I) -> Lifetime<I> {
+    pub fn to_lifetime(self, interner: &I) -> Lifetime<I> {
         self.var.to_lifetime(interner)
     }
 
     /// Convert this inference variable into a const. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a const (we can't check it).
-    pub(crate) fn to_const(self, interner: &I, ty: Ty<I>) -> Const<I> {
+    pub fn to_const(self, interner: &I, ty: Ty<I>) -> Const<I> {
         self.var.to_const(interner, ty)
     }
 }
@@ -100,7 +100,7 @@ impl<I: Interner> UnifyKey for EnaVariable<I> {
 /// universe index; when the inference variable is assigned a value, it becomes
 /// bound and records that value. See `EnaVariable` for more details.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) enum InferenceValue<I: Interner> {
+pub enum InferenceValue<I: Interner> {
     Unbound(UniverseIndex),
     Bound(GenericArg<I>),
 }

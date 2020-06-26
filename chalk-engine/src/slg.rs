@@ -1,65 +1,31 @@
-use crate::clauses::program_clauses_for_goal;
-use crate::coinductive_goal::IsCoinductive;
-use crate::infer::ucanonicalize::UCanonicalized;
-use crate::infer::unify::UnificationResult;
-use crate::infer::InferenceTable;
-use crate::solve::truncate;
-use crate::RustIrDatabase;
+use crate::context;
+use crate::{ExClause, Literal};
 use chalk_derive::HasInterner;
-use chalk_engine::context;
-use chalk_engine::{ExClause, Literal};
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
+use chalk_solve::clauses::program_clauses_for_goal;
+use chalk_solve::coinductive_goal::IsCoinductive;
+use chalk_solve::infer::ucanonicalize::UCanonicalized;
+use chalk_solve::infer::unify::UnificationResult;
+use chalk_solve::infer::InferenceTable;
+use chalk_solve::solve::truncate;
+use chalk_solve::RustIrDatabase;
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
-pub(crate) mod aggregate;
+pub mod aggregate;
 mod resolvent;
 
-#[derive(Debug)]
-pub enum SubstitutionResult<S> {
-    Definite(S),
-    Ambiguous(S),
-    Floundered,
-}
-
-impl<S> SubstitutionResult<S> {
-    pub fn as_ref(&self) -> SubstitutionResult<&S> {
-        match self {
-            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(subst),
-            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(subst),
-            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
-        }
-    }
-    pub fn map<U, F: FnOnce(S) -> U>(self, f: F) -> SubstitutionResult<U> {
-        match self {
-            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(f(subst)),
-            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(f(subst)),
-            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
-        }
-    }
-}
-
-impl<S: Display> Display for SubstitutionResult<S> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
-            SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),
-            SubstitutionResult::Floundered => write!(fmt, "Floundered"),
-        }
-    }
-}
-
 #[derive(Clone, Debug, HasInterner)]
-pub(crate) struct SlgContext<I: Interner> {
+pub struct SlgContext<I: Interner> {
     phantom: PhantomData<I>,
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct SlgContextOps<'me, I: Interner> {
+pub struct SlgContextOps<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     max_size: usize,
     expected_answers: Option<usize>,
@@ -111,7 +77,7 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         map: &UniverseMap,
         value: &Canonical<InEnvironment<Goal<I>>>,
     ) -> Canonical<InEnvironment<Goal<I>>> {
-        use crate::infer::ucanonicalize::UniverseMapExt;
+        use chalk_solve::infer::ucanonicalize::UniverseMapExt;
         map.map_from_canonical(self.program.interner(), value)
     }
 
@@ -120,7 +86,7 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         map: &UniverseMap,
         value: &Canonical<AnswerSubst<I>>,
     ) -> Canonical<AnswerSubst<I>> {
-        use crate::infer::ucanonicalize::UniverseMapExt;
+        use chalk_solve::infer::ucanonicalize::UniverseMapExt;
         map.map_from_canonical(self.program.interner(), value)
     }
 

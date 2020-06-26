@@ -18,3 +18,7 @@ tracing = "0.1"
 
 chalk-derive = { version = "0.15.0-dev.0", path = "../chalk-derive" }
 chalk-ir = { version = "0.15.0-dev.0", path = "../chalk-ir" }
+chalk-solve = { version = "0.15.0-dev.0", path = "../chalk-solve" }
+
+[dev-dependencies]
+chalk-integration = { path = "../chalk-integration" }

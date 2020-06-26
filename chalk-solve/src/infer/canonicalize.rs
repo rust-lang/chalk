@@ -26,7 +26,7 @@ impl<I: Interner> InferenceTable<I> {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub(crate) fn canonicalize<T>(&mut self, interner: &I, value: &T) -> Canonicalized<T::Result>
+    pub fn canonicalize<T>(&mut self, interner: &I, value: &T) -> Canonicalized<T::Result>
     where
         T: Fold<I>,
         T::Result: HasInterner<Interner = I>,
@@ -54,12 +54,12 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Canonicalized<T: HasInterner> {
+pub struct Canonicalized<T: HasInterner> {
     /// The canonicalized result.
-    pub(crate) quantified: Canonical<T>,
+    pub quantified: Canonical<T>,
 
     /// The free existential variables, along with the universes they inhabit.
-    pub(crate) free_vars: Vec<ParameterEnaVariable<T::Interner>>,
+    pub free_vars: Vec<ParameterEnaVariable<T::Interner>>,
 
     /// The maximum universe of any universally quantified variables
     /// encountered.

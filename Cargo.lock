@@ -189,7 +189,9 @@ name = "chalk-engine"
 version = "0.15.0-dev.0"
 dependencies = [
  "chalk-derive 0.15.0-dev.0",
+ "chalk-integration 0.15.0-dev.0",
  "chalk-ir 0.15.0-dev.0",
+ "chalk-solve 0.15.0-dev.0",
  "rustc-hash 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -231,7 +233,6 @@ name = "chalk-solve"
 version = "0.15.0-dev.0"
 dependencies = [
  "chalk-derive 0.15.0-dev.0",
- "chalk-engine 0.15.0-dev.0",
  "chalk-integration 0.15.0-dev.0",
  "chalk-ir 0.15.0-dev.0",
  "ena 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -168,7 +168,7 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
 /// is `Implemented(T: Clone)`, then this function might return clauses
 /// derived from the trait `Clone` and its impls.
 #[instrument(level = "debug", skip(db))]
-pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
+pub fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,

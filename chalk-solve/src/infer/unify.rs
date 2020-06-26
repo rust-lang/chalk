@@ -10,7 +10,7 @@ use std::fmt::Debug;
 
 impl<I: Interner> InferenceTable<I> {
     #[instrument(level = "debug", skip(self, interner, environment))]
-    pub(crate) fn unify<T>(
+    pub fn unify<T>(
         &mut self,
         interner: &I,
         environment: &Environment<I>,
@@ -42,8 +42,8 @@ struct Unifier<'t, I: Interner> {
 }
 
 #[derive(Debug)]
-pub(crate) struct UnificationResult<I: Interner> {
-    pub(crate) goals: Vec<InEnvironment<Goal<I>>>,
+pub struct UnificationResult<I: Interner> {
+    pub goals: Vec<InEnvironment<Goal<I>>>,
 }
 
 impl<'t, I: Interner> Unifier<'t, I> {

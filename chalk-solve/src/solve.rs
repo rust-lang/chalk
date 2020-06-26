@@ -3,21 +3,10 @@ use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt;
 
-#[cfg(feature = "slg-solver")]
-pub use crate::solve::slg::SubstitutionResult;
-#[cfg(feature = "slg-solver")]
-use {
-    crate::solve::slg::{aggregate::AggregateOps, SlgContext, SlgContextOps},
-    chalk_engine::context::{AnswerResult, AnswerStream, ContextOps},
-    chalk_engine::forest::Forest,
-};
-
 #[cfg(feature = "recursive-solver")]
 use crate::recursive::RecursiveContext;
 
-#[cfg(feature = "slg-solver")]
-mod slg;
-pub(crate) mod truncate;
+pub mod truncate;
 
 /// A (possible) solution for a proposed goal.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -93,82 +82,37 @@ impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub enum SolverChoice {
-    /// Run the SLG solver, producing a Solution.
-    #[cfg(feature = "slg-solver")]
-    SLG {
-        max_size: usize,
-        expected_answers: Option<usize>,
-    },
-    /// Run the recursive solver.
-    #[cfg(feature = "recursive-solver")]
-    Recursive {
-        overflow_depth: usize,
-        caching_enabled: bool,
-    },
+#[derive(Debug)]
+pub enum SubstitutionResult<S> {
+    Definite(S),
+    Ambiguous(S),
+    Floundered,
 }
 
-impl SolverChoice {
-    /// Returns specific SLG parameters.
-    #[cfg(feature = "slg-solver")]
-    pub fn slg(max_size: usize, expected_answers: Option<usize>) -> Self {
-        SolverChoice::SLG {
-            max_size,
-            expected_answers,
-        }
-    }
-
-    /// Returns the default SLG parameters.
-    #[cfg(feature = "slg-solver")]
-    pub fn slg_default() -> Self {
-        SolverChoice::slg(10, None)
-    }
-
-    /// Returns the default recursive solver setup.
-    #[cfg(feature = "recursive-solver")]
-    pub fn recursive() -> Self {
-        SolverChoice::Recursive {
-            overflow_depth: 100,
-            caching_enabled: true,
-        }
-    }
-
-    /// Creates a solver state.
-    pub fn into_solver<I: Interner>(self) -> Solver<I> {
+impl<S> SubstitutionResult<S> {
+    pub fn as_ref(&self) -> SubstitutionResult<&S> {
         match self {
-            #[cfg(feature = "slg-solver")]
-            SolverChoice::SLG {
-                max_size,
-                expected_answers,
-            } => Solver(SolverImpl::Slg {
-                forest: Box::new(Forest::new()),
-                max_size,
-                expected_answers,
-            }),
-            #[cfg(feature = "recursive-solver")]
-            SolverChoice::Recursive {
-                overflow_depth,
-                caching_enabled,
-            } => Solver(SolverImpl::Recursive(Box::new(RecursiveContext::new(
-                overflow_depth,
-                caching_enabled,
-            )))),
+            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(subst),
+            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(subst),
+            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
+        }
+    }
+    pub fn map<U, F: FnOnce(S) -> U>(self, f: F) -> SubstitutionResult<U> {
+        match self {
+            SubstitutionResult::Definite(subst) => SubstitutionResult::Definite(f(subst)),
+            SubstitutionResult::Ambiguous(subst) => SubstitutionResult::Ambiguous(f(subst)),
+            SubstitutionResult::Floundered => SubstitutionResult::Floundered,
         }
     }
 }
 
-#[cfg(feature = "slg-solver")]
-impl Default for SolverChoice {
-    fn default() -> Self {
-        SolverChoice::slg_default()
-    }
-}
-
-#[cfg(all(not(feature = "slg-solver"), feature = "recursive-solver"))]
-impl Default for SolverChoice {
-    fn default() -> Self {
-        SolverChoice::recursive()
+impl<S: fmt::Display> fmt::Display for SubstitutionResult<S> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SubstitutionResult::Definite(subst) => write!(fmt, "{}", subst),
+            SubstitutionResult::Ambiguous(subst) => write!(fmt, "Ambiguous({})", subst),
+            SubstitutionResult::Floundered => write!(fmt, "Floundered"),
+        }
     }
 }
 
@@ -176,24 +120,10 @@ impl Default for SolverChoice {
 /// out what sets of types implement which traits. Also, between
 /// queries, this struct stores the cached state from previous solver
 /// attempts, which can then be re-used later.
-pub struct Solver<I: Interner>(SolverImpl<I>);
-
-enum SolverImpl<I: Interner> {
-    #[cfg(feature = "slg-solver")]
-    Slg {
-        forest: Box<Forest<I, SlgContext<I>>>,
-        max_size: usize,
-        /// The expected number of answers for a solution.
-        /// Only really useful for tests, since `make_solution`
-        /// will panic if the number of cached answers does not
-        /// equal this when a solution is made.
-        expected_answers: Option<usize>,
-    },
-    #[cfg(feature = "recursive-solver")]
-    Recursive(Box<RecursiveContext<I>>),
-}
-
-impl<I: Interner> Solver<I> {
+pub trait Solver<I: Interner>
+where
+    Self: fmt::Debug,
+{
     /// Attempts to solve the given goal, which must be in canonical
     /// form. Returns a unique solution (if one exists).  This will do
     /// only as much work towards `goal` as it has to (and that work
@@ -212,47 +142,11 @@ impl<I: Interner> Solver<I> {
     /// - `None` is the goal cannot be proven.
     /// - `Some(solution)` if we succeeded in finding *some* answers,
     ///   although `solution` may reflect ambiguity and unknowns.
-    pub fn solve(
+    fn solve(
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-    ) -> Option<Solution<I>> {
-        match &mut self.0 {
-            #[cfg(feature = "slg-solver")]
-            SolverImpl::Slg {
-                forest,
-                max_size,
-                expected_answers,
-            } => {
-                let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                ops.make_solution(goal, forest.iter_answers(&ops, goal), || true)
-            }
-            #[cfg(feature = "recursive-solver")]
-            SolverImpl::Recursive(ctx) => {
-                ctx.solver(program)
-                    .solve_root_goal(goal)
-                    .ok()
-                    .map(|s| match s {
-                        crate::recursive::lib::Solution::Unique(c) => {
-                            crate::solve::Solution::Unique(c)
-                        }
-                        crate::recursive::lib::Solution::Ambig(g) => {
-                            crate::solve::Solution::Ambig(match g {
-                                crate::recursive::lib::Guidance::Definite(g) => {
-                                    crate::solve::Guidance::Definite(g)
-                                }
-                                crate::recursive::lib::Guidance::Suggested(g) => {
-                                    crate::solve::Guidance::Suggested(g)
-                                }
-                                crate::recursive::lib::Guidance::Unknown => {
-                                    crate::solve::Guidance::Unknown
-                                }
-                            })
-                        }
-                    })
-            }
-        }
-    }
+    ) -> Option<Solution<I>>;
 
     /// Attempts to solve the given goal, which must be in canonical
     /// form. Returns a unique solution (if one exists).  This will do
@@ -276,49 +170,12 @@ impl<I: Interner> Solver<I> {
     /// - `None` is the goal cannot be proven.
     /// - `Some(solution)` if we succeeded in finding *some* answers,
     ///   although `solution` may reflect ambiguity and unknowns.
-    pub fn solve_limited(
+    fn solve_limited(
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        should_continue: impl std::ops::Fn() -> bool,
-    ) -> Option<Solution<I>> {
-        match &mut self.0 {
-            #[cfg(feature = "slg-solver")]
-            SolverImpl::Slg {
-                forest,
-                max_size,
-                expected_answers,
-            } => {
-                let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                ops.make_solution(goal, forest.iter_answers(&ops, goal), should_continue)
-            }
-            #[cfg(feature = "recursive-solver")]
-            SolverImpl::Recursive(ctx) => {
-                // TODO support should_continue in recursive solver
-                ctx.solver(program)
-                    .solve_root_goal(goal)
-                    .ok()
-                    .map(|s| match s {
-                        crate::recursive::lib::Solution::Unique(c) => {
-                            crate::solve::Solution::Unique(c)
-                        }
-                        crate::recursive::lib::Solution::Ambig(g) => {
-                            crate::solve::Solution::Ambig(match g {
-                                crate::recursive::lib::Guidance::Definite(g) => {
-                                    crate::solve::Guidance::Definite(g)
-                                }
-                                crate::recursive::lib::Guidance::Suggested(g) => {
-                                    crate::solve::Guidance::Suggested(g)
-                                }
-                                crate::recursive::lib::Guidance::Unknown => {
-                                    crate::solve::Guidance::Unknown
-                                }
-                            })
-                        }
-                    })
-            }
-        }
-    }
+        _should_continue: impl std::ops::Fn() -> bool,
+    ) -> Option<Solution<I>>;
 
     /// Attempts to solve the given goal, which must be in canonical
     /// form. Provides multiple solutions to function `f`.  This will do
@@ -342,54 +199,83 @@ impl<I: Interner> Solver<I> {
     ///
     /// - `true` all solutions were processed with the function.
     /// - `false` the function returned `false` and solutions were interrupted.
-    #[cfg(feature = "slg-solver")]
-    pub fn solve_multiple(
+    fn solve_multiple(
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        mut f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
-    ) -> bool {
-        match &mut self.0 {
-            SolverImpl::Slg {
-                forest,
-                max_size,
-                expected_answers,
-            } => {
-                let ops = SlgContextOps::new(program, *max_size, *expected_answers);
-                let mut answers = forest.iter_answers(&ops, goal);
-                loop {
-                    let subst = match answers.next_answer(|| true) {
-                        AnswerResult::Answer(answer) => {
-                            if !answer.ambiguous {
-                                SubstitutionResult::Definite(answer.subst)
-                            } else {
-                                if ops.is_trivial_constrained_substitution(&answer.subst) {
-                                    SubstitutionResult::Floundered
-                                } else {
-                                    SubstitutionResult::Ambiguous(answer.subst)
-                                }
-                            }
-                        }
-                        AnswerResult::Floundered => SubstitutionResult::Floundered,
-                        AnswerResult::NoMoreSolutions => {
-                            return true;
-                        }
-                        AnswerResult::QuantumExceeded => continue,
-                    };
+        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+    ) -> bool;
+}
 
-                    if !f(subst, !answers.peek_answer(|| true).is_no_more_solutions()) {
-                        return false;
-                    }
-                }
-            }
-            #[cfg(feature = "recursive-solver")]
-            SolverImpl::Recursive(_ctx) => unimplemented!(),
-        }
+pub struct RecursiveSolverImpl<I: Interner> {
+    pub ctx: Box<RecursiveContext<I>>,
+}
+
+impl<I: Interner> fmt::Debug for RecursiveSolverImpl<I> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "RecursiveSolverImpl")
     }
 }
 
-impl<I: Interner> std::fmt::Debug for Solver<I> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(fmt, "Solver {{ .. }}")
+impl<I: Interner> Solver<I> for RecursiveSolverImpl<I> {
+    fn solve(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> Option<Solution<I>> {
+        self.ctx
+            .solver(program)
+            .solve_root_goal(goal)
+            .ok()
+            .map(|s| match s {
+                crate::recursive::lib::Solution::Unique(c) => crate::solve::Solution::Unique(c),
+                crate::recursive::lib::Solution::Ambig(g) => {
+                    crate::solve::Solution::Ambig(match g {
+                        crate::recursive::lib::Guidance::Definite(g) => {
+                            crate::solve::Guidance::Definite(g)
+                        }
+                        crate::recursive::lib::Guidance::Suggested(g) => {
+                            crate::solve::Guidance::Suggested(g)
+                        }
+                        crate::recursive::lib::Guidance::Unknown => crate::solve::Guidance::Unknown,
+                    })
+                }
+            })
+    }
+
+    fn solve_limited(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+        _should_continue: impl std::ops::Fn() -> bool,
+    ) -> Option<Solution<I>> {
+        // TODO support should_continue in recursive solver
+        self.ctx
+            .solver(program)
+            .solve_root_goal(goal)
+            .ok()
+            .map(|s| match s {
+                crate::recursive::lib::Solution::Unique(c) => crate::solve::Solution::Unique(c),
+                crate::recursive::lib::Solution::Ambig(g) => {
+                    crate::solve::Solution::Ambig(match g {
+                        crate::recursive::lib::Guidance::Definite(g) => {
+                            crate::solve::Guidance::Definite(g)
+                        }
+                        crate::recursive::lib::Guidance::Suggested(g) => {
+                            crate::solve::Guidance::Suggested(g)
+                        }
+                        crate::recursive::lib::Guidance::Unknown => crate::solve::Guidance::Unknown,
+                    })
+                }
+            })
+    }
+
+    fn solve_multiple(
+        &mut self,
+        _program: &dyn RustIrDatabase<I>,
+        _goal: &UCanonical<InEnvironment<Goal<I>>>,
+        _f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+    ) -> bool {
+        unimplemented!()
     }
 }
