@@ -132,7 +132,7 @@ where
     I: Interner,
 {
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::VariableKind<I>>;
-    type Value = &'a Substitution<I>;
+    type Value = &'a FnSubst<I>;
 
     fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
         let p: fn(usize) -> VariableKind<I> = make_lifetime;

@@ -1648,7 +1648,7 @@ impl LowerTy for Ty {
 
                 let function = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
-                    substitution: Substitution::from(interner, lowered_tys),
+                    substitution: chalk_ir::FnSubst(Substitution::from(interner, lowered_tys)),
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }

@@ -623,3 +623,29 @@ impl<I: Interner> Zip<I> for DynTy<I> {
         Ok(())
     }
 }
+
+impl<I: Interner> Zip<I> for FnSubst<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(
+        zipper: &mut Z,
+        _variance: Variance,
+        a: &Self,
+        b: &Self,
+    ) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        zipper.zip_substs(
+            None,
+            &a.0.as_slice(interner)[..a.0.len(interner) - 1],
+            &b.0.as_slice(interner)[..b.0.len(interner) - 1],
+        )?;
+        Zip::zip_with(
+            zipper,
+            Variance::Contravariant,
+            a.0.iter(interner).last().unwrap(),
+            b.0.iter(interner).last().unwrap(),
+        )?;
+        Ok(())
+    }
+}

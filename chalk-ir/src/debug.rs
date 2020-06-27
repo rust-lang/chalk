@@ -232,6 +232,12 @@ impl Debug for InferenceVar {
     }
 }
 
+impl<I: Interner> Debug for FnSubst<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.0)
+    }
+}
+
 impl<I: Interner> Debug for Fn<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here

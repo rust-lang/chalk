@@ -15,9 +15,7 @@ impl<I: Interner> Visit<I> for Fn<I> {
     where
         I: 'i,
     {
-        let interner = visitor.interner();
         self.substitution
-            .as_slice(interner)
             .visit_with(visitor, outer_binder.shifted_in())
     }
 }

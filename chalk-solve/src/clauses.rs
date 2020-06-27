@@ -547,6 +547,7 @@ fn match_ty<I: Interner>(
             builder.push_fact(WellFormed::Ty(ty.clone()));
             quantified_ty
                 .substitution
+                .0
                 .iter(interner)
                 .map(|p| p.assert_ty_ref(interner))
                 .map(|ty| match_ty(builder, environment, &ty))

@@ -105,7 +105,7 @@ impl<I: Interner> RenderAsRust<I> for Fn<I> {
                     .format(", ")
             )?;
         }
-        let parameters = self.substitution.as_slice(interner);
+        let parameters = self.substitution.0.as_slice(interner);
         write!(
             f,
             "fn({}) -> {}",

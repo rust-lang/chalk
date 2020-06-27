@@ -842,16 +842,46 @@ impl InferenceVar {
     }
 }
 
+/// A wrapper for the substs on a Fn.
+#[derive(Clone, PartialEq, Eq, Hash, HasInterner, Fold, Visit)]
+pub struct FnSubst<I: Interner>(pub Substitution<I>);
+
+impl<I: Interner> Copy for FnSubst<I> where I::InternedSubstitution: Copy {}
+
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 #[allow(missing_docs)]
 pub struct Fn<I: Interner> {
     pub num_binders: usize,
-    pub substitution: Substitution<I>,
+    pub substitution: FnSubst<I>,
 }
 
 impl<I: Interner> Copy for Fn<I> where I::InternedSubstitution: Copy {}
+
+impl<I: Interner> Fn<I> {
+    /// Represent the current `Fn` as if it was wrapped in `Binders`
+    pub fn into_binders(self, interner: &I) -> Binders<FnSubst<I>> {
+        Binders::new(
+            VariableKinds::from(
+                interner,
+                (0..self.num_binders).map(|_| VariableKind::Lifetime),
+            ),
+            self.substitution,
+        )
+    }
+
+    /// Represent the current `Fn` as if it was wrapped in `Binders`
+    pub fn as_binders(&self, interner: &I) -> Binders<&FnSubst<I>> {
+        Binders::new(
+            VariableKinds::from(
+                interner,
+                (0..self.num_binders).map(|_| VariableKind::Lifetime),
+            ),
+            &self.substitution,
+        )
+    }
+}
 
 /// Constants.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
