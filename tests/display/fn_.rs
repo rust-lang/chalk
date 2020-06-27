@@ -51,11 +51,7 @@ fn test_opaque_ty_with_fn_def() {
     );
 }
 
-/// This test fails because lowering code discards function arguments when
-/// lowering `foo` into an `fn()` type, and in the parser, `fn` types must
-/// always have exactly one argument to parse correctly. So `fn bar() -> foo;`
-/// becomes `fn bar() -> fn()` (note: not `fn(u32)`), and then the parser
-/// rejects `fn()` because it has 0 arguments, not 1.
+/// We do not yet support "fn def" types, which this uses.
 #[test]
 #[ignore]
 fn test_fn_as_type() {

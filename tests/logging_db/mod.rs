@@ -1,8 +1,19 @@
+//! Tests for `LoggingRustIrDatabase` which tests its functionality to record
+//! types and stubs.
+//!
+//! Each tests records the trait solver solving something, and then runs the
+//! solver on the output `LoggingRustIrDatabase` writes.These tests _don't_ test
+//! that the output program is identical to the input, only that the resulting
+//! program allows solving the same goals.
+//!
+//! Note that this does not, and should not, test the majority of the rendering
+//! code. The code to render specific items and syntax details is rigorously
+//! tested in `tests/display/`.
 #[macro_use]
 mod util;
 
 #[test]
-fn records_struct_and_trait() {
+fn records_struct_trait_and_impl() {
     logging_db_output_sufficient! {
         program {
             struct S {}
@@ -21,7 +32,6 @@ fn records_struct_and_trait() {
 }
 
 #[test]
-#[ignore]
 fn records_opaque_type() {
     logging_db_output_sufficient! {
         program {
@@ -42,7 +52,6 @@ fn records_opaque_type() {
 }
 
 #[test]
-#[ignore]
 fn records_fn_def() {
     logging_db_output_sufficient! {
         program {
@@ -55,6 +64,28 @@ fn records_fn_def() {
             foo: Sized
         } yields {
             "Unique"
+        }
+    }
+}
+
+#[test]
+fn records_generics() {
+    logging_db_output_sufficient! {
+        program {
+            struct Foo<T> {}
+            trait Bar {}
+            impl Bar for Foo<()> {}
+        }
+
+        goal {
+            Foo<()>: Bar
+        } yields {
+            "Unique"
+        }
+        goal {
+            Foo<i32>: Bar
+        } yields {
+            "No possible solution"
         }
     }
 }
@@ -155,7 +186,7 @@ fn records_generic_impls() {
 }
 
 #[test]
-fn catches_assoc_type_bounds() {
+fn catches_assoc_type_bounds_not_mentioned() {
     logging_db_output_sufficient! {
         program {
             trait Foo {
@@ -176,7 +207,7 @@ fn catches_assoc_type_bounds() {
 }
 
 #[test]
-fn catches_assoc_type_values() {
+fn catches_assoc_type_values_not_mentioned() {
     logging_db_output_sufficient! {
         program {
             trait Foo {
