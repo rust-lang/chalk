@@ -4,6 +4,14 @@ use super::unify::UnificationResult;
 use super::*;
 use chalk_integration::interner::ChalkIr;
 
+#[derive(Debug)]
+struct TestDatabase;
+impl UnificationDatabase for TestDatabase {
+    fn variance(&self) -> Variance {
+        Variance::Invariant
+    }
+}
+
 #[test]
 fn infer() {
     let interner = &ChalkIr;
@@ -14,6 +22,7 @@ fn infer() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -27,6 +36,7 @@ fn infer() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &b,
@@ -49,6 +59,7 @@ fn universe_error() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -67,6 +78,7 @@ fn cycle_error() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -78,6 +90,7 @@ fn cycle_error() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -97,6 +110,7 @@ fn cycle_indirect() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -104,7 +118,14 @@ fn cycle_indirect() {
         )
         .unwrap();
     table
-        .unify(interner, &environment0, Variance::Invariant, &a, &b)
+        .unify(
+            interner,
+            &TestDatabase,
+            &environment0,
+            Variance::Invariant,
+            &a,
+            &b,
+        )
         .unwrap_err();
 }
 
@@ -119,6 +140,7 @@ fn universe_error_indirect_1() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &b,
@@ -126,7 +148,14 @@ fn universe_error_indirect_1() {
         )
         .unwrap();
     table
-        .unify(interner, &environment0, Variance::Invariant, &a, &b)
+        .unify(
+            interner,
+            &TestDatabase,
+            &environment0,
+            Variance::Invariant,
+            &a,
+            &b,
+        )
         .unwrap_err();
 }
 
@@ -139,11 +168,19 @@ fn universe_error_indirect_2() {
     let a = table.new_variable(U0).to_ty(interner);
     let b = table.new_variable(U1).to_ty(interner);
     table
-        .unify(interner, &environment0, Variance::Invariant, &a, &b)
+        .unify(
+            interner,
+            &TestDatabase,
+            &environment0,
+            Variance::Invariant,
+            &a,
+            &b,
+        )
         .unwrap();
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &b,
@@ -163,6 +200,7 @@ fn universe_promote() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -172,6 +210,7 @@ fn universe_promote() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -191,6 +230,7 @@ fn universe_promote_bad() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -200,6 +240,7 @@ fn universe_promote_bad() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &b,
@@ -222,6 +263,7 @@ fn projection_eq() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &a,
@@ -281,6 +323,7 @@ fn quantify_bound() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &v2b,
@@ -322,6 +365,7 @@ fn quantify_ty_under_binder() {
     table
         .unify(
             interner,
+            &TestDatabase,
             &environment0,
             Variance::Invariant,
             &v0.to_ty(interner),
@@ -369,7 +413,14 @@ fn lifetime_constraint_indirect() {
     let t_a = ty!(apply (item 0) (lifetime (placeholder 1)));
     let t_b = ty!(apply (item 0) (lifetime (infer 1)));
     let UnificationResult { goals } = table
-        .unify(interner, &environment0, Variance::Invariant, &t_a, &t_b)
+        .unify(
+            interner,
+            &TestDatabase,
+            &environment0,
+            Variance::Invariant,
+            &t_a,
+            &t_b,
+        )
         .unwrap();
     assert!(goals.is_empty());
 
@@ -380,7 +431,14 @@ fn lifetime_constraint_indirect() {
     // (likely unsatisfiable) constraint relating them.
     let t_c = ty!(infer 0);
     let UnificationResult { goals } = table
-        .unify(interner, &environment0, Variance::Invariant, &t_c, &t_b)
+        .unify(
+            interner,
+            &TestDatabase,
+            &environment0,
+            Variance::Invariant,
+            &t_c,
+            &t_b,
+        )
         .unwrap();
     assert_eq!(goals.len(), 2);
     assert_eq!(

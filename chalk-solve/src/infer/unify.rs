@@ -6,6 +6,7 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
+use chalk_ir::UnificationDatabase;
 use std::fmt::Debug;
 
 impl<I: Interner> InferenceTable<I> {
@@ -13,6 +14,7 @@ impl<I: Interner> InferenceTable<I> {
     pub(crate) fn unify<T>(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase,
         environment: &Environment<I>,
         variance: Variance,
         a: &T,
@@ -22,7 +24,7 @@ impl<I: Interner> InferenceTable<I> {
         T: ?Sized + Zip<I>,
     {
         let snapshot = self.snapshot();
-        match Unifier::new(interner, self, environment).unify(variance, a, b) {
+        match Unifier::new(interner, db, self, environment).unify(variance, a, b) {
             Ok(r) => {
                 self.commit(snapshot);
                 Ok(r)
@@ -40,6 +42,7 @@ struct Unifier<'t, I: Interner> {
     environment: &'t Environment<I>,
     goals: Vec<InEnvironment<Goal<I>>>,
     interner: &'t I,
+    db: &'t dyn UnificationDatabase,
 }
 
 #[derive(Debug)]
@@ -50,6 +53,7 @@ pub(crate) struct UnificationResult<I: Interner> {
 impl<'t, I: Interner> Unifier<'t, I> {
     fn new(
         interner: &'t I,
+        db: &'t dyn UnificationDatabase,
         table: &'t mut InferenceTable<I>,
         environment: &'t Environment<I>,
     ) -> Self {
@@ -58,6 +62,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             table: table,
             goals: vec![],
             interner,
+            db,
         }
     }
 
@@ -549,6 +554,10 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
 
     fn interner(&self) -> &'i I {
         self.interner
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self.db
     }
 }
 

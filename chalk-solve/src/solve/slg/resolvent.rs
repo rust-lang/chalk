@@ -58,6 +58,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
     #[instrument(level = "debug", skip(self, interner, environment, subst))]
     fn resolvent_clause(
         &mut self,
+        db: &dyn UnificationDatabase,
         interner: &I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
@@ -89,6 +90,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         // Unify the selected literal Li with C'.
         let unification_result = self.infer.unify(
             interner,
+            db,
             environment,
             Variance::Invariant,
             goal,
@@ -208,6 +210,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
     fn apply_answer_subst(
         &mut self,
         interner: &I,
+        unification_database: &dyn UnificationDatabase,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
@@ -233,6 +236,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
 
         AnswerSubstitutor::substitute(
             interner,
+            unification_database,
             &mut self.infer,
             &selected_goal.environment,
             &answer_subst,
@@ -270,11 +274,13 @@ struct AnswerSubstitutor<'t, I: Interner> {
 
     ex_clause: &'t mut ExClause<I>,
     interner: &'t I,
+    unification_database: &'t dyn UnificationDatabase,
 }
 
 impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn substitute<T: Zip<I>>(
         interner: &I,
+        unification_database: &dyn UnificationDatabase,
         table: &mut InferenceTable<I>,
         environment: &Environment<I>,
         answer_subst: &Substitution<I>,
@@ -284,6 +290,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     ) -> Fallible<()> {
         let mut this = AnswerSubstitutor {
             interner,
+            unification_database,
             table,
             environment,
             answer_subst,
@@ -297,6 +304,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn unify_free_answer_var(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase,
         variance: Variance,
         answer_var: BoundVar,
         pending: GenericArgData<I>,
@@ -324,6 +332,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             interner,
             self.table.unify(
                 interner,
+                db,
                 &self.environment,
                 variance,
                 answer_param,
@@ -383,6 +392,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         if let TyData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
                 interner,
+                self.unification_database,
                 variance,
                 *answer_depth,
                 GenericArgData::Ty(pending.clone()),
@@ -455,6 +465,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         if let LifetimeData::BoundVar(answer_depth) = answer.data(interner) {
             if self.unify_free_answer_var(
                 interner,
+                self.unification_database,
                 variance,
                 *answer_depth,
                 GenericArgData::Lifetime(pending.clone()),
@@ -512,6 +523,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         if let ConstValue::BoundVar(answer_depth) = answer_value {
             if self.unify_free_answer_var(
                 interner,
+                self.unification_database,
                 variance,
                 *answer_depth,
                 GenericArgData::Const(pending.clone()),
@@ -571,5 +583,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
     fn interner(&self) -> &'i I {
         self.interner
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self.unification_database
     }
 }

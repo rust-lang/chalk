@@ -88,6 +88,17 @@ where
     }
 }
 
+impl<I, DB, P> UnificationDatabase for LoggingRustIrDatabase<I, DB, P>
+where
+    DB: RustIrDatabase<I>,
+    P: Borrow<DB> + Debug,
+    I: Interner,
+{
+    fn variance(&self) -> Variance {
+        self.db.borrow().unification_database().variance()
+    }
+}
+
 impl<I, DB, P> RustIrDatabase<I> for LoggingRustIrDatabase<I, DB, P>
 where
     DB: RustIrDatabase<I>,
@@ -247,6 +258,10 @@ where
         // TODO: record closure IDs
         self.db.borrow().closure_fn_substitution(closure_id, substs)
     }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self
+    }
 }
 
 /// Wraps a [`RustIrDatabase`], and, when dropped, writes out all used
@@ -312,6 +327,18 @@ where
         write!(self.write, "{}", self.db)
             .and_then(|_| self.write.flush())
             .expect("expected to be able to write rust ir database");
+    }
+}
+
+impl<I, W, DB, P> UnificationDatabase for WriteOnDropRustIrDatabase<I, W, DB, P>
+where
+    I: Interner,
+    W: Write,
+    DB: RustIrDatabase<I>,
+    P: Borrow<DB> + Debug,
+{
+    fn variance(&self) -> Variance {
+        self.db.borrow().variance()
     }
 }
 
@@ -400,6 +427,10 @@ where
 
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.db.borrow().is_object_safe(trait_id)
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self
     }
 
     fn trait_name(&self, trait_id: TraitId<I>) -> String {

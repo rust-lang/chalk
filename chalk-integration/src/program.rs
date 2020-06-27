@@ -6,6 +6,7 @@ use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
     FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
+    UnificationDatabase, Variance,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -326,6 +327,12 @@ impl tls::DebugContext for Program {
     }
 }
 
+impl UnificationDatabase for Program {
+    fn variance(&self) -> Variance {
+        Variance::Invariant
+    }
+}
+
 impl RustIrDatabase<ChalkIr> for Program {
     fn custom_clauses(&self) -> Vec<ProgramClause<ChalkIr>> {
         self.custom_clauses.clone()
@@ -385,6 +392,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                     <[_] as CouldMatch<[_]>>::could_match(
                         &parameters,
                         interner,
+                        self.unification_database(),
                         &trait_ref.substitution.as_slice(interner),
                     )
                 }
@@ -467,6 +475,10 @@ impl RustIrDatabase<ChalkIr> for Program {
         substs: &Substitution<ChalkIr>,
     ) -> Substitution<ChalkIr> {
         substs.clone()
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self
     }
 
     fn trait_name(&self, trait_id: TraitId<ChalkIr>) -> String {

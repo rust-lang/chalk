@@ -258,6 +258,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                             info!("program clause = {:#?}", clause);
                             let mut infer = infer.clone();
                             if let Ok(resolvent) = infer.resolvent_clause(
+                                context.unification_database(),
                                 context.interner(),
                                 &environment,
                                 &domain_goal,
@@ -630,6 +631,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 );
                 match strand.infer.apply_answer_subst(
                     self.context.interner(),
+                    self.context.unification_database(),
                     &mut strand.ex_clause,
                     &subgoal,
                     table_goal,

@@ -9,20 +9,33 @@ use crate::{
     },
     RustIrDatabase,
 };
-use chalk_ir::{interner::Interner, ApplicationTy, Binders, TypeName, VariableKinds};
+use chalk_ir::{
+    interner::Interner, ApplicationTy, Binders, TypeName, UnificationDatabase, VariableKinds,
+    Variance,
+};
 
 #[derive(Debug)]
-pub struct StubWrapper<'a, DB> {
+pub struct StubWrapper<'a, DB, I: Interner> {
     db: &'a DB,
+    _interner: std::marker::PhantomData<I>,
 }
 
-impl<'a, DB> StubWrapper<'a, DB> {
+impl<'a, DB, I: Interner> StubWrapper<'a, DB, I> {
     pub fn new(db: &'a DB) -> Self {
-        StubWrapper { db }
+        StubWrapper {
+            db,
+            _interner: std::marker::PhantomData,
+        }
     }
 }
 
-impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, DB> {
+impl<I: Interner, DB: RustIrDatabase<I>> UnificationDatabase for StubWrapper<'_, DB, I> {
+    fn variance(&self) -> Variance {
+        self.db.unification_database().variance()
+    }
+}
+
+impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, DB, I> {
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
         self.db.custom_clauses()
     }
@@ -211,6 +224,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         _substs: &chalk_ir::Substitution<I>,
     ) -> chalk_ir::Substitution<I> {
         unimplemented!("cannot stub closures")
+    }
+
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self
     }
 
     fn trait_name(&self, trait_id: chalk_ir::TraitId<I>) -> String {

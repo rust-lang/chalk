@@ -12,7 +12,7 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ClausePriority, DomainGoal, Environment, Fallible, Floundered, GenericArg,
     Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
-    ProgramClauseImplication, Substitution, UCanonical, UniverseMap, Variance,
+    ProgramClauseImplication, Substitution, UCanonical, UnificationDatabase, UniverseMap, Variance,
 };
 use std::fmt::Debug;
 use tracing::{debug, instrument};
@@ -277,6 +277,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn unify<T>(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase,
         environment: &Environment<I>,
         variance: Variance,
         a: &T,
@@ -285,7 +286,9 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     where
         T: ?Sized + Zip<I>,
     {
-        let res = self.infer.unify(interner, environment, variance, a, b)?;
+        let res = self
+            .infer
+            .unify(interner, db, environment, variance, a, b)?;
         Ok(res.goals)
     }
 

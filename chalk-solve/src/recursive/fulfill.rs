@@ -9,7 +9,7 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, UCanonical, UniverseMap, Variance,
+    QuantifierKind, Substitution, UCanonical, UnificationDatabase, UniverseMap, Variance,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -96,6 +96,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn unify<T>(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase,
         environment: &Environment<I>,
         variance: Variance,
         a: &T,
@@ -271,9 +272,14 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     where
         T: ?Sized + Zip<I> + Debug,
     {
-        let goals = self
-            .infer
-            .unify(self.solver.interner(), environment, variance, a, b)?;
+        let goals = self.infer.unify(
+            self.solver.interner(),
+            self.solver.db().unification_database(),
+            environment,
+            variance,
+            a,
+            b,
+        )?;
         debug!("unify({:?}, {:?}) succeeded", a, b);
         debug!("unify: goals={:?}", goals);
         for goal in goals {

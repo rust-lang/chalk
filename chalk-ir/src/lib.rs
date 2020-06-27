@@ -3021,3 +3021,12 @@ pub struct AnswerSubst<I: Interner> {
     /// Delayed subgoals, used when the solver answered with an (incomplete) `Answer` (instead of a `CompleteAnswer`).
     pub delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
 }
+
+/// Logic to decide the Variance for a given subst
+pub trait UnificationDatabase
+where
+    Self: std::fmt::Debug,
+{
+    /// Gets the variance
+    fn variance(&self) -> Variance;
+}

@@ -143,6 +143,8 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         substs: &Substitution<I>,
     ) -> Substitution<I>;
 
+    fn unification_database(&self) -> &dyn UnificationDatabase;
+
     /// Retrieves a trait's original name. No uniqueness guarantees.
     /// TODO: remove this, use only interner debug methods
     fn trait_name(&self, trait_id: TraitId<I>) -> String;

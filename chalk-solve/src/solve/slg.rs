@@ -222,6 +222,10 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         self.program.interner()
     }
 
+    fn unification_database(&self) -> &dyn UnificationDatabase {
+        self.program.unification_database()
+    }
+
     fn into_goal(&self, domain_goal: DomainGoal<I>) -> Goal<I> {
         domain_goal.cast(self.program.interner())
     }
@@ -347,6 +351,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
     fn unify_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase,
         environment: &Environment<I>,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
@@ -354,7 +359,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
     ) -> Fallible<()> {
         let result = self
             .infer
-            .unify(interner, environment, Variance::Invariant, a, b)?;
+            .unify(interner, db, environment, Variance::Invariant, a, b)?;
         Ok(into_ex_clause(interner, result, ex_clause))
     }
 }

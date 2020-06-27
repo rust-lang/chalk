@@ -10,7 +10,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{
     AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment,
     Fallible, Floundered, GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses,
-    Substitution, UCanonical, UniverseMap,
+    Substitution, UCanonical, UnificationDatabase, UniverseMap,
 };
 use std::fmt::Debug;
 
@@ -138,6 +138,8 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug {
         u_canon: &UCanonical<InEnvironment<Goal<I>>>,
         canonical_subst: &Canonical<AnswerSubst<I>>,
     ) -> bool;
+
+    fn unification_database(&self) -> &dyn UnificationDatabase;
 }
 
 /// An "inference table" contains the state to support unification and
@@ -209,6 +211,7 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
     fn unify_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
+        db: &dyn UnificationDatabase,
         environment: &Environment<I>,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
@@ -244,6 +247,7 @@ pub trait ResolventOps<I: Interner, C: Context<I>> {
     /// The bindings in `infer` are unaffected by this operation.
     fn resolvent_clause(
         &mut self,
+        ops: &dyn UnificationDatabase,
         interner: &I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
@@ -254,6 +258,7 @@ pub trait ResolventOps<I: Interner, C: Context<I>> {
     fn apply_answer_subst(
         &mut self,
         interner: &I,
+        unification_database: &dyn UnificationDatabase,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,

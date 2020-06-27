@@ -7,7 +7,7 @@ use crate::*;
 /// A fast check to see whether two things could ever possibly match.
 pub trait CouldMatch<T: ?Sized + HasInterner> {
     /// Checks whether `self` and `other` could possibly match.
-    fn could_match(&self, interner: &T::Interner, other: &T) -> bool;
+    fn could_match(&self, interner: &T::Interner, db: &dyn UnificationDatabase, other: &T) -> bool;
 }
 
 #[allow(unreachable_code, unused_variables)]
@@ -16,9 +16,9 @@ where
     T: Zip<I> + ?Sized + HasInterner<Interner = I>,
     I: Interner,
 {
-    fn could_match(&self, interner: &I, other: &T) -> bool {
+    fn could_match(&self, interner: &I, db: &dyn UnificationDatabase, other: &T) -> bool {
         return Zip::zip_with(
-            &mut MatchZipper { interner },
+            &mut MatchZipper { interner, db },
             Variance::Invariant,
             self,
             other,
@@ -27,6 +27,7 @@ where
 
         struct MatchZipper<'i, I> {
             interner: &'i I,
+            db: &'i dyn UnificationDatabase,
         };
 
         impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
@@ -40,7 +41,7 @@ where
                             && a.substitution
                                 .iter(interner)
                                 .zip(b.substitution.iter(interner))
-                                .all(|(p_a, p_b)| p_a.could_match(interner, &p_b))
+                                .all(|(p_a, p_b)| p_a.could_match(interner, self.db, &p_b))
                     }
 
                     _ => true,
@@ -86,18 +87,32 @@ where
             fn interner(&self) -> &'i I {
                 self.interner
             }
+
+            fn unification_database(&self) -> &dyn UnificationDatabase {
+                self.db
+            }
         }
     }
 }
 
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClauseData<I> {
-    fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
-        self.0.value.consequence.could_match(interner, other)
+    fn could_match(
+        &self,
+        interner: &I,
+        db: &dyn UnificationDatabase,
+        other: &DomainGoal<I>,
+    ) -> bool {
+        self.0.value.consequence.could_match(interner, db, other)
     }
 }
 
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClause<I> {
-    fn could_match(&self, interner: &I, other: &DomainGoal<I>) -> bool {
-        self.data(interner).could_match(interner, other)
+    fn could_match(
+        &self,
+        interner: &I,
+        db: &dyn UnificationDatabase,
+        other: &DomainGoal<I>,
+    ) -> bool {
+        self.data(interner).could_match(interner, db, other)
     }
 }
