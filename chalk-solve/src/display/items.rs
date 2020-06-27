@@ -150,6 +150,21 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
             }
         );
 
+        // well-known
+        if let Some(well_known) = self.well_known {
+            let name = match well_known {
+                WellKnownTrait::Sized => "sized",
+                WellKnownTrait::Copy => "copy",
+                WellKnownTrait::Clone => "clone",
+                WellKnownTrait::Drop => "drop",
+                WellKnownTrait::FnOnce => "fn_once",
+                WellKnownTrait::FnMut => "fn_mut",
+                WellKnownTrait::Fn => "fn",
+                WellKnownTrait::Unsize => "unsize",
+            };
+            write!(f, "#[lang({})]\n", name)?;
+        }
+
         // trait declaration
         let binders = s.binder_var_display(&self.binders.binders).skip(1);
         write!(f, "trait {}", self.id.display(s))?;

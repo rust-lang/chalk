@@ -58,3 +58,28 @@ fn test_trait_flags() {
         ));
     }
 }
+
+#[test]
+fn test_wellknown_traits() {
+    let well_knowns = vec![
+        "sized", "copy", "clone", "drop", "fn_once", "fn_mut", "fn", "unsize",
+    ];
+    for flag in well_knowns {
+        reparse_test(&format!(
+            "
+            #[lang({0})]
+            trait Hello_{0} {{}}
+            ",
+            flag
+        ));
+    }
+    reparse_test!(
+        program {
+            #[auto]
+            #[lang(sized)]
+            trait Foo {
+
+            }
+        }
+    );
+}
