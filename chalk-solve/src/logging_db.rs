@@ -117,6 +117,11 @@ where
         self.db.borrow().adt_datum(adt_id)
     }
 
+    fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
+        self.record(id);
+        self.db.borrow().adt_repr(id)
+    }
+
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.record(impl_id);
         self.db.borrow().impl_datum(impl_id)
@@ -334,6 +339,10 @@ where
 
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
         self.db.borrow().adt_datum(adt_id)
+    }
+
+    fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
+        self.db.borrow().adt_repr(id)
     }
 
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
