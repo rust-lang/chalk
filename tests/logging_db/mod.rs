@@ -162,7 +162,9 @@ fn catches_assoc_type_bounds() {
                 type Assoc: Bar;
             }
             trait Bar {}
-            impl Foo for () {}
+            impl Foo for () {
+                type Assoc = ();
+            }
         }
 
         goal {
@@ -174,7 +176,27 @@ fn catches_assoc_type_bounds() {
 }
 
 #[test]
-#[ignore]
+fn catches_assoc_type_values() {
+    logging_db_output_sufficient! {
+        program {
+            trait Foo {
+                type Assoc;
+            }
+            struct Baz {}
+            impl Foo for () {
+                type Assoc = Baz;
+            }
+        }
+
+        goal {
+            (): Foo
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
 fn does_not_need_necessary_separate_impl() {
     // this should leave out "impl Bar for Fox" and the result should pass the
     // test (it won't be well-formed, but that's OK.)

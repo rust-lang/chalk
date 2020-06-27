@@ -72,10 +72,12 @@ pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
                     .visit_with(&mut collector, DebruijnIndex::INNERMOST);
             }
             RecordedItemId::Impl(impl_id) => {
-                collector
-                    .db
-                    .impl_datum(impl_id)
-                    .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+                let impl_datum = collector.db.impl_datum(impl_id);
+                for id in &impl_datum.associated_ty_value_ids {
+                    let assoc_ty_value = collector.db.associated_ty_value(*id);
+                    assoc_ty_value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+                }
+                impl_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
             }
         }
     }
