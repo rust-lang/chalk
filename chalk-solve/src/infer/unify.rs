@@ -80,15 +80,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(UnificationResult { goals: self.goals })
     }
 
-    fn unify_ty_ty(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
+    fn relate_ty_ty(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
+        let variance = self.variance;
 
         let n_a = self.table.normalize_ty_shallow(interner, a);
         let n_b = self.table.normalize_ty_shallow(interner, b);
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_span!("unify_ty_ty", ?a, ?b);
+        debug_span!("relate_ty_ty", ?a, ?b);
 
         match (a.data(interner), b.data(interner)) {
             // Unifying two inference variables: unify them in the underlying
@@ -227,9 +228,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn unify_binders<'a, T, R>(
+    fn relate_binders<'a, T, R>(
         &mut self,
-        variance: Variance,
         a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
         b: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
     ) -> Fallible<()>
@@ -246,6 +246,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // for<'b...> exists<'a...> T == U
 
         let interner = self.interner;
+        let variance = self.variance;
 
         {
             let a_universal = self.table.instantiate_binders_universally(interner, a);
@@ -312,20 +313,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
-    fn unify_lifetime_lifetime(
-        &mut self,
-        variance: Variance,
-        a: &Lifetime<I>,
-        b: &Lifetime<I>,
-    ) -> Fallible<()> {
+    fn relate_lifetime_lifetime(&mut self, a: &Lifetime<I>, b: &Lifetime<I>) -> Fallible<()> {
         let interner = self.interner;
+        let variance = self.variance;
 
         let n_a = self.table.normalize_lifetime_shallow(interner, a);
         let n_b = self.table.normalize_lifetime_shallow(interner, b);
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_span!("unify_lifetime_lifetime", ?a, ?b);
+        debug_span!("relate_lifetime_lifetime", ?a, ?b);
 
         match (a.data(interner), b.data(interner)) {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
@@ -392,20 +389,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    fn unify_const_const<'a>(
-        &mut self,
-        variance: Variance,
-        a: &'a Const<I>,
-        b: &'a Const<I>,
-    ) -> Fallible<()> {
+    fn relate_const_const<'a>(&mut self, a: &'a Const<I>, b: &'a Const<I>) -> Fallible<()> {
         let interner = self.interner;
+        let variance = self.variance;
 
         let n_a = self.table.normalize_const_shallow(interner, a);
         let n_b = self.table.normalize_const_shallow(interner, b);
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
-        debug_span!("unify_const_const", ?a, ?b);
+        debug_span!("relate_const_const", ?a, ?b);
 
         let ConstData {
             ty: a_ty,
@@ -416,13 +409,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
             value: b_val,
         } = b.data(interner);
 
-        self.unify_ty_ty(variance, a_ty, b_ty)?;
+        self.relate_ty_ty(a_ty, b_ty)?;
 
         match (a_val, b_val) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (&ConstValue::InferenceVar(var1), &ConstValue::InferenceVar(var2)) => {
-                debug!(?var1, ?var2, "unify_ty_ty");
+                debug!(?var1, ?var2, "relate_ty_ty");
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
                 Ok(self
@@ -507,39 +500,39 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn with_local_variance<R>(
         &mut self,
         local_variance: Variance,
-        op: impl std::ops::Fn(&mut Self, Variance) -> R,
+        op: impl std::ops::Fn(&mut Self) -> R,
     ) -> R {
         match (self.variance, local_variance) {
             (Variance::Invariant, _) => {
-                let r = op(self, Variance::Invariant);
+                let r = op(self);
                 r
             }
             (Variance::Covariant, Variance::Invariant) => {
                 self.variance = Variance::Invariant;
-                let r = op(self, Variance::Invariant);
+                let r = op(self);
                 self.variance = Variance::Covariant;
                 r
             }
             (Variance::Covariant, Variance::Covariant) => {
-                let r = op(self, Variance::Covariant);
+                let r = op(self);
                 r
             }
             (Variance::Covariant, Variance::Contravariant) => {
-                let r = op(self, Variance::Covariant);
+                let r = op(self);
                 r
             }
             (Variance::Contravariant, Variance::Invariant) => {
                 self.variance = Variance::Invariant;
-                let r = op(self, Variance::Invariant);
+                let r = op(self);
                 self.variance = Variance::Covariant;
                 r
             }
             (Variance::Contravariant, Variance::Covariant) => {
-                let r = op(self, Variance::Contravariant);
+                let r = op(self);
                 r
             }
             (Variance::Contravariant, Variance::Contravariant) => {
-                let r = op(self, Variance::Contravariant);
+                let r = op(self);
                 r
             }
         }
@@ -548,7 +541,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
 impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
     fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
-        self.with_local_variance(variance, |this, variance| this.unify_ty_ty(variance, a, b))
+        self.with_local_variance(variance, |this| this.relate_ty_ty(a, b))
     }
 
     fn zip_lifetimes(
@@ -557,15 +550,11 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         a: &Lifetime<I>,
         b: &Lifetime<I>,
     ) -> Fallible<()> {
-        self.with_local_variance(variance, |this, variance| {
-            this.unify_lifetime_lifetime(variance, a, b)
-        })
+        self.with_local_variance(variance, |this| this.relate_lifetime_lifetime(a, b))
     }
 
     fn zip_consts(&mut self, variance: Variance, a: &Const<I>, b: &Const<I>) -> Fallible<()> {
-        self.with_local_variance(variance, |this, variance| {
-            this.unify_const_const(variance, a, b)
-        })
+        self.with_local_variance(variance, |this| this.relate_const_const(a, b))
     }
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
@@ -581,11 +570,9 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         //   (representing the hidden "self" type)
         // * The `for<..>` binders from higher-ranked traits.
         //
-        // In both cases we can use the same `unify_binders` routine.
+        // In both cases we can use the same `relate_binders` routine.
 
-        self.with_local_variance(variance, |this, variance| {
-            this.unify_binders(variance, a, b)
-        })
+        self.with_local_variance(variance, |this| this.relate_binders(a, b))
     }
 
     fn interner(&self) -> &'i I {

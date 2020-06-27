@@ -4,6 +4,8 @@ use super::unify::UnificationResult;
 use super::*;
 use chalk_integration::interner::ChalkIr;
 
+// We just use a vec of 20 `Invariant`, since this is zipped and no substs are
+// longer than this
 #[derive(Debug)]
 struct TestDatabase;
 impl UnificationDatabase<ChalkIr> for TestDatabase {

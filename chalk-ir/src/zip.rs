@@ -581,12 +581,14 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
                 b.substitution.as_slice(interner),
             ),
             TypeName::Ref(mutbl) => {
+                // The lifetime is `Contravariant`
                 Zip::zip_with(
                     zipper,
                     Variance::Contravariant,
                     &a.substitution.as_slice(interner)[0],
                     &b.substitution.as_slice(interner)[0],
                 )?;
+                // The type is `Covariant` when not mut, `Invariant` otherwise
                 let variance = match mutbl {
                     Mutability::Not => Variance::Covariant,
                     Mutability::Mut => Variance::Invariant,
