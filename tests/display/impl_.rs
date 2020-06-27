@@ -36,3 +36,15 @@ fn test_impl_for_generic() {
         }
     );
 }
+
+#[test]
+fn test_upstream_impl_keyword() {
+    reparse_test!(
+        program {
+            struct Bar {}
+            trait Foo {}
+            #[upstream]
+            impl Foo for Bar {}
+        }
+    );
+}

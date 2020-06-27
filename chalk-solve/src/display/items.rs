@@ -163,18 +163,36 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
 
         let s = &s.add_debrujin_index(None);
         let binders = s.binder_var_display(&self.binders.binders);
-
         let value = self.binders.skip_binders();
 
+        // annotations
+        // #[upstream]
+        // ^^^^^^^^^^^
+        // impl<T> Foo<T> for Bar<T> where T: Baz { }
+        if self.impl_type == ImplType::External {
+            write!(f, "#[upstream]\n")?;
+        }
+
+        // impl keyword
+        // impl<T> Foo<T> for Bar<T> where T: Baz { }
+        // ^^^^
+        write!(f, "impl")?;
         let trait_ref = &value.trait_ref;
-        // Ignore automatically added Self parameter by skipping first parameter
+
+        // generic binders
+        // impl<T> Foo<T> for Bar<T> where T: Baz
+        //     ^^^
+        write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
+
+        // trait, type and parameters
+        // impl<T> Foo<T> for Bar<T> where T: Baz { }
+        //         ^^^^^^^^^^^^^^^^^
         let full_trait_name = display_trait_with_generics(
             s,
             trait_ref.trait_id,
+            // Ignore automatically added Self parameter by skipping first parameter
             &trait_ref.substitution.parameters(interner)[1..],
         );
-        write!(f, "impl")?;
-        write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
         write!(
             f,
             " {}{} for {}",
@@ -182,12 +200,20 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             full_trait_name,
             trait_ref.self_type_parameter(interner).display(s)
         )?;
+
+        // where clauses
+        // impl<T> Foo<T> for Bar<T> where T: Baz { }
+        //                           ^^^^^^^^^^^^
         if !value.where_clauses.is_empty() {
             let s = &s.add_indent();
             write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
         } else {
             write!(f, " ")?;
         }
+
+        // body
+        // impl<T> Foo<T> for Bar<T> where T: Baz { }
+        //                                        ^^^
         write!(f, "{{")?;
         {
             let s = &s.add_indent();
