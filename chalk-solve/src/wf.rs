@@ -85,6 +85,7 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 trait_ref.visit_with(self, outer_binder);
             }
             WhereClause::LifetimeOutlives(..) => {}
+            WhereClause::TypeOutlives(..) => todo!(),
         }
     }
 

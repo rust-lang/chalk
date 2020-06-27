@@ -326,6 +326,7 @@ fn program_clauses_that_could_match<I: Interner>(
                 })
             });
         }
+        DomainGoal::Holds(WhereClause::TypeOutlives(TypeOutlives { ty, lifetime })) => todo!(),
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)

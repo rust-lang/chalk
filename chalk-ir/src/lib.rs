@@ -1399,6 +1399,21 @@ pub struct LifetimeOutlives<I: Interner> {
 
 impl<I: Interner> Copy for LifetimeOutlives<I> where I::InternedLifetime: Copy {}
 
+/// Type outlives, which for `T: 'a` checks that the type `T`
+/// lives at least as long as the lifetime `'a`
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+pub struct TypeOutlives<I: Interner> {
+    pub ty: Ty<I>,
+    pub lifetime: Lifetime<I>,
+}
+
+impl<I: Interner> Copy for TypeOutlives<I>
+where
+    I::InternedLifetime: Copy,
+    I::InternedType: Copy,
+{
+}
+
 /// Where clauses that can be written by a Rust programmer.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, SuperVisit, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
@@ -1408,6 +1423,8 @@ pub enum WhereClause<I: Interner> {
     AliasEq(AliasEq<I>),
     /// One lifetime outlives another.
     LifetimeOutlives(LifetimeOutlives<I>),
+    /// Type outlives a lifetime.
+    TypeOutlives(TypeOutlives<I>),
 }
 
 impl<I: Interner> Copy for WhereClause<I>
@@ -1607,6 +1624,7 @@ impl<I: Interner> WhereClause<I> {
             WhereClause::Implemented(trait_ref) => Some(trait_ref.trait_id),
             WhereClause::AliasEq(_) => None,
             WhereClause::LifetimeOutlives(_) => None,
+            WhereClause::TypeOutlives(_) => None,
         }
     }
 }
@@ -2626,9 +2644,18 @@ pub enum Constraint<I: Interner> {
     /// Outlives constraint `'a: 'b`, indicating that the value of `'a` must be
     /// a superset of the value of `'b`.
     Outlives(Lifetime<I>, Lifetime<I>),
+
+    /// Type outlives constraint `T: 'a`, indicating that the type `T` must live
+    /// at least as long as the value of `'a`.
+    TypeOutlives(Ty<I>, Lifetime<I>),
 }
 
-impl<I: Interner> Copy for Constraint<I> where I::InternedLifetime: Copy {}
+impl<I: Interner> Copy for Constraint<I>
+where
+    I::InternedLifetime: Copy,
+    I::InternedType: Copy,
+{
+}
 
 /// A list of constraints.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
