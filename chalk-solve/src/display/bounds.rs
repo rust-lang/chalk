@@ -1,3 +1,6 @@
+//! Writer logic for `where` clauses and other bounds.
+//!
+//! Contains logic for writing the various forms of `Foo: Bar`.
 use std::fmt::{Display, Formatter, Result};
 
 use crate::rust_ir::*;

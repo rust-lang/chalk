@@ -1,3 +1,8 @@
+//! Writer logic for top level items.
+//!
+//! Contains code specific to top-level items and other structures specific to a
+//! single top-level item.
+
 use std::fmt::{Formatter, Result};
 
 use crate::rust_ir::*;

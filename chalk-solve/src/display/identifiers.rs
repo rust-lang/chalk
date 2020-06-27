@@ -1,3 +1,7 @@
+//! Writer logic for simple IDs
+//!
+//! `RenderAsRust` impls for identifiers which are either too small or too
+//! shared to belong anywhere else belong here.
 use std::fmt::{Formatter, Result};
 
 use chalk_ir::interner::Interner;

@@ -1,3 +1,4 @@
+//! `RenderAsRust` trait and related utils.
 use std::fmt::{Display, Formatter, Result};
 
 use chalk_ir::interner::Interner;

@@ -1,3 +1,4 @@
+//! Render utilities which don't belong anywhere else.
 use std::fmt::{Display, Formatter, Result};
 
 pub fn as_display<F: Fn(&mut Formatter<'_>) -> Result>(f: F) -> impl Display {

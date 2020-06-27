@@ -1,3 +1,6 @@
+//! Persistent state passed down between writers.
+//!
+//! This is essentially `WriterState` and other things supporting that.
 use std::{
     cell::RefCell,
     collections::BTreeMap,

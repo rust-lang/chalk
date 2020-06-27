@@ -1,3 +1,6 @@
+//! Writer logic for types.
+//!
+//! Contains the highly-recursive logic for writing `TyData` and its variants.
 use std::fmt::{Formatter, Result};
 
 use crate::split::Split;
