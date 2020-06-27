@@ -10,6 +10,48 @@ use super::{
     state::WriterState,
 };
 
+/// Used in `AdtDatum` and `TraitDatum` to write n flags from a flags struct
+/// to a writer. Each flag field turns into an if expression + write!, so we can
+/// just list the names and not repeat this pattern over and over.
+///
+/// This macro will error if unknown flags are specified. This will also error
+/// if any flags are missing.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// write_flags!(f, self.flags, XFlags { red, green })
+/// ```
+///
+/// Turns into
+///
+/// ```rust,ignore
+/// match self.flags {
+///     XFlags { red, green } => {
+///         if red {
+///             write!(f, "#[red]")?;
+///         }
+///         if green {
+///             write!(f, "#[green]")?;
+///         }
+///     }
+/// }
+/// ```
+macro_rules! write_flags {
+    ($writer:ident, $val:expr, $struct_name:ident { $($n:ident),* }) => {
+        match $val {
+            // if any fields are missing, the destructuring will error
+            $struct_name {
+                $($n,)*
+            } => {
+                $(if $n {
+                    write!($writer,"#[{}]\n",stringify!($n))?;
+                })*
+            }
+        }
+    }
+}
+
 impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // When support for Self in structs is added, self_binding should be
@@ -53,31 +95,34 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         let s = &s.add_debrujin_index(Some(0));
         let value = self.binders.skip_binders();
 
-        macro_rules! trait_flags {
-            ($($n:ident),*) => {
-                $(if self.flags.$n {
-                    write!(f,"#[{}]\n",stringify!($n))?;
-                })*
+        // flags
+        write_flags!(
+            f,
+            self.flags,
+            TraitFlags {
+                auto,
+                marker,
+                upstream,
+                fundamental,
+                non_enumerable,
+                coinductive
             }
-        }
-
-        trait_flags!(
-            auto,
-            marker,
-            upstream,
-            fundamental,
-            non_enumerable,
-            coinductive
         );
+
+        // trait declaration
         let binders = s.binder_var_display(&self.binders.binders).skip(1);
         write!(f, "trait {}", self.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", binders, ", ")?;
+
+        // where clauses
         if !value.where_clauses.is_empty() {
             let s = &s.add_indent();
             write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
         } else {
             write!(f, " ")?;
         }
+
+        // body
         write!(f, "{{")?;
         let s = &s.add_indent();
         write_joined_non_empty_list!(
