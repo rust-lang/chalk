@@ -222,7 +222,7 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         self.program.interner()
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self.program.unification_database()
     }
 
@@ -351,7 +351,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
     fn unify_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
-        db: &dyn UnificationDatabase,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
         a: &GenericArg<I>,
         b: &GenericArg<I>,

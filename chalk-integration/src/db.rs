@@ -73,9 +73,13 @@ impl ChalkDatabase {
     }
 }
 
-impl UnificationDatabase for ChalkDatabase {
-    fn variance(&self) -> Variance {
-        self.program_ir().unwrap().variance()
+impl UnificationDatabase<ChalkIr> for ChalkDatabase {
+    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
+        self.program_ir().unwrap().fn_def_variance(fn_def_id)
+    }
+
+    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
+        self.program_ir().unwrap().adt_variance(adt_id)
     }
 }
 
@@ -204,7 +208,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .closure_fn_substitution(closure_id, substs)
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<ChalkIr> {
         self
     }
 

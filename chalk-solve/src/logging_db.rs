@@ -88,14 +88,21 @@ where
     }
 }
 
-impl<I, DB, P> UnificationDatabase for LoggingRustIrDatabase<I, DB, P>
+impl<I, DB, P> UnificationDatabase<I> for LoggingRustIrDatabase<I, DB, P>
 where
     DB: RustIrDatabase<I>,
     P: Borrow<DB> + Debug,
     I: Interner,
 {
-    fn variance(&self) -> Variance {
-        self.db.borrow().unification_database().variance()
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Vec<Variance> {
+        self.db
+            .borrow()
+            .unification_database()
+            .fn_def_variance(fn_def_id)
+    }
+
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Vec<Variance> {
+        self.db.borrow().unification_database().adt_variance(adt_id)
     }
 }
 
@@ -259,7 +266,7 @@ where
         self.db.borrow().closure_fn_substitution(closure_id, substs)
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self
     }
 }
@@ -330,15 +337,22 @@ where
     }
 }
 
-impl<I, W, DB, P> UnificationDatabase for WriteOnDropRustIrDatabase<I, W, DB, P>
+impl<I, W, DB, P> UnificationDatabase<I> for WriteOnDropRustIrDatabase<I, W, DB, P>
 where
     I: Interner,
     W: Write,
     DB: RustIrDatabase<I>,
     P: Borrow<DB> + Debug,
 {
-    fn variance(&self) -> Variance {
-        self.db.borrow().variance()
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Vec<Variance> {
+        self.db
+            .borrow()
+            .unification_database()
+            .fn_def_variance(fn_def_id)
+    }
+
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Vec<Variance> {
+        self.db.borrow().unification_database().adt_variance(adt_id)
     }
 }
 
@@ -429,7 +443,7 @@ where
         self.db.borrow().is_object_safe(trait_id)
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self
     }
 

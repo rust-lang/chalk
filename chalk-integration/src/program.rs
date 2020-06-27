@@ -327,9 +327,23 @@ impl tls::DebugContext for Program {
     }
 }
 
-impl UnificationDatabase for Program {
-    fn variance(&self) -> Variance {
-        Variance::Invariant
+impl UnificationDatabase<ChalkIr> for Program {
+    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
+        self.fn_def_data[&fn_def_id]
+            .binders
+            .binders
+            .iter(&self.interner())
+            .map(|_| Variance::Invariant)
+            .collect()
+    }
+
+    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
+        self.adt_data[&adt_id]
+            .binders
+            .binders
+            .iter(&self.interner())
+            .map(|_| Variance::Invariant)
+            .collect()
     }
 }
 
@@ -477,7 +491,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         substs.clone()
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<ChalkIr> {
         self
     }
 

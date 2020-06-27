@@ -28,9 +28,13 @@ struct MockDatabase {
     panicking_method: PanickingMethod,
 }
 
-impl UnificationDatabase for MockDatabase {
-    fn variance(&self) -> Variance {
-        Variance::Invariant
+impl UnificationDatabase<ChalkIr> for MockDatabase {
+    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
+        unimplemented!()
+    }
+
+    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
+        unimplemented!()
     }
 }
 
@@ -228,7 +232,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<ChalkIr> {
         self
     }
 

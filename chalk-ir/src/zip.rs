@@ -61,7 +61,7 @@ pub trait Zipper<'i, I: Interner + 'i> {
     fn interner(&self) -> &'i I;
 
     /// Retrieves the `UnificationDatabase` from the underlying zipper object
-    fn unification_database(&self) -> &dyn UnificationDatabase;
+    fn unification_database(&self) -> &dyn UnificationDatabase<I>;
 }
 
 impl<'f, 'i, Z, I> Zipper<'i, I> for &'f mut Z
@@ -97,7 +97,7 @@ where
         Z::interner(*self)
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         (**self).unification_database()
     }
 }

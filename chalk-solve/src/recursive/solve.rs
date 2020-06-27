@@ -277,7 +277,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn unify<T>(
         &mut self,
         interner: &I,
-        db: &dyn UnificationDatabase,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
         variance: Variance,
         a: &T,

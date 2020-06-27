@@ -3023,10 +3023,14 @@ pub struct AnswerSubst<I: Interner> {
 }
 
 /// Logic to decide the Variance for a given subst
-pub trait UnificationDatabase
+pub trait UnificationDatabase<I>
 where
     Self: std::fmt::Debug,
+    I: Interner,
 {
-    /// Gets the variance
-    fn variance(&self) -> Variance;
+    /// Gets the variances for the substitution of a fn def
+    fn fn_def_variance(&self, fn_def_id: FnDefId<I>) -> Vec<Variance>;
+
+    /// Gets the variances for the substitution of a adt
+    fn adt_variance(&self, adt_id: AdtId<I>) -> Vec<Variance>;
 }

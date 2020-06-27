@@ -96,7 +96,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn unify<T>(
         &mut self,
         interner: &I,
-        db: &dyn UnificationDatabase,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
         variance: Variance,
         a: &T,

@@ -58,7 +58,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
     #[instrument(level = "debug", skip(self, interner, environment, subst))]
     fn resolvent_clause(
         &mut self,
-        db: &dyn UnificationDatabase,
+        db: &dyn UnificationDatabase<I>,
         interner: &I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
@@ -210,7 +210,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
     fn apply_answer_subst(
         &mut self,
         interner: &I,
-        unification_database: &dyn UnificationDatabase,
+        unification_database: &dyn UnificationDatabase<I>,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
@@ -274,13 +274,13 @@ struct AnswerSubstitutor<'t, I: Interner> {
 
     ex_clause: &'t mut ExClause<I>,
     interner: &'t I,
-    unification_database: &'t dyn UnificationDatabase,
+    unification_database: &'t dyn UnificationDatabase<I>,
 }
 
 impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn substitute<T: Zip<I>>(
         interner: &I,
-        unification_database: &dyn UnificationDatabase,
+        unification_database: &dyn UnificationDatabase<I>,
         table: &mut InferenceTable<I>,
         environment: &Environment<I>,
         answer_subst: &Substitution<I>,
@@ -304,7 +304,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn unify_free_answer_var(
         &mut self,
         interner: &I,
-        db: &dyn UnificationDatabase,
+        db: &dyn UnificationDatabase<I>,
         variance: Variance,
         answer_var: BoundVar,
         pending: GenericArgData<I>,
@@ -585,7 +585,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         self.interner
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self.unification_database
     }
 }

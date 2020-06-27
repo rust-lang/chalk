@@ -14,7 +14,7 @@ impl<I: Interner> InferenceTable<I> {
     pub(crate) fn unify<T>(
         &mut self,
         interner: &I,
-        db: &dyn UnificationDatabase,
+        db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
         variance: Variance,
         a: &T,
@@ -42,7 +42,7 @@ struct Unifier<'t, I: Interner> {
     environment: &'t Environment<I>,
     goals: Vec<InEnvironment<Goal<I>>>,
     interner: &'t I,
-    db: &'t dyn UnificationDatabase,
+    db: &'t dyn UnificationDatabase<I>,
 }
 
 #[derive(Debug)]
@@ -53,7 +53,7 @@ pub(crate) struct UnificationResult<I: Interner> {
 impl<'t, I: Interner> Unifier<'t, I> {
     fn new(
         interner: &'t I,
-        db: &'t dyn UnificationDatabase,
+        db: &'t dyn UnificationDatabase<I>,
         table: &'t mut InferenceTable<I>,
         environment: &'t Environment<I>,
     ) -> Self {
@@ -556,7 +556,7 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         self.interner
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self.db
     }
 }

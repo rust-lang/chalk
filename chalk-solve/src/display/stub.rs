@@ -15,27 +15,27 @@ use chalk_ir::{
 };
 
 #[derive(Debug)]
-pub struct StubWrapper<'a, DB, I: Interner> {
+pub struct StubWrapper<'a, DB> {
     db: &'a DB,
-    _interner: std::marker::PhantomData<I>,
 }
 
-impl<'a, DB, I: Interner> StubWrapper<'a, DB, I> {
+impl<'a, DB> StubWrapper<'a, DB> {
     pub fn new(db: &'a DB) -> Self {
-        StubWrapper {
-            db,
-            _interner: std::marker::PhantomData,
-        }
+        StubWrapper { db }
     }
 }
 
-impl<I: Interner, DB: RustIrDatabase<I>> UnificationDatabase for StubWrapper<'_, DB, I> {
-    fn variance(&self) -> Variance {
-        self.db.unification_database().variance()
+impl<I: Interner, DB: RustIrDatabase<I>> UnificationDatabase<I> for StubWrapper<'_, DB> {
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Vec<Variance> {
+        self.db.unification_database().fn_def_variance(fn_def_id)
+    }
+
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Vec<Variance> {
+        self.db.unification_database().adt_variance(adt_id)
     }
 }
 
-impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, DB, I> {
+impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, DB> {
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
         self.db.custom_clauses()
     }
@@ -226,7 +226,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         unimplemented!("cannot stub closures")
     }
 
-    fn unification_database(&self) -> &dyn UnificationDatabase {
+    fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self
     }
 

@@ -6,9 +6,13 @@ use chalk_integration::interner::ChalkIr;
 
 #[derive(Debug)]
 struct TestDatabase;
-impl UnificationDatabase for TestDatabase {
-    fn variance(&self) -> Variance {
-        Variance::Invariant
+impl UnificationDatabase<ChalkIr> for TestDatabase {
+    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
+        unimplemented!()
+    }
+
+    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
+        unimplemented!()
     }
 }
 
