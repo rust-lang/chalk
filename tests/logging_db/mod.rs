@@ -82,7 +82,6 @@ fn records_parents_parent() {
 }
 
 #[test]
-#[ignore]
 fn records_associated_type_bounds() {
     logging_db_output_sufficient! {
         program {
@@ -151,6 +150,25 @@ fn records_generic_impls() {
             V: Bar
         } yields {
             "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn catches_assoc_type_bounds() {
+    logging_db_output_sufficient! {
+        program {
+            trait Foo {
+                type Assoc: Bar;
+            }
+            trait Bar {}
+            impl Foo for () {}
+        }
+
+        goal {
+            (): Foo
+        } yields {
+            "Unique"
         }
     }
 }

@@ -483,6 +483,28 @@ pub struct AssociatedTyDatum<I: Interner> {
     pub binders: Binders<AssociatedTyDatumBound<I>>,
 }
 
+// Manual implementation to avoid I::Identifier type.
+impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
+    fn visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        let result = R::new().combine(self.trait_id.visit_with(visitor, outer_binder));
+        if result.return_early() {
+            return result;
+        }
+        let result = result.combine(self.id.visit_with(visitor, outer_binder));
+        if result.return_early() {
+            return result;
+        }
+        return result.combine(self.binders.visit_with(visitor, outer_binder));
+    }
+}
+
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]

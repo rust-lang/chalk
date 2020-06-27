@@ -11,6 +11,10 @@ use std::collections::BTreeSet;
 /// Collects the identifiers needed to resolve all the names for a given
 /// set of identifers, excluding identifiers we already have.
 ///
+/// When recording identifiers to print, the `LoggingRustIrDatabase` only
+/// records identifiers the solver uses. But the solver assumes well-formedness,
+/// and thus skips over many names referenced in the definitions.
+///
 /// For instance, if we have:
 ///
 /// ```rust,ignore
@@ -21,8 +25,9 @@ use std::collections::BTreeSet;
 /// impl Parent for S {}
 /// impl Child for S {}
 /// ```
-/// If we render the identifiers for only for `S`, `impl Child for S`, and
-/// `trait Child`, it will not parse because the `Child` trait's definition
+///
+/// And our goal is `S: Child`, we will only render `S`, `impl Child for S`, and
+/// `trait Child`. This will not parse because the `Child` trait's definition
 /// references parent. IdCollector solves this by collecting all of the directly
 /// related identifiers, allowing those to be rendered as well, ensuring name
 /// resolution is successful.
@@ -52,6 +57,13 @@ pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
                 let trait_datum = collector.db.trait_datum(trait_id);
 
                 trait_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+                for assoc_ty_id in &trait_datum.associated_ty_ids {
+                    let assoc_ty_datum = collector.db.associated_ty_data(*assoc_ty_id);
+                    assoc_ty_datum
+                        .bounds_on_self(collector.db.interner())
+                        .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+                    assoc_ty_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST)
+                }
             }
             RecordedItemId::OpaqueTy(opaque_id) => {
                 collector
