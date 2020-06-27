@@ -39,6 +39,7 @@ fn test_trait_flags() {
         "fundamental",
         "non_enumerable",
         "coinductive",
+        "object_safe",
     ];
     reparse_test(&format!(
         "{}trait Hello {{}}",

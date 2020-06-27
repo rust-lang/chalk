@@ -150,6 +150,11 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
             }
         );
 
+        // object safe
+        if s.db.is_object_safe(self.id) {
+            write!(f, "#[object_safe]\n")?;
+        }
+
         // well-known
         if let Some(well_known) = self.well_known {
             let name = match well_known {
