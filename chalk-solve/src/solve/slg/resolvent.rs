@@ -427,8 +427,17 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             (TyData::Function(answer), TyData::Function(pending)) => {
                 self.outer_binder.shift_in();
                 self.zip_substs(
-                    answer.substitution.as_slice(interner),
-                    pending.substitution.as_slice(interner),
+                    None,
+                    &answer.substitution.as_slice(interner)
+                        [..answer.substitution.len(interner) - 1],
+                    &pending.substitution.as_slice(interner)
+                        [..pending.substitution.len(interner) - 1],
+                )?;
+                Zip::zip_with(
+                    self,
+                    Variance::Contravariant,
+                    answer.substitution.iter(interner).last().unwrap(),
+                    pending.substitution.iter(interner).last().unwrap(),
                 )?;
                 self.outer_binder.shift_out();
                 Ok(())

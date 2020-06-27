@@ -788,7 +788,7 @@ impl DebruijnIndex {
 /// known. It is referenced within the type using `^1.0`, indicating
 /// a bound type with debruijn index 1 (i.e., skipping through one
 /// level of binder).
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct DynTy<I: Interner> {
     /// The unknown self type.
     pub bounds: Binders<QuantifiedWhereClauses<I>>,

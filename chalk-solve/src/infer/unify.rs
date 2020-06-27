@@ -24,7 +24,7 @@ impl<I: Interner> InferenceTable<I> {
         T: ?Sized + Zip<I>,
     {
         let snapshot = self.snapshot();
-        match Unifier::new(interner, db, self, environment).unify(variance, a, b) {
+        match Unifier::unify(interner, db, self, environment).relate(a, b) {
             Ok(r) => {
                 self.commit(snapshot);
                 Ok(r)
@@ -43,6 +43,7 @@ struct Unifier<'t, I: Interner> {
     goals: Vec<InEnvironment<Goal<I>>>,
     interner: &'t I,
     db: &'t dyn UnificationDatabase<I>,
+    variance: Variance,
 }
 
 #[derive(Debug)]
@@ -51,7 +52,7 @@ pub(crate) struct UnificationResult<I: Interner> {
 }
 
 impl<'t, I: Interner> Unifier<'t, I> {
-    fn new(
+    fn unify(
         interner: &'t I,
         db: &'t dyn UnificationDatabase<I>,
         table: &'t mut InferenceTable<I>,
@@ -63,16 +64,18 @@ impl<'t, I: Interner> Unifier<'t, I> {
             goals: vec![],
             interner,
             db,
+            variance: Variance::Invariant,
         }
     }
 
     /// The main entry point for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
     /// unification of `a` and `b` and returns the Unification Result.
-    fn unify<T>(mut self, variance: Variance, a: &T, b: &T) -> Fallible<UnificationResult<I>>
+    fn relate<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult<I>>
     where
         T: ?Sized + Zip<I>,
     {
+        let variance = self.variance;
         Zip::zip_with(&mut self, variance, a, b)?;
         Ok(UnificationResult { goals: self.goals })
     }
@@ -141,13 +144,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 {
                     let a_universal = self.table.instantiate_binders_universally(interner, fn1);
                     let b_existential = self.table.instantiate_binders_existentially(interner, fn2);
-                    self.zip_substs(&a_universal.as_slice(interner), &b_existential.as_slice(interner))?;
+                    self.zip_substs(None, &a_universal.as_slice(interner), &b_existential.as_slice(interner))?;
                 }
 
                 {
                     let b_universal = self.table.instantiate_binders_universally(interner, fn2);
                     let a_existential = self.table.instantiate_binders_existentially(interner, fn1);
-                    self.zip_substs(&a_existential.as_slice(interner), &b_universal.as_slice(interner))?;
+                    self.zip_substs(None, &a_existential.as_slice(interner), &b_universal.as_slice(interner))?;
                 }
                 Ok(())
             }
@@ -514,11 +517,52 @@ impl<'t, I: Interner> Unifier<'t, I> {
             ));
         }
     }
+
+    fn with_local_variance<R>(
+        &mut self,
+        local_variance: Variance,
+        op: impl std::ops::Fn(&mut Self, Variance) -> R,
+    ) -> R {
+        match (self.variance, local_variance) {
+            (Variance::Invariant, _) => {
+                let r = op(self, Variance::Invariant);
+                r
+            }
+            (Variance::Covariant, Variance::Invariant) => {
+                self.variance = Variance::Invariant;
+                let r = op(self, Variance::Invariant);
+                self.variance = Variance::Covariant;
+                r
+            }
+            (Variance::Covariant, Variance::Covariant) => {
+                let r = op(self, Variance::Covariant);
+                r
+            }
+            (Variance::Covariant, Variance::Contravariant) => {
+                let r = op(self, Variance::Covariant);
+                r
+            }
+            (Variance::Contravariant, Variance::Invariant) => {
+                self.variance = Variance::Invariant;
+                let r = op(self, Variance::Invariant);
+                self.variance = Variance::Covariant;
+                r
+            }
+            (Variance::Contravariant, Variance::Covariant) => {
+                let r = op(self, Variance::Contravariant);
+                r
+            }
+            (Variance::Contravariant, Variance::Contravariant) => {
+                let r = op(self, Variance::Contravariant);
+                r
+            }
+        }
+    }
 }
 
 impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
     fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
-        self.unify_ty_ty(variance, a, b)
+        self.with_local_variance(variance, |this, variance| this.unify_ty_ty(variance, a, b))
     }
 
     fn zip_lifetimes(
@@ -527,11 +571,15 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         a: &Lifetime<I>,
         b: &Lifetime<I>,
     ) -> Fallible<()> {
-        self.unify_lifetime_lifetime(variance, a, b)
+        self.with_local_variance(variance, |this, variance| {
+            this.unify_lifetime_lifetime(variance, a, b)
+        })
     }
 
     fn zip_consts(&mut self, variance: Variance, a: &Const<I>, b: &Const<I>) -> Fallible<()> {
-        self.unify_const_const(variance, a, b)
+        self.with_local_variance(variance, |this, variance| {
+            this.unify_const_const(variance, a, b)
+        })
     }
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
@@ -549,7 +597,9 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         //
         // In both cases we can use the same `unify_binders` routine.
 
-        self.unify_binders(variance, a, b)
+        self.with_local_variance(variance, |this, variance| {
+            this.unify_binders(variance, a, b)
+        })
     }
 
     fn interner(&self) -> &'i I {
