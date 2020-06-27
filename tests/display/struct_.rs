@@ -31,3 +31,33 @@ fn test_struct_fields() {
         }
     );
 }
+
+#[test]
+fn test_struct_keywords() {
+    reparse_test!(
+        program {
+            #[upstream]
+            struct UpstreamFoo {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[fundamental]
+            struct FundamentalFoo<T> {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[phantom_data]
+            struct PhantomFoo {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[upstream]
+            #[fundamental]
+            #[phantom_data]
+            struct Bar<T> {}
+        }
+    );
+}

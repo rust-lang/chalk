@@ -58,14 +58,32 @@ impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
         // changed to Some(0)
         let s = &s.add_debrujin_index(None);
         let value = self.binders.skip_binders();
+
+        // flags
+        write_flags!(
+            f,
+            self.flags,
+            AdtFlags {
+                // Ordering matters
+                upstream,
+                fundamental,
+                phantom_data
+            }
+        );
+
+        // name
         write!(f, "struct {}", self.id.display(s),)?;
         write_joined_non_empty_list!(f, "<{}>", s.binder_var_display(&self.binders.binders), ", ")?;
+
+        // where clauses
         if !value.where_clauses.is_empty() {
             let s = &s.add_indent();
             write!(f, "\nwhere\n{}\n", value.where_clauses.display(s))?;
         } else {
             write!(f, " ")?;
         }
+
+        // body
         write!(f, "{{")?;
         let s = &s.add_indent();
         write_joined_non_empty_list!(
