@@ -43,18 +43,24 @@ use super::{
 /// }
 /// ```
 macro_rules! write_flags {
-    ($writer:ident, $val:expr, $struct_name:ident { $($n:ident),* }) => {
+    ($writer:ident, $val:expr, $struct_name:ident { $($n:ident $(: $extra_arg:tt)?),* }) => {
         match $val {
             // if any fields are missing, the destructuring will error
             $struct_name {
                 $($n,)*
             } => {
                 $(if $n {
-                    write!($writer,"#[{}]\n",stringify!($n))?;
+                    write!($writer, "#[{}]\n", write_flags!(@default $n $(: $extra_arg)*))?;
                 })*
             }
         }
-    }
+    };
+    (@default $n:ident : $name:literal) => {
+        $name
+    };
+    (@default $n:ident ) => {
+        stringify!($n)
+    };
 }
 
 impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
@@ -73,6 +79,18 @@ impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
                 upstream,
                 fundamental,
                 phantom_data
+            }
+        );
+
+        // repr
+        let repr = s.db.adt_repr(self.id);
+
+        write_flags!(
+            f,
+            repr,
+            AdtRepr {
+                repr_c: "repr(C)",
+                repr_packed: "repr(packed)"
             }
         );
 

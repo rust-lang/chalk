@@ -61,3 +61,40 @@ fn test_struct_keywords() {
         }
     );
 }
+
+#[test]
+fn test_struct_repr() {
+    reparse_test!(
+        program {
+            #[repr(C)]
+            struct CFoo {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[repr(packed)]
+            struct PackedFoo {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[repr(C)]
+            #[repr(packed)]
+            struct CPackedFoo {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[repr(packed)]
+            #[repr(C)]
+            struct PackedCFoo {}
+        }
+    );
+    reparse_test!(
+        program {
+            #[upstream]
+            #[repr(C)]
+            struct UpstreamCFoo {}
+        }
+    );
+}
