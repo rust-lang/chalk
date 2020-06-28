@@ -17,6 +17,7 @@ mod identifiers;
 mod items;
 mod render_trait;
 mod state;
+mod stub;
 mod ty;
 
 pub use self::render_trait::*;
@@ -35,7 +36,7 @@ where
 
 /// Writes stubs for items which were referenced by name, but for which we
 /// didn't directly access. For instance, traits mentioned in where bounds which
-/// are only usually checked during well-formedness, when we waren't recording
+/// are only usually checked during well-formedness, when we weren't recording
 /// well-formedness.
 ///
 /// The "stub" nature of this means it writes output with the right names and
@@ -50,55 +51,7 @@ where
     DB: RustIrDatabase<I>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
-    let ws = &WriterState::new(db);
-    for id in ids {
-        match id {
-            RecordedItemId::Impl(_id) => unreachable!(),
-            RecordedItemId::Adt(id) => {
-                let mut v = (*db.adt_datum(id)).clone();
-                v.binders = Binders::new(
-                    VariableKinds::new(ws.db.interner()),
-                    AdtDatumBound {
-                        fields: Vec::new(),
-                        where_clauses: Vec::new(),
-                    },
-                );
-                write_item(f, ws, &v)?;
-            }
-            RecordedItemId::Trait(id) => {
-                let mut v = (*db.trait_datum(id)).clone();
-                v.binders = Binders::new(
-                    VariableKinds::new(ws.db.interner()),
-                    TraitDatumBound {
-                        where_clauses: Vec::new(),
-                    },
-                );
-                write_item(f, ws, &v)?;
-            }
-            RecordedItemId::OpaqueTy(id) => {
-                let mut v = (*db.opaque_ty_data(id)).clone();
-                v.bound = Binders::new(
-                    VariableKinds::new(ws.db.interner()),
-                    OpaqueTyDatumBound {
-                        bounds: Binders::new(VariableKinds::new(ws.db.interner()), Vec::new()),
-                    },
-                );
-                write_item(f, ws, &v)?;
-            }
-            RecordedItemId::FnDef(id) => {
-                let mut v = (*db.fn_def_datum(id)).clone();
-                v.binders = Binders::new(
-                    VariableKinds::new(ws.db.interner()),
-                    FnDefDatumBound {
-                        inputs_and_output: v.binders.skip_binders().inputs_and_output.clone(),
-                        where_clauses: Vec::new(),
-                    },
-                );
-                write_item(f, ws, &v)?;
-            }
-        }
-    }
-    Ok(())
+    write_items(f, &stub::StubWrapper::new(db), ids)
 }
 
 /// Writes out each item recorded by a [`LoggingRustIrDatabase`].

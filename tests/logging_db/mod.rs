@@ -186,7 +186,7 @@ fn records_generic_impls() {
 }
 
 #[test]
-fn catches_assoc_type_bounds_not_mentioned() {
+fn stubs_types_from_assoc_type_bounds() {
     logging_db_output_sufficient! {
         program {
             trait Foo {
@@ -207,7 +207,7 @@ fn catches_assoc_type_bounds_not_mentioned() {
 }
 
 #[test]
-fn catches_assoc_type_values_not_mentioned() {
+fn stubs_types_from_assoc_type_values_not_mentioned() {
     logging_db_output_sufficient! {
         program {
             trait Foo {
@@ -239,6 +239,144 @@ fn stubs_types_from_opaque_ty_bounds() {
 
         goal {
             Bar: Foo
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn stubs_types_in_dyn_ty() {
+    logging_db_output_sufficient! {
+        program {
+            trait Foo {
+                type Assoc<'a>;
+            }
+            trait Other {}
+            impl Foo for () {
+                type Assoc<'a> = dyn Other + 'a;
+            }
+        }
+
+        goal {
+            (): Foo
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn can_stub_traits_with_unreferenced_assoc_ty() {
+    // None of our code will bring in `SuperNotReferenced`'s definition, so if
+    // we fail to remove the bounds on `NotReferenced::Assoc`, then it will fail.
+
+    // two tests where we don't reference the assoc ty.
+    logging_db_output_sufficient! {
+        program {
+            trait SuperNotReferenced {}
+            trait NotReferenced {
+                type Assoc: SuperNotReferenced;
+            }
+            trait Referenced where Self: NotReferenced {}
+            impl Referenced for () {}
+        }
+
+        goal {
+            (): Referenced
+        } yields {
+            "Unique"
+        }
+    }
+    logging_db_output_sufficient! {
+        program {
+            trait SuperNotReferenced {}
+            trait NotReferenced {
+                type Assoc where Self: SuperNotReferenced;
+            }
+            trait Referenced where Self: NotReferenced {}
+            impl Referenced for () {}
+        }
+
+        goal {
+            (): Referenced
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn can_stub_traits_with_referenced_assoc_ty() {
+    // two tests where we do reference the assoc ty
+    logging_db_output_sufficient! {
+        program {
+            trait SuperNotReferenced {}
+            trait NotReferenced {
+                type Assoc: SuperNotReferenced;
+            }
+            trait Referenced where Self: NotReferenced<Assoc=()> {}
+            impl Referenced for () {}
+        }
+
+        goal {
+            (): Referenced
+        } yields {
+            "Unique"
+        }
+    }
+    logging_db_output_sufficient! {
+        program {
+            trait SuperNotReferenced {}
+            trait NotReferenced {
+                type Assoc where (): SuperNotReferenced;
+            }
+            trait Referenced where Self: NotReferenced<Assoc=()> {}
+            impl Referenced for () {}
+        }
+
+        goal {
+            (): Referenced
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn can_stub_types_referenced_in_alias_ty_generics() {
+    logging_db_output_sufficient! {
+        program {
+            struct ThisTypeShouldBeStubbed {}
+            trait HasGenericAssoc {
+                type Assoc<T>;
+            }
+            trait Referenced where Self: HasGenericAssoc<Assoc<ThisTypeShouldBeStubbed>=()> {}
+            impl Referenced for () {}
+        }
+
+        goal {
+            (): Referenced
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn can_stub_types_referenced_in_alias_ty_bounds() {
+    logging_db_output_sufficient! {
+        program {
+            struct ThisTypeShouldBeStubbed {}
+            trait HasAssoc {
+                type Assoc;
+            }
+            trait Referenced where Self: HasAssoc<Assoc=ThisTypeShouldBeStubbed> {}
+            impl Referenced for () {}
+        }
+
+        goal {
+            (): Referenced
         } yields {
             "Unique"
         }
