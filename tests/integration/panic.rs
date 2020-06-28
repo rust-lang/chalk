@@ -57,7 +57,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         Arc::new(TraitDatum {
             id,
             binders: Binders::new(
-                VariableKinds::new(&ChalkIr),
+                VariableKinds::empty(&ChalkIr),
                 TraitDatumBound {
                     where_clauses: vec![],
                 },
@@ -92,7 +92,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         );
 
         let binders = Binders::new(
-            VariableKinds::new(&ChalkIr),
+            VariableKinds::empty(&ChalkIr),
             ImplDatumBound {
                 trait_ref: TraitRef {
                     trait_id: TraitId(RawId { index: 0 }),
@@ -175,7 +175,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             panic!("program_clauses_for_env panic")
         }
 
-        ProgramClauses::new(&ChalkIr)
+        ProgramClauses::empty(&ChalkIr)
     }
 
     fn interner(&self) -> &ChalkIr {
@@ -252,7 +252,7 @@ fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
     // Foo: Bar
     UCanonical {
         canonical: Canonical {
-            binders: CanonicalVarKinds::new(&ChalkIr),
+            binders: CanonicalVarKinds::empty(&ChalkIr),
             value: InEnvironment {
                 environment: Environment::new(&ChalkIr),
                 goal: GoalData::DomainGoal(DomainGoal::Holds(WhereClause::Implemented(TraitRef {
