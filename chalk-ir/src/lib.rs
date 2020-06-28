@@ -11,7 +11,6 @@ use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
 use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
-use std::iter;
 use std::marker::PhantomData;
 
 pub use crate::debug::SeparatorTraitRef;
@@ -1895,7 +1894,7 @@ impl<T: HasInterner> Binders<T> {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
         let value = op(new_var);
-        let binders = VariableKinds::from(interner, iter::once(VariableKind::Ty(TyKind::General)));
+        let binders = VariableKinds::from1(interner, VariableKind::Ty(TyKind::General));
         Binders { binders, value }
     }
 
@@ -2196,6 +2195,11 @@ impl<I: Interner> VariableKinds<I> {
         Ok(VariableKinds {
             interned: I::intern_generic_arg_kinds(interner, variable_kinds.into_iter())?,
         })
+    }
+
+    /// Creates a list of variable kinds from a single variable kind.
+    pub fn from1(interner: &I, variable_kind: VariableKind<I>) -> Self {
+        Self::from(interner, Some(variable_kind))
     }
 
     /// Get an iterator over the list of variable kinds.
