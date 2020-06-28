@@ -1403,7 +1403,9 @@ impl<I: Interner> Copy for LifetimeOutlives<I> where I::InternedLifetime: Copy {
 /// lives at least as long as the lifetime `'a`
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub struct TypeOutlives<I: Interner> {
+    /// The type which must outlive the given lifetime.
     pub ty: Ty<I>,
+    /// The lifetime which the type must outlive.
     pub lifetime: Lifetime<I>,
 }
 
