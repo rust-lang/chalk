@@ -205,7 +205,7 @@ where
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
         let implication = ProgramClauseImplication {
             consequence: self.cast(interner),
-            conditions: Goals::new(interner),
+            conditions: Goals::empty(interner),
             priority: ClausePriority::High,
         };
 
@@ -222,7 +222,7 @@ where
     fn cast_to(self, interner: &I) -> ProgramClause<I> {
         ProgramClauseData(self.map(|bound| ProgramClauseImplication {
             consequence: bound.cast(interner),
-            conditions: Goals::new(interner),
+            conditions: Goals::empty(interner),
             priority: ClausePriority::High,
         }))
         .intern(interner)

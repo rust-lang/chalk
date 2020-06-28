@@ -76,7 +76,7 @@ impl<I: Interner> Environment<I> {
     /// Creates a new environment.
     pub fn new(interner: &I) -> Self {
         Environment {
-            clauses: ProgramClauses::new(interner),
+            clauses: ProgramClauses::empty(interner),
         }
     }
 
@@ -2104,7 +2104,7 @@ pub struct ProgramClauses<I: Interner> {
 
 impl<I: Interner> ProgramClauses<I> {
     /// Creates an empty list of program clauses.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<ProgramClause<I>>)
     }
 
@@ -2381,7 +2381,7 @@ pub struct Goals<I: Interner> {
 
 impl<I: Interner> Goals<I> {
     /// Creates an empty list of goals.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<Goal<I>>)
     }
 
@@ -2530,7 +2530,7 @@ where
             }
         } else {
             // No goals to prove, always true
-            GoalData::All(Goals::new(interner)).intern(interner)
+            GoalData::All(Goals::empty(interner)).intern(interner)
         }
     }
 }
