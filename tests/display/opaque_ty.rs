@@ -17,6 +17,15 @@ fn opaque_types() {
 }
 
 #[test]
+fn opaque_ty_no_bounds() {
+    reparse_test!(
+        program {
+            opaque type Foo: = ();
+        }
+    );
+}
+
+#[test]
 fn test_generic_opaque_types() {
     reparse_test!(
         program {
@@ -66,7 +75,6 @@ fn test_opaque_type_as_type_value() {
     );
 }
 
-#[ignore]
 #[test]
 fn test_generic_opaque_type_as_value1() {
     reparse_test!(
@@ -104,11 +112,23 @@ fn test_generic_opaque_type_as_value1() {
             trait Fez {
                 type Assoc;
             }
-            impl Fez for Foo {
+            impl Fez for Foo<Unit> {
                 type Assoc = fn(Biiiz<Unit>);
             }
-            impl<T, U> Bar<T, U> for Foo {}
+            impl<T, U> Bar<T, U> for Foo<T> {}
             opaque type Biiiz<U>: Bar<Unit, U> = Foo<U>;
+        }
+    );
+}
+
+#[test]
+fn multiple_bounds() {
+    reparse_test!(
+        program {
+            struct Baz {}
+            trait Foo {}
+            trait Fuu {}
+            opaque type Bar: Foo + Fuu = Baz;
         }
     );
 }

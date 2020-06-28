@@ -11,7 +11,7 @@ use chalk_ir::interner::Interner;
 use itertools::Itertools;
 
 use super::{
-    display_self_where_clauses_as_bounds, display_trait_with_generics, render_trait::RenderAsRust,
+    display_self_where_clauses_as_bounds, display_type_with_generics, render_trait::RenderAsRust,
     state::WriterState,
 };
 
@@ -230,7 +230,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         // trait, type and parameters
         // impl<T> Foo<T> for Bar<T> where T: Baz { }
         //         ^^^^^^^^^^^^^^^^^
-        let full_trait_name = display_trait_with_generics(
+        let full_trait_name = display_type_with_generics(
             s,
             trait_ref.trait_id,
             // Ignore automatically added Self parameter by skipping first parameter

@@ -8,7 +8,7 @@ use chalk_ir::{interner::Interner, *};
 use itertools::Itertools;
 
 use super::{
-    display_trait_with_assoc_ty_value, display_trait_with_generics, render_trait::RenderAsRust,
+    display_trait_with_assoc_ty_value, display_type_with_generics, render_trait::RenderAsRust,
     state::WriterState,
 };
 use crate::split::Split;
@@ -26,7 +26,7 @@ impl<I: Interner> RenderAsRust<I> for InlineBound<I> {
 
 impl<I: Interner> RenderAsRust<I> for TraitBound<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        display_trait_with_generics(s, self.trait_id, &self.args_no_self).fmt(f)
+        display_type_with_generics(s, self.trait_id, &self.args_no_self).fmt(f)
     }
 }
 
@@ -104,7 +104,7 @@ impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
             f,
             "{}: {}",
             self.self_type_parameter(interner).display(s),
-            display_trait_with_generics(
+            display_type_with_generics(
                 s,
                 self.trait_id,
                 &self.substitution.parameters(interner)[1..]

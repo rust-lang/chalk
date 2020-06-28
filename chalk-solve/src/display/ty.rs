@@ -8,7 +8,7 @@ use chalk_ir::{interner::Interner, *};
 use itertools::Itertools;
 
 use super::{
-    display_self_where_clauses_as_bounds, display_trait_with_generics, render_trait::RenderAsRust,
+    display_self_where_clauses_as_bounds, display_type_with_generics, render_trait::RenderAsRust,
     state::WriterState,
 };
 
@@ -68,7 +68,7 @@ impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
             f,
             "<{} as {}>::{}",
             trait_params[0].display(s),
-            display_trait_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
+            display_type_with_generics(s, assoc_ty_datum.trait_id, &trait_params[1..]),
             assoc_ty_datum.id.display(s),
         )?;
         write_joined_non_empty_list!(
@@ -87,7 +87,7 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
         write!(
             f,
             "{}",
-            display_trait_with_generics(
+            display_type_with_generics(
                 s,
                 self.opaque_ty_id,
                 self.substitution.parameters(interner),
@@ -173,7 +173,17 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     }
                 )?
             }
-            TypeName::OpaqueType(_) => todo!("opaque type usage"),
+            TypeName::OpaqueType(opaque_ty_id) => {
+                write!(
+                    f,
+                    "{}",
+                    display_type_with_generics(
+                        s,
+                        opaque_ty_id,
+                        self.substitution.parameters(interner)
+                    )
+                )?;
+            }
             TypeName::Raw(raw) => {
                 let mutability = match raw {
                     Mutability::Mut => "*mut ",

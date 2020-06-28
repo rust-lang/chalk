@@ -181,7 +181,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                             )?;
                         }
                         match &bound.skip_binders() {
-                            WhereClause::Implemented(trait_ref) => display_trait_with_generics(
+                            WhereClause::Implemented(trait_ref) => display_type_with_generics(
                                 s,
                                 trait_ref.trait_id,
                                 &trait_ref.substitution.parameters(interner)[1..],
@@ -212,10 +212,11 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
     })
 }
 
-/// Displays a trait with its parameters - something like `AsRef<T>`.
+/// Displays a type with its parameters - something like `AsRef<T>`,
+/// OpaqueTyName<U>, or `AdtName<Value>`.
 ///
-/// This is shared between where bounds & dyn Trait.
-fn display_trait_with_generics<'a, I: Interner>(
+/// This is shared between where bounds, OpaqueTy, & dyn Trait.
+fn display_type_with_generics<'a, I: Interner>(
     s: &'a WriterState<'a, I>,
     trait_name: impl RenderAsRust<I> + 'a,
     trait_params: impl IntoIterator<Item = &'a GenericArg<I>> + 'a,
