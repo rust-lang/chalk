@@ -1,6 +1,6 @@
 [package]
 name = "chalk-solve"
-version = "0.15.0"
+version = "0.16.0-dev.0"
 description = "Combines the chalk-engine with chalk-ir"
 license = "Apache-2.0/MIT"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -17,9 +17,9 @@ tracing = "0.1"
 tracing-subscriber = "0.2"
 rustc-hash = { version = "1.0.0" }
 
-chalk-derive = { version = "=0.15.0", path = "../chalk-derive" }
-chalk-engine = { version = "=0.15.0", path = "../chalk-engine", optional = true }
-chalk-ir = { version = "=0.15.0", path = "../chalk-ir" }
+chalk-derive = { version = "0.16.0-dev.0", path = "../chalk-derive" }
+chalk-engine = { version = "0.16.0-dev.0", path = "../chalk-engine", optional = true }
+chalk-ir = { version = "0.16.0-dev.0", path = "../chalk-ir" }
 
 [dev-dependencies]
 chalk-integration = { path = "../chalk-integration" }
