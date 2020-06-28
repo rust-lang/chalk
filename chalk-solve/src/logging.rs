@@ -7,6 +7,6 @@ pub fn with_tracing_logs<T>(action: impl FnOnce() -> T) -> T {
     let filter = EnvFilter::from_env("CHALK_DEBUG");
     let subscriber = Registry::default()
         .with(filter)
-        .with(HierarchicalLayer::new(4));
+        .with(HierarchicalLayer::new(2));
     tracing::subscriber::with_default(subscriber, action)
 }
