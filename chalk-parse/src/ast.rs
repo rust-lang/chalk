@@ -366,6 +366,7 @@ pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
     ProjectionEq { projection: ProjectionTy, ty: Ty },
     LifetimeOutlives { a: Lifetime, b: Lifetime },
+    TypeOutlives { ty: Ty, lifetime: Lifetime },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

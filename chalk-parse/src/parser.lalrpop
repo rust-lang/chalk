@@ -412,6 +412,11 @@ WhereClause: WhereClause = {
     // 'a: 'b
     <a:Lifetime> ":" <b:Lifetime> => {
         WhereClause::LifetimeOutlives { a, b }
+    },
+
+    // T: 'a
+    <ty:Ty> ":" <lifetime:Lifetime>  => {
+        WhereClause::TypeOutlives { ty, lifetime }
     }
 };
 
