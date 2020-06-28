@@ -227,6 +227,24 @@ fn overlapping_assoc_types_error_simple() {
     }
 }
 
+/// See https://github.com/rust-lang/chalk/issues/515
+#[test]
+fn overlapping_assoc_types_error_generics() {
+    lowering_error! {
+        program {
+            trait Iterator<I> { type Item; }
+            trait Trait {}
+
+            struct Foo {}
+
+            impl<T, I> Trait for T where T: Iterator<I, Item = u32> {}
+            impl<T, I> Trait for T where T: Iterator<I, Item = u32> {}
+        } error_msg {
+            "overlapping impls of trait `Trait`"
+        }
+    }
+}
+
 #[test]
 fn overlapping_negative_positive_impls() {
     lowering_error! {
