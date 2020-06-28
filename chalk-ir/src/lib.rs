@@ -2231,7 +2231,7 @@ pub struct CanonicalVarKinds<I: Interner> {
 
 impl<I: Interner> CanonicalVarKinds<I> {
     /// Creates an empty list of canonical variable kinds.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<CanonicalVarKind<I>>)
     }
 
@@ -2262,6 +2262,11 @@ impl<I: Interner> CanonicalVarKinds<I> {
         Ok(CanonicalVarKinds {
             interned: I::intern_canonical_var_kinds(interner, variable_kinds.into_iter())?,
         })
+    }
+
+    /// Creates a list of canonical variable kinds from a single canonical variable kind.
+    pub fn from1(interner: &I, variable_kind: CanonicalVarKind<I>) -> Self {
+        Self::from(interner, Some(variable_kind))
     }
 
     /// Get an iterator over the list of canonical variable kinds.
