@@ -389,10 +389,12 @@ fn program_clauses_that_could_match<I: Interner>(
 /// Adds clauses to allow normalizing possible downstream associated type
 /// implementations when in the "compatible" mode. Example clauses:
 ///
-///     for<type, type, type> Normalize(<^0.0 as Trait<^0.1>>::Item -> ^0.2)
-///         :- Compatible, Implemented(^0.0: Trait<^0.1>), DownstreamType(^0.1), CannotProve
-///     for<type, type, type> Normalize(<^0.0 as Trait<^0.1>>::Item -> ^0.2)
-///         :- Compatible, Implemented(^0.0: Trait<^0.1>), IsFullyVisible(^0.0), DownstreamType(^0.1), CannotProve
+/// ```notrust
+/// for<type, type, type> Normalize(<^0.0 as Trait<^0.1>>::Item -> ^0.2)
+///     :- Compatible, Implemented(^0.0: Trait<^0.1>), DownstreamType(^0.1), CannotProve
+/// for<type, type, type> Normalize(<^0.0 as Trait<^0.1>>::Item -> ^0.2)
+///     :- Compatible, Implemented(^0.0: Trait<^0.1>), IsFullyVisible(^0.0), DownstreamType(^0.1), CannotProve
+/// ```
 fn push_clauses_for_compatible_normalize<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
