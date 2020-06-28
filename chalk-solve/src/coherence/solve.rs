@@ -93,13 +93,13 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let lhs_params = lhs_bound
             .trait_ref
             .substitution
-            .parameters(interner)
+            .as_slice(interner)
             .iter()
             .cloned();
         let rhs_params = rhs_bound
             .trait_ref
             .substitution
-            .parameters(interner)
+            .as_slice(interner)
             .iter()
             .map(|param| param.shifted_in(interner));
 
@@ -223,14 +223,14 @@ impl<I: Interner> CoherenceSolver<'_, I> {
                             // T0 = U0, ..., Tm = Um
                             let params_goals = more_special_trait_ref
                                 .substitution
-                                .parameters(interner)
+                                .as_slice(interner)
                                 .iter()
                                 .cloned()
                                 .zip(
                                     less_special_impl
                                         .trait_ref
                                         .substitution
-                                        .parameters(interner)
+                                        .as_slice(interner)
                                         .iter()
                                         .cloned(),
                                 )

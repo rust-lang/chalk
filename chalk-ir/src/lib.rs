@@ -2325,7 +2325,7 @@ impl<T: HasInterner> UCanonical<T> {
         let subst = &canonical_subst.value.subst;
         assert_eq!(
             self.canonical.binders.len(interner),
-            subst.parameters(interner).len()
+            subst.as_slice(interner).len()
         );
         subst.is_identity_subst(interner)
     }
@@ -2662,7 +2662,7 @@ impl<I: Interner> Substitution<I> {
 
     /// Index into the list of parameters.
     pub fn at(&self, interner: &I, index: usize) -> &GenericArg<I> {
-        &self.parameters(interner)[index]
+        &self.as_slice(interner)[index]
     }
 
     /// Create a substitution from a single parameter.
@@ -2677,22 +2677,22 @@ impl<I: Interner> Substitution<I> {
 
     /// Check whether this is an empty substitution.
     pub fn is_empty(&self, interner: &I) -> bool {
-        self.parameters(interner).is_empty()
+        self.as_slice(interner).is_empty()
     }
 
     /// Get an iterator over the parameters of the substitution.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, GenericArg<I>> {
-        self.parameters(interner).iter()
+        self.as_slice(interner).iter()
     }
 
-    /// Get the parameters associated with a substitution.
-    pub fn parameters(&self, interner: &I) -> &[GenericArg<I>] {
+    /// Returns a slice containing the parameters associated with the substitution.
+    pub fn as_slice(&self, interner: &I) -> &[GenericArg<I>] {
         interner.substitution_data(&self.interned)
     }
 
     /// Get the length of the substitution (number of parameters).
     pub fn len(&self, interner: &I) -> usize {
-        self.parameters(interner).len()
+        self.as_slice(interner).len()
     }
 
     /// A substitution is an **identity substitution** if it looks
@@ -2753,7 +2753,7 @@ impl<I: Interner> SubstFolder<'_, I> {
     /// Index into the list of parameters.
     pub fn at(&self, index: usize) -> &GenericArg<I> {
         let interner = self.interner;
-        &self.subst.parameters(interner)[index]
+        &self.subst.as_slice(interner)[index]
     }
 }
 
@@ -2766,7 +2766,7 @@ pub trait AsParameters<I: Interner> {
 impl<I: Interner> AsParameters<I> for Substitution<I> {
     #[allow(unreachable_code, unused_variables)]
     fn as_parameters(&self, interner: &I) -> &[GenericArg<I>] {
-        self.parameters(interner)
+        self.as_slice(interner)
     }
 }
 

@@ -385,7 +385,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                     <[_] as CouldMatch<[_]>>::could_match(
                         &parameters,
                         interner,
-                        &trait_ref.substitution.parameters(interner),
+                        &trait_ref.substitution.as_slice(interner),
                     )
                 }
             })

@@ -386,7 +386,7 @@ fn compute_assoc_ty_goal<I: Interner>(
 
             let (impl_parameters, projection) = db
                 .impl_parameters_and_projection_from_associated_ty_value(
-                    &assoc_ty_substitution.parameters(interner),
+                    &assoc_ty_substitution.as_slice(interner),
                     assoc_ty,
                 );
 
