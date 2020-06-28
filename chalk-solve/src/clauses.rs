@@ -364,18 +364,18 @@ fn program_clauses_that_could_match<I: Interner>(
                     )?;
                 }
 
+                push_program_clauses_for_associated_type_values_in_impls_of(
+                    builder,
+                    trait_id,
+                    trait_parameters,
+                );
+
                 push_clauses_for_compatible_normalize(
                     db,
                     builder,
                     interner,
                     trait_id,
                     proj.associated_ty_id,
-                );
-
-                push_program_clauses_for_associated_type_values_in_impls_of(
-                    builder,
-                    trait_id,
-                    trait_parameters,
                 );
             }
             AliasTy::Opaque(_) => (),
