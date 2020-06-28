@@ -246,6 +246,53 @@ fn stubs_types_from_opaque_ty_bounds() {
 }
 
 #[test]
+fn opaque_ty_in_opaque_ty() {
+    logging_db_output_sufficient! {
+        program {
+            trait Foo {}
+            trait Fuu {}
+            struct Baz {}
+            opaque type Baq: Foo + Fuu = Baz;
+            opaque type Bar: Foo + Fuu = Baq;
+        }
+
+        goal {
+            Bar: Foo
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn opaque_ty_in_projection() {
+    logging_db_output_sufficient! {
+        program {
+            struct Baz {}
+            trait Foo {}
+            trait Fuu {}
+            trait Fuut {
+                type Assoc;
+            }
+            impl Fuut for Baz {
+                type Assoc = Baq;
+            }
+            impl Foo for Baz
+            where
+                Baz: Fuut<Assoc=Baq>
+            { }
+            opaque type Baq: Foo + Fuu = Baz;
+        }
+
+        goal {
+            Baz: Foo
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
 fn stubs_types_in_dyn_ty() {
     logging_db_output_sufficient! {
         program {

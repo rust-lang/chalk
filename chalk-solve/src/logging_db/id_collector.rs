@@ -133,7 +133,9 @@ where
                     let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
                     self.record(assoc_ty_datum.trait_id)
                 }
-                AliasTy::Opaque(_opaque_ty) => todo!("opaque types!"),
+                AliasTy::Opaque(opaque_ty) => {
+                    self.record(opaque_ty.opaque_ty_id);
+                }
             },
             TyData::BoundVar(..) => (),
             TyData::Dyn(..) => (),
@@ -156,7 +158,9 @@ where
                     let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
                     self.record(assoc_ty_datum.trait_id)
                 }
-                AliasTy::Opaque(_opaque_ty) => todo!("opaque types!"),
+                AliasTy::Opaque(opaque_ty) => {
+                    self.record(opaque_ty.opaque_ty_id);
+                }
             },
             WhereClause::LifetimeOutlives(_lifetime_outlives) => (),
         }
