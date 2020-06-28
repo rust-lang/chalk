@@ -1804,7 +1804,7 @@ impl<T: HasInterner> Binders<T> {
     /// (value)`. Since our deBruijn indices count binders, not variables, this
     /// is sometimes useful.
     pub fn empty(interner: &T::Interner, value: T) -> Self {
-        let binders = VariableKinds::new(interner);
+        let binders = VariableKinds::empty(interner);
         Self { binders, value }
     }
 
@@ -2168,7 +2168,7 @@ pub struct VariableKinds<I: Interner> {
 
 impl<I: Interner> VariableKinds<I> {
     /// Creates an empty list of canonical variable kinds.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<VariableKind<I>>)
     }
 
