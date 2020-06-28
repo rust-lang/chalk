@@ -228,6 +228,24 @@ fn catches_assoc_type_values_not_mentioned() {
 }
 
 #[test]
+fn stubs_types_from_opaque_ty_bounds() {
+    logging_db_output_sufficient! {
+        program {
+            trait Foo {}
+            trait Fuu {}
+            struct Baz {}
+            opaque type Bar: Foo + Fuu = Baz;
+        }
+
+        goal {
+            Bar: Foo
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
 fn does_not_need_necessary_separate_impl() {
     // this should leave out "impl Bar for Fox" and the result should pass the
     // test (it won't be well-formed, but that's OK.)

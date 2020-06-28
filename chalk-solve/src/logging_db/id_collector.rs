@@ -70,6 +70,10 @@ pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
                     .db
                     .opaque_ty_data(opaque_id)
                     .visit_with(&mut collector, DebruijnIndex::INNERMOST);
+                collector
+                    .db
+                    .hidden_opaque_type(opaque_id)
+                    .visit_with(&mut collector, DebruijnIndex::INNERMOST);
             }
             RecordedItemId::Impl(impl_id) => {
                 let impl_datum = collector.db.impl_datum(impl_id);
