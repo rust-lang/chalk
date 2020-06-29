@@ -3,11 +3,12 @@ use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::split::Split;
 use crate::RustIrDatabase;
-use chalk_ir::cast::Cast;
+use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
+use std::iter;
 use tracing::{debug, instrument};
 
 pub mod builder;
@@ -376,6 +377,14 @@ fn program_clauses_that_could_match<I: Interner>(
                     trait_id,
                     trait_parameters,
                 );
+
+                push_clauses_for_compatible_normalize(
+                    db,
+                    builder,
+                    interner,
+                    trait_id,
+                    proj.associated_ty_id,
+                );
             }
             AliasTy::Opaque(_) => (),
         },
@@ -383,6 +392,63 @@ fn program_clauses_that_could_match<I: Interner>(
     };
 
     Ok(clauses)
+}
+
+/// Adds clauses to allow normalizing possible downstream associated type
+/// implementations when in the "compatible" mode. Example clauses:
+///
+/// ```notrust
+/// for<type, type, type> Normalize(<^0.0 as Trait<^0.1>>::Item -> ^0.2)
+///     :- Compatible, Implemented(^0.0: Trait<^0.1>), DownstreamType(^0.1), CannotProve
+/// for<type, type, type> Normalize(<^0.0 as Trait<^0.1>>::Item -> ^0.2)
+///     :- Compatible, Implemented(^0.0: Trait<^0.1>), IsFullyVisible(^0.0), DownstreamType(^0.1), CannotProve
+/// ```
+fn push_clauses_for_compatible_normalize<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    builder: &mut ClauseBuilder<'_, I>,
+    interner: &I,
+    trait_id: TraitId<I>,
+    associated_ty_id: AssocTypeId<I>,
+) {
+    let trait_datum = db.trait_datum(trait_id);
+    let trait_binders = trait_datum.binders.map_ref(|b| &b.where_clauses);
+    builder.push_binders(&trait_binders, |builder, where_clauses| {
+        let projection = ProjectionTy {
+            associated_ty_id,
+            substitution: builder.substitution_in_scope(),
+        };
+        let trait_ref = TraitRef {
+            trait_id,
+            substitution: builder.substitution_in_scope(),
+        };
+        let type_parameters: Vec<_> = trait_ref.type_parameters(interner).collect();
+
+        builder.push_bound_ty(|builder, target_ty| {
+            for i in 0..type_parameters.len() {
+                builder.push_clause(
+                    DomainGoal::Normalize(Normalize {
+                        ty: target_ty.clone(),
+                        alias: AliasTy::Projection(projection.clone()),
+                    }),
+                    where_clauses
+                        .iter()
+                        .cloned()
+                        .casted(interner)
+                        .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
+                        .chain(iter::once(
+                            WhereClause::Implemented(trait_ref.clone()).cast(interner),
+                        ))
+                        .chain((0..i).map(|j| {
+                            DomainGoal::IsFullyVisible(type_parameters[j].clone()).cast(interner)
+                        }))
+                        .chain(iter::once(
+                            DomainGoal::DownstreamType(type_parameters[i].clone()).cast(interner),
+                        ))
+                        .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
+                );
+            }
+        });
+    });
 }
 
 /// Generate program clauses from the associated-type values
