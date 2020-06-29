@@ -11,7 +11,6 @@ use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
 use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
-use std::iter;
 use std::marker::PhantomData;
 
 pub use crate::debug::SeparatorTraitRef;
@@ -77,7 +76,7 @@ impl<I: Interner> Environment<I> {
     /// Creates a new environment.
     pub fn new(interner: &I) -> Self {
         Environment {
-            clauses: ProgramClauses::new(interner),
+            clauses: ProgramClauses::empty(interner),
         }
     }
 
@@ -1804,7 +1803,7 @@ impl<T: HasInterner> Binders<T> {
     /// (value)`. Since our deBruijn indices count binders, not variables, this
     /// is sometimes useful.
     pub fn empty(interner: &T::Interner, value: T) -> Self {
-        let binders = VariableKinds::new(interner);
+        let binders = VariableKinds::empty(interner);
         Self { binders, value }
     }
 
@@ -1895,7 +1894,7 @@ impl<T: HasInterner> Binders<T> {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
         let value = op(new_var);
-        let binders = VariableKinds::from(interner, iter::once(VariableKind::Ty(TyKind::General)));
+        let binders = VariableKinds::from1(interner, VariableKind::Ty(TyKind::General));
         Binders { binders, value }
     }
 
@@ -2105,7 +2104,7 @@ pub struct ProgramClauses<I: Interner> {
 
 impl<I: Interner> ProgramClauses<I> {
     /// Creates an empty list of program clauses.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<ProgramClause<I>>)
     }
 
@@ -2167,8 +2166,8 @@ pub struct VariableKinds<I: Interner> {
 }
 
 impl<I: Interner> VariableKinds<I> {
-    /// Creates an empty list of canonical variable kinds.
-    pub fn new(interner: &I) -> Self {
+    /// Creates an empty list of variable kinds.
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<VariableKind<I>>)
     }
 
@@ -2196,6 +2195,11 @@ impl<I: Interner> VariableKinds<I> {
         Ok(VariableKinds {
             interned: I::intern_generic_arg_kinds(interner, variable_kinds.into_iter())?,
         })
+    }
+
+    /// Creates a list of variable kinds from a single variable kind.
+    pub fn from1(interner: &I, variable_kind: VariableKind<I>) -> Self {
+        Self::from(interner, Some(variable_kind))
     }
 
     /// Get an iterator over the list of variable kinds.
@@ -2227,7 +2231,7 @@ pub struct CanonicalVarKinds<I: Interner> {
 
 impl<I: Interner> CanonicalVarKinds<I> {
     /// Creates an empty list of canonical variable kinds.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<CanonicalVarKind<I>>)
     }
 
@@ -2258,6 +2262,11 @@ impl<I: Interner> CanonicalVarKinds<I> {
         Ok(CanonicalVarKinds {
             interned: I::intern_canonical_var_kinds(interner, variable_kinds.into_iter())?,
         })
+    }
+
+    /// Creates a list of canonical variable kinds from a single canonical variable kind.
+    pub fn from1(interner: &I, variable_kind: CanonicalVarKind<I>) -> Self {
+        Self::from(interner, Some(variable_kind))
     }
 
     /// Get an iterator over the list of canonical variable kinds.
@@ -2325,7 +2334,7 @@ impl<T: HasInterner> UCanonical<T> {
         let subst = &canonical_subst.value.subst;
         assert_eq!(
             self.canonical.binders.len(interner),
-            subst.parameters(interner).len()
+            subst.as_slice(interner).len()
         );
         subst.is_identity_subst(interner)
     }
@@ -2372,7 +2381,7 @@ pub struct Goals<I: Interner> {
 
 impl<I: Interner> Goals<I> {
     /// Creates an empty list of goals.
-    pub fn new(interner: &I) -> Self {
+    pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<Goal<I>>)
     }
 
@@ -2521,7 +2530,7 @@ where
             }
         } else {
             // No goals to prove, always true
-            GoalData::All(Goals::new(interner)).intern(interner)
+            GoalData::All(Goals::empty(interner)).intern(interner)
         }
     }
 }
@@ -2662,7 +2671,7 @@ impl<I: Interner> Substitution<I> {
 
     /// Index into the list of parameters.
     pub fn at(&self, interner: &I, index: usize) -> &GenericArg<I> {
-        &self.parameters(interner)[index]
+        &self.as_slice(interner)[index]
     }
 
     /// Create a substitution from a single parameter.
@@ -2677,22 +2686,22 @@ impl<I: Interner> Substitution<I> {
 
     /// Check whether this is an empty substitution.
     pub fn is_empty(&self, interner: &I) -> bool {
-        self.parameters(interner).is_empty()
+        self.as_slice(interner).is_empty()
     }
 
     /// Get an iterator over the parameters of the substitution.
     pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, GenericArg<I>> {
-        self.parameters(interner).iter()
+        self.as_slice(interner).iter()
     }
 
-    /// Get the parameters associated with a substitution.
-    pub fn parameters(&self, interner: &I) -> &[GenericArg<I>] {
+    /// Returns a slice containing the parameters associated with the substitution.
+    pub fn as_slice(&self, interner: &I) -> &[GenericArg<I>] {
         interner.substitution_data(&self.interned)
     }
 
     /// Get the length of the substitution (number of parameters).
     pub fn len(&self, interner: &I) -> usize {
-        self.parameters(interner).len()
+        self.as_slice(interner).len()
     }
 
     /// A substitution is an **identity substitution** if it looks
@@ -2753,7 +2762,7 @@ impl<I: Interner> SubstFolder<'_, I> {
     /// Index into the list of parameters.
     pub fn at(&self, index: usize) -> &GenericArg<I> {
         let interner = self.interner;
-        &self.subst.parameters(interner)[index]
+        &self.subst.as_slice(interner)[index]
     }
 }
 
@@ -2766,7 +2775,7 @@ pub trait AsParameters<I: Interner> {
 impl<I: Interner> AsParameters<I> for Substitution<I> {
     #[allow(unreachable_code, unused_variables)]
     fn as_parameters(&self, interner: &I) -> &[GenericArg<I>] {
-        self.parameters(interner)
+        self.as_slice(interner)
     }
 }
 

@@ -234,7 +234,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
             s,
             trait_ref.trait_id,
             // Ignore automatically added Self parameter by skipping first parameter
-            &trait_ref.substitution.parameters(interner)[1..],
+            &trait_ref.substitution.as_slice(interner)[1..],
         );
         write!(
             f,

@@ -387,8 +387,8 @@ pub fn add_unsize_program_clauses<I: Interner>(
                 return;
             }
 
-            let parameters_a = substitution_a.parameters(interner);
-            let parameters_b = substitution_b.parameters(interner);
+            let parameters_a = substitution_a.as_slice(interner);
+            let parameters_b = substitution_b.as_slice(interner);
             // Check that the source adt with the target's
             // unsizing parameters is equal to the target.
             // We construct a new substitution where if a parameter is used in the

@@ -235,7 +235,7 @@ fn program_clauses_that_could_match<I: Interner>(
 
             for impl_id in db.impls_for_trait(
                 trait_ref.trait_id,
-                trait_ref.substitution.parameters(interner),
+                trait_ref.substitution.as_slice(interner),
             ) {
                 db.impl_datum(impl_id).to_program_clauses(builder);
             }

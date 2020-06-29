@@ -544,7 +544,7 @@ impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
         let parameters = separator_trait_ref
             .trait_ref
             .substitution
-            .parameters(interner);
+            .as_slice(interner);
         write!(
             fmt,
             "{:?}{}{:?}{:?}",
@@ -856,7 +856,7 @@ impl<I: Interner> Substitution<I> {
     /// Displays the substitution in the form `< P0, .. Pn >`, or (if
     /// the substitution is empty) as an empty string.
     pub fn with_angle(&self, interner: &I) -> Angle<'_, GenericArg<I>> {
-        Angle(self.parameters(interner))
+        Angle(self.as_slice(interner))
     }
 }
 

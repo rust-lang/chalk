@@ -1,4 +1,3 @@
-use std::iter;
 use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
@@ -156,7 +155,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
         let binders = Binders::new(
-            VariableKinds::from(interner, iter::once(VariableKind::Ty(TyKind::General))),
+            VariableKinds::from1(interner, VariableKind::Ty(TyKind::General)),
             PhantomData::<I>,
         );
         self.push_binders(&binders, |this, PhantomData| {

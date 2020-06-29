@@ -137,7 +137,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                             WhereClause::Implemented(trait_ref) => display_type_with_generics(
                                 s,
                                 trait_ref.trait_id,
-                                &trait_ref.substitution.parameters(interner)[1..],
+                                &trait_ref.substitution.as_slice(interner)[1..],
                             )
                             .fmt(f),
                             WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {

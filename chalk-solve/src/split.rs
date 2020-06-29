@@ -27,7 +27,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
             associated_ty_id,
             ref substitution,
         } = *projection;
-        let parameters = substitution.parameters(interner);
+        let parameters = substitution.as_slice(interner);
         let associated_ty_data = &self.associated_ty_data(associated_ty_id);
         let (trait_params, other_params) =
             self.split_associated_ty_parameters(parameters, &**associated_ty_data);
