@@ -180,8 +180,6 @@ dependencies = [
  "salsa 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.111 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.111 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "tracing-subscriber 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
