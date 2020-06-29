@@ -76,7 +76,7 @@ impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
                 .root_answer(self.context, self.table, self.answer)
             {
                 Ok(answer) => {
-                    debug!("Answer: {:?}", &answer);
+                    debug!(answer = ?(&answer));
                     return AnswerResult::Answer(answer);
                 }
 

@@ -1,8 +1,8 @@
+use crate::debug_span;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
-use tracing::debug;
 
 use super::InferenceTable;
 
@@ -16,7 +16,7 @@ impl<I: Interner> InferenceTable<I> {
         T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
         T::Result: HasInterner<Interner = I>,
     {
-        debug!("u_canonicalize({:#?})", value0);
+        debug_span!("u_canonicalize", "{:#?}", value0);
 
         // First, find all the universes that appear in `value`.
         let mut universes = UniverseMap::new();
@@ -169,8 +169,7 @@ impl UniverseMapExt for UniverseMap {
         T::Result: HasInterner<Interner = I>,
         I: Interner,
     {
-        debug!("map_from_canonical(value={:?})", canonical_value);
-        debug!("map_from_canonical: universes = {:?}", self.universes);
+        debug_span!("map_from_canonical", ?canonical_value, universes = ?self.universes);
 
         let binders = canonical_value
             .binders

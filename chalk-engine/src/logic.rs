@@ -196,8 +196,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             }
         };
 
-        debug!("ucanonical_subgoal={:?}", ucanonical_subgoal);
-        debug!("universe_map={:?}", universe_map);
+        debug!(?ucanonical_subgoal, ?universe_map);
 
         let table = self.get_or_create_table_for_ucanonical_goal(context, ucanonical_subgoal);
 
@@ -218,14 +217,14 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         goal: UCanonical<InEnvironment<Goal<I>>>,
     ) -> TableIndex {
         if let Some(table) = self.tables.index_of(&goal) {
-            debug!("found existing table {:?}", table);
+            debug!(?table, "found existing table");
             return table;
         }
 
         info!(
-            "creating new table {:?} and goal {:#?}",
-            self.tables.next_index(),
-            goal
+            table = ?self.tables.next_index(),
+            "creating new table with goal = {:#?}",
+            goal,
         );
         let table = Self::build_table(context, self.tables.next_index(), goal);
         self.tables.insert(table)
@@ -279,6 +278,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     }
                     Err(Floundered) => {
                         debug!(
+                            table = ?table_idx,
                             "Marking table {:?} as floundered! (failed to create program clauses)",
                             table_idx
                         );
@@ -300,8 +300,8 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     Self::simplify_goal(context, &mut infer, subst, environment, goal)
                 {
                     info!(
-                        "pushing initial strand with ex-clause: {:#?}",
-                        infer.debug_ex_clause(context.interner(), &ex_clause),
+                        ex_clause = ?infer.debug_ex_clause(context.interner(), &ex_clause),
+                        "pushing initial strand"
                     );
                     let strand = Strand {
                         infer,
@@ -503,7 +503,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             });
             match next_strand {
                 Some(mut strand) => {
-                    debug!("next strand: {:#?}", strand);
+                    debug!("starting next strand = {:#?}", strand);
 
                     strand.last_pursued_time = clock;
                     match self.select_subgoal(&mut strand) {
@@ -715,7 +715,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 // We want to disproval the subgoal, but we
                 // have an unconditional answer for the subgoal,
                 // therefore we have failed to disprove it.
-                debug!("Marking Strand as ambiguous because answer to (negative) subgoal was ambiguous");
+                debug!(?strand, "Marking Strand as ambiguous because answer to (negative) subgoal was ambiguous");
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
@@ -879,7 +879,9 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         } = *strand.selected_subgoal.as_ref().unwrap();
 
         debug!(
-            "table selection {:?} with goal: {:#?}",
+            ?subgoal_table,
+            goal = ?self.forest.tables[subgoal_table].table_goal,
+            "table selection {:?} with goal: {:?}",
             subgoal_table, self.forest.tables[subgoal_table].table_goal
         );
 
@@ -894,12 +896,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             // We need to check if we can merge it into the current `Strand`.
             match self.merge_answer_into_strand(&mut strand) {
                 Err(e) => {
-                    debug!("could not merge into current strand");
+                    debug!(?strand, "could not merge into current strand");
                     drop(strand);
                     return Err(e);
                 }
                 Ok(_) => {
-                    debug!("merged answer into current strand");
+                    debug!(?strand, "merged answer into current strand");
                     self.stack.top().active_strand = Some(strand);
                     return Ok(());
                 }
@@ -1410,10 +1412,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             constraints,
             filtered_delayed_subgoals,
         );
-        debug!(
-            "answer: table={:?}, subst={:?}, floundered={:?}",
-            table, subst, floundered
-        );
+        debug!(?table, ?subst, ?floundered, "found answer");
 
         let answer = Answer { subst, ambiguous };
 
@@ -1528,7 +1527,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             floundered_literal,
             floundered_time,
         });
-        debug!("flounder_subgoal: ex_clause={:#?}", ex_clause);
+        debug!(?ex_clause);
     }
 
     /// True if all the tables on the stack starting from `depth` and

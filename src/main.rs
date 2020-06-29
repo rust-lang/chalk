@@ -10,11 +10,10 @@ use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::*;
 use chalk_integration::query::LoweringDatabase;
 use chalk_solve::ext::*;
+use chalk_solve::logging;
 use chalk_solve::{RustIrDatabase, SolverChoice};
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
-use tracing_subscriber::filter::EnvFilter;
-use tracing_subscriber::FmtSubscriber;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -298,17 +297,13 @@ impl Args {
 
 fn main() {
     use std::io::Write;
-    let filter = EnvFilter::from_env("CHALK_DEBUG");
-    FmtSubscriber::builder()
-        .with_env_filter(filter)
-        .without_time()
-        .init();
-
-    ::std::process::exit(match run() {
-        Ok(_) => 0,
-        Err(ref e) => {
-            write!(&mut ::std::io::stderr(), "{}", e).expect("Error writing to stderr");
-            1
-        }
+    logging::with_tracing_logs(|| {
+        ::std::process::exit(match run() {
+            Ok(_) => 0,
+            Err(ref e) => {
+                write!(&mut ::std::io::stderr(), "{}", e).expect("Error writing to stderr");
+                1
+            }
+        })
     });
 }

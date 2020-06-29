@@ -7,7 +7,7 @@ use super::lib::{Minimums, Solution, UCanonicalGoal};
 use super::stack::StackDepth;
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 /// The "search graph" stores in-progress goals that are still
 /// being solved.
@@ -78,25 +78,25 @@ impl<I: Interner> SearchGraph<I> {
     }
 
     /// Clears all nodes with a depth-first number greater than or equal `dfn`.
+    #[instrument(level = "debug", skip(self))]
     pub(crate) fn rollback_to(&mut self, dfn: DepthFirstNumber) {
-        debug!("rollback_to(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
         self.nodes.truncate(dfn.index);
     }
 
     /// Removes all nodes with a depth-first-number greater than or
     /// equal to `dfn`, adding their final solutions into the cache.
+    #[instrument(level = "debug", skip(self))]
     pub(crate) fn move_to_cache(
         &mut self,
         dfn: DepthFirstNumber,
         cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
     ) {
-        debug!("move_to_cache(dfn={:?})", dfn);
         self.indices.retain(|_key, value| *value < dfn);
         for node in self.nodes.drain(dfn.index..) {
             assert!(node.stack_depth.is_none());
             assert!(node.links.positive >= dfn);
-            debug!("caching solution {:?} for {:?}", node.solution, node.goal);
+            debug!("caching solution {:#?} for {:#?}", node.solution, node.goal);
             cache.insert(node.goal, node.solution);
         }
     }

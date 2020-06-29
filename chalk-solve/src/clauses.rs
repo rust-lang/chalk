@@ -190,7 +190,7 @@ pub(crate) fn program_clauses_for_goal<'db, I: Interner>(
         .filter(|c| c.could_match(interner, goal))
         .collect();
 
-    debug!("vec = {:#?}", clauses);
+    debug!(?clauses);
 
     Ok(clauses)
 }
@@ -477,11 +477,11 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
             continue;
         }
 
-        debug!("impl_id = {:?}", impl_id);
+        debug!(?impl_id);
 
         for &atv_id in &impl_datum.associated_ty_value_ids {
             let atv = builder.db.associated_ty_value(atv_id);
-            debug!("atv_id = {:?} atv = {:#?}", atv_id, atv);
+            debug!(?atv_id, ?atv);
             atv.to_program_clauses(builder);
         }
     }

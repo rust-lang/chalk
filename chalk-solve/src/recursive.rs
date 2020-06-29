@@ -97,11 +97,11 @@ impl<'me, I: Interner> Solver<'me, I> {
     /// }`, `into_peeled_goal` can be used to create a canonical goal
     /// `SomeType<!1>: Foo<?0>`. This function will then return a
     /// solution with the substitution `?0 := u8`.
+    #[instrument(level = "debug", skip(self))]
     pub(crate) fn solve_root_goal(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
     ) -> Fallible<Solution<I>> {
-        debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
         self.solve_goal(canonical_goal.clone(), minimums)
@@ -128,7 +128,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
 
             debug!(
-                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
+                "loop iteration result = {:?} with minimums {:?}",
                 current_answer, minimums
             );
 
@@ -192,7 +192,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     ) -> Fallible<Solution<I>> {
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
-            debug!("solve_reduced_goal: cache hit, value={:?}", value);
+            debug!(?value, "cache hit");
             return value.clone();
         }
 
@@ -255,16 +255,16 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                     self.context
                         .search_graph
                         .move_to_cache(dfn, &mut self.context.cache);
-                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
+                    debug!(target: "solve_goal", "SCC head encountered, moving to cache");
                 } else {
                     debug!(
-                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
+                        target: "solve_goal", "SCC head encountered, rolling back as caching disabled"
                     );
                     self.context.search_graph.rollback_to(dfn);
                 }
             }
 
-            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            info!(target = "solve_goal", solution = ?result, prio = ?priority);
             result
         }
     }

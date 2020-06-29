@@ -81,7 +81,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                         }
                     }
                 };
-                debug!("prog_solution={:?}", prog_solution);
+                debug!(?prog_solution);
 
                 (prog_solution, prog_prio)
             }
@@ -148,7 +148,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             let res = self.solve_via_implication(canonical_goal, implication, minimums);
 
             if let (Ok(solution), priority) = res {
-                debug!("ok: solution={:?} prio={:?}", solution, priority);
+                debug!(?solution, ?priority, "Ok");
                 cur_solution = Some(match cur_solution {
                     None => (solution, priority),
                     Some((cur, cur_priority)) => combine::with_priorities(
@@ -161,7 +161,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
                     ),
                 });
             } else {
-                debug!("error");
+                debug!("Error");
             }
         }
         cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))

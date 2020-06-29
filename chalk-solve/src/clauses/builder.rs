@@ -139,7 +139,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         );
 
         let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
-        debug!("push_binders: value={:?}", value);
+        debug!(?value);
         let res = op(self, value);
 
         self.binders.truncate(old_len);

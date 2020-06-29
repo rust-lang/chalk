@@ -80,7 +80,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let b = n_b.as_ref().unwrap_or(b);
 
         debug_span!("unify_ty_ty", ?a, ?b);
-        // let _s = span.enter();
 
         match (a.data(interner), b.data(interner)) {
             // Unifying two inference variables: unify them in the underlying
@@ -185,8 +184,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     /// Unify two inference variables
+    #[instrument(level = "debug", skip(self))]
     fn unify_var_var(&mut self, a: InferenceVar, b: InferenceVar) -> Fallible<()> {
-        debug!("unify_var_var({:?}, {:?})", a, b);
         let var1 = EnaVariable::from(a);
         let var2 = EnaVariable::from(b);
         Ok(self
@@ -200,16 +199,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// (type kind is not `General`). For example, unify a `TyKind::General`
     /// inference variable with a `TyKind::Integer` variable, resulting in the
     /// general inference variable narrowing to an integer variable.
+
+    #[instrument(level = "debug", skip(self))]
     fn unify_general_var_specific_ty(
         &mut self,
         general_var: InferenceVar,
         specific_ty: Ty<I>,
     ) -> Fallible<()> {
-        debug!(
-            "unify_general_var_specific_var({:?}, {:?})",
-            general_var, specific_ty
-        );
-
         self.table
             .unify
             .unify_var_value(
@@ -221,6 +217,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn unify_binders<'a, T, R>(
         &mut self,
         a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
@@ -238,7 +235,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // for<'a...> exists<'b...> T == U &&
         // for<'b...> exists<'a...> T == U
 
-        debug!("unify_binders({:?}, {:?})", a, b);
         let interner = self.interner;
 
         {
@@ -301,7 +297,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             .unify
             .unify_var_value(var, InferenceValue::from_ty(interner, ty1.clone()))
             .unwrap();
-        debug!("unify_var_ty: var {:?} set to {:?}", var, ty1);
+        debug!("var {:?} set to {:?}", var, ty1);
 
         Ok(())
     }
@@ -320,10 +316,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (&LifetimeData::InferenceVar(var_a), &LifetimeData::InferenceVar(var_b)) => {
                 let var_a = EnaVariable::from(var_a);
                 let var_b = EnaVariable::from(var_b);
-                debug!(
-                    "unify_lifetime_lifetime: var_a={:?} var_b={:?}",
-                    var_a, var_b
-                );
+                debug!(?var_a, ?var_b);
                 self.table.unify.unify_var_var(var_a, var_b).unwrap();
                 Ok(())
             }
@@ -365,10 +358,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let var = EnaVariable::from(var);
         let var_ui = self.table.universe_of_unbound_var(var);
         if var_ui.can_see(value_ui) {
-            debug!(
-                "unify_lifetime_var: {:?} in {:?} can see {:?}; unifying",
-                var, var_ui, value_ui
-            );
+            debug!("{:?} in {:?} can see {:?}; unifying", var, var_ui, value_ui);
             self.table
                 .unify
                 .unify_var_value(
@@ -379,7 +369,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             Ok(())
         } else {
             debug!(
-                "unify_lifetime_var: {:?} in {:?} cannot see {:?}; pushing constraint",
+                "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
             Ok(self.push_lifetime_eq_subgoal(a.clone(), b.clone()))
@@ -411,7 +401,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (&ConstValue::InferenceVar(var1), &ConstValue::InferenceVar(var2)) => {
-                // debug!("unify_ty_ty: unify_var_var({:?}, {:?})", var1, var2);
+                debug!(?var1, ?var2, "unify_ty_ty");
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
                 Ok(self
@@ -424,14 +414,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying an inference variables with a non-inference variable.
             (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
             | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
-                debug!("unify_var_ty(var={:?}, ty={:?})", var, b);
+                debug!(?var, ty=?b, "unify_var_ty");
                 self.unify_var_const(var, b)
             }
 
             (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
             | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
-                debug!("unify_var_ty(var={:?}, ty={:?})", var, a);
-
+                debug!(?var, ty=?a, "unify_var_ty");
                 self.unify_var_const(var, a)
             }
 
@@ -457,9 +446,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn unify_var_const(&mut self, var: InferenceVar, c: &Const<I>) -> Fallible<()> {
-        debug!("unify_var_const(var={:?}, c={:?})", var, c);
-
         let interner = self.interner;
         let var = EnaVariable::from(var);
 

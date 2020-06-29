@@ -20,7 +20,6 @@ rustyline = "6.0.0"
 salsa = "0.10.0"
 serde = "1.0"
 serde_derive = "1.0"
-tracing-subscriber = "0.2"
 
 chalk-derive = { version = "0.16.0-dev.0", path = "chalk-derive" }
 chalk-engine = { version = "0.16.0-dev.0", path = "chalk-engine" }
@@ -36,4 +35,3 @@ chalk-integration = { version = "0.16.0-dev.0", path = "chalk-integration" }
 diff = "0.1"
 pretty_assertions = "0.6.1"
 regex = "1"
-tracing = "0.1"
