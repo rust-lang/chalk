@@ -14,10 +14,12 @@ mod test_macros;
 pub mod clauses;
 pub mod coherence;
 mod coinductive_goal;
+pub mod display;
 pub mod ext;
 pub mod goal_builder;
 mod infer;
 pub mod logging;
+pub mod logging_db;
 #[cfg(feature = "recursive-solver")]
 pub mod recursive;
 pub mod rust_ir;
@@ -139,6 +141,22 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         closure_id: ClosureId<I>,
         substs: &Substitution<I>,
     ) -> Substitution<I>;
+
+    /// Retrieves a trait's original name. No uniqueness guarantees.
+    /// TODO: remove this, use only interner debug methods
+    fn trait_name(&self, trait_id: TraitId<I>) -> String;
+
+    /// Retrieves a struct's original name. No uniqueness guarantees.
+    fn adt_name(&self, struct_id: AdtId<I>) -> String;
+
+    /// Retrieves the name of an associated type.
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String;
+
+    /// Retrieves the name of an opaque type.
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String;
+
+    /// Retrieves the name of a function definition
+    fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String;
 }
 
 pub use clauses::program_clauses_for_env;

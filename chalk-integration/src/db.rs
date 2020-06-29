@@ -197,4 +197,24 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .unwrap()
             .closure_fn_substitution(closure_id, substs)
     }
+
+    fn trait_name(&self, trait_id: TraitId<ChalkIr>) -> String {
+        self.program_ir().unwrap().trait_name(trait_id)
+    }
+
+    fn adt_name(&self, struct_id: AdtId<ChalkIr>) -> String {
+        self.program_ir().unwrap().adt_name(struct_id)
+    }
+
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<ChalkIr>) -> String {
+        self.program_ir().unwrap().assoc_type_name(assoc_ty_id)
+    }
+
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
+        self.program_ir().unwrap().opaque_type_name(opaque_ty_id)
+    }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
+        self.program_ir().unwrap().fn_def_name(fn_def_id)
+    }
 }

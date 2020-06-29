@@ -455,7 +455,7 @@ pub enum TyData<I: Interner> {
     /// an empty list).
     Apply(ApplicationTy<I>),
 
-    /// instantiated form a universally quantified type, e.g., from
+    /// instantiated from a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
     /// unknown type".
     Placeholder(PlaceholderIndex),

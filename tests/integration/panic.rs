@@ -221,6 +221,26 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     ) -> Substitution<ChalkIr> {
         unimplemented!()
     }
+
+    fn trait_name(&self, trait_id: TraitId<ChalkIr>) -> String {
+        unimplemented!()
+    }
+
+    fn adt_name(&self, struct_id: AdtId<ChalkIr>) -> String {
+        unimplemented!()
+    }
+
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<ChalkIr>) -> String {
+        unimplemented!()
+    }
+
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
+        unimplemented!()
+    }
+
+    fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
+        unimplemented!()
+    }
 }
 
 fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
