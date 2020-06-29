@@ -107,7 +107,7 @@ impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
             display_type_with_generics(
                 s,
                 self.trait_id,
-                &self.substitution.parameters(interner)[1..]
+                &self.substitution.as_slice(interner)[1..]
             )
         )
     }

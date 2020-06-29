@@ -2166,7 +2166,7 @@ pub struct VariableKinds<I: Interner> {
 }
 
 impl<I: Interner> VariableKinds<I> {
-    /// Creates an empty list of canonical variable kinds.
+    /// Creates an empty list of variable kinds.
     pub fn empty(interner: &I) -> Self {
         Self::from(interner, None::<VariableKind<I>>)
     }

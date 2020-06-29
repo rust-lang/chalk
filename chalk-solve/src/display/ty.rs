@@ -87,11 +87,7 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
         write!(
             f,
             "{}",
-            display_type_with_generics(
-                s,
-                self.opaque_ty_id,
-                self.substitution.parameters(interner),
-            )
+            display_type_with_generics(s, self.opaque_ty_id, self.substitution.as_slice(interner),)
         )
     }
 }
@@ -109,7 +105,7 @@ impl<I: Interner> RenderAsRust<I> for Fn<I> {
                     .format(", ")
             )?;
         }
-        let parameters = self.substitution.parameters(interner);
+        let parameters = self.substitution.as_slice(interner);
         write!(
             f,
             "fn({}) -> {}",
@@ -128,7 +124,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
         match self.name {
             TypeName::Adt(sid) => {
                 write!(f, "{}", sid.display(s))?;
-                let parameters = self.substitution.parameters(interner);
+                let parameters = self.substitution.as_slice(interner);
                 let parameters = parameters.iter().map(|param| param.display(s));
                 write_joined_non_empty_list!(f, "<{}>", parameters, ", ")?;
             }
@@ -147,7 +143,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     datum.trait_id.display(s),
                     datum.id.display(s),
                 )?;
-                let params = self.substitution.parameters(interner);
+                let params = self.substitution.as_slice(interner);
                 write_joined_non_empty_list!(
                     f,
                     "<{}>",
@@ -161,7 +157,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     f,
                     "({}{})",
                     self.substitution
-                        .parameters(interner)
+                        .as_slice(interner)
                         .iter()
                         .map(|p| p.display(s))
                         .format(", "),
@@ -180,7 +176,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                     display_type_with_generics(
                         s,
                         opaque_ty_id,
-                        self.substitution.parameters(interner)
+                        self.substitution.as_slice(interner)
                     )
                 )?;
             }
