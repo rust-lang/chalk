@@ -1,23 +1,24 @@
 [package]
-name = "chalk-integration"
+name = "chalk-recursive"
 version = "0.17.0-dev.0"
+description = "Recursive solver for the Chalk project"
 license = "Apache-2.0/MIT"
-description = "Sample solver setup for Chalk"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
+readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
-publish = false
+
+[features]
+default = []
 
 [dependencies]
-string_cache = "0.8.0"
-salsa = "0.14.0"
+rustc-hash = { version = "1.1.0" }
 tracing = "0.1"
-
 
 chalk-derive = { version = "0.17.0-dev.0", path = "../chalk-derive" }
 chalk-ir = { version = "0.17.0-dev.0", path = "../chalk-ir" }
 chalk-solve = { version = "0.17.0-dev.0", path = "../chalk-solve" }
-chalk-recursive = { version = "0.17.0-dev.0", path = "../chalk-recursive" }
-chalk-engine = { version = "0.17.0-dev.0", path = "../chalk-engine" }
-chalk-parse = { version = "0.17.0-dev.0", path = "../chalk-parse" }
+
+[dev-dependencies]
+chalk-integration = { path = "../chalk-integration" }

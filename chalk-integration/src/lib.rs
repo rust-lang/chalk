@@ -15,8 +15,8 @@ use chalk_engine::forest::Forest;
 use chalk_engine::solve::SLGSolverImpl;
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{Binders, Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
-use chalk_solve::recursive::RecursiveContext;
-use chalk_solve::solve::RecursiveSolverImpl;
+use chalk_recursive::RecursiveContext;
+use chalk_recursive::RecursiveSolverImpl;
 use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 use interner::ChalkIr;
 

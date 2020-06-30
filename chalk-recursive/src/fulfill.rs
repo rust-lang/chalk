@@ -1,6 +1,5 @@
-use super::lib::{Guidance, Minimums, Solution};
-use super::solve::SolveDatabase;
-use crate::debug_span;
+use crate::solve::SolveDatabase;
+use crate::{Guidance, Minimums, Solution};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -11,6 +10,7 @@ use chalk_ir::{
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
     QuantifierKind, Substitution, UCanonical, UniverseMap,
 };
+use chalk_solve::debug_span;
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
 use tracing::{debug, instrument};
@@ -386,7 +386,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         universes: UniverseMap,
         subst: Canonical<ConstrainedSubst<I>>,
     ) {
-        use crate::infer::ucanonicalize::UniverseMapExt;
+        use chalk_solve::infer::ucanonicalize::UniverseMapExt;
         let subst = universes.map_from_canonical(self.interner(), &subst);
         let ConstrainedSubst { subst, constraints } = self
             .infer

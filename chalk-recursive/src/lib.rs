@@ -1,19 +1,209 @@
-mod combine;
-mod fulfill;
-pub mod lib;
-mod search_graph;
-mod solve;
-mod stack;
-
-use self::lib::{Minimums, Solution, UCanonicalGoal};
-use self::search_graph::{DepthFirstNumber, SearchGraph};
+use self::search_graph::SearchGraph;
 use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
-use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
+use crate::search_graph::DepthFirstNumber;
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Fallible};
+use chalk_ir::Fallible;
+use chalk_ir::{Canonical, Constraints, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
+use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use rustc_hash::FxHashMap;
-use tracing::{debug, info, instrument};
+use std::fmt;
+use tracing::debug;
+use tracing::{info, instrument};
+
+pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
+
+mod combine;
+mod fulfill;
+mod search_graph;
+pub mod solve;
+mod stack;
+/// The `minimums` struct is used while solving to track whether we encountered
+/// any cycles in the process.
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct Minimums {
+    pub(crate) positive: DepthFirstNumber,
+}
+
+impl Minimums {
+    pub fn new() -> Self {
+        Minimums {
+            positive: DepthFirstNumber::MAX,
+        }
+    }
+
+    pub fn update_from(&mut self, minimums: Minimums) {
+        self.positive = ::std::cmp::min(self.positive, minimums.positive);
+    }
+}
+
+/// A (possible) solution for a proposed goal.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Solution<I: Interner> {
+    /// The goal indeed holds, and there is a unique value for all existential
+    /// variables. In this case, we also record a set of lifetime constraints
+    /// which must also hold for the goal to be valid.
+    Unique(Canonical<ConstrainedSubst<I>>),
+
+    /// The goal may be provable in multiple ways, but regardless we may have some guidance
+    /// for type inference. In this case, we don't return any lifetime
+    /// constraints, since we have not "committed" to any particular solution
+    /// yet.
+    Ambig(Guidance<I>),
+}
+
+/// When a goal holds ambiguously (e.g., because there are multiple possible
+/// solutions), we issue a set of *guidance* back to type inference.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Guidance<I: Interner> {
+    /// The existential variables *must* have the given values if the goal is
+    /// ever to hold, but that alone isn't enough to guarantee the goal will
+    /// actually hold.
+    Definite(Canonical<Substitution<I>>),
+
+    /// There are multiple plausible values for the existentials, but the ones
+    /// here are suggested as the preferred choice heuristically. These should
+    /// be used for inference fallback only.
+    Suggested(Canonical<Substitution<I>>),
+
+    /// There's no useful information to feed back to type inference
+    Unknown,
+}
+
+impl<I: Interner> Solution<I> {
+    /// There are multiple candidate solutions, which may or may not agree on
+    /// the values for existential variables; attempt to combine them. This
+    /// operation does not depend on the order of its arguments.
+    //
+    // This actually isn't as precise as it could be, in two ways:
+    //
+    // a. It might be that while there are multiple distinct candidates, they
+    //    all agree about *some things*. To be maximally precise, we would
+    //    compute the intersection of what they agree on. It's not clear though
+    //    that this is actually what we want Rust's inference to do, and it's
+    //    certainly not what it does today.
+    //
+    // b. There might also be an ambiguous candidate and a successful candidate,
+    //    both with the same refined-goal. In that case, we could probably claim
+    //    success, since if the conditions of the ambiguous candidate were met,
+    //    we know the success would apply.  Example: `?0: Clone` yields ambiguous
+    //    candidate `Option<?0>: Clone` and successful candidate `Option<?0>:
+    //    Clone`.
+    //
+    // But you get the idea.
+    pub(crate) fn combine(self, other: Solution<I>, interner: &I) -> Solution<I> {
+        use self::Guidance::*;
+
+        if self == other {
+            return self;
+        }
+
+        debug!(
+            "combine {} with {}",
+            self.display(interner),
+            other.display(interner)
+        );
+
+        // Otherwise, always downgrade to Ambig:
+
+        let guidance = match (self.into_guidance(), other.into_guidance()) {
+            (Definite(ref subst1), Definite(ref subst2)) if subst1 == subst2 => {
+                Definite(subst1.clone())
+            }
+            (Suggested(ref subst1), Suggested(ref subst2)) if subst1 == subst2 => {
+                Suggested(subst1.clone())
+            }
+            _ => Unknown,
+        };
+        Solution::Ambig(guidance)
+    }
+
+    /// View this solution purely in terms of type inference guidance
+    pub(crate) fn into_guidance(self) -> Guidance<I> {
+        match self {
+            Solution::Unique(constrained) => Guidance::Definite(Canonical {
+                value: constrained.value.subst,
+                binders: constrained.binders,
+            }),
+            Solution::Ambig(guidance) => guidance,
+        }
+    }
+
+    /// Extract a constrained substitution from this solution, even if ambiguous.
+    pub(crate) fn constrained_subst(&self, interner: &I) -> Option<Canonical<ConstrainedSubst<I>>> {
+        match *self {
+            Solution::Unique(ref constrained) => Some(constrained.clone()),
+            Solution::Ambig(Guidance::Definite(ref canonical))
+            | Solution::Ambig(Guidance::Suggested(ref canonical)) => {
+                let value = ConstrainedSubst {
+                    subst: canonical.value.clone(),
+                    constraints: Constraints::empty(interner),
+                };
+                Some(Canonical {
+                    value,
+                    binders: canonical.binders.clone(),
+                })
+            }
+            Solution::Ambig(_) => None,
+        }
+    }
+
+    /// Determine whether this solution contains type information that *must*
+    /// hold.
+    pub(crate) fn has_definite(&self) -> bool {
+        match *self {
+            Solution::Unique(_) => true,
+            Solution::Ambig(Guidance::Definite(_)) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_unique(&self) -> bool {
+        match *self {
+            Solution::Unique(..) => true,
+            _ => false,
+        }
+    }
+
+    pub(crate) fn is_ambig(&self) -> bool {
+        match *self {
+            Solution::Ambig(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn display<'a>(&'a self, interner: &'a I) -> SolutionDisplay<'a, I> {
+        SolutionDisplay {
+            solution: self,
+            interner,
+        }
+    }
+}
+
+pub struct SolutionDisplay<'a, I: Interner> {
+    solution: &'a Solution<I>,
+    interner: &'a I,
+}
+
+impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let SolutionDisplay { solution, interner } = self;
+        match solution {
+            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained.display(interner)),
+            Solution::Ambig(Guidance::Definite(subst)) => write!(
+                f,
+                "Ambiguous; definite substitution {}",
+                subst.display(interner)
+            ),
+            Solution::Ambig(Guidance::Suggested(subst)) => write!(
+                f,
+                "Ambiguous; suggested substitution {}",
+                subst.display(interner)
+            ),
+            Solution::Ambig(Guidance::Unknown) => write!(f, "Ambiguous; no inference guidance"),
+        }
+    }
+}
 
 pub struct RecursiveContext<I: Interner> {
     stack: Stack,
@@ -38,6 +228,16 @@ pub struct RecursiveContext<I: Interner> {
 pub(crate) struct Solver<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     context: &'me mut RecursiveContext<I>,
+}
+
+pub struct RecursiveSolverImpl<I: Interner> {
+    pub ctx: Box<RecursiveContext<I>>,
+}
+
+impl<I: Interner> fmt::Debug for RecursiveSolverImpl<I> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "RecursiveSolverImpl")
+    }
 }
 
 /// An extension trait for merging `Result`s
@@ -275,5 +475,56 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
     fn db(&self) -> &dyn RustIrDatabase<I> {
         self.program
+    }
+}
+
+impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolverImpl<I> {
+    fn solve(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> Option<chalk_solve::Solution<I>> {
+        self.ctx
+            .solver(program)
+            .solve_root_goal(goal)
+            .ok()
+            .map(|s| match s {
+                Solution::Unique(c) => chalk_solve::Solution::Unique(c),
+                Solution::Ambig(g) => chalk_solve::Solution::Ambig(match g {
+                    Guidance::Definite(g) => chalk_solve::Guidance::Definite(g),
+                    Guidance::Suggested(g) => chalk_solve::Guidance::Suggested(g),
+                    Guidance::Unknown => chalk_solve::Guidance::Unknown,
+                }),
+            })
+    }
+
+    fn solve_limited(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+        _should_continue: impl std::ops::Fn() -> bool,
+    ) -> Option<chalk_solve::Solution<I>> {
+        // TODO support should_continue in recursive solver
+        self.ctx
+            .solver(program)
+            .solve_root_goal(goal)
+            .ok()
+            .map(|s| match s {
+                Solution::Unique(c) => chalk_solve::Solution::Unique(c),
+                Solution::Ambig(g) => chalk_solve::Solution::Ambig(match g {
+                    Guidance::Definite(g) => chalk_solve::Guidance::Definite(g),
+                    Guidance::Suggested(g) => chalk_solve::Guidance::Suggested(g),
+                    Guidance::Unknown => chalk_solve::Guidance::Unknown,
+                }),
+            })
+    }
+
+    fn solve_multiple(
+        &mut self,
+        _program: &dyn RustIrDatabase<I>,
+        _goal: &UCanonical<InEnvironment<Goal<I>>>,
+        _f: impl FnMut(chalk_solve::SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+    ) -> bool {
+        unimplemented!()
     }
 }

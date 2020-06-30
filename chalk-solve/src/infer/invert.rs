@@ -97,7 +97,7 @@ impl<I: Interner> InferenceTable<I> {
 
     /// As `negated_instantiated`, but canonicalizes before
     /// returning. Just a convenience function.
-    pub(crate) fn invert_then_canonicalize<T>(
+    pub fn invert_then_canonicalize<T>(
         &mut self,
         interner: &I,
         value: &T,

@@ -1,10 +1,10 @@
-use super::lib::Solution;
+use crate::Solution;
 use tracing::debug;
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{ClausePriority, DomainGoal, Fallible, GenericArg, Goal, GoalData};
 
-pub(super) fn with_priorities_for_goal<I: Interner>(
+pub(crate) fn with_priorities_for_goal<I: Interner>(
     interner: &I,
     goal: &Goal<I>,
     a: Fallible<Solution<I>>,

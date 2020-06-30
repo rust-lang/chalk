@@ -4,9 +4,6 @@ use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt;
 
-#[cfg(feature = "recursive-solver")]
-use crate::recursive::RecursiveContext;
-
 pub mod truncate;
 
 /// A (possible) solution for a proposed goal.
@@ -206,77 +203,4 @@ where
         goal: &UCanonical<InEnvironment<Goal<I>>>,
         f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool;
-}
-
-pub struct RecursiveSolverImpl<I: Interner> {
-    pub ctx: Box<RecursiveContext<I>>,
-}
-
-impl<I: Interner> fmt::Debug for RecursiveSolverImpl<I> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "RecursiveSolverImpl")
-    }
-}
-
-impl<I: Interner> Solver<I> for RecursiveSolverImpl<I> {
-    fn solve(
-        &mut self,
-        program: &dyn RustIrDatabase<I>,
-        goal: &UCanonical<InEnvironment<Goal<I>>>,
-    ) -> Option<Solution<I>> {
-        self.ctx
-            .solver(program)
-            .solve_root_goal(goal)
-            .ok()
-            .map(|s| match s {
-                crate::recursive::lib::Solution::Unique(c) => crate::solve::Solution::Unique(c),
-                crate::recursive::lib::Solution::Ambig(g) => {
-                    crate::solve::Solution::Ambig(match g {
-                        crate::recursive::lib::Guidance::Definite(g) => {
-                            crate::solve::Guidance::Definite(g)
-                        }
-                        crate::recursive::lib::Guidance::Suggested(g) => {
-                            crate::solve::Guidance::Suggested(g)
-                        }
-                        crate::recursive::lib::Guidance::Unknown => crate::solve::Guidance::Unknown,
-                    })
-                }
-            })
-    }
-
-    fn solve_limited(
-        &mut self,
-        program: &dyn RustIrDatabase<I>,
-        goal: &UCanonical<InEnvironment<Goal<I>>>,
-        _should_continue: impl std::ops::Fn() -> bool,
-    ) -> Option<Solution<I>> {
-        // TODO support should_continue in recursive solver
-        self.ctx
-            .solver(program)
-            .solve_root_goal(goal)
-            .ok()
-            .map(|s| match s {
-                crate::recursive::lib::Solution::Unique(c) => crate::solve::Solution::Unique(c),
-                crate::recursive::lib::Solution::Ambig(g) => {
-                    crate::solve::Solution::Ambig(match g {
-                        crate::recursive::lib::Guidance::Definite(g) => {
-                            crate::solve::Guidance::Definite(g)
-                        }
-                        crate::recursive::lib::Guidance::Suggested(g) => {
-                            crate::solve::Guidance::Suggested(g)
-                        }
-                        crate::recursive::lib::Guidance::Unknown => crate::solve::Guidance::Unknown,
-                    })
-                }
-            })
-    }
-
-    fn solve_multiple(
-        &mut self,
-        _program: &dyn RustIrDatabase<I>,
-        _goal: &UCanonical<InEnvironment<Goal<I>>>,
-        _f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
-    ) -> bool {
-        unimplemented!()
-    }
 }

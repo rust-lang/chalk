@@ -160,7 +160,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 }
 
-pub(crate) trait ParameterEnaVariableExt<I: Interner> {
+pub trait ParameterEnaVariableExt<I: Interner> {
     fn to_generic_arg(&self, interner: &I) -> GenericArg<I>;
 }
 

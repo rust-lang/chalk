@@ -157,6 +157,7 @@ dependencies = [
  "chalk-integration",
  "chalk-ir",
  "chalk-parse",
+ "chalk-recursive",
  "chalk-solve",
  "diff",
  "docopt",
@@ -199,6 +200,7 @@ dependencies = [
  "chalk-engine",
  "chalk-ir",
  "chalk-parse",
+ "chalk-recursive",
  "chalk-solve",
  "salsa",
  "string_cache",
@@ -221,6 +223,18 @@ dependencies = [
  "lalrpop-util",
  "regex",
  "string_cache",
+]
+
+[[package]]
+name = "chalk-recursive"
+version = "0.17.0-dev.0"
+dependencies = [
+ "chalk-derive",
+ "chalk-integration",
+ "chalk-ir",
+ "chalk-solve",
+ "rustc-hash",
+ "tracing",
 ]
 
 [[package]]

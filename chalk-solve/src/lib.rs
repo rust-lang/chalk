@@ -16,8 +16,6 @@ pub mod goal_builder;
 pub mod infer;
 pub mod logging;
 pub mod logging_db;
-#[cfg(feature = "recursive-solver")]
-pub mod recursive;
 pub mod rust_ir;
 pub mod solve;
 pub mod split;
