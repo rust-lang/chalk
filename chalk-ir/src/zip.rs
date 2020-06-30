@@ -49,6 +49,7 @@ pub trait Zipper<'i, I: Interner + 'i> {
     /// Zips two substs
     fn zip_substs(
         &mut self,
+        ambient: Variance,
         variances: Option<Vec<Variance>>,
         a: &[GenericArg<I>],
         b: &[GenericArg<I>],
@@ -57,7 +58,11 @@ pub trait Zipper<'i, I: Interner + 'i> {
         Self: Sized,
     {
         for (i, (a, b)) in a.iter().zip(b.iter()).enumerate() {
-            let variance = variances.as_ref().map_or(Variance::Invariant, |v| v[i]);
+            let variance = variances
+                .as_ref()
+                .map(|v| v[i])
+                .unwrap_or(Variance::Invariant);
+            let variance = ambient.xform(variance);
             Zip::zip_with(self, variance, a, b)?;
         }
         Ok(())
@@ -510,6 +515,7 @@ impl<I: Interner> Zip<I> for TraitRef<I> {
         let interner = zipper.interner();
         Zip::zip_with(zipper, variance, &a.trait_id, &b.trait_id)?;
         zipper.zip_substs(
+            variance,
             None,
             a.substitution.as_slice(interner),
             b.substitution.as_slice(interner),
@@ -530,6 +536,7 @@ impl<I: Interner> Zip<I> for ProjectionTy<I> {
         let interner = zipper.interner();
         Zip::zip_with(zipper, variance, &a.associated_ty_id, &b.associated_ty_id)?;
         zipper.zip_substs(
+            variance,
             None,
             a.substitution.as_slice(interner),
             b.substitution.as_slice(interner),
@@ -550,6 +557,7 @@ impl<I: Interner> Zip<I> for OpaqueTy<I> {
         let interner = zipper.interner();
         Zip::zip_with(zipper, variance, &a.opaque_ty_id, &b.opaque_ty_id)?;
         zipper.zip_substs(
+            variance,
             None,
             a.substitution.as_slice(interner),
             b.substitution.as_slice(interner),
@@ -572,11 +580,13 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
         Zip::zip_with(zipper, variance, &a.name, &b.name)?;
         match a.name {
             FnDef(fn_def_id) => zipper.zip_substs(
+                variance,
                 Some(zipper.unification_database().fn_def_variance(fn_def_id)),
                 a.substitution.as_slice(interner),
                 b.substitution.as_slice(interner),
             ),
             Adt(adt_id) => zipper.zip_substs(
+                variance,
                 Some(zipper.unification_database().adt_variance(adt_id)),
                 a.substitution.as_slice(interner),
                 b.substitution.as_slice(interner),
@@ -585,31 +595,31 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
                 // The lifetime is `Contravariant`
                 Zip::zip_with(
                     zipper,
-                    Variance::Contravariant,
+                    variance.xform(Variance::Contravariant),
                     &a.substitution.as_slice(interner)[0],
                     &b.substitution.as_slice(interner)[0],
                 )?;
                 // The type is `Covariant` when not mut, `Invariant` otherwise
-                let variance = match mutbl {
+                let output_variance = match mutbl {
                     Mutability::Not => Variance::Covariant,
                     Mutability::Mut => Variance::Invariant,
                 };
                 Zip::zip_with(
                     zipper,
-                    variance,
+                    variance.xform(output_variance),
                     a.substitution.iter(interner).last().unwrap(),
                     b.substitution.iter(interner).last().unwrap(),
                 )?;
                 Ok(())
             }
             Raw(mutbl) => {
-                let variance = match mutbl {
+                let ty_variance = match mutbl {
                     Mutability::Not => Variance::Covariant,
                     Mutability::Mut => Variance::Invariant,
                 };
                 Zip::zip_with(
                     zipper,
-                    variance,
+                    variance.xform(ty_variance),
                     a.substitution.as_slice(interner),
                     b.substitution.as_slice(interner),
                 )?;
@@ -617,6 +627,7 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
             }
             AssociatedType(_) | Scalar(_) | Tuple(_) | Array | Slice | OpaqueType(_) | Str
             | Never | Closure(_) | Error => zipper.zip_substs(
+                variance,
                 None,
                 a.substitution.as_slice(interner),
                 b.substitution.as_slice(interner),
@@ -644,7 +655,7 @@ impl<I: Interner> Zip<I> for DynTy<I> {
 impl<I: Interner> Zip<I> for FnSubst<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(
         zipper: &mut Z,
-        _variance: Variance,
+        variance: Variance,
         a: &Self,
         b: &Self,
     ) -> Fallible<()>
@@ -653,15 +664,16 @@ impl<I: Interner> Zip<I> for FnSubst<I> {
     {
         let interner = zipper.interner();
         // Parameters
-        zipper.zip_substs(
-            None,
-            &a.0.as_slice(interner)[..a.0.len(interner) - 1],
-            &b.0.as_slice(interner)[..b.0.len(interner) - 1],
-        )?;
+        for (a, b) in a.0.as_slice(interner)[..a.0.len(interner) - 1]
+            .iter()
+            .zip(b.0.as_slice(interner)[..b.0.len(interner) - 1].iter())
+        {
+            Zip::zip_with(zipper, variance.xform(Variance::Contravariant), a, b)?;
+        }
         // Return type
         Zip::zip_with(
             zipper,
-            Variance::Contravariant,
+            variance,
             a.0.iter(interner).last().unwrap(),
             b.0.iter(interner).last().unwrap(),
         )?;

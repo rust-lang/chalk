@@ -73,6 +73,18 @@ pub enum Variance {
     Contravariant,
 }
 
+impl Variance {
+    fn xform(self, other: Variance) -> Variance {
+        match (self, other) {
+            (Variance::Invariant, _) => Variance::Invariant,
+            (_, Variance::Invariant) => Variance::Invariant,
+            (_, Variance::Covariant) => self,
+            (Variance::Covariant, Variance::Contravariant) => Variance::Contravariant,
+            (Variance::Contravariant, Variance::Contravariant) => Variance::Covariant,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 /// The set of assumptions we've made so far, and the current number of
 /// universal (forall) quantifiers we're within.
