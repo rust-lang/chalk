@@ -98,18 +98,30 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 &TyData::InferenceVar(var1, kind1),
                 &TyData::InferenceVar(var2, kind2),
             ) => {
-                if kind1 == kind2 {
-                    self.unify_var_var(var1, var2)
-                } else if kind1 == TyKind::General {
-                    self.unify_general_var_specific_ty(var1, b.clone())
-                } else if kind2 == TyKind::General {
-                    self.unify_general_var_specific_ty(var2, a.clone())
-                } else {
-                    debug!(
-                        "Tried to unify mis-matching inference variables: {:?} and {:?}",
-                        kind1, kind2
-                    );
-                    Err(NoSolution)
+                match self.variance {
+                    Variance::Invariant => {
+                        if kind1 == kind2 {
+                            self.unify_var_var(var1, var2)
+                        } else if kind1 == TyKind::General {
+                            self.unify_general_var_specific_ty(var1, b.clone())
+                        } else if kind2 == TyKind::General {
+                            self.unify_general_var_specific_ty(var2, a.clone())
+                        } else {
+                            debug!(
+                                "Tried to unify mis-matching inference variables: {:?} and {:?}",
+                                kind1, kind2
+                            );
+                            Err(NoSolution)
+                        }
+                    },
+                    Variance::Covariant => {
+                        self.push_subtype_goal(a.clone().cast(interner), b.clone().cast(interner));
+                        Ok(())
+                    },
+                    Variance::Contravariant => {
+                        self.push_subtype_goal(b.clone().cast(interner), a.clone().cast(interner));
+                        Ok(())
+                    },
                 }
             }
 
@@ -495,6 +507,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 .cast(self.interner),
             ));
         }
+    }
+
+    fn push_subtype_goal(&mut self, a: GenericArg<I>, b: GenericArg<I>) {
+        let subtype_goal = GoalData::SubtypeGoal(SubtypeGoal { a, b }).intern(self.interner());
+        self.goals
+            .push(InEnvironment::new(self.environment, subtype_goal));
     }
 
     fn with_local_variance<R>(

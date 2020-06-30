@@ -1792,6 +1792,16 @@ pub struct EqGoal<I: Interner> {
 
 impl<I: Interner> Copy for EqGoal<I> where I::InternedGenericArg: Copy {}
 
+/// Subtype goal: tries to prove that `a` is a subtype of `b`
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
+#[allow(missing_docs)]
+pub struct SubtypeGoal<I: Interner> {
+    pub a: GenericArg<I>,
+    pub b: GenericArg<I>,
+}
+
+impl<I: Interner> Copy for SubtypeGoal<I> where I::InternedGenericArg: Copy {}
+
 /// Proves that the given type alias **normalizes** to the given
 /// type. A projection `T::Foo` normalizes to the type `U` if we can
 /// **match it to an impl** and that impl has a `type Foo = V` where
@@ -2618,6 +2628,9 @@ pub enum GoalData<I: Interner> {
 
     /// Make two things equal; the rules for doing so are well known to the logic
     EqGoal(EqGoal<I>),
+
+    /// Make one thing a subtype of another; the rules for doing so are well known to the logic
+    SubtypeGoal(SubtypeGoal<I>),
 
     /// A "domain goal" indicates some base sort of goal that can be
     /// proven via program clauses

@@ -69,6 +69,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     &goal.b,
                     &mut ex_clause,
                 )?,
+                GoalData::SubtypeGoal(_goal) => todo!(),
                 GoalData::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals

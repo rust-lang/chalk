@@ -337,6 +337,7 @@ impl<I: Interner> Debug for GoalData<I> {
             GoalData::All(ref goals) => write!(fmt, "all{:?}", goals),
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
+            GoalData::SubtypeGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
@@ -734,6 +735,12 @@ impl<I: Interner> Debug for DomainGoal<I> {
 impl<I: Interner> Debug for EqGoal<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         write!(fmt, "({:?} = {:?})", self.a, self.b)
+    }
+}
+
+impl<I: Interner> Debug for SubtypeGoal<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "({:?} <: {:?})", self.a, self.b)
     }
 }
 

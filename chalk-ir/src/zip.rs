@@ -567,20 +567,21 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
     where
         I: 'i,
     {
+        use TypeName::*;
         let interner = zipper.interner();
         Zip::zip_with(zipper, variance, &a.name, &b.name)?;
         match a.name {
-            TypeName::FnDef(fn_def_id) => zipper.zip_substs(
+            FnDef(fn_def_id) => zipper.zip_substs(
                 Some(zipper.unification_database().fn_def_variance(fn_def_id)),
                 a.substitution.as_slice(interner),
                 b.substitution.as_slice(interner),
             ),
-            TypeName::Adt(adt_id) => zipper.zip_substs(
+            Adt(adt_id) => zipper.zip_substs(
                 Some(zipper.unification_database().adt_variance(adt_id)),
                 a.substitution.as_slice(interner),
                 b.substitution.as_slice(interner),
             ),
-            TypeName::Ref(mutbl) => {
+            Ref(mutbl) => {
                 // The lifetime is `Contravariant`
                 Zip::zip_with(
                     zipper,
@@ -601,7 +602,21 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
                 )?;
                 Ok(())
             }
-            _ => zipper.zip_substs(
+            Raw(mutbl) => {
+                let variance = match mutbl {
+                    Mutability::Not => Variance::Covariant,
+                    Mutability::Mut => Variance::Invariant,
+                };
+                Zip::zip_with(
+                    zipper,
+                    variance,
+                    a.substitution.as_slice(interner),
+                    b.substitution.as_slice(interner),
+                )?;
+                Ok(())
+            }
+            AssociatedType(_) | Scalar(_) | Tuple(_) | Array | Slice | OpaqueType(_) | Str
+            | Never | Closure(_) | Error => zipper.zip_substs(
                 None,
                 a.substitution.as_slice(interner),
                 b.substitution.as_slice(interner),
@@ -613,14 +628,14 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
 impl<I: Interner> Zip<I> for DynTy<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(
         zipper: &mut Z,
-        variance: Variance,
+        _variance: Variance,
         a: &Self,
         b: &Self,
     ) -> Fallible<()>
     where
         I: 'i,
     {
-        Zip::zip_with(zipper, variance, &a.bounds, &b.bounds)?;
+        Zip::zip_with(zipper, Variance::Invariant, &a.bounds, &b.bounds)?;
         Zip::zip_with(zipper, Variance::Contravariant, &a.lifetime, &b.lifetime)?;
         Ok(())
     }
@@ -637,11 +652,13 @@ impl<I: Interner> Zip<I> for FnSubst<I> {
         I: 'i,
     {
         let interner = zipper.interner();
+        // Parameters
         zipper.zip_substs(
             None,
             &a.0.as_slice(interner)[..a.0.len(interner) - 1],
             &b.0.as_slice(interner)[..b.0.len(interner) - 1],
         )?;
+        // Return type
         Zip::zip_with(
             zipper,
             Variance::Contravariant,

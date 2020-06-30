@@ -9,7 +9,8 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, UCanonical, UnificationDatabase, UniverseMap, Variance,
+    QuantifierKind, Substitution, SubtypeGoal, UCanonical, UnificationDatabase, UniverseMap,
+    Variance,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -331,6 +332,9 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             }
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, Variance::Invariant, &a, &b)?;
+            }
+            GoalData::SubtypeGoal(SubtypeGoal { a, b }) => {
+                self.unify(&environment, Variance::Covariant, &a, &b)?;
             }
             GoalData::CannotProve(()) => {
                 debug!("Pushed a CannotProve goal, setting cannot_prove = true");
