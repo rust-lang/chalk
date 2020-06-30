@@ -10,8 +10,8 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
-    Binders, Canonical, ClausePriority, Constraint, DomainGoal, Environment, Fallible, Floundered,
-    GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
+    Binders, Canonical, ClausePriority, DomainGoal, Environment, Fallible, Floundered, GenericArg,
+    Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
     ProgramClauseImplication, Substitution, UCanonical, UniverseMap,
 };
 use std::fmt::Debug;
@@ -280,15 +280,12 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
         environment: &Environment<I>,
         a: &T,
         b: &T,
-    ) -> Fallible<(
-        Vec<InEnvironment<Goal<I>>>,
-        Vec<InEnvironment<Constraint<I>>>,
-    )>
+    ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
     where
         T: ?Sized + Zip<I>,
     {
         let res = self.infer.unify(interner, environment, a, b)?;
-        Ok((res.goals, res.constraints))
+        Ok(res.goals)
     }
 
     fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
