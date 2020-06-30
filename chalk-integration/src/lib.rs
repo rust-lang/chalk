@@ -11,11 +11,9 @@ pub mod query;
 pub mod test_macros;
 pub mod tls;
 
-use chalk_engine::forest::Forest;
 use chalk_engine::solve::SLGSolverImpl;
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{Binders, Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
-use chalk_recursive::RecursiveContext;
 use chalk_recursive::RecursiveSolverImpl;
 use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 use interner::ChalkIr;
@@ -137,17 +135,11 @@ impl Into<SolverImpl> for SolverChoice {
             SolverChoice::SLG {
                 max_size,
                 expected_answers,
-            } => SolverImpl::Slg(SLGSolverImpl {
-                forest: Forest::new(),
-                max_size,
-                expected_answers,
-            }),
+            } => SolverImpl::Slg(SLGSolverImpl::new(max_size, expected_answers)),
             SolverChoice::Recursive {
                 overflow_depth,
                 caching_enabled,
-            } => SolverImpl::Recursive(RecursiveSolverImpl {
-                ctx: Box::new(RecursiveContext::new(overflow_depth, caching_enabled)),
-            }),
+            } => SolverImpl::Recursive(RecursiveSolverImpl::new(overflow_depth, caching_enabled)),
         }
     }
 }

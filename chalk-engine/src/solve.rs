@@ -9,9 +9,19 @@ use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 use std::fmt;
 
 pub struct SLGSolverImpl<I: Interner> {
-    pub forest: Forest<I, SlgContext<I>>,
-    pub max_size: usize,
-    pub expected_answers: Option<usize>,
+    pub(crate) forest: Forest<I, SlgContext<I>>,
+    pub(crate) max_size: usize,
+    pub(crate) expected_answers: Option<usize>,
+}
+
+impl<I: Interner> SLGSolverImpl<I> {
+    pub fn new(max_size: usize, expected_answers: Option<usize>) -> Self {
+        Self {
+            forest: Forest::new(),
+            max_size,
+            expected_answers,
+        }
+    }
 }
 
 impl<I: Interner> fmt::Debug for SLGSolverImpl<I> {

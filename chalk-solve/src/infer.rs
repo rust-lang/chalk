@@ -3,14 +3,14 @@ use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
 use tracing::{debug, instrument};
 
-pub mod canonicalize;
-pub mod instantiate;
+mod canonicalize;
+pub(crate) mod instantiate;
 mod invert;
 mod normalize_deep;
 mod test;
 pub mod ucanonicalize;
 pub mod unify;
-pub mod var;
+mod var;
 
 use self::var::*;
 
@@ -21,7 +21,7 @@ pub struct InferenceTable<I: Interner> {
     max_universe: UniverseIndex,
 }
 
-pub struct InferenceSnapshot<I: Interner> {
+pub(crate) struct InferenceSnapshot<I: Interner> {
     unify_snapshot: ena::unify::Snapshot<ena::unify::InPlace<EnaVariable<I>>>,
     max_universe: UniverseIndex,
     vars: Vec<EnaVariable<I>>,
@@ -115,7 +115,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Make permanent the changes made since the snapshot was taken.
-    pub fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
+    pub(crate) fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
         self.unify.commit(snapshot.unify_snapshot);
     }
 

@@ -16,16 +16,16 @@ use chalk_solve::RustIrDatabase;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-pub mod aggregate;
+pub(crate) mod aggregate;
 mod resolvent;
 
 #[derive(Clone, Debug, HasInterner)]
-pub struct SlgContext<I: Interner> {
+pub(crate) struct SlgContext<I: Interner> {
     phantom: PhantomData<I>,
 }
 
 #[derive(Clone, Debug)]
-pub struct SlgContextOps<'me, I: Interner> {
+pub(crate) struct SlgContextOps<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     max_size: usize,
     expected_answers: Option<usize>,
