@@ -62,8 +62,7 @@ pub trait Zipper<'i, I: Interner + 'i> {
                 .as_ref()
                 .map(|v| v[i])
                 .unwrap_or(Variance::Invariant);
-            let variance = ambient.xform(variance);
-            Zip::zip_with(self, variance, a, b)?;
+            Zip::zip_with(self, ambient.xform(variance), a, b)?;
         }
         Ok(())
     }
@@ -639,15 +638,25 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
 impl<I: Interner> Zip<I> for DynTy<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(
         zipper: &mut Z,
-        _variance: Variance,
+        variance: Variance,
         a: &Self,
         b: &Self,
     ) -> Fallible<()>
     where
         I: 'i,
     {
-        Zip::zip_with(zipper, Variance::Invariant, &a.bounds, &b.bounds)?;
-        Zip::zip_with(zipper, Variance::Contravariant, &a.lifetime, &b.lifetime)?;
+        Zip::zip_with(
+            zipper,
+            variance.xform(Variance::Invariant),
+            &a.bounds,
+            &b.bounds,
+        )?;
+        Zip::zip_with(
+            zipper,
+            variance.xform(Variance::Contravariant),
+            &a.lifetime,
+            &b.lifetime,
+        )?;
         Ok(())
     }
 }
