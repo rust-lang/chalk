@@ -4,7 +4,8 @@ use crate::{ExClause, Literal, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution, Variance,
+    Environment, FallibleOrFloundered, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+    Variance,
 };
 use tracing::debug;
 
@@ -18,7 +19,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         subst: Substitution<I>,
         initial_environment: Environment<I>,
         initial_goal: Goal<I>,
-    ) -> Fallible<ExClause<I>> {
+    ) -> FallibleOrFloundered<ExClause<I>> {
         let mut ex_clause = ExClause {
             subst,
             ambiguous: false,
@@ -61,7 +62,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                             subgoal.clone(),
                         )));
                 }
-                GoalData::EqGoal(goal) => infer.relate_generic_args_into_ex_clause(
+                GoalData::EqGoal(goal) => match infer.relate_generic_args_into_ex_clause(
                     context.interner(),
                     context.unification_database(),
                     &environment,
@@ -69,16 +70,34 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     &goal.a,
                     &goal.b,
                     &mut ex_clause,
-                )?,
-                GoalData::SubtypeGoal(goal) => infer.relate_generic_args_into_ex_clause(
-                    context.interner(),
-                    context.unification_database(),
-                    &environment,
-                    Variance::Covariant,
-                    &goal.a,
-                    &goal.b,
-                    &mut ex_clause,
-                )?,
+                ) {
+                    Ok(()) => {}
+                    Err(_) => return FallibleOrFloundered::NoSolution,
+                },
+                GoalData::SubtypeGoal(goal) => {
+                    match (goal.a.ty(context.interner()), goal.b.ty(context.interner())) {
+                        (Some(a_ty), Some(b_ty)) => {
+                            if a_ty.inference_var(context.interner()).is_some()
+                                && b_ty.inference_var(context.interner()).is_some()
+                            {
+                                return FallibleOrFloundered::Floundered;
+                            }
+                        }
+                        _ => {}
+                    }
+                    match infer.relate_generic_args_into_ex_clause(
+                        context.interner(),
+                        context.unification_database(),
+                        &environment,
+                        Variance::Covariant,
+                        &goal.a,
+                        &goal.b,
+                        &mut ex_clause,
+                    ) {
+                        Ok(()) => {}
+                        Err(_) => return FallibleOrFloundered::NoSolution,
+                    }
+                }
                 GoalData::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
@@ -94,6 +113,6 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             }
         }
 
-        Ok(ex_clause)
+        FallibleOrFloundered::Ok(ex_clause)
     }
 }

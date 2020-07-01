@@ -23,6 +23,16 @@ pub enum Void {}
 /// to perform some operation which may not complete.
 pub type Fallible<T> = Result<T, NoSolution>;
 
+/// A combination of `Fallible` and `Floundered`.
+pub enum FallibleOrFloundered<T> {
+    /// Success
+    Ok(T),
+    /// No solution. See `chalk_ir::NoSolution`.
+    NoSolution,
+    /// Floundered. See `chalk_ir::Floundered`.
+    Floundered,
+}
+
 /// Indicates that the attempted operation has "no solution" -- i.e.,
 /// cannot be performed.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

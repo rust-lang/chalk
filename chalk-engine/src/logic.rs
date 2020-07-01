@@ -12,8 +12,8 @@ use crate::{
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Floundered, Goal, GoalData, InEnvironment, NoSolution,
-    Substitution, UCanonical, UniverseMap,
+    Canonical, ConstrainedSubst, FallibleOrFloundered, Floundered, Goal, GoalData, InEnvironment,
+    NoSolution, Substitution, UCanonical, UniverseMap,
 };
 use tracing::{debug, debug_span, info, instrument};
 
@@ -297,21 +297,23 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                 // simplified subgoals. You can think of this as
                 // applying built-in "meta program clauses" that
                 // reduce goals into Domain goals.
-                if let Ok(ex_clause) =
-                    Self::simplify_goal(context, &mut infer, subst, environment, goal)
-                {
-                    info!(
-                        ex_clause = ?infer.debug_ex_clause(context.interner(), &ex_clause),
-                        "pushing initial strand"
-                    );
-                    let strand = Strand {
-                        infer,
-                        ex_clause,
-                        selected_subgoal: None,
-                        last_pursued_time: TimeStamp::default(),
-                    };
-                    let canonical_strand = Self::canonicalize_strand(context, strand);
-                    table.enqueue_strand(canonical_strand);
+                match Self::simplify_goal(context, &mut infer, subst, environment, goal) {
+                    FallibleOrFloundered::Ok(ex_clause) => {
+                        info!(
+                            ex_clause = ?infer.debug_ex_clause(context.interner(), &ex_clause),
+                            "pushing initial strand"
+                        );
+                        let strand = Strand {
+                            infer,
+                            ex_clause,
+                            selected_subgoal: None,
+                            last_pursued_time: TimeStamp::default(),
+                        };
+                        let canonical_strand = Self::canonicalize_strand(context, strand);
+                        table.enqueue_strand(canonical_strand);
+                    }
+                    FallibleOrFloundered::NoSolution => {}
+                    FallibleOrFloundered::Floundered => table.mark_floundered(),
                 }
             }
         }
