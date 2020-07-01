@@ -74,13 +74,23 @@ pub enum Variance {
 }
 
 impl Variance {
-    fn xform(self, other: Variance) -> Variance {
+    pub fn xform(self, other: Variance) -> Variance {
         match (self, other) {
             (Variance::Invariant, _) => Variance::Invariant,
             (_, Variance::Invariant) => Variance::Invariant,
             (_, Variance::Covariant) => self,
             (Variance::Covariant, Variance::Contravariant) => Variance::Contravariant,
             (Variance::Contravariant, Variance::Contravariant) => Variance::Covariant,
+        }
+    }
+
+    /// Converts `Covariant` into `Contravariant` and vice-versa. `Invariant`
+    /// stays the same.
+    pub fn invert(self) -> Variance {
+        match self {
+            Variance::Invariant => Variance::Invariant,
+            Variance::Covariant => Variance::Contravariant,
+            Variance::Contravariant => Variance::Covariant,
         }
     }
 }

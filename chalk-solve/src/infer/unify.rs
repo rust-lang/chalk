@@ -196,14 +196,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
             | (&TyData::Function(_), &TyData::Alias(ref alias))
             | (&TyData::InferenceVar(_, _), &TyData::Alias(ref alias))
-            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_alias_ty(alias, a),
+            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.relate_alias_ty(variance.invert(), alias, a),
 
             (&TyData::Alias(ref alias), &TyData::Alias(_))
             | (&TyData::Alias(ref alias), &TyData::Apply(_))
             | (&TyData::Alias(ref alias), &TyData::Placeholder(_))
             | (&TyData::Alias(ref alias), &TyData::Function(_))
             | (&TyData::Alias(ref alias), &TyData::InferenceVar(_, _))
-            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_alias_ty(alias, b),
+            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.relate_alias_ty(variance, alias, b),
 
             (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
@@ -280,23 +280,53 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    /// Unify an alias like `<T as Trait>::Item` or `impl Trait` with some other
-    /// type `ty` (which might also be an alias). Creates a goal like
+    /// Relate an alias like `<T as Trait>::Item` or `impl Trait` with some other
+    /// type `ty`. If the variance is `Invariant`, creates a goal like
     ///
     /// ```notrust
     /// AliasEq(<T as Trait>::Item = U) // associated type projection
     /// AliasEq(impl Trait = U) // impl trait
     /// ```
-    fn unify_alias_ty(&mut self, alias: &AliasTy<I>, ty: &Ty<I>) -> Fallible<()> {
+    /// Otherwise, this creates a new variable `?X`, creates a goal like
+    /// ```notrust
+    /// AliasEq(Alias = ?X)
+    /// ```
+    /// and relates `?X` and `ty`.
+    fn relate_alias_ty(
+        &mut self,
+        variance: Variance,
+        alias: &AliasTy<I>,
+        ty: &Ty<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
-        Ok(self.goals.push(InEnvironment::new(
-            self.environment,
-            AliasEq {
-                alias: alias.clone(),
-                ty: ty.clone(),
+        match variance {
+            Variance::Invariant => {
+                self.goals.push(InEnvironment::new(
+                    self.environment,
+                    AliasEq {
+                        alias: alias.clone(),
+                        ty: ty.clone(),
+                    }
+                    .cast(interner),
+                ));
+                Ok(())
             }
-            .cast(interner),
-        )))
+            Variance::Covariant | Variance::Contravariant => {
+                let var = self
+                    .table
+                    .new_variable(UniverseIndex::root())
+                    .to_ty(interner);
+                self.goals.push(InEnvironment::new(
+                    self.environment,
+                    AliasEq {
+                        alias: alias.clone(),
+                        ty: var.clone(),
+                    }
+                    .cast(interner),
+                ));
+                self.relate_ty_ty(variance, &var, ty)
+            }
+        }
     }
 
     /// Unify an inference variable `var` with some non-inference
