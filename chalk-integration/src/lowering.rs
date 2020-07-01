@@ -1084,6 +1084,11 @@ impl LowerLeafGoal for LeafGoal {
                 b: b.lower(env)?.cast(interner),
             }
             .cast::<chalk_ir::Goal<ChalkIr>>(interner),
+            LeafGoal::SubtypeGenericArgs { a, b } => chalk_ir::SubtypeGoal {
+                a: a.lower(env)?.cast(interner),
+                b: b.lower(env)?.cast(interner),
+            }
+            .cast::<chalk_ir::Goal<ChalkIr>>(interner),
         })
     }
 }

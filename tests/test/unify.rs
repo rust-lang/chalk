@@ -333,3 +333,19 @@ fn quantified_types() {
         }
     }
 }
+
+#[test]
+fn subtype() {
+    test! {
+        program {
+            fn foo<'a>(a: &'a (), b: &'a ());
+            fn bar<'a, 'b>(a: &'a (), b: &'b ());
+        }
+
+        goal {
+            for<'a> fn(&'a (), &'a ()) subtype for<'a, 'b> fn(&'a (), &'b ())
+        } yields {
+            "Unique"
+        }
+    }
+}

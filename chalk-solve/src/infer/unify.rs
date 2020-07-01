@@ -8,6 +8,7 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::UnificationDatabase;
 use std::fmt::Debug;
+use tracing::instrument;
 
 impl<I: Interner> InferenceTable<I> {
     #[instrument(level = "debug", skip(self, interner, db, environment))]
@@ -69,6 +70,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// The main entry points for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
     /// relation of `a` and `b` and returns the Unification Result.
+    #[instrument(level = "debug", skip(self))]
     fn relate<T>(mut self, variance: Variance, a: &T, b: &T) -> Fallible<UnificationResult<I>>
     where
         T: ?Sized + Zip<I>,
