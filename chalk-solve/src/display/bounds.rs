@@ -92,6 +92,7 @@ impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
             WhereClause::Implemented(trait_ref) => trait_ref.fmt(s, f),
             WhereClause::AliasEq(alias_eq) => alias_eq.fmt(s, f),
             WhereClause::LifetimeOutlives(lifetime) => lifetime.display(s).fmt(f),
+            WhereClause::TypeOutlives(ty) => ty.display(s).fmt(f),
         }
     }
 }
@@ -154,5 +155,12 @@ impl<I: Interner> RenderAsRust<I> for LifetimeOutlives<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
         // a': 'b
         write!(f, "{}: {}", self.a.display(s), self.b.display(s))
+    }
+}
+
+impl<I: Interner> RenderAsRust<I> for TypeOutlives<I> {
+    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        // T: 'a
+        write!(f, "{}: {}", self.ty.display(s), self.lifetime.display(s))
     }
 }
