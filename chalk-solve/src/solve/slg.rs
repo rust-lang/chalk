@@ -177,7 +177,7 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
     ) -> (
         TruncatingInferenceTable<I>,
         Substitution<I>,
-        Constraints<I>,
+        Vec<InEnvironment<Constraint<I>>>,
         Vec<InEnvironment<Goal<I>>>,
     ) {
         let (
@@ -190,7 +190,12 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
             },
         ) = InferenceTable::from_canonical(self.program.interner(), num_universes, answer);
         let infer_table = TruncatingInferenceTable::new(self.max_size, infer);
-        (infer_table, subst, constraints, delayed_subgoals)
+        (
+            infer_table,
+            subst,
+            constraints.as_slice(self.interner()).to_vec(),
+            delayed_subgoals,
+        )
     }
 
     fn identity_constrained_subst(
@@ -299,10 +304,16 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         &mut self,
         interner: &I,
         subst: Substitution<I>,
-        constraints: Constraints<I>,
+        constraints: Vec<InEnvironment<Constraint<I>>>,
     ) -> Canonical<ConstrainedSubst<I>> {
         self.infer
-            .canonicalize(interner, &ConstrainedSubst { subst, constraints })
+            .canonicalize(
+                interner,
+                &ConstrainedSubst {
+                    subst,
+                    constraints: Constraints::from(interner, constraints),
+                },
+            )
             .quantified
     }
 
@@ -310,7 +321,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         &mut self,
         interner: &I,
         subst: Substitution<I>,
-        constraints: Constraints<I>,
+        constraints: Vec<InEnvironment<Constraint<I>>>,
         delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
     ) -> Canonical<AnswerSubst<I>> {
         self.infer
@@ -318,7 +329,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
                 interner,
                 &AnswerSubst {
                     subst,
-                    constraints,
+                    constraints: Constraints::from(interner, constraints),
                     delayed_subgoals,
                 },
             )

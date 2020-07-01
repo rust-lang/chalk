@@ -8,7 +8,7 @@
 use crate::{CompleteAnswer, ExClause};
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraints, DomainGoal, Environment,
+    AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment,
     Fallible, Floundered, GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses,
     Substitution, UCanonical, UniverseMap,
 };
@@ -94,7 +94,7 @@ pub trait ContextOps<I: Interner, C: Context<I>>: Sized + Clone + Debug {
     ) -> (
         C::InferenceTable,
         Substitution<I>,
-        Constraints<I>,
+        Vec<InEnvironment<Constraint<I>>>,
         Vec<InEnvironment<Goal<I>>>,
     );
 
@@ -181,7 +181,7 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
         &mut self,
         interner: &I,
         subst: Substitution<I>,
-        constraints: Constraints<I>,
+        constraints: Vec<InEnvironment<Constraint<I>>>,
     ) -> Canonical<ConstrainedSubst<I>>;
 
     // Used by: logic
@@ -189,7 +189,7 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
         &mut self,
         interner: &I,
         subst: Substitution<I>,
-        constraints: Constraints<I>,
+        constraints: Vec<InEnvironment<Constraint<I>>>,
         delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
     ) -> Canonical<AnswerSubst<I>>;
 

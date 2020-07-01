@@ -60,7 +60,7 @@ use chalk_derive::{Fold, HasInterner, Visit};
 use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::visit::VisitResult;
 use chalk_ir::{
-    AnswerSubst, Canonical, ConstrainedSubst, Constraints, DebruijnIndex, Goal, InEnvironment,
+    AnswerSubst, Canonical, ConstrainedSubst, Constraint, DebruijnIndex, Goal, InEnvironment,
     Substitution,
 };
 
@@ -94,7 +94,7 @@ pub struct ExClause<I: Interner> {
     pub ambiguous: bool,
 
     /// Region constraints we have accumulated.
-    pub constraints: Constraints<I>,
+    pub constraints: Vec<InEnvironment<Constraint<I>>>,
 
     /// Subgoals: literals that must be proven
     pub subgoals: Vec<Literal<I>>,
