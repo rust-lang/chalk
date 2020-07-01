@@ -88,7 +88,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         debug!(?consequence, ?conditions, ?constraints);
 
         // Unify the selected literal Li with C'.
-        let unification_result = self.infer.unify(
+        let unification_result = self.infer.relate(
             interner,
             db,
             environment,
@@ -330,7 +330,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
         slg::into_ex_clause(
             interner,
-            self.table.unify(
+            self.table.relate(
                 interner,
                 db,
                 &self.environment,

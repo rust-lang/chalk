@@ -11,7 +11,7 @@ use std::fmt::Debug;
 
 impl<I: Interner> InferenceTable<I> {
     #[instrument(level = "debug", skip(self, interner, db, environment))]
-    pub(crate) fn unify<T>(
+    pub(crate) fn relate<T>(
         &mut self,
         interner: &I,
         db: &dyn UnificationDatabase<I>,
@@ -24,7 +24,7 @@ impl<I: Interner> InferenceTable<I> {
         T: ?Sized + Zip<I>,
     {
         let snapshot = self.snapshot();
-        match Unifier::new(interner, db, self, environment).unify(a, b) {
+        match Unifier::new(interner, db, self, environment).relate(variance, a, b) {
             Ok(r) => {
                 self.commit(snapshot);
                 Ok(r)
@@ -66,25 +66,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    /// One of the main entry points for the `Unifier` type and really the
+    /// The main entry points for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
-    /// unification of `a` and `b` and returns the Unification Result.
-    fn unify<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult<I>>
+    /// relation of `a` and `b` and returns the Unification Result.
+    fn relate<T>(mut self, variance: Variance, a: &T, b: &T) -> Fallible<UnificationResult<I>>
     where
         T: ?Sized + Zip<I>,
     {
-        Zip::zip_with(&mut self, Variance::Invariant, a, b)?;
-        Ok(UnificationResult { goals: self.goals })
-    }
-
-    /// One of the main entry points for the `Unifier` type and really the
-    /// only type meant to be called externally. Performs a
-    /// subtyping of `a` and `b` and returns the Unification Result.
-    fn sub<T>(mut self, a: &T, b: &T) -> Fallible<UnificationResult<I>>
-    where
-        T: ?Sized + Zip<I>,
-    {
-        Zip::zip_with(&mut self, Variance::Covariant, a, b)?;
+        Zip::zip_with(&mut self, variance, a, b)?;
         Ok(UnificationResult { goals: self.goals })
     }
 

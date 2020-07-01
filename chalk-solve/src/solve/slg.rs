@@ -348,18 +348,19 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         self.infer.invert(interner, value)
     }
 
-    fn unify_generic_args_into_ex_clause(
+    fn relate_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
         db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
+        variance: Variance,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
         ex_clause: &mut ExClause<I>,
     ) -> Fallible<()> {
         let result = self
             .infer
-            .unify(interner, db, environment, Variance::Invariant, a, b)?;
+            .relate(interner, db, environment, variance, a, b)?;
         Ok(into_ex_clause(interner, result, ex_clause))
     }
 }

@@ -288,7 +288,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     {
         let res = self
             .infer
-            .unify(interner, db, environment, variance, a, b)?;
+            .relate(interner, db, environment, variance, a, b)?;
         Ok(res.goals)
     }
 

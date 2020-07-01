@@ -10,7 +10,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{
     AnswerSubst, Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment,
     Fallible, Floundered, GenericArg, Goal, InEnvironment, ProgramClause, ProgramClauses,
-    Substitution, UCanonical, UnificationDatabase, UniverseMap,
+    Substitution, UCanonical, UnificationDatabase, UniverseMap, Variance,
 };
 use std::fmt::Debug;
 
@@ -208,11 +208,12 @@ pub trait UnificationOps<I: Interner, C: Context<I>> {
     ///
     /// If the parameters fail to unify, then `Error` is returned
     // Used by: simplify
-    fn unify_generic_args_into_ex_clause(
+    fn relate_generic_args_into_ex_clause(
         &mut self,
         interner: &I,
         db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
+        variance: Variance,
         a: &GenericArg<I>,
         b: &GenericArg<I>,
         ex_clause: &mut ExClause<I>,

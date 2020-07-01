@@ -4,7 +4,7 @@ use crate::{ExClause, Literal, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution, Variance,
 };
 use tracing::debug;
 
@@ -61,15 +61,24 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                             subgoal.clone(),
                         )));
                 }
-                GoalData::EqGoal(goal) => infer.unify_generic_args_into_ex_clause(
+                GoalData::EqGoal(goal) => infer.relate_generic_args_into_ex_clause(
                     context.interner(),
                     context.unification_database(),
                     &environment,
+                    Variance::Invariant,
                     &goal.a,
                     &goal.b,
                     &mut ex_clause,
                 )?,
-                GoalData::SubtypeGoal(_goal) => todo!(),
+                GoalData::SubtypeGoal(goal) => infer.relate_generic_args_into_ex_clause(
+                    context.interner(),
+                    context.unification_database(),
+                    &environment,
+                    Variance::Covariant,
+                    &goal.a,
+                    &goal.b,
+                    &mut ex_clause,
+                )?,
                 GoalData::DomainGoal(domain_goal) => {
                     ex_clause
                         .subgoals
