@@ -2645,7 +2645,7 @@ pub enum QuantifierKind {
 pub enum Constraint<I: Interner> {
     /// Outlives constraint `'a: 'b`, indicating that the value of `'a` must be
     /// a superset of the value of `'b`.
-    Outlives(Lifetime<I>, Lifetime<I>),
+    LifetimeOutlives(Lifetime<I>, Lifetime<I>),
 
     /// Type outlives constraint `T: 'a`, indicating that the type `T` must live
     /// at least as long as the value of `'a`.

@@ -845,7 +845,7 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
 impl<I: Interner> Debug for Constraint<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            Constraint::Outlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
+            Constraint::LifetimeOutlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
             Constraint::TypeOutlives(ty, lifetime) => write!(fmt, "{:?}: {:?}", ty, lifetime),
         }
     }

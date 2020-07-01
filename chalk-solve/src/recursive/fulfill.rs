@@ -313,8 +313,10 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             }
             GoalData::DomainGoal(dg) => match dg {
                 DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
-                    let constraint =
-                        InEnvironment::new(environment, Constraint::Outlives(a.clone(), b.clone()));
+                    let constraint = InEnvironment::new(
+                        environment,
+                        Constraint::LifetimeOutlives(a.clone(), b.clone()),
+                    );
                     self.constraints.insert(constraint);
                 }
                 _ => {

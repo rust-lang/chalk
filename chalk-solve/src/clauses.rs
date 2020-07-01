@@ -321,12 +321,30 @@ fn program_clauses_that_could_match<I: Interner>(
                             a: a.clone(),
                             b: b.clone(),
                         })),
-                        Some(InEnvironment::new(environment, Constraint::Outlives(a, b))),
+                        Some(InEnvironment::new(
+                            environment,
+                            Constraint::LifetimeOutlives(a, b),
+                        )),
                     );
                 })
             });
         }
-        DomainGoal::Holds(WhereClause::TypeOutlives(TypeOutlives { ty, lifetime })) => todo!(),
+        DomainGoal::Holds(WhereClause::TypeOutlives(..)) => {
+            builder.push_bound_ty(|builder, ty| {
+                builder.push_bound_lifetime(|builder, lifetime| {
+                    builder.push_fact_with_constraints(
+                        DomainGoal::Holds(WhereClause::TypeOutlives(TypeOutlives {
+                            ty: ty.clone(),
+                            lifetime: lifetime.clone(),
+                        })),
+                        Some(InEnvironment::new(
+                            environment,
+                            Constraint::TypeOutlives(ty, lifetime),
+                        )),
+                    )
+                })
+            });
+        }
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)
