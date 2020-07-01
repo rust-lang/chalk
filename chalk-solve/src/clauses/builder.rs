@@ -85,7 +85,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(interner),
             conditions: Goals::from(interner, conditions),
-            constraints: constraints.into_iter().collect(),
+            constraints: Constraints::from(interner, constraints),
             priority,
         };
 

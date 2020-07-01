@@ -95,7 +95,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         let mut ex_clause = ExClause {
             subst: subst.clone(),
             ambiguous: false,
-            constraints: vec![],
+            constraints: Constraints::empty(interner),
             subgoals: vec![],
             delayed_subgoals: vec![],
             answer_time: TimeStamp::default(),
@@ -105,7 +105,14 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         // Add the subgoals/region-constraints that unification gave us.
         slg::into_ex_clause(interner, unification_result, &mut ex_clause);
 
-        ex_clause.constraints.extend(constraints);
+        ex_clause.constraints = Constraints::from(
+            interner,
+            ex_clause
+                .constraints
+                .as_slice(interner)
+                .into_iter()
+                .chain(constraints.as_slice(interner)),
+        );
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -234,7 +241,14 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
             &answer_table_goal.value,
             selected_goal,
         )?;
-        ex_clause.constraints.extend(answer_constraints);
+        ex_clause.constraints = Constraints::from(
+            interner,
+            ex_clause
+                .constraints
+                .as_slice(interner)
+                .into_iter()
+                .chain(answer_constraints.as_slice(interner)),
+        );
         // at that point we should only have goals that stemmed
         // from non trivial self cycles
         ex_clause.delayed_subgoals.extend(delayed_subgoals);

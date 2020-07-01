@@ -2,9 +2,9 @@ use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData,
-    Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication, ProgramClauses, ProjectionTy,
-    QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind,
-    VariableKinds,
+    Constraint, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId,
+    Ty, VariableKind, VariableKinds,
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
@@ -53,6 +53,7 @@ impl Interner for ChalkIr {
     type InternedQuantifiedWhereClauses = Vec<QuantifiedWhereClause<ChalkIr>>;
     type InternedVariableKinds = Vec<VariableKind<ChalkIr>>;
     type InternedCanonicalVarKinds = Vec<CanonicalVarKind<ChalkIr>>;
+    type InternedConstraints = Vec<InEnvironment<Constraint<ChalkIr>>>;
     type DefId = RawId;
     type InternedAdtId = RawId;
     type Identifier = Identifier;
@@ -343,6 +344,20 @@ impl Interner for ChalkIr {
         canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
     ) -> &'a [CanonicalVarKind<ChalkIr>] {
         canonical_var_kinds
+    }
+
+    fn intern_constraints<E>(
+        &self,
+        data: impl IntoIterator<Item = Result<InEnvironment<Constraint<Self>>, E>>,
+    ) -> Result<Self::InternedConstraints, E> {
+        data.into_iter().collect()
+    }
+
+    fn constraints_data<'a>(
+        &self,
+        constraints: &'a Self::InternedConstraints,
+    ) -> &'a [InEnvironment<Constraint<Self>>] {
+        constraints
     }
 }
 

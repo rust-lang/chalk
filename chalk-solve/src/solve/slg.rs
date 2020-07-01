@@ -177,7 +177,7 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
     ) -> (
         TruncatingInferenceTable<I>,
         Substitution<I>,
-        Vec<InEnvironment<Constraint<I>>>,
+        Constraints<I>,
         Vec<InEnvironment<Goal<I>>>,
     ) {
         let (
@@ -207,7 +207,7 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
                 self.program.interner(),
                 &ConstrainedSubst {
                     subst,
-                    constraints: vec![],
+                    constraints: Constraints::empty(self.program.interner()),
                 },
             )
             .quantified
@@ -299,7 +299,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         &mut self,
         interner: &I,
         subst: Substitution<I>,
-        constraints: Vec<InEnvironment<Constraint<I>>>,
+        constraints: Constraints<I>,
     ) -> Canonical<ConstrainedSubst<I>> {
         self.infer
             .canonicalize(interner, &ConstrainedSubst { subst, constraints })
@@ -310,7 +310,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
         &mut self,
         interner: &I,
         subst: Substitution<I>,
-        constraints: Vec<InEnvironment<Constraint<I>>>,
+        constraints: Constraints<I>,
         delayed_subgoals: Vec<InEnvironment<Goal<I>>>,
     ) -> Canonical<AnswerSubst<I>> {
         self.infer

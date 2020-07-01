@@ -5,6 +5,7 @@ use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::LowerGoal;
 use chalk_integration::query::LoweringDatabase;
+use chalk_ir::Constraints;
 use chalk_solve::ext::*;
 use chalk_solve::logging::with_tracing_logs;
 use chalk_solve::RustIrDatabase;
@@ -15,14 +16,13 @@ mod bench;
 mod coherence;
 mod wf_lowering;
 
-pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str) {
+pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, interner: &ChalkIr) {
     // sort constraints, since the different solvers may output them in different order
     match &mut result {
         Some(Solution::Unique(solution)) => {
-            solution
-                .value
-                .constraints
-                .sort_by_key(|c| format!("{:?}", c));
+            let mut sorted = solution.value.constraints.as_slice(interner).to_vec();
+            sorted.sort_by_key(|c| format!("{:?}", c));
+            solution.value.constraints = Constraints::from(interner, sorted);
         }
         _ => {}
     }
@@ -255,7 +255,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                 match expected {
                     TestGoal::Aggregated(expected) => {
                         let result = db.solve(&peeled_goal);
-                        assert_result(result, expected);
+                        assert_result(result, expected, db.interner());
                     }
                     TestGoal::All(expected) => {
                         let mut expected = expected.into_iter();

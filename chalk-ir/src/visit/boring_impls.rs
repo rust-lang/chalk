@@ -5,10 +5,10 @@
 //! The more interesting impls of `Visit` remain in the `visit` module.
 
 use crate::{
-    AdtId, AssocTypeId, ClausePriority, ClosureId, DebruijnIndex, FloatTy, FnDefId, GenericArg,
-    Goals, ImplId, IntTy, Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause,
-    ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution, SuperVisit,
-    TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
+    AdtId, AssocTypeId, ClausePriority, ClosureId, Constraints, DebruijnIndex, FloatTy, FnDefId,
+    GenericArg, Goals, ImplId, IntTy, Interner, Mutability, OpaqueTyId, PlaceholderIndex,
+    ProgramClause, ProgramClauses, QuantifiedWhereClauses, QuantifierKind, Scalar, Substitution,
+    SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult, Visitor,
 };
 use std::{marker::PhantomData, sync::Arc};
 
@@ -255,6 +255,21 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
 }
 
 impl<I: Interner> Visit<I> for ProgramClauses<I> {
+    fn visit_with<'i, R: VisitResult>(
+        &self,
+        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        outer_binder: DebruijnIndex,
+    ) -> R
+    where
+        I: 'i,
+    {
+        let interner = visitor.interner();
+
+        visit_iter(self.iter(interner), visitor, outer_binder)
+    }
+}
+
+impl<I: Interner> Visit<I> for Constraints<I> {
     fn visit_with<'i, R: VisitResult>(
         &self,
         visitor: &mut dyn Visitor<'i, I, Result = R>,

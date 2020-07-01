@@ -96,6 +96,12 @@ impl<I: Interner> Debug for ProgramClauses<I> {
     }
 }
 
+impl<I: Interner> Debug for Constraints<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_constraints(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
 impl<I: Interner> Debug for ApplicationTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_application_ty(self, fmt).unwrap_or_else(|| write!(fmt, "ApplicationTy(?)"))

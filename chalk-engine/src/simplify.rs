@@ -4,7 +4,7 @@ use crate::{ExClause, Literal, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+    Constraints, Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
 };
 use tracing::debug;
 
@@ -22,7 +22,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         let mut ex_clause = ExClause {
             subst,
             ambiguous: false,
-            constraints: vec![],
+            constraints: Constraints::empty(context.interner()),
             subgoals: vec![],
             delayed_subgoals: vec![],
             answer_time: TimeStamp::default(),

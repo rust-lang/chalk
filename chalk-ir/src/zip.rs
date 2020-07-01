@@ -270,6 +270,17 @@ impl<I: Interner> Zip<I> for ProgramClauses<I> {
     }
 }
 
+impl<I: Interner> Zip<I> for Constraints<I> {
+    fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
+    where
+        I: 'i,
+    {
+        let interner = zipper.interner();
+        Zip::zip_with(zipper, a.as_slice(interner), b.as_slice(interner))?;
+        Ok(())
+    }
+}
+
 impl<I: Interner> Zip<I> for QuantifiedWhereClauses<I> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where

@@ -2009,7 +2009,7 @@ pub struct ProgramClauseImplication<I: Interner> {
     pub conditions: Goals<I>,
 
     /// The lifetime constraints that should be proven.
-    pub constraints: Vec<InEnvironment<Constraint<I>>>,
+    pub constraints: Constraints<I>,
 
     /// The relative priority of the implication.
     pub priority: ClausePriority,
@@ -2630,6 +2630,79 @@ pub enum Constraint<I: Interner> {
 
 impl<I: Interner> Copy for Constraint<I> where I::InternedLifetime: Copy {}
 
+/// A list of constraints.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
+pub struct Constraints<I: Interner> {
+    interned: I::InternedConstraints,
+}
+
+impl<I: Interner> Constraints<I> {
+    /// Creates a list of constraints.
+    pub fn from(
+        interner: &I,
+        constraints: impl IntoIterator<Item = impl CastTo<InEnvironment<Constraint<I>>>>,
+    ) -> Self {
+        Self::from_fallible(
+            interner,
+            constraints
+                .into_iter()
+                .map(|p| -> Result<InEnvironment<Constraint<I>>, ()> { Ok(p.cast(interner)) }),
+        )
+        .unwrap()
+    }
+
+    /// Try to create a list of constraints.
+    pub fn from_fallible<E>(
+        interner: &I,
+        constraints: impl IntoIterator<Item = Result<impl CastTo<InEnvironment<Constraint<I>>>, E>>,
+    ) -> Result<Self, E> {
+        use crate::cast::Caster;
+        Ok(Constraints {
+            interned: I::intern_constraints(interner, constraints.into_iter().casted(interner))?,
+        })
+    }
+
+    /// Get the interned representation of the constraints.
+    pub fn interned(&self) -> &I::InternedConstraints {
+        &self.interned
+    }
+
+    /// Index into the list of constraints.
+    pub fn at(&self, interner: &I, index: usize) -> &InEnvironment<Constraint<I>> {
+        &self.as_slice(interner)[index]
+    }
+
+    /// Create a list of constraints from a single constraint.
+    pub fn from1(interner: &I, parameter: impl CastTo<InEnvironment<Constraint<I>>>) -> Self {
+        Self::from(interner, Some(parameter))
+    }
+
+    /// Create an empty list of constraints.
+    pub fn empty(interner: &I) -> Self {
+        Self::from(interner, None::<InEnvironment<Constraint<I>>>)
+    }
+
+    /// Check whether this is an empty list of constraints.
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    /// Get an iterator over the constraints.
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, InEnvironment<Constraint<I>>> {
+        self.as_slice(interner).iter()
+    }
+
+    /// Returns a slice containing the parameters associated with the substitution.
+    pub fn as_slice(&self, interner: &I) -> &[InEnvironment<Constraint<I>>] {
+        interner.constraints_data(&self.interned)
+    }
+
+    /// Get the length of the list of constraints.
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+}
+
 /// A mapping of inference variables to instantiations thereof.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
 pub struct Substitution<I: Interner> {
@@ -2891,7 +2964,7 @@ pub struct ConstrainedSubst<I: Interner> {
     pub subst: Substitution<I>,
 
     /// Region constraints that constrain the substitution.
-    pub constraints: Vec<InEnvironment<Constraint<I>>>,
+    pub constraints: Constraints<I>,
 }
 
 /// The resulting substitution after solving a goal.
@@ -2903,7 +2976,7 @@ pub struct AnswerSubst<I: Interner> {
     pub subst: Substitution<I>,
 
     /// List of constraints that are part of the answer.
-    pub constraints: Vec<InEnvironment<Constraint<I>>>,
+    pub constraints: Constraints<I>,
 
     /// Delayed subgoals, used when the solver answered with an (incomplete) `Answer` (instead of a `CompleteAnswer`).
     pub delayed_subgoals: Vec<InEnvironment<Goal<I>>>,

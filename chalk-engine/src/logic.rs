@@ -1477,7 +1477,11 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         let is_trivial_answer = {
             self.context
                 .is_trivial_substitution(&self.forest.tables[table].table_goal, &answer.subst)
-                && answer.subst.value.constraints.is_empty()
+                && answer
+                    .subst
+                    .value
+                    .constraints
+                    .is_empty(self.context.interner())
         };
 
         if let Some(answer_index) = self.forest.tables[table].push_answer(answer) {
