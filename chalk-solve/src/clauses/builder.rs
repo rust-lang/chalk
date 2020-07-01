@@ -163,7 +163,6 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// unaffected and hence the context remains usable. Invokes `op`,
     /// passing a type representing this new type variable in as an
     /// argument.
-    #[allow(dead_code)]
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
         let binders = Binders::new(
@@ -178,6 +177,28 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .assert_ty_ref(interner)
                 .clone();
             op(this, ty)
+        });
+    }
+
+    /// Push a single binder, for a lifetime, at the end of the binder
+    /// list.  The indices of previously bound variables are
+    /// unaffected and hence the context remains usable. Invokes `op`,
+    /// passing a lifetime representing this new lifetime variable in as an
+    /// argument.
+    pub fn push_bound_lifetime(&mut self, op: impl FnOnce(&mut Self, Lifetime<I>)) {
+        let interner = self.interner();
+        let binders = Binders::new(
+            VariableKinds::from1(interner, VariableKind::Lifetime),
+            PhantomData::<I>,
+        );
+        self.push_binders(&binders, |this, PhantomData| {
+            let lifetime = this
+                .placeholders_in_scope()
+                .last()
+                .unwrap()
+                .assert_lifetime_ref(interner)
+                .clone();
+            op(this, lifetime)
         });
     }
 
