@@ -16,7 +16,7 @@ fn push_adt_sized_conditions<I: Interner>(
     let adt_datum = db.adt_datum(adt_id);
 
     // WF ensures that all enums are Sized, so we only have to consider structs.
-    if adt_datum.flags.kind != AdtKind::Struct {
+    if adt_datum.kind != AdtKind::Struct {
         builder.push_fact(trait_ref.clone());
         return;
     }

@@ -157,7 +157,7 @@ where
         // }
         // ```
         let adt_datum = self.db.adt_datum(adt_id);
-        let is_enum = adt_datum.flags.kind == AdtKind::Enum;
+        let is_enum = adt_datum.kind == AdtKind::Enum;
 
         let mut gb = GoalBuilder::new(self.db);
         let adt_data = adt_datum

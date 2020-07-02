@@ -357,7 +357,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             let adt_datum = db.adt_datum(adt_id);
 
             // Unsizing of enums is not allowed
-            if adt_datum.flags.kind == AdtKind::Enum {
+            if adt_datum.kind == AdtKind::Enum {
                 return;
             }
 

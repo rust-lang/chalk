@@ -1127,17 +1127,17 @@ impl LowerAdtDefn for AdtDefn {
             upstream: self.flags.upstream,
             fundamental: self.flags.fundamental,
             phantom_data: self.flags.phantom_data,
-            kind: match self.flags.kind {
-                AdtKind::Struct => rust_ir::AdtKind::Struct,
-                AdtKind::Enum => rust_ir::AdtKind::Enum,
-                AdtKind::Union => rust_ir::AdtKind::Union,
-            },
         };
 
         Ok(rust_ir::AdtDatum {
             id: adt_id,
             binders,
             flags,
+            kind: match self.flags.kind {
+                AdtKind::Struct => rust_ir::AdtKind::Struct,
+                AdtKind::Enum => rust_ir::AdtKind::Enum,
+                AdtKind::Union => rust_ir::AdtKind::Union,
+            },
         })
     }
 }

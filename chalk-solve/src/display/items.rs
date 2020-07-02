@@ -95,7 +95,11 @@ impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
         );
 
         // name
-        write!(f, "struct {}", self.id.display(s),)?;
+        match self.kind {
+            AdtKind::Struct => write!(f, "struct {}", self.id.display(s),)?,
+            AdtKind::Enum => write!(f, "enum {}", self.id.display(s),)?,
+            AdtKind::Union => write!(f, "union {}", self.id.display(s),)?,
+        }
         write_joined_non_empty_list!(f, "<{}>", s.binder_var_display(&self.binders.binders), ", ")?;
 
         // where clauses
@@ -109,14 +113,37 @@ impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
         // body
         write!(f, "{{")?;
         let s = &s.add_indent();
-        write_joined_non_empty_list!(
-            f,
-            "\n{}\n",
-            value.fields.iter().enumerate().map(|(idx, field)| {
-                format!("{}field_{}: {}", s.indent(), idx, field.display(s))
-            }),
-            ",\n"
-        )?;
+        match self.kind {
+            AdtKind::Struct | AdtKind::Union => {
+                write_joined_non_empty_list!(
+                    f,
+                    "\n{}\n",
+                    value.variants[0]
+                        .fields
+                        .iter()
+                        .enumerate()
+                        .map(|(idx, field)| {
+                            format!("{}field_{}: {}", s.indent(), idx, field.display(s))
+                        }),
+                    ",\n"
+                )?;
+            }
+            AdtKind::Enum => {
+                for (variant_idx, variant) in value.variants.iter().enumerate() {
+                    write!(f, "\n{}variant_{} {{", s.indent(), variant_idx)?;
+                    let s = &s.add_indent();
+                    write_joined_non_empty_list!(
+                        f,
+                        "\n{}\n",
+                        variant.fields.iter().enumerate().map(|(idx, field)| {
+                            format!("{}field_{}: {}", s.indent(), idx, field.display(s))
+                        }),
+                        ",\n"
+                    )?;
+                    write!(f, "{}}},", s.indent())?;
+                }
+            }
+        }
         write!(f, "}}")?;
         Ok(())
     }

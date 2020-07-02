@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use crate::{
     rust_ir::{
-        AdtDatumBound, AssociatedTyDatumBound, FnDefDatumBound, OpaqueTyDatumBound, TraitDatumBound,
+        AdtDatumBound, AdtKind, AdtVariantDatum, AssociatedTyDatumBound, FnDefDatumBound,
+        OpaqueTyDatumBound, TraitDatumBound,
     },
     RustIrDatabase,
 };
@@ -57,10 +58,14 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
 
     fn adt_datum(&self, adt_id: chalk_ir::AdtId<I>) -> std::sync::Arc<crate::rust_ir::AdtDatum<I>> {
         let mut v = (*self.db.adt_datum(adt_id)).clone();
+        let variants = match v.kind {
+            AdtKind::Struct | AdtKind::Union => vec![AdtVariantDatum { fields: vec![] }],
+            AdtKind::Enum => vec![],
+        };
         v.binders = Binders::new(
             v.binders.binders.clone(),
             AdtDatumBound {
-                fields: Vec::new(),
+                variants,
                 where_clauses: Vec::new(),
             },
         );
