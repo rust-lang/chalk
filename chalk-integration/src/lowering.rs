@@ -299,10 +299,7 @@ impl<'k> Env<'k> {
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
         Ok(chalk_ir::Binders::new(
-            VariableKinds::from_iter(
-                interner,
-                binders.iter().map(|v| v.kind.clone()),
-            ),
+            VariableKinds::from_iter(interner, binders.iter().map(|v| v.kind.clone())),
             op(&env)?,
         ))
     }
@@ -864,10 +861,7 @@ impl LowerTypeKind for StructDefn {
             sort: TypeSort::Struct,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(
-                    interner,
-                    self.all_parameters().anonymize(),
-                ),
+                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
                 crate::Unit,
             ),
         })
@@ -881,10 +875,7 @@ impl LowerTypeKind for FnDefn {
             sort: TypeSort::FnDef,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(
-                    interner,
-                    self.all_parameters().anonymize(),
-                ),
+                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
                 crate::Unit,
             ),
         })
@@ -904,10 +895,7 @@ impl LowerTypeKind for ClosureDefn {
             sort: TypeSort::Closure,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(
-                    interner,
-                    self.all_parameters().anonymize(),
-                ),
+                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
                 crate::Unit,
             ),
         })

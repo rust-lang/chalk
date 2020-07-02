@@ -23,10 +23,8 @@ fn push_clauses<I: Interner>(
         substitution: arg_sub,
     })
     .intern(interner);
-    let substitution = Substitution::from_iter(
-        interner,
-        &[self_ty.cast(interner), tupled.cast(interner)],
-    );
+    let substitution =
+        Substitution::from_iter(interner, &[self_ty.cast(interner), tupled.cast(interner)]);
     builder.push_fact(TraitRef {
         trait_id,
         substitution: substitution.clone(),
@@ -142,10 +140,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         },
         TyData::Function(fn_val) => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
-            let bound_ref = Binders::new(
-                VariableKinds::from_iter(interner, binders),
-                orig_sub,
-            );
+            let bound_ref = Binders::new(VariableKinds::from_iter(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
                 // The last parameter represents the function return type
                 let (arg_sub, fn_output_ty) = orig_sub
