@@ -87,7 +87,17 @@ pub struct AdtDatum<I: Interner> {
     pub binders: Binders<AdtDatumBound<I>>,
     pub id: AdtId<I>,
     pub flags: AdtFlags,
+    pub kind: AdtKind,
 }
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
+pub enum AdtKind {
+    Struct,
+    Enum,
+    Union,
+}
+
+chalk_ir::const_visit!(AdtKind);
 
 impl<I: Interner> AdtDatum<I> {
     pub fn name(&self, interner: &I) -> TypeName<I> {
@@ -97,8 +107,13 @@ impl<I: Interner> AdtDatum<I> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
 pub struct AdtDatumBound<I: Interner> {
-    pub fields: Vec<Ty<I>>,
+    pub variants: Vec<AdtVariantDatum<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
+pub struct AdtVariantDatum<I: Interner> {
+    pub fields: Vec<Ty<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

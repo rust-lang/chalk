@@ -20,7 +20,7 @@ pub struct Program {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Item {
-    StructDefn(StructDefn),
+    AdtDefn(AdtDefn),
     FnDefn(FnDefn),
     ClosureDefn(ClosureDefn),
     TraitDefn(TraitDefn),
@@ -30,24 +30,38 @@ pub enum Item {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct StructDefn {
+pub struct AdtDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
-    pub fields: Vec<Field>,
-    pub flags: StructFlags,
-    pub repr: StructRepr,
+    pub variants: Vec<Variant>,
+    pub flags: AdtFlags,
+    pub repr: AdtRepr,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct StructFlags {
+pub struct Variant {
+    pub name: Identifier,
+    pub fields: Vec<Field>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
     pub phantom_data: bool,
+    pub kind: AdtKind,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum AdtKind {
+    Struct,
+    Enum,
+    Union,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct StructRepr {
+pub struct AdtRepr {
     pub repr_c: bool,
     pub repr_packed: bool,
 }

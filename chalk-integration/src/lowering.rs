@@ -370,7 +370,7 @@ impl LowerProgram for Program {
 
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             match item {
-                Item::StructDefn(defn) => {
+                Item::AdtDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = AdtId(raw_id);
                     adt_ids.insert(type_kind.name.clone(), id);
@@ -444,7 +444,7 @@ impl LowerProgram for Program {
             };
 
             match *item {
-                Item::StructDefn(ref d) => {
+                Item::AdtDefn(ref d) => {
                     let adt_id = AdtId(raw_id);
                     adt_data.insert(adt_id, Arc::new(d.lower_adt(adt_id, &empty_env)?));
                     adt_reprs.insert(adt_id, d.lower_adt_repr()?);
@@ -720,7 +720,7 @@ trait LowerParameterMap {
     }
 }
 
-impl LowerParameterMap for StructDefn {
+impl LowerParameterMap for AdtDefn {
     fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
         None
     }
@@ -853,11 +853,11 @@ trait LowerWhereClauses {
     }
 }
 
-impl LowerTypeKind for StructDefn {
+impl LowerTypeKind for AdtDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
         let interner = &ChalkIr;
         Ok(TypeKind {
-            sort: TypeSort::Struct,
+            sort: TypeSort::Adt,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
                 chalk_ir::VariableKinds::from(interner, self.all_parameters().anonymize()),
@@ -901,7 +901,7 @@ impl LowerTypeKind for ClosureDefn {
     }
 }
 
-impl LowerWhereClauses for StructDefn {
+impl LowerWhereClauses for AdtDefn {
     fn where_clauses(&self) -> &[QuantifiedWhereClause] {
         &self.where_clauses
     }
@@ -1094,9 +1094,18 @@ trait LowerAdtDefn {
         adt_id: chalk_ir::AdtId<ChalkIr>,
         env: &Env,
     ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>>;
+
+    fn lower_adt_variant(
+        &self,
+        variant: &Variant,
+        env: &Env,
+    ) -> LowerResult<rust_ir::AdtVariantDatum<ChalkIr>> {
+        let fields: LowerResult<_> = variant.fields.iter().map(|f| f.ty.lower(env)).collect();
+        Ok(rust_ir::AdtVariantDatum { fields: fields? })
+    }
 }
 
-impl LowerAdtDefn for StructDefn {
+impl LowerAdtDefn for AdtDefn {
     fn lower_adt(
         &self,
         adt_id: chalk_ir::AdtId<ChalkIr>,
@@ -1109,11 +1118,15 @@ impl LowerAdtDefn for StructDefn {
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let fields: LowerResult<_> = self.fields.iter().map(|f| f.ty.lower(env)).collect();
+            let variants: LowerResult<_> = self
+                .variants
+                .iter()
+                .map(|v| self.lower_adt_variant(v, env))
+                .collect();
             let where_clauses = self.lower_where_clauses(env)?;
 
             Ok(rust_ir::AdtDatumBound {
-                fields: fields?,
+                variants: variants?,
                 where_clauses,
             })
         })?;
@@ -1128,6 +1141,11 @@ impl LowerAdtDefn for StructDefn {
             id: adt_id,
             binders,
             flags,
+            kind: match self.flags.kind {
+                AdtKind::Struct => rust_ir::AdtKind::Struct,
+                AdtKind::Enum => rust_ir::AdtKind::Enum,
+                AdtKind::Union => rust_ir::AdtKind::Union,
+            },
         })
     }
 }
@@ -1136,7 +1154,7 @@ trait LowerAdtRepr {
     fn lower_adt_repr(&self) -> LowerResult<rust_ir::AdtRepr>;
 }
 
-impl LowerAdtRepr for StructDefn {
+impl LowerAdtRepr for AdtDefn {
     fn lower_adt_repr(&self) -> LowerResult<rust_ir::AdtRepr> {
         Ok(rust_ir::AdtRepr {
             repr_c: self.repr.repr_c,

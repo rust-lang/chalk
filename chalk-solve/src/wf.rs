@@ -147,7 +147,6 @@ where
         Self { db, solver_choice }
     }
 
-    /// TODO: Currently only handles structs, may need more work for enums & unions
     pub fn verify_adt_decl(&self, adt_id: AdtId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
 
@@ -158,42 +157,63 @@ where
         //     data: Vec<T>
         // }
         // ```
-        let struct_datum = self.db.adt_datum(adt_id);
+        let adt_datum = self.db.adt_datum(adt_id);
+        let is_enum = adt_datum.kind == AdtKind::Enum;
 
         let mut gb = GoalBuilder::new(self.db);
-        let struct_data = struct_datum
+        let adt_data = adt_datum
             .binders
-            .map_ref(|b| (&b.fields, &b.where_clauses));
+            .map_ref(|b| (&b.variants, &b.where_clauses));
 
         // We make a goal like...
         //
         // forall<T> { ... }
-        let wg_goal = gb.forall(&struct_data, (), |gb, _, (fields, where_clauses), ()| {
-            let interner = gb.interner();
+        let wg_goal = gb.forall(
+            &adt_data,
+            is_enum,
+            |gb, _, (variants, where_clauses), is_enum| {
+                let interner = gb.interner();
 
-            // struct is well-formed in terms of Sized
-            let sized_constraint_goal = WfWellKnownGoals::struct_sized_constraint(gb.db(), fields);
+                // (FromEnv(T: Eq) => ...)
+                gb.implies(
+                    where_clauses
+                        .iter()
+                        .cloned()
+                        .map(|wc| wc.into_from_env_goal(interner)),
+                    |gb| {
+                        let sub_goals: Vec<_> = variants
+                            .iter()
+                            .flat_map(|variant| {
+                                let fields = &variant.fields;
 
-            // (FromEnv(T: Eq) => ...)
-            gb.implies(
-                where_clauses
-                    .iter()
-                    .cloned()
-                    .map(|wc| wc.into_from_env_goal(interner)),
-                |gb| {
-                    // WellFormed(Vec<T>), for each field type `Vec<T>` or type that appears in the where clauses
-                    let types =
-                        InputTypeCollector::types_in(gb.interner(), (&fields, &where_clauses));
+                                // When checking if Enum is well-formed, we require that all fields of
+                                // each variant are sized. For `structs`, we relax this requirement to
+                                // all but the last field.
+                                let sized_constraint_goal =
+                                    WfWellKnownGoals::struct_sized_constraint(
+                                        gb.db(),
+                                        fields,
+                                        is_enum,
+                                    );
 
-                    gb.all(
-                        types
-                            .into_iter()
-                            .map(|ty| ty.well_formed().cast(interner))
-                            .chain(sized_constraint_goal.into_iter()),
-                    )
-                },
-            )
-        });
+                                // WellFormed(Vec<T>), for each field type `Vec<T>` or type that appears in the where clauses
+                                let types = InputTypeCollector::types_in(
+                                    gb.interner(),
+                                    (&fields, &where_clauses),
+                                );
+
+                                types
+                                    .into_iter()
+                                    .map(|ty| ty.well_formed().cast(interner))
+                                    .chain(sized_constraint_goal.into_iter())
+                            })
+                            .collect();
+
+                        gb.all(sub_goals)
+                    },
+                )
+            },
+        );
 
         let wg_goal = wg_goal.into_closed_goal(interner);
 
@@ -510,8 +530,11 @@ impl WfWellKnownGoals {
     pub fn struct_sized_constraint<I: Interner>(
         db: &dyn RustIrDatabase<I>,
         fields: &[Ty<I>],
+        size_all: bool,
     ) -> Option<Goal<I>> {
-        if fields.len() <= 1 {
+        let excluded = if size_all { 0 } else { 1 };
+
+        if fields.len() <= excluded {
             return None;
         }
 
@@ -521,7 +544,7 @@ impl WfWellKnownGoals {
 
         Some(Goal::all(
             interner,
-            fields[..fields.len() - 1].iter().map(|ty| {
+            fields[..fields.len() - excluded].iter().map(|ty| {
                 TraitRef {
                     trait_id: sized_trait,
                     substitution: Substitution::from1(interner, ty.clone()),
@@ -534,7 +557,7 @@ impl WfWellKnownGoals {
     /// Computes a goal to prove constraints on a Copy implementation.
     /// Copy impl is considered well-formed for
     ///    a) certain builtin types (scalar values, shared ref, etc..)
-    ///    b) structs which
+    ///    b) adts which
     ///        1) have all Copy fields
     ///        2) don't have a Drop impl
     fn copy_impl_constraint<I: Interner>(
@@ -577,16 +600,18 @@ impl WfWellKnownGoals {
 
         let goals = adt_datum
             .binders
-            .map_ref(|b| &b.fields)
+            .map_ref(|b| &b.variants)
             .substitute(interner, substitution)
             .into_iter()
-            .map(|f| {
-                // Implemented(FieldTy: Copy)
-                TraitRef {
-                    trait_id: trait_ref.trait_id,
-                    substitution: Substitution::from1(interner, f),
-                }
-                .cast(interner)
+            .flat_map(|v| {
+                v.fields.into_iter().map(|f| {
+                    // Implemented(FieldTy: Copy)
+                    TraitRef {
+                        trait_id: trait_ref.trait_id,
+                        substitution: Substitution::from1(interner, f),
+                    }
+                    .cast(interner)
+                })
             })
             .chain(neg_drop_goal.into_iter());
 

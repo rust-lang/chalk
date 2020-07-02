@@ -38,12 +38,13 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the definition with the given id.
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
 
-    /// Returns the datum for the impl with the given id.
+    /// Returns the datum for the ADT with the given id.
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>>;
 
     /// Returns the representation for the ADT definition with the given id.
     fn adt_repr(&self, id: AdtId<I>) -> AdtRepr;
 
+    /// Returns the datum for the fn definition with the given id.
     fn fn_def_datum(&self, fn_def_id: FnDefId<I>) -> Arc<FnDefDatum<I>>;
 
     /// Returns the datum for the impl with the given id.

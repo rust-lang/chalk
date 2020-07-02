@@ -1,5 +1,4 @@
 //! Encapsulates the concrete representation of core types such as types and goals.
-
 use crate::AdtId;
 use crate::AliasTy;
 use crate::ApplicationTy;
@@ -196,7 +195,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     }
 
     /// Prints the debug representation of a type-kind-id.
-    /// Returns `None` to fallback to the default debug output.
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
     fn debug_trait_id(
         trait_id: TraitId<Self>,

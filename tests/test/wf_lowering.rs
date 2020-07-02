@@ -711,6 +711,80 @@ fn struct_sized_constraints() {
 }
 
 #[test]
+fn enum_sized_constraints() {
+    // All fields must be sized
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            enum E<T> {
+                A {
+                    t1: T,
+                    t2: T,
+                },
+                B,
+                C,
+            }
+        } error_msg {
+            "type declaration `E` does not meet well-formedness requirements"
+        }
+    }
+
+    // Even the last field must be sized
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            struct Foo { }
+
+            enum E<T> {
+                A {
+                    t1: Foo,
+                    t2: T,
+                },
+                B,
+                C,
+            }
+        } error_msg {
+            "type declaration `E` does not meet well-formedness requirements"
+        }
+    }
+
+    // Sized bound
+    lowering_success! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            enum S<T> where T: Sized {
+                A {
+                    t1: T,
+                    t2: T,
+                },
+                B,
+                C,
+            }
+        }
+    }
+
+    // No manual impls
+    lowering_error! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+
+            enum Foo {}
+
+            impl Sized for Foo {}
+        } error_msg {
+            "trait impl for `Sized` does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
 fn copy_constraints() {
     lowering_success! {
         program {
@@ -783,6 +857,87 @@ fn copy_constraints() {
             impl<T> Copy for S<T> { }
 
             impl<T> Drop for S<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    // Enums
+
+    // Copy types on enum
+    lowering_success! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            enum E<T1, T2> { Foo(T1), Bar { t2: T2 } }
+
+            impl<T1, T2> Copy for E<T1, T2> where T1: Copy, T2: Copy { }
+        }
+    }
+
+    // Types with with copy bound
+    lowering_success! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            trait MyTrait where Self: Copy { }
+
+            enum E<T> where T: MyTrait { Foo(T) }
+
+            impl<T> Copy for E<T> { }
+        }
+    }
+
+    // Copy implementations for a adt with non-copy field
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            enum E<T> { Foo(T) }
+
+            impl<T> Copy for E<T> { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    // Only one copy field
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            enum E<T1, T2> { Foo(T1), Bar { t2: T2 } }
+
+            impl<T1, T2> Copy for E<T1, T2> where T2: Copy { }
+        } error_msg {
+           "trait impl for `Copy` does not meet well-formedness requirements"
+        }
+    }
+
+    // Copy implemenation for a Drop type
+    lowering_error! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+
+            #[lang(drop)]
+            trait Drop { }
+
+            enum E<T> where T: Copy { Foo { t: T } }
+
+            impl<T> Copy for E<T> { }
+
+            impl<T> Drop for E<T> { }
         } error_msg {
            "trait impl for `Copy` does not meet well-formedness requirements"
         }

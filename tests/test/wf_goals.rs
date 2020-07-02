@@ -37,6 +37,40 @@ fn struct_wf() {
 }
 
 #[test]
+fn enum_wf() {
+    test! {
+        program {
+            enum Foo<T> where T: Eq { }
+            enum Bar { }
+            enum Baz { }
+
+            trait Eq { }
+
+            impl Eq for Baz { }
+            impl<T> Eq for Foo<T> where T: Eq { }
+        }
+
+        goal {
+            WellFormed(Foo<Bar>)
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            WellFormed(Foo<Baz>)
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed(Foo<Foo<Baz>>)
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
 fn recursive_where_clause_on_type() {
     test! {
         program {
