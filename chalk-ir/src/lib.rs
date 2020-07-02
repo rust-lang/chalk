@@ -2980,6 +2980,62 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
     }
 }
 
+/// Utility for defining new sequence-like interned types.
+pub trait Sequence<I: Interner>: Sized {
+    /// The element type of the sequence.
+    type Element: HasInterner<Interner = I> + CastTo<Self::Element>;
+
+    /// Try to create a sequence from elements
+    fn from_fallible<E>(
+        interner: &I,
+        elements: impl IntoIterator<Item = Result<impl CastTo<Self::Element>, E>>,
+    ) -> Result<Self, E>;
+
+    /// Returns a slice containing the elements in the sequence.
+    fn as_slice(&self, interner: &I) -> &[Self::Element];
+
+    /// Create a sequence from elements
+    fn from(interner: &I, elements: impl IntoIterator<Item = impl CastTo<Self::Element>>) -> Self {
+        <Self as Sequence<I>>::from_fallible(
+            interner,
+            elements
+                .into_iter()
+                .map(|el| -> Result<Self::Element, ()> { Ok(el.cast(interner)) }),
+        )
+        .unwrap()
+    }
+
+    /// Index into the sequence.
+    fn at(&self, interner: &I, index: usize) -> &Self::Element {
+        &self.as_slice(interner)[index]
+    }
+
+    /// Create a sequence from a single element.
+    fn from1(interner: &I, element: impl CastTo<Self::Element>) -> Self {
+        <Self as Sequence<I>>::from(interner, Some(element))
+    }
+
+    /// Create an empty sequence.
+    fn empty(interner: &I) -> Self {
+        <Self as Sequence<I>>::from(interner, None::<Self::Element>)
+    }
+
+    /// Check whether this is an empty sequence.
+    fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    /// Get an iterator over the elements of the sequence.
+    fn iter(&self, interner: &I) -> std::slice::Iter<'_, Self::Element> {
+        self.as_slice(interner).iter()
+    }
+
+    /// Get the length of the sequence.
+    fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+}
+
 /// Combines a substitution (`subst`) with a set of region constraints
 /// (`constraints`). This represents the result of a query; the
 /// substitution stores the values for the query's unknown variables,
