@@ -9,7 +9,7 @@ use chalk_ir::{
     visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
     ApplicationTy, Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal,
     LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyData, TypeName,
-    WhereClause,
+    TypeOutlives, WhereClause,
 };
 
 struct UnsizeParameterCollector<'a, I: Interner> {
@@ -276,13 +276,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
         }
 
         // T -> dyn Trait + 'a
-        (
-            _,
-            TyData::Dyn(DynTy {
-                bounds,
-                lifetime: _,
-            }),
-        ) => {
+        (_, TyData::Dyn(DynTy { bounds, lifetime })) => {
             // Check if all traits in trait object are object safe
             let object_safe_goals = bounds
                 .skip_binders()
@@ -304,7 +298,12 @@ pub fn add_unsize_program_clauses<I: Interner>(
             }
             .cast(interner);
 
-            // FIXME(areredify) we need a `source_ty: 'lifetime` goal here
+            // Check that `source_ty` outlives `'a`
+            let source_ty_outlives: Goal<_> = WhereClause::TypeOutlives(TypeOutlives {
+                ty: source_ty,
+                lifetime: lifetime.clone(),
+            })
+            .cast(interner);
 
             builder.push_clause(
                 trait_ref.clone(),
@@ -312,7 +311,8 @@ pub fn add_unsize_program_clauses<I: Interner>(
                     .iter(interner)
                     .map(|bound| bound.clone().cast::<Goal<I>>(interner))
                     .chain(object_safe_goals)
-                    .chain(iter::once(self_sized_goal.cast(interner))),
+                    .chain(iter::once(self_sized_goal.cast(interner)))
+                    .chain(iter::once(source_ty_outlives)),
             );
         }
 

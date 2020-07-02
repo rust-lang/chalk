@@ -192,7 +192,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn Principal + Auto + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // Principal is not the first trait
@@ -201,7 +201,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn Auto + Principal + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // Auto-only trait object
@@ -210,18 +210,16 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn Auto + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // TypeOutlives test
-        // FIXME: this should create a constraint 'a: 'a, but currently
-        // we have no `TypeOutlives` goal to produce it
         goal {
             forall<'a> {
                 FooLifetime<'a>: Unsize<dyn Principal + Auto + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: FooLifetime<'!1_0>: '!1_0 }]"
         }
 
         // See above
@@ -232,7 +230,7 @@ fn ty_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [] }"
+            "Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: FooLifetime<'!1_0>: '^0.0 }] }"
         }
 
         // Source does not implement auto trait (with principal)
@@ -268,7 +266,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn GenericPrincipal<u32, Item = u32> + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
 
@@ -311,7 +309,7 @@ fn ty_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([for<> FromEnv(!2_0:Sized)]), goal: FooNotSized<!2_0>: '!1_0 }]"
         }
     }
 }
@@ -352,7 +350,7 @@ fn tuple_unsizing() {
                (u32, Foo): Unsize<(u32, dyn Principal + 'a)>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // Last field does not implement `Unsize`
@@ -388,7 +386,7 @@ fn tuple_unsizing() {
                (u32, (u32, Foo)): Unsize<(u32, (u32, dyn Principal + 'a))>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
     }
 }
@@ -499,7 +497,7 @@ fn struct_unsizing() {
                 S1<Foo>: Unsize<S1<dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         goal {
@@ -526,7 +524,7 @@ fn struct_unsizing() {
                 S12<Foo, Foo>: Unsize<S12<Foo, dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // Test for the unsizing parameters collector
@@ -536,7 +534,7 @@ fn struct_unsizing() {
                 SWithBinders<Foo, Foo>: Unsize<SWithBinders<dyn Principal + 'a, Foo>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // Non-trivial unsizing of the last field
@@ -545,7 +543,7 @@ fn struct_unsizing() {
                 SNested<Foo, Bar<Foo>, Foo>: Unsize<SNested<Foo, Bar<Foo>, dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         goal {
@@ -562,7 +560,7 @@ fn struct_unsizing() {
                 SLifetime<'a, Foo>: Unsize<SLifetime<'a, dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
         }
 
         // Tests with constant as an unsizing parameter
