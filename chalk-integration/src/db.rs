@@ -9,7 +9,7 @@ use crate::{
 use chalk_ir::{
     AdtId, AssocTypeId, Binders, Canonical, ClosureId, ConstrainedSubst, Environment, FnDefId,
     GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses,
-    Substitution, TraitId, Ty, UCanonical, UnificationDatabase, Variance,
+    Substitution, TraitId, Ty, UCanonical, UnificationDatabase, Variances,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -74,11 +74,11 @@ impl ChalkDatabase {
 }
 
 impl UnificationDatabase<ChalkIr> for ChalkDatabase {
-    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
+    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
         self.program_ir().unwrap().fn_def_variance(fn_def_id)
     }
 
-    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
+    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
         self.program_ir().unwrap().adt_variance(adt_id)
     }
 }

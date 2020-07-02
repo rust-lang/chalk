@@ -50,7 +50,7 @@ pub trait Zipper<'i, I: Interner + 'i> {
     fn zip_substs(
         &mut self,
         ambient: Variance,
-        variances: Option<Vec<Variance>>,
+        variances: Option<Variances<I>>,
         a: &[GenericArg<I>],
         b: &[GenericArg<I>],
     ) -> Fallible<()>
@@ -60,7 +60,7 @@ pub trait Zipper<'i, I: Interner + 'i> {
         for (i, (a, b)) in a.iter().zip(b.iter()).enumerate() {
             let variance = variances
                 .as_ref()
-                .map(|v| v[i])
+                .map(|v| v.as_slice(self.interner())[i])
                 .unwrap_or(Variance::Invariant);
             Zip::zip_with(self, ambient.xform(variance), a, b)?;
         }

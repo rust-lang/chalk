@@ -2437,6 +2437,69 @@ impl<I: Interner> CanonicalVarKinds<I> {
         interner.canonical_var_kinds_data(&self.interned)
     }
 }
+/// List of variable kinds with universe index. Wraps `InternedCanonicalVarKinds`.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+pub struct Variances<I: Interner> {
+    interned: I::InternedVariances,
+}
+
+impl<I: Interner> Variances<I> {
+    /// Creates an empty list of canonical variable kinds.
+    pub fn empty(interner: &I) -> Self {
+        Self::from(interner, None::<Variance>)
+    }
+
+    /// Get the interned canonical variable kinds.
+    pub fn interned(&self) -> &I::InternedVariances {
+        &self.interned
+    }
+
+    /// Creates a list of canonical variable kinds using an iterator.
+    pub fn from(interner: &I, variances: impl IntoIterator<Item = Variance>) -> Self {
+        Self::from_fallible(
+            interner,
+            variances
+                .into_iter()
+                .map(|p| -> Result<Variance, ()> { Ok(p) }),
+        )
+        .unwrap()
+    }
+
+    /// Tries to create a list of canonical variable kinds using an iterator.
+    pub fn from_fallible<E>(
+        interner: &I,
+        variances: impl IntoIterator<Item = Result<Variance, E>>,
+    ) -> Result<Self, E> {
+        Ok(Variances {
+            interned: I::intern_variances(interner, variances.into_iter())?,
+        })
+    }
+
+    /// Creates a list of canonical variable kinds from a single canonical variable kind.
+    pub fn from1(interner: &I, variance: Variance) -> Self {
+        Self::from(interner, Some(variance))
+    }
+
+    /// Get an iterator over the list of canonical variable kinds.
+    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Variance> {
+        self.as_slice(interner).iter()
+    }
+
+    /// Checks whether the list of canonical variable kinds is empty.
+    pub fn is_empty(&self, interner: &I) -> bool {
+        self.as_slice(interner).is_empty()
+    }
+
+    /// Returns the number of canonical variable kinds.
+    pub fn len(&self, interner: &I) -> usize {
+        self.as_slice(interner).len()
+    }
+
+    /// Returns a slice containing the canonical variable kinds.
+    pub fn as_slice(&self, interner: &I) -> &[Variance] {
+        interner.variances_data(&self.interned)
+    }
+}
 
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
@@ -3145,8 +3208,8 @@ where
     I: Interner,
 {
     /// Gets the variances for the substitution of a fn def
-    fn fn_def_variance(&self, fn_def_id: FnDefId<I>) -> Vec<Variance>;
+    fn fn_def_variance(&self, fn_def_id: FnDefId<I>) -> Variances<I>;
 
     /// Gets the variances for the substitution of a adt
-    fn adt_variance(&self, adt_id: AdtId<I>) -> Vec<Variance>;
+    fn adt_variance(&self, adt_id: AdtId<I>) -> Variances<I>;
 }

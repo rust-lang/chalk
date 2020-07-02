@@ -94,14 +94,14 @@ where
     P: Borrow<DB> + Debug,
     I: Interner,
 {
-    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Vec<Variance> {
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Variances<I> {
         self.db
             .borrow()
             .unification_database()
             .fn_def_variance(fn_def_id)
     }
 
-    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Vec<Variance> {
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Variances<I> {
         self.db.borrow().unification_database().adt_variance(adt_id)
     }
 }
@@ -344,14 +344,14 @@ where
     DB: RustIrDatabase<I>,
     P: Borrow<DB> + Debug,
 {
-    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Vec<Variance> {
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Variances<I> {
         self.db
             .borrow()
             .unification_database()
             .fn_def_variance(fn_def_id)
     }
 
-    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Vec<Variance> {
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Variances<I> {
         self.db.borrow().unification_database().adt_variance(adt_id)
     }
 }

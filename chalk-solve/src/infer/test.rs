@@ -9,12 +9,12 @@ use chalk_integration::interner::ChalkIr;
 #[derive(Debug)]
 struct TestDatabase;
 impl UnificationDatabase<ChalkIr> for TestDatabase {
-    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
-        vec![Variance::Invariant; 20]
+    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::from(&ChalkIr, [Variance::Invariant; 20].iter().copied())
     }
 
-    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
-        vec![Variance::Invariant; 20]
+    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::from(&ChalkIr, [Variance::Invariant; 20].iter().copied())
     }
 }
 

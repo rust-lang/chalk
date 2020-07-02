@@ -11,7 +11,7 @@ use crate::{
 };
 use chalk_ir::{
     interner::Interner, ApplicationTy, Binders, TypeName, UnificationDatabase, VariableKinds,
-    Variance,
+    Variances,
 };
 
 #[derive(Debug)]
@@ -26,11 +26,11 @@ impl<'a, DB> StubWrapper<'a, DB> {
 }
 
 impl<I: Interner, DB: RustIrDatabase<I>> UnificationDatabase<I> for StubWrapper<'_, DB> {
-    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Vec<Variance> {
+    fn fn_def_variance(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Variances<I> {
         self.db.unification_database().fn_def_variance(fn_def_id)
     }
 
-    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Vec<Variance> {
+    fn adt_variance(&self, adt_id: chalk_ir::AdtId<I>) -> Variances<I> {
         self.db.unification_database().adt_variance(adt_id)
     }
 }

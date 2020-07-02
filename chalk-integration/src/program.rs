@@ -6,7 +6,7 @@ use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
     FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
-    UnificationDatabase, Variance,
+    UnificationDatabase, Variance, Variances,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -328,22 +328,26 @@ impl tls::DebugContext for Program {
 }
 
 impl UnificationDatabase<ChalkIr> for Program {
-    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
-        self.fn_def_data[&fn_def_id]
-            .binders
-            .binders
-            .iter(&self.interner())
-            .map(|_| Variance::Invariant)
-            .collect()
+    fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::from(
+            self.interner(),
+            self.fn_def_data[&fn_def_id]
+                .binders
+                .binders
+                .iter(self.interner())
+                .map(|_| Variance::Invariant),
+        )
     }
 
-    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
-        self.adt_data[&adt_id]
-            .binders
-            .binders
-            .iter(&self.interner())
-            .map(|_| Variance::Invariant)
-            .collect()
+    fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::from(
+            self.interner(),
+            self.adt_data[&adt_id]
+                .binders
+                .binders
+                .iter(self.interner())
+                .map(|_| Variance::Invariant),
+        )
     }
 }
 

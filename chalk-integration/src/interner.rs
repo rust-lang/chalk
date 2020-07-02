@@ -2,13 +2,10 @@ use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData,
-    Constraint, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId,
-    Ty, VariableKind, VariableKinds,
-};
-use chalk_ir::{
-    GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
-    QuantifiedWhereClause, TyData,
+    Constraint, GenericArg, GenericArgData, Goal, GoalData, Goals, InEnvironment, Lifetime,
+    LifetimeData, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseData, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, QuantifiedWhereClause, QuantifiedWhereClauses, SeparatorTraitRef,
+    Substitution, TraitId, Ty, TyData, VariableKind, VariableKinds, Variance,
 };
 use std::fmt;
 use std::fmt::Debug;
@@ -54,6 +51,7 @@ impl Interner for ChalkIr {
     type InternedVariableKinds = Vec<VariableKind<ChalkIr>>;
     type InternedCanonicalVarKinds = Vec<CanonicalVarKind<ChalkIr>>;
     type InternedConstraints = Vec<InEnvironment<Constraint<ChalkIr>>>;
+    type InternedVariances = Vec<Variance>;
     type DefId = RawId;
     type InternedAdtId = RawId;
     type Identifier = Identifier;
@@ -358,6 +356,17 @@ impl Interner for ChalkIr {
         constraints: &'a Self::InternedConstraints,
     ) -> &'a [InEnvironment<Constraint<Self>>] {
         constraints
+    }
+
+    fn intern_variances<E>(
+        &self,
+        data: impl IntoIterator<Item = Result<Variance, E>>,
+    ) -> Result<Self::InternedVariances, E> {
+        data.into_iter().collect()
+    }
+
+    fn variances_data<'a>(&self, variances: &'a Self::InternedVariances) -> &'a [Variance] {
+        variances
     }
 }
 

@@ -29,12 +29,12 @@ struct MockDatabase {
 }
 
 impl UnificationDatabase<ChalkIr> for MockDatabase {
-    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Vec<Variance> {
-        vec![]
+    fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::empty(self.interner())
     }
 
-    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Vec<Variance> {
-        vec![]
+    fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
+        Variances::empty(self.interner())
     }
 }
 
