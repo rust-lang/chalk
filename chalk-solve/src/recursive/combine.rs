@@ -68,7 +68,7 @@ fn calculate_inputs<I: Interner>(
     domain_goal: &DomainGoal<I>,
     solution: &Solution<I>,
 ) -> Vec<GenericArg<I>> {
-    if let Some(subst) = solution.constrained_subst() {
+    if let Some(subst) = solution.constrained_subst(interner) {
         let subst_goal = subst.value.subst.apply(&domain_goal, interner);
         subst_goal.inputs(interner)
     } else {

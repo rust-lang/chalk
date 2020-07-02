@@ -43,9 +43,10 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_fact_with_priority(
         &mut self,
         consequence: impl CastTo<DomainGoal<I>>,
+        constraints: impl IntoIterator<Item = InEnvironment<Constraint<I>>>,
         priority: ClausePriority,
     ) {
-        self.push_clause_with_priority(consequence, None::<Goal<_>>, priority);
+        self.push_clause_with_priority(consequence, None::<Goal<_>>, constraints, priority);
     }
 
     /// Pushes a clause `forall<..> { consequence :- conditions }`
@@ -57,23 +58,34 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
     ) {
-        self.push_clause_with_priority(consequence, conditions, ClausePriority::High)
+        self.push_clause_with_priority(consequence, conditions, None, ClausePriority::High)
     }
 
-    /// Pushes a clause `forall<..> { consequence :- conditions }`
+    pub fn push_fact_with_constraints(
+        &mut self,
+        consequence: impl CastTo<DomainGoal<I>>,
+        constraints: impl IntoIterator<Item = InEnvironment<Constraint<I>>>,
+    ) {
+        self.push_fact_with_priority(consequence, constraints, ClausePriority::High)
+    }
+
+    /// Pushes a clause `forall<..> { consequence :- conditions ; constraints }`
     /// into the set of program clauses, meaning that `consequence`
-    /// can be proven if `conditions` are all true.  The `forall<..>`
-    /// binders will be whichever binders have been pushed (see `push_binders`).
+    /// can be proven if `conditions` are all true and `constraints`
+    /// are proven to hold.  The `forall<..>` binders will be whichever binders
+    /// have been pushed (see `push_binders`).
     pub fn push_clause_with_priority(
         &mut self,
         consequence: impl CastTo<DomainGoal<I>>,
         conditions: impl IntoIterator<Item = impl CastTo<Goal<I>>>,
+        constraints: impl IntoIterator<Item = InEnvironment<Constraint<I>>>,
         priority: ClausePriority,
     ) {
         let interner = self.db.interner();
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(interner),
             conditions: Goals::from(interner, conditions),
+            constraints: Constraints::from(interner, constraints),
             priority,
         };
 
@@ -151,7 +163,6 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// unaffected and hence the context remains usable. Invokes `op`,
     /// passing a type representing this new type variable in as an
     /// argument.
-    #[allow(dead_code)]
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
         let binders = Binders::new(
@@ -166,6 +177,28 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .assert_ty_ref(interner)
                 .clone();
             op(this, ty)
+        });
+    }
+
+    /// Push a single binder, for a lifetime, at the end of the binder
+    /// list.  The indices of previously bound variables are
+    /// unaffected and hence the context remains usable. Invokes `op`,
+    /// passing a lifetime representing this new lifetime variable in as an
+    /// argument.
+    pub fn push_bound_lifetime(&mut self, op: impl FnOnce(&mut Self, Lifetime<I>)) {
+        let interner = self.interner();
+        let binders = Binders::new(
+            VariableKinds::from1(interner, VariableKind::Lifetime),
+            PhantomData::<I>,
+        );
+        self.push_binders(&binders, |this, PhantomData| {
+            let lifetime = this
+                .placeholders_in_scope()
+                .last()
+                .unwrap()
+                .assert_lifetime_ref(interner)
+                .clone();
+            op(this, lifetime)
         });
     }
 

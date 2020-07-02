@@ -331,7 +331,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_eq_subgoal(a.clone(), b.clone()))
+                    Ok(self.push_lifetime_eq_goals(a.clone(), b.clone()))
                 } else {
                     Ok(())
                 }
@@ -372,7 +372,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_eq_subgoal(a.clone(), b.clone()))
+            Ok(self.push_lifetime_eq_goals(a.clone(), b.clone()))
         }
     }
 
@@ -460,14 +460,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
-    fn push_lifetime_eq_subgoal(&mut self, a: Lifetime<I>, b: Lifetime<I>) {
-        let interner = self.interner;
-        let b_outlives_a = GoalData::AddRegionConstraint(b.clone(), a.clone()).intern(interner);
-        self.goals
-            .push(InEnvironment::new(self.environment, b_outlives_a));
-        let a_outlives_b = GoalData::AddRegionConstraint(a, b).intern(interner);
-        self.goals
-            .push(InEnvironment::new(self.environment, a_outlives_b));
+    fn push_lifetime_eq_goals(&mut self, a: Lifetime<I>, b: Lifetime<I>) {
+        self.goals.push(InEnvironment::new(
+            self.environment,
+            WhereClause::LifetimeOutlives(LifetimeOutlives {
+                a: a.clone(),
+                b: b.clone(),
+            })
+            .cast(self.interner),
+        ));
+        self.goals.push(InEnvironment::new(
+            self.environment,
+            WhereClause::LifetimeOutlives(LifetimeOutlives {
+                a: b.clone(),
+                b: a.clone(),
+            })
+            .cast(self.interner),
+        ));
     }
 }
 
@@ -548,6 +557,7 @@ where
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn fold_free_placeholder_lifetime(
         &mut self,
         ui: PlaceholderIndex,
@@ -570,7 +580,7 @@ where
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
             self.unifier
-                .push_lifetime_eq_subgoal(tick_x.to_lifetime(interner), ui.to_lifetime(interner));
+                .push_lifetime_eq_goals(tick_x.to_lifetime(interner), ui.to_lifetime(interner));
             Ok(tick_x.to_lifetime(interner))
         } else {
             // If the `ui` is higher than `self.universe_index`, then we can name

@@ -1854,6 +1854,7 @@ impl LowerClause for Clause {
                 .map(|consequence| chalk_ir::ProgramClauseImplication {
                     consequence,
                     conditions: conditions.clone(),
+                    constraints: chalk_ir::Constraints::empty(interner),
                     priority: ClausePriority::High,
                 })
                 .collect::<Vec<_>>();

@@ -7,8 +7,8 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
-    Binders, Canonical, ConstrainedSubst, Constraint, DomainGoal, Environment, EqGoal, Fallible,
-    GenericArg, Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution,
+    Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
+    Fallible, GenericArg, Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution,
     ProgramClauseImplication, QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
 };
 use rustc_hash::FxHashSet;
@@ -154,6 +154,7 @@ pub(super) struct Fulfill<
 impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I>>
     Fulfill<'s, I, Solver, Infer>
 {
+    #[instrument(level = "debug", skip(solver, infer))]
     pub(super) fn new_with_clause(
         solver: &'s mut Solver,
         infer: Infer,
@@ -173,10 +174,16 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         let ProgramClauseImplication {
             consequence,
             conditions,
+            constraints,
             priority: _,
         } = fulfill
             .infer
             .instantiate_binders_existentially(fulfill.solver.interner(), clause);
+
+        debug!(?consequence, ?conditions, ?constraints);
+        fulfill
+            .constraints
+            .extend(constraints.as_slice(fulfill.interner()).to_owned());
 
         debug!("the subst is {:?}", fulfill.subst);
 
@@ -304,17 +311,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.push_obligation(Obligation::Refute(in_env));
             }
-            GoalData::AddRegionConstraint(a, b) => {
-                self.constraints.insert(InEnvironment::new(
-                    &environment,
-                    Constraint::Outlives(a.clone(), b.clone()),
-                ));
-            }
-            GoalData::DomainGoal(domain_goal) => match domain_goal {
+            GoalData::DomainGoal(dg) => match dg {
                 DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
-                    let add_constraint =
-                        GoalData::AddRegionConstraint(a.clone(), b.clone()).intern(interner);
-                    self.push_goal(environment, add_constraint)?
+                    let constraint =
+                        InEnvironment::new(environment, Constraint::Outlives(a.clone(), b.clone()));
+                    self.constraints.insert(constraint);
                 }
                 _ => {
                     let in_env = InEnvironment::new(environment, goal);
@@ -332,6 +333,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self, minimums))]
     fn prove(
         &mut self,
         wc: &InEnvironment<Goal<I>>,
@@ -401,7 +403,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             "fulfill::apply_solution: adding constraints {:?}",
             constraints
         );
-        self.constraints.extend(constraints);
+        self.constraints
+            .extend(constraints.as_slice(self.interner()).to_owned());
 
         // We use the empty environment for unification here because we're
         // really just doing a substitution on unconstrained variables, which is
@@ -452,7 +455,9 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         } = self.prove(wc, minimums)?;
 
                         if solution.has_definite() {
-                            if let Some(constrained_subst) = solution.constrained_subst() {
+                            if let Some(constrained_subst) =
+                                solution.constrained_subst(self.interner())
+                            {
                                 self.apply_solution(free_vars, universes, constrained_subst);
                                 progress = true;
                             }
@@ -506,7 +511,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             // No obligations remain, so we have definitively solved our goals,
             // and the current inference state is the unique way to solve them.
 
-            let constraints = self.constraints.into_iter().collect();
+            let constraints = Constraints::from(self.interner(), self.constraints.clone());
             let constrained = self.infer.canonicalize(
                 self.solver.interner(),
                 &ConstrainedSubst {
@@ -522,10 +527,13 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        let interner = self.solver.interner();
-        let canonical_subst = self.infer.canonicalize(interner, &self.subst);
+        let canonical_subst = self.infer.canonicalize(self.solver.interner(), &self.subst);
 
-        if canonical_subst.0.value.is_identity_subst(interner) {
+        if canonical_subst
+            .0
+            .value
+            .is_identity_subst(self.solver.interner())
+        {
             // In this case, we didn't learn *anything* definitively. So now, we
             // go one last time through the positive obligations, this time
             // applying even *tentative* inference suggestions, so that we can
@@ -540,7 +548,9 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         universes,
                         solution,
                     } = self.prove(&goal, minimums).unwrap();
-                    if let Some(constrained_subst) = solution.constrained_subst() {
+                    if let Some(constrained_subst) =
+                        solution.constrained_subst(self.solver.interner())
+                    {
                         self.apply_solution(free_vars, universes, constrained_subst);
                         return Ok(Solution::Ambig(Guidance::Suggested(canonical_subst.0)));
                     }

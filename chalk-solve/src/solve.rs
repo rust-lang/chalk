@@ -1,4 +1,5 @@
 use crate::RustIrDatabase;
+use chalk_derive::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::fmt;
@@ -20,7 +21,7 @@ mod slg;
 pub(crate) mod truncate;
 
 /// A (possible) solution for a proposed goal.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, HasInterner)]
 pub enum Solution<I: Interner> {
     /// The goal indeed holds, and there is a unique value for all existential
     /// variables. In this case, we also record a set of lifetime constraints

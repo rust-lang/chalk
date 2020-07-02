@@ -58,7 +58,7 @@ pub fn logging_db_output_sufficient(
                 match expected {
                     TestGoal::Aggregated(expected) => {
                         let result = solver.solve(&wrapped, &peeled_goal);
-                        assert_result(result, expected);
+                        assert_result(result, expected, db.interner());
                     }
                     _ => panic!("only aggregated test goals supported for logger goals"),
                 }
@@ -99,7 +99,7 @@ pub fn logging_db_output_sufficient(
             match expected {
                 TestGoal::Aggregated(expected) => {
                     let result = solver.solve(&db, &peeled_goal);
-                    assert_result(result, expected);
+                    assert_result(result, expected, db.interner());
                 }
                 _ => panic!("only aggregated test goals supported for logger goals"),
             }

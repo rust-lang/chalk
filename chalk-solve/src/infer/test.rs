@@ -301,17 +301,14 @@ fn lifetime_constraint_indirect() {
     // we will replace `'!1` with a new variable `'?2` and introduce a
     // (likely unsatisfiable) constraint relating them.
     let t_c = ty!(infer 0);
-    let goals = table
-        .unify(interner, &environment0, &t_c, &t_b)
-        .unwrap()
-        .goals;
+    let UnificationResult { goals } = table.unify(interner, &environment0, &t_c, &t_b).unwrap();
     assert_eq!(goals.len(), 2);
     assert_eq!(
         format!("{:?}", goals[0]),
-        "InEnvironment { environment: Env([]), goal: AddRegionConstraint(\'!1_0: \'?2) }",
+        "InEnvironment { environment: Env([]), goal: \'?2: \'!1_0 }",
     );
     assert_eq!(
         format!("{:?}", goals[1]),
-        "InEnvironment { environment: Env([]), goal: AddRegionConstraint(\'?2: \'!1_0) }",
+        "InEnvironment { environment: Env([]), goal: \'!1_0: \'?2 }",
     );
 }

@@ -96,6 +96,12 @@ impl<I: Interner> Debug for ProgramClauses<I> {
     }
 }
 
+impl<I: Interner> Debug for Constraints<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_constraints(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}
+
 impl<I: Interner> Debug for ApplicationTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_application_ty(self, fmt).unwrap_or_else(|| write!(fmt, "ApplicationTy(?)"))
@@ -326,9 +332,6 @@ impl<I: Interner> Debug for GoalData<I> {
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::AddRegionConstraint(ref a, ref b) => {
-                write!(fmt, "AddRegionConstraint({:?}: {:?})", a, b)
-            }
             GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }

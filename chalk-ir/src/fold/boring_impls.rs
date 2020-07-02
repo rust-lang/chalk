@@ -213,6 +213,26 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for QuantifiedWhereClauses<
     }
 }
 
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Constraints<I> {
+    type Result = Constraints<TI>;
+    fn fold_with<'i>(
+        &self,
+        folder: &mut dyn Folder<'i, I, TI>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+        TI: 'i,
+    {
+        let interner = folder.interner();
+        let target_interner = folder.target_interner();
+        let folded = self
+            .iter(interner)
+            .map(|p| p.fold_with(folder, outer_binder));
+        Ok(Constraints::from_fallible(target_interner, folded)?)
+    }
+}
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! copy_fold {

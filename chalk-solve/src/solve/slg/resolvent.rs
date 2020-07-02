@@ -76,6 +76,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         let ProgramClauseImplication {
             consequence,
             conditions,
+            constraints,
             priority: _,
         } = {
             let ProgramClauseData(implication) = clause.data(interner);
@@ -83,7 +84,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
             self.infer
                 .instantiate_binders_existentially(interner, implication)
         };
-        debug!(?consequence, ?conditions);
+        debug!(?consequence, ?conditions, ?constraints);
 
         // Unify the selected literal Li with C'.
         let unification_result = self
@@ -103,6 +104,10 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
 
         // Add the subgoals/region-constraints that unification gave us.
         slg::into_ex_clause(interner, unification_result, &mut ex_clause);
+
+        ex_clause
+            .constraints
+            .extend(constraints.as_slice(interner).to_owned());
 
         // Add the `conditions` from the program clause into the result too.
         ex_clause
@@ -231,7 +236,9 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
             &answer_table_goal.value,
             selected_goal,
         )?;
-        ex_clause.constraints.extend(answer_constraints);
+        ex_clause
+            .constraints
+            .extend(answer_constraints.as_slice(interner).to_vec());
         // at that point we should only have goals that stemmed
         // from non trivial self cycles
         ex_clause.delayed_subgoals.extend(delayed_subgoals);

@@ -11,7 +11,7 @@ use self::solve::{SolveDatabase, SolveIteration};
 use self::stack::{Stack, StackDepth};
 use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Fallible};
+use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Fallible};
 use rustc_hash::FxHashMap;
 use tracing::{debug, info, instrument};
 
@@ -208,7 +208,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                 if self.context.stack.coinductive_cycle_from(depth) {
                     let value = ConstrainedSubst {
                         subst: goal.trivial_substitution(self.program.interner()),
-                        constraints: vec![],
+                        constraints: Constraints::empty(self.program.interner()),
                     };
                     debug!("applying coinductive semantics");
                     return Ok(Solution::Unique(Canonical {

@@ -793,7 +793,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
             //    forall<Self> {
             //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
             //    }
-            builder.push_fact_with_priority(projection_eq, ClausePriority::Low);
+            builder.push_fact_with_priority(projection_eq, None, ClausePriority::Low);
 
             // Well-formedness of projection type.
             //

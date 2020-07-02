@@ -1,6 +1,8 @@
 use super::search_graph::DepthFirstNumber;
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, Substitution, UCanonical};
+use chalk_ir::{
+    Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, Substitution, UCanonical,
+};
 use std::fmt;
 use tracing::debug;
 
@@ -118,14 +120,14 @@ impl<I: Interner> Solution<I> {
     }
 
     /// Extract a constrained substitution from this solution, even if ambiguous.
-    pub(crate) fn constrained_subst(&self) -> Option<Canonical<ConstrainedSubst<I>>> {
+    pub(crate) fn constrained_subst(&self, interner: &I) -> Option<Canonical<ConstrainedSubst<I>>> {
         match *self {
             Solution::Unique(ref constrained) => Some(constrained.clone()),
             Solution::Ambig(Guidance::Definite(ref canonical))
             | Solution::Ambig(Guidance::Suggested(ref canonical)) => {
                 let value = ConstrainedSubst {
                     subst: canonical.value.clone(),
-                    constraints: vec![],
+                    constraints: Constraints::empty(interner),
                 };
                 Some(Canonical {
                     value,
