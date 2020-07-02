@@ -20,7 +20,7 @@ impl<I: Interner> InferenceTable<I> {
         variance: Variance,
         a: &T,
         b: &T,
-    ) -> Fallible<UnificationResult<I>>
+    ) -> Fallible<RelationResult<I>>
     where
         T: ?Sized + Zip<I>,
     {
@@ -47,7 +47,7 @@ struct Unifier<'t, I: Interner> {
 }
 
 #[derive(Debug)]
-pub(crate) struct UnificationResult<I: Interner> {
+pub(crate) struct RelationResult<I: Interner> {
     pub(crate) goals: Vec<InEnvironment<Goal<I>>>,
 }
 
@@ -71,12 +71,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// only type meant to be called externally. Performs a
     /// relation of `a` and `b` and returns the Unification Result.
     #[instrument(level = "debug", skip(self))]
-    fn relate<T>(mut self, variance: Variance, a: &T, b: &T) -> Fallible<UnificationResult<I>>
+    fn relate<T>(mut self, variance: Variance, a: &T, b: &T) -> Fallible<RelationResult<I>>
     where
         T: ?Sized + Zip<I>,
     {
         Zip::zip_with(&mut self, variance, a, b)?;
-        Ok(UnificationResult { goals: self.goals })
+        Ok(RelationResult { goals: self.goals })
     }
 
     fn relate_ty_ty(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
@@ -90,8 +90,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
         debug_span!("relate_ty_ty", ?variance, ?a, ?b);
 
         match (a.data(interner), b.data(interner)) {
-            // Unifying two inference variables: unify them in the underlying
-            // ena table.
+            // Relating two inference variables:
+            // If `Invariant`, unify them in the underlying ena table.
+            // If `Covariant` or `Contravariant`, push `SubtypeGoal`
             (
                 &TyData::InferenceVar(var1, kind1),
                 &TyData::InferenceVar(var2, kind2),
@@ -123,7 +124,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
-            // Unifying an inference variable with a non-inference variable.
+            // Relating an inference variable with a non-inference variable.
             (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Apply(_))
             | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Placeholder(_))
             | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Dyn(_))

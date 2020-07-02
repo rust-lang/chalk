@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use super::unify::UnificationResult;
+use super::unify::RelationResult;
 use super::*;
 use chalk_integration::interner::ChalkIr;
 
@@ -418,7 +418,7 @@ fn lifetime_constraint_indirect() {
     // '!1.
     let t_a = ty!(apply (item 0) (lifetime (placeholder 1)));
     let t_b = ty!(apply (item 0) (lifetime (infer 1)));
-    let UnificationResult { goals } = table
+    let RelationResult { goals } = table
         .relate(
             interner,
             &TestDatabase,
@@ -436,7 +436,7 @@ fn lifetime_constraint_indirect() {
     // we will replace `'!1` with a new variable `'?2` and introduce a
     // (likely unsatisfiable) constraint relating them.
     let t_c = ty!(infer 0);
-    let UnificationResult { goals } = table
+    let RelationResult { goals } = table
         .relate(
             interner,
             &TestDatabase,

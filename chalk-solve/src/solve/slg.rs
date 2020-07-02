@@ -1,7 +1,7 @@
 use crate::clauses::program_clauses_for_goal;
 use crate::coinductive_goal::IsCoinductive;
 use crate::infer::ucanonicalize::UCanonicalized;
-use crate::infer::unify::UnificationResult;
+use crate::infer::unify::RelationResult;
 use crate::infer::InferenceTable;
 use crate::solve::truncate;
 use crate::RustIrDatabase;
@@ -368,7 +368,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
 /// Helper function
 fn into_ex_clause<I: Interner>(
     interner: &I,
-    result: UnificationResult<I>,
+    result: RelationResult<I>,
     ex_clause: &mut ExClause<I>,
 ) {
     ex_clause.subgoals.extend(
