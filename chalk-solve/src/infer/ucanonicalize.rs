@@ -46,7 +46,7 @@ impl<I: Interner> InferenceTable<I> {
                 DebruijnIndex::INNERMOST,
             )
             .unwrap();
-        let binders = CanonicalVarKinds::from(
+        let binders = <CanonicalVarKinds<_> as Sequence<_>>::from(
             interner,
             value0
                 .binders
@@ -188,7 +188,7 @@ impl UniverseMapExt for UniverseMap {
             .unwrap();
 
         Canonical {
-            binders: CanonicalVarKinds::from(interner, binders),
+            binders: <CanonicalVarKinds<_> as Sequence<_>>::from(interner, binders),
             value,
         }
     }

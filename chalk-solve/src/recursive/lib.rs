@@ -1,7 +1,8 @@
 use super::search_graph::DepthFirstNumber;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, Substitution, UCanonical,
+    Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, Sequence, Substitution,
+    UCanonical,
 };
 use std::fmt;
 use tracing::debug;

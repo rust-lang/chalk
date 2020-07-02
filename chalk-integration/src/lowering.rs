@@ -3,7 +3,8 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId, ImplId,
-    OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind,
+    OpaqueTyId, QuantifiedWhereClauses, Sequence, Substitution, ToGenericArg, TraitId, TyKind,
+    VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -298,7 +299,10 @@ impl<'k> Env<'k> {
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
         Ok(chalk_ir::Binders::new(
-            chalk_ir::VariableKinds::from(interner, binders.iter().map(|v| v.kind.clone())),
+            <VariableKinds<_> as Sequence<_>>::from(
+                interner,
+                binders.iter().map(|v| v.kind.clone()),
+            ),
             op(&env)?,
         ))
     }
@@ -464,7 +468,7 @@ impl LowerProgram for Program {
                     let upvars = empty_env.in_binders(defn.all_parameters(), |env| {
                         let upvar_tys: LowerResult<Vec<chalk_ir::Ty<ChalkIr>>> =
                             defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
-                        let substitution = chalk_ir::Substitution::from(
+                        let substitution = <chalk_ir::Substitution<_> as Sequence<_>>::from(
                             &ChalkIr,
                             upvar_tys?.into_iter().map(|ty| ty.cast(&ChalkIr)),
                         );
@@ -860,7 +864,10 @@ impl LowerTypeKind for StructDefn {
             sort: TypeSort::Struct,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                chalk_ir::VariableKinds::from(interner, self.all_parameters().anonymize()),
+                <VariableKinds<_> as Sequence<_>>::from(
+                    interner,
+                    self.all_parameters().anonymize(),
+                ),
                 crate::Unit,
             ),
         })
@@ -874,7 +881,10 @@ impl LowerTypeKind for FnDefn {
             sort: TypeSort::FnDef,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                chalk_ir::VariableKinds::from(interner, self.all_parameters().anonymize()),
+                <VariableKinds<_> as Sequence<_>>::from(
+                    interner,
+                    self.all_parameters().anonymize(),
+                ),
                 crate::Unit,
             ),
         })
@@ -894,7 +904,10 @@ impl LowerTypeKind for ClosureDefn {
             sort: TypeSort::Closure,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                chalk_ir::VariableKinds::from(interner, self.all_parameters().anonymize()),
+                <VariableKinds<_> as Sequence<_>>::from(
+                    interner,
+                    self.all_parameters().anonymize(),
+                ),
                 crate::Unit,
             ),
         })
@@ -916,7 +929,7 @@ impl LowerTypeKind for TraitDefn {
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
                 // for the purposes of the *type*, ignore `Self`:
-                chalk_ir::VariableKinds::from(interner, binders.anonymize()),
+                <VariableKinds<_> as Sequence<_>>::from(interner, binders.anonymize()),
                 crate::Unit,
             ),
         })
@@ -931,7 +944,7 @@ impl LowerTypeKind for OpaqueTyDefn {
             sort: TypeSort::Opaque,
             name: self.identifier.str.clone(),
             binders: chalk_ir::Binders::new(
-                chalk_ir::VariableKinds::from(interner, binders.anonymize()),
+                <VariableKinds<_> as Sequence<_>>::from(interner, binders.anonymize()),
                 crate::Unit,
             ),
         })
@@ -1508,7 +1521,7 @@ impl LowerProjectionTy for ProjectionTy {
 
         Ok(chalk_ir::ProjectionTy {
             associated_ty_id: lookup.id,
-            substitution: chalk_ir::Substitution::from(interner, args),
+            substitution: <chalk_ir::Substitution<_> as Sequence<_>>::from(interner, args),
         })
     }
 }
@@ -1543,7 +1556,7 @@ impl LowerTy for Ty {
                         Atom::from(FIXME_SELF),
                     )),
                     |env| {
-                        Ok(QuantifiedWhereClauses::from(
+                        Ok(<QuantifiedWhereClauses<_> as Sequence<_>>::from(
                             interner,
                             bounds.lower(env)?.iter().flat_map(|qil| {
                                 qil.into_where_clauses(
@@ -1630,7 +1643,7 @@ impl LowerTy for Ty {
 
                 let function = chalk_ir::Fn {
                     num_binders: lifetime_names.len(),
-                    substitution: Substitution::from(interner, lowered_tys),
+                    substitution: <Substitution<_> as Sequence<_>>::from(interner, lowered_tys),
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
@@ -1651,7 +1664,7 @@ impl LowerTy for Ty {
 
             Ty::Array { ty, len } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Array,
-                substitution: chalk_ir::Substitution::from(
+                substitution: <chalk_ir::Substitution<_> as Sequence<_>>::from(
                     interner,
                     &[
                         ty.lower(env)?.cast(interner),
@@ -1689,7 +1702,7 @@ impl LowerTy for Ty {
                 name: chalk_ir::TypeName::Ref(ast_mutability_to_chalk_mutability(
                     mutability.clone(),
                 )),
-                substitution: chalk_ir::Substitution::from(
+                substitution: <chalk_ir::Substitution<_> as Sequence<_>>::from(
                     interner,
                     &[
                         lifetime.lower(env)?.cast(interner),

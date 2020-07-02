@@ -11,8 +11,8 @@ use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
     visit::{Visit, VisitResult},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
-    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
-    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Sequence, Substitution, ToGenericArg, TraitId,
+    TraitRef, Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -390,7 +390,7 @@ impl<I: Interner> TraitBound<I> {
     pub fn as_trait_ref(&self, interner: &I, self_ty: Ty<I>) -> TraitRef<I> {
         TraitRef {
             trait_id: self.trait_id,
-            substitution: Substitution::from(
+            substitution: <Substitution<_> as Sequence<_>>::from(
                 interner,
                 iter::once(self_ty.cast(interner)).chain(self.args_no_self.iter().cloned()),
             ),
@@ -413,7 +413,7 @@ impl<I: Interner> AliasEqBound<I> {
     fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         let trait_ref = self.trait_bound.as_trait_ref(interner, self_ty);
 
-        let substitution = Substitution::from(
+        let substitution = <Substitution<_> as Sequence<_>>::from(
             interner,
             self.parameters
                 .iter()
@@ -532,7 +532,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
         let (binders, assoc_ty_datum) = self.binders.as_ref().into();
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
-        let substitution = Substitution::from(
+        let substitution = <Substitution<_> as Sequence<_>>::from(
             interner,
             binders
                 .iter(interner)

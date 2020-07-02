@@ -12,7 +12,7 @@ use crate::{
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Canonical, ConstrainedSubst, Floundered, Goal, GoalData, InEnvironment, NoSolution,
+    Canonical, ConstrainedSubst, Floundered, Goal, GoalData, InEnvironment, NoSolution, Sequence,
     Substitution, UCanonical, UniverseMap,
 };
 use tracing::{debug, debug_span, info, instrument};

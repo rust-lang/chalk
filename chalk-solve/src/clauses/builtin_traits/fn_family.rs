@@ -4,8 +4,8 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Substitution, TraitId,
-    Ty, TyData, TypeName, VariableKinds,
+    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Sequence, Substitution,
+    TraitId, Ty, TyData, TypeName, VariableKinds,
 };
 
 fn push_clauses<I: Interner>(
@@ -23,8 +23,10 @@ fn push_clauses<I: Interner>(
         substitution: arg_sub,
     })
     .intern(interner);
-    let substitution =
-        Substitution::from(interner, &[self_ty.cast(interner), tupled.cast(interner)]);
+    let substitution = <Substitution<_> as Sequence<_>>::from(
+        interner,
+        &[self_ty.cast(interner), tupled.cast(interner)],
+    );
     builder.push_fact(TraitRef {
         trait_id,
         substitution: substitution.clone(),
@@ -68,7 +70,7 @@ fn push_clauses_for_apply<I: Interner>(
             .iter()
             .cloned()
             .map(|ty| ty.cast(interner));
-        let arg_sub = Substitution::from(interner, arg_sub);
+        let arg_sub = <Substitution<_> as Sequence<_>>::from(interner, arg_sub);
         let output_ty = inputs_and_output.return_type;
 
         push_clauses(
@@ -140,13 +142,16 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         },
         TyData::Function(fn_val) => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
-            let bound_ref = Binders::new(VariableKinds::from(interner, binders), orig_sub);
+            let bound_ref = Binders::new(
+                <VariableKinds<_> as Sequence<_>>::from(interner, binders),
+                orig_sub,
+            );
             builder.push_binders(&bound_ref, |builder, orig_sub| {
                 // The last parameter represents the function return type
                 let (arg_sub, fn_output_ty) = orig_sub
                     .as_slice(interner)
                     .split_at(orig_sub.len(interner) - 1);
-                let arg_sub = Substitution::from(interner, arg_sub);
+                let arg_sub = <Substitution<_> as Sequence<_>>::from(interner, arg_sub);
                 let output_ty = fn_output_ty[0].assert_ty_ref(interner).clone();
 
                 push_clauses(

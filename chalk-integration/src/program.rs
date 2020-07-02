@@ -5,7 +5,7 @@ use chalk_ir::debug::Angle;
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
     FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, Sequence, Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,

@@ -4,7 +4,7 @@ use crate::{ExClause, Literal, TimeStamp};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
+    Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Sequence, Substitution,
 };
 use tracing::debug;
 

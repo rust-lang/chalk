@@ -9,8 +9,8 @@
 use chalk_ir::{
     fold::{Fold, Folder},
     interner::{HasInterner, Interner},
-    Binders, BoundVar, DebruijnIndex, Fallible, Lifetime, LifetimeData, Ty, TyData, TyKind,
-    VariableKind, VariableKinds,
+    Binders, BoundVar, DebruijnIndex, Fallible, Lifetime, LifetimeData, Sequence, Ty, TyData,
+    TyKind, VariableKind, VariableKinds,
 };
 use rustc_hash::FxHashMap;
 
@@ -34,7 +34,10 @@ impl<I: Interner> Generalize<'_, I> {
         let value = value
             .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
             .unwrap();
-        Binders::new(VariableKinds::from(interner, generalize.binders), value)
+        Binders::new(
+            <VariableKinds<_> as Sequence<_>>::from(interner, generalize.binders),
+            value,
+        )
     }
 }
 

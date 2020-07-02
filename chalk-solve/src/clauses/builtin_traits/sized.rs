@@ -3,7 +3,7 @@ use std::iter;
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{AdtId, ApplicationTy, Substitution, TyData, TypeName};
+use chalk_ir::{AdtId, ApplicationTy, Sequence, Substitution, TyData, TypeName};
 
 fn push_adt_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,

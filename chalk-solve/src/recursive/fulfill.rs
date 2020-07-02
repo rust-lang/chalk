@@ -9,7 +9,7 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, UCanonical, UniverseMap,
+    QuantifierKind, Sequence, Substitution, UCanonical, UniverseMap,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -504,7 +504,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             // No obligations remain, so we have definitively solved our goals,
             // and the current inference state is the unique way to solve them.
 
-            let constraints = Constraints::from(self.interner(), self.constraints.clone());
+            let constraints =
+                <Constraints<_> as Sequence<_>>::from(self.interner(), self.constraints.clone());
             let constrained = self.infer.canonicalize(
                 self.solver.interner(),
                 &ConstrainedSubst {

@@ -8,8 +8,8 @@ use chalk_ir::{
     interner::HasInterner,
     visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
     ApplicationTy, Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal,
-    LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyData, TypeName,
-    TypeOutlives, WhereClause,
+    LifetimeOutlives, QuantifiedWhereClauses, Sequence, Substitution, TraitId, Ty, TyData,
+    TypeName, TypeOutlives, WhereClause,
 };
 
 struct UnsizeParameterCollector<'a, I: Interner> {
@@ -239,7 +239,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // should be equal to target type.
             let new_source_ty = TyData::Dyn(DynTy {
                 bounds: bounds_a.map_ref(|bounds| {
-                    QuantifiedWhereClauses::from(
+                    <QuantifiedWhereClauses<_> as Sequence<_>>::from(
                         interner,
                         bounds.iter(interner).filter(|bound| {
                             let trait_id = match bound.trait_id() {
@@ -398,7 +398,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             //
             // In order for the coercion to be valid, target struct and
             // struct with this newly constructed substitution applied to it should be equal.
-            let substitution = Substitution::from(
+            let substitution = <Substitution<_> as Sequence<_>>::from(
                 interner,
                 parameters_a.iter().enumerate().map(|(i, p)| {
                     if unsize_parameter_candidates.contains(&i) {
@@ -427,7 +427,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // Check that `TailField<T>: Unsize<TailField<U>>`
             let last_field_unsizing_goal: Goal<I> = TraitRef {
                 trait_id: unsize_trait_id,
-                substitution: Substitution::from(
+                substitution: <Substitution<_> as Sequence<_>>::from(
                     interner,
                     [source_tail_field, target_tail_field].iter().cloned(),
                 ),
@@ -463,7 +463,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // last element is equal to the target.
             let new_tuple = ApplicationTy {
                 name: TypeName::Tuple(*arity),
-                substitution: Substitution::from(
+                substitution: <Substitution<_> as Sequence<_>>::from(
                     interner,
                     substitution_a
                         .iter(interner)
@@ -483,7 +483,10 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // Check that `T: Unsize<U>`
             let last_field_unsizing_goal: Goal<I> = TraitRef {
                 trait_id: unsize_trait_id,
-                substitution: Substitution::from(interner, [tail_ty_a, tail_ty_b].iter().cloned()),
+                substitution: <Substitution<_> as Sequence<_>>::from(
+                    interner,
+                    [tail_ty_a, tail_ty_b].iter().cloned(),
+                ),
             }
             .cast(interner);
 

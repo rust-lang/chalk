@@ -87,7 +87,9 @@ reflexive_impl!(for(I: Interner) Goal<I>);
 reflexive_impl!(for(I: Interner) WhereClause<I>);
 reflexive_impl!(for(I: Interner) ProgramClause<I>);
 reflexive_impl!(for(I: Interner) QuantifiedWhereClause<I>);
+reflexive_impl!(for(I: Interner) VariableKind<I>);
 reflexive_impl!(for(I: Interner) VariableKinds<I>);
+reflexive_impl!(for(I: Interner) CanonicalVarKind<I>);
 reflexive_impl!(for(I: Interner) CanonicalVarKinds<I>);
 reflexive_impl!(for(I: Interner) Constraint<I>);
 

@@ -1,7 +1,7 @@
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{ApplicationTy, Substitution, TyData, TypeName};
+use chalk_ir::{ApplicationTy, Sequence, Substitution, TyData, TypeName};
 use std::iter;
 
 fn push_tuple_copy_conditions<I: Interner>(
