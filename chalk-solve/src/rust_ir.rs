@@ -1,5 +1,3 @@
-#![deny(rust_2018_idioms)]
-
 //! Contains the definition for the "Rust IR" -- this is basically a "lowered"
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
