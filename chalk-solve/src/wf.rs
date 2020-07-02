@@ -553,11 +553,10 @@ impl WfWellKnownGoals {
         ))
     }
 
-    // FIXME(#505) update comments for ADTs
     /// Computes a goal to prove constraints on a Copy implementation.
     /// Copy impl is considered well-formed for
     ///    a) certain builtin types (scalar values, shared ref, etc..)
-    ///    b) structs which
+    ///    b) adts which
     ///        1) have all Copy fields
     ///        2) don't have a Drop impl
     fn copy_impl_constraint<I: Interner>(

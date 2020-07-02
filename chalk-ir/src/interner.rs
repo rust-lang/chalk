@@ -194,11 +194,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a type-kind-id. To get good
-    /// results, this requires inspecting TLS, and is difficult to
-    /// code without reference to a specific interner (and hence
-    /// fully known types).
-    ///
+    /// Prints the debug representation of a type-kind-id.
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]

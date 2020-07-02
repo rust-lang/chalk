@@ -162,3 +162,58 @@ fn auto_traits_flounder() {
         }
     }
 }
+
+#[test]
+fn enum_auto_trait() {
+    test! {
+        program {
+            #[auto] trait Send { }
+            struct Foo { }
+            struct Bar { }
+            impl Send for Foo { }
+            impl !Send for Bar { }
+
+            enum A {
+                X,
+                Y(Foo),
+                Z {
+                    z: Foo,
+                }
+            }
+
+            enum B {
+                X,
+                Y(Foo),
+                Z {
+                    z: Bar,
+                }
+            }
+
+            enum C {
+                X,
+                Y(Bar),
+                Z {
+                    z: Foo,
+                }
+            }
+        }
+
+        goal {
+            A: Send
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            B: Send
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            C: Send
+        } yields {
+            "No possible solution"
+        }
+    }
+}
