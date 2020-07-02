@@ -8,8 +8,8 @@ use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
-    Fallible, GenericArg, Goal, GoalData, InEnvironment, LifetimeOutlives, NoSolution,
-    ProgramClauseImplication, QuantifierKind, Substitution, UCanonical, UniverseMap, WhereClause,
+    Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
+    QuantifierKind, Substitution, UCanonical, UniverseMap,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -311,19 +311,10 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 let in_env = InEnvironment::new(environment, subgoal.clone());
                 self.push_obligation(Obligation::Refute(in_env));
             }
-            GoalData::DomainGoal(dg) => match dg {
-                DomainGoal::Holds(WhereClause::LifetimeOutlives(LifetimeOutlives { a, b })) => {
-                    let constraint = InEnvironment::new(
-                        environment,
-                        Constraint::LifetimeOutlives(a.clone(), b.clone()),
-                    );
-                    self.constraints.insert(constraint);
-                }
-                _ => {
-                    let in_env = InEnvironment::new(environment, goal);
-                    self.push_obligation(Obligation::Prove(in_env));
-                }
-            },
+            GoalData::DomainGoal(_) => {
+                let in_env = InEnvironment::new(environment, goal);
+                self.push_obligation(Obligation::Prove(in_env));
+            }
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
             }
