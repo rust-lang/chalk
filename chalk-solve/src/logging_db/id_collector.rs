@@ -163,6 +163,7 @@ where
                 }
             },
             WhereClause::LifetimeOutlives(_lifetime_outlives) => (),
+            WhereClause::TypeOutlives(_type_outlives) => (),
         }
         where_clause.super_visit_with(self.as_dyn(), outer_binder)
     }

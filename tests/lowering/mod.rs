@@ -688,6 +688,15 @@ fn lifetime_outlives() {
 }
 
 #[test]
+fn type_outlives() {
+    lowering_success! {
+        program {
+            trait Foo<'a, T> where T: 'a {}
+        }
+    }
+}
+
+#[test]
 fn phantom_data() {
     lowering_success! {
         program {

@@ -25,6 +25,7 @@ impl<I: Interner> IsCoinductive<I> for Goal<I> {
                 }
                 WhereClause::AliasEq(..) => false,
                 WhereClause::LifetimeOutlives(..) => false,
+                WhereClause::TypeOutlives(..) => false,
             },
             GoalData::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..))) => true,
             GoalData::Quantified(QuantifierKind::ForAll, goal) => {

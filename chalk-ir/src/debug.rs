@@ -575,6 +575,12 @@ impl<I: Interner> Debug for LifetimeOutlives<I> {
     }
 }
 
+impl<I: Interner> Debug for TypeOutlives<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "{:?}: {:?}", self.ty, self.lifetime)
+    }
+}
+
 /// Helper struct for showing debug output for projection types.
 pub struct ProjectionTyDebug<'a, I: Interner> {
     projection_ty: &'a ProjectionTy<I>,
@@ -675,6 +681,7 @@ impl<I: Interner> Debug for WhereClause<I> {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
             WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
             WhereClause::LifetimeOutlives(l_o) => write!(fmt, "{:?}", l_o),
+            WhereClause::TypeOutlives(t_o) => write!(fmt, "{:?}", t_o),
         }
     }
 }
@@ -838,7 +845,8 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
 impl<I: Interner> Debug for Constraint<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            Constraint::Outlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
+            Constraint::LifetimeOutlives(a, b) => write!(fmt, "{:?}: {:?}", a, b),
+            Constraint::TypeOutlives(ty, lifetime) => write!(fmt, "{:?}: {:?}", ty, lifetime),
         }
     }
 }

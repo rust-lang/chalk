@@ -156,6 +156,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                                 AliasTy::Opaque(_opaque) => todo!("opaque type AliasTy"),
                             },
                             WhereClause::LifetimeOutlives(lifetime) => lifetime.display(s).fmt(f),
+                            WhereClause::TypeOutlives(ty) => ty.display(s).fmt(f),
                         }
                     })
                     .to_string()

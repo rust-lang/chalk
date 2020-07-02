@@ -643,6 +643,35 @@ fn lifetime_outlives_constraints() {
     }
 }
 
+#[test]
+fn type_outlives_constraints() {
+    test! {
+        program {
+            trait Foo<'a, T> where T: 'a {}
+            struct Bar {}
+            impl<'a, T> Foo<'a, T> for Bar where T: 'a {}
+        }
+
+        goal {
+            exists<'a, T> {
+                Bar: Foo<'a, T>
+            }
+        } yields {
+            "Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := ^0.1], lifetime constraints [InEnvironment { environment: Env([]), goal: ^0.1: '^0.0 }] }"
+        }
+
+        goal {
+            forall<T> {
+                exists<'a> {
+                    Bar: Foo<'a, T>
+                }
+            }
+        } yields {
+            "Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: !1_0: '^0.0 }] }"
+        }
+    }
+}
+
 /// Example of fundamental ambiguity in the recursive solver, used in the
 /// recursive solver book documentation.
 #[test]

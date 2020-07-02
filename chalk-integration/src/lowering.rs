@@ -994,6 +994,14 @@ impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
                     },
                 )]
             }
+            WhereClause::TypeOutlives { ty, lifetime } => {
+                vec![chalk_ir::WhereClause::TypeOutlives(
+                    chalk_ir::TypeOutlives {
+                        ty: ty.lower(env)?,
+                        lifetime: lifetime.lower(env)?,
+                    },
+                )]
+            }
         };
         Ok(where_clauses)
     }
