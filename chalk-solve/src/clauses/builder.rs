@@ -84,8 +84,8 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         let interner = self.db.interner();
         let clause = ProgramClauseImplication {
             consequence: consequence.cast(interner),
-            conditions: <Goals<_> as Sequence<_>>::from(interner, conditions),
-            constraints: <Constraints<_> as Sequence<_>>::from(interner, constraints),
+            conditions: Goals::from_iter(interner, conditions),
+            constraints: Constraints::from_iter(interner, constraints),
             priority,
         };
 
@@ -98,7 +98,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
 
         self.clauses.push(
             ProgramClauseData(Binders::new(
-                <VariableKinds<_> as Sequence<_>>::from(interner, self.binders.clone()),
+                VariableKinds::from_iter(interner, self.binders.clone()),
                 clause,
             ))
             .intern(interner),
@@ -115,7 +115,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// Accesses the placeholders for the current list of parameters in scope,
     /// in the form of a `Substitution`.
     pub fn substitution_in_scope(&self) -> Substitution<I> {
-        <Substitution<_> as Sequence<_>>::from(
+        Substitution::from_iter(
             self.db.interner(),
             self.placeholders_in_scope().iter().cloned(),
         )

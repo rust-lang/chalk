@@ -5,7 +5,7 @@ use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::LowerGoal;
 use chalk_integration::query::LoweringDatabase;
-use chalk_ir::Constraints;
+use chalk_ir::{Constraints, Sequence};
 use chalk_solve::ext::*;
 use chalk_solve::logging::with_tracing_logs;
 use chalk_solve::RustIrDatabase;
@@ -22,7 +22,7 @@ pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, inte
         Some(Solution::Unique(solution)) => {
             let mut sorted = solution.value.constraints.as_slice(interner).to_vec();
             sorted.sort_by_key(|c| format!("{:?}", c));
-            solution.value.constraints = Constraints::from(interner, sorted);
+            solution.value.constraints = Constraints::from_iter(interner, sorted);
         }
         _ => {}
     }

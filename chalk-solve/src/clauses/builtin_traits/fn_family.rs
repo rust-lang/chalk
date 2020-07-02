@@ -23,7 +23,7 @@ fn push_clauses<I: Interner>(
         substitution: arg_sub,
     })
     .intern(interner);
-    let substitution = <Substitution<_> as Sequence<_>>::from(
+    let substitution = Substitution::from_iter(
         interner,
         &[self_ty.cast(interner), tupled.cast(interner)],
     );
@@ -70,7 +70,7 @@ fn push_clauses_for_apply<I: Interner>(
             .iter()
             .cloned()
             .map(|ty| ty.cast(interner));
-        let arg_sub = <Substitution<_> as Sequence<_>>::from(interner, arg_sub);
+        let arg_sub = Substitution::from_iter(interner, arg_sub);
         let output_ty = inputs_and_output.return_type;
 
         push_clauses(
@@ -143,7 +143,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         TyData::Function(fn_val) => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(
-                <VariableKinds<_> as Sequence<_>>::from(interner, binders),
+                VariableKinds::from_iter(interner, binders),
                 orig_sub,
             );
             builder.push_binders(&bound_ref, |builder, orig_sub| {
@@ -151,7 +151,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 let (arg_sub, fn_output_ty) = orig_sub
                     .as_slice(interner)
                     .split_at(orig_sub.len(interner) - 1);
-                let arg_sub = <Substitution<_> as Sequence<_>>::from(interner, arg_sub);
+                let arg_sub = Substitution::from_iter(interner, arg_sub);
                 let output_ty = fn_output_ty[0].assert_ty_ref(interner).clone();
 
                 push_clauses(

@@ -239,7 +239,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // should be equal to target type.
             let new_source_ty = TyData::Dyn(DynTy {
                 bounds: bounds_a.map_ref(|bounds| {
-                    <QuantifiedWhereClauses<_> as Sequence<_>>::from(
+                    QuantifiedWhereClauses::from_iter(
                         interner,
                         bounds.iter(interner).filter(|bound| {
                             let trait_id = match bound.trait_id() {
@@ -398,7 +398,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             //
             // In order for the coercion to be valid, target struct and
             // struct with this newly constructed substitution applied to it should be equal.
-            let substitution = <Substitution<_> as Sequence<_>>::from(
+            let substitution = Substitution::from_iter(
                 interner,
                 parameters_a.iter().enumerate().map(|(i, p)| {
                     if unsize_parameter_candidates.contains(&i) {
@@ -427,7 +427,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // Check that `TailField<T>: Unsize<TailField<U>>`
             let last_field_unsizing_goal: Goal<I> = TraitRef {
                 trait_id: unsize_trait_id,
-                substitution: <Substitution<_> as Sequence<_>>::from(
+                substitution: Substitution::from_iter(
                     interner,
                     [source_tail_field, target_tail_field].iter().cloned(),
                 ),
@@ -463,7 +463,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // last element is equal to the target.
             let new_tuple = ApplicationTy {
                 name: TypeName::Tuple(*arity),
-                substitution: <Substitution<_> as Sequence<_>>::from(
+                substitution: Substitution::from_iter(
                     interner,
                     substitution_a
                         .iter(interner)
@@ -483,7 +483,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // Check that `T: Unsize<U>`
             let last_field_unsizing_goal: Goal<I> = TraitRef {
                 trait_id: unsize_trait_id,
-                substitution: <Substitution<_> as Sequence<_>>::from(
+                substitution: Substitution::from_iter(
                     interner,
                     [tail_ty_a, tail_ty_b].iter().cloned(),
                 ),

@@ -388,7 +388,7 @@ impl<I: Interner> TraitBound<I> {
     pub fn as_trait_ref(&self, interner: &I, self_ty: Ty<I>) -> TraitRef<I> {
         TraitRef {
             trait_id: self.trait_id,
-            substitution: <Substitution<_> as Sequence<_>>::from(
+            substitution: Substitution::from_iter(
                 interner,
                 iter::once(self_ty.cast(interner)).chain(self.args_no_self.iter().cloned()),
             ),
@@ -411,7 +411,7 @@ impl<I: Interner> AliasEqBound<I> {
     fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         let trait_ref = self.trait_bound.as_trait_ref(interner, self_ty);
 
-        let substitution = <Substitution<_> as Sequence<_>>::from(
+        let substitution = Substitution::from_iter(
             interner,
             self.parameters
                 .iter()
@@ -530,7 +530,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
         let (binders, assoc_ty_datum) = self.binders.as_ref().into();
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
-        let substitution = <Substitution<_> as Sequence<_>>::from(
+        let substitution = Substitution::from_iter(
             interner,
             binders
                 .iter(interner)

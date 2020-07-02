@@ -15,7 +15,7 @@ impl<I: Interner> InferenceTable<I> {
         interner: &I,
         binders: &[CanonicalVarKind<I>],
     ) -> Substitution<I> {
-        <Substitution<_> as Sequence<_>>::from(
+        Substitution::from_iter(
             interner,
             binders.iter().map(|kind| {
                 let param_infer_var = kind.map_ref(|&ui| self.new_variable(ui));

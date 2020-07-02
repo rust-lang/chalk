@@ -82,7 +82,7 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
             interner,
             ..
         } = self;
-        <CanonicalVarKinds<_> as Sequence<_>>::from(
+        CanonicalVarKinds::from_iter(
             interner,
             free_vars
                 .into_iter()

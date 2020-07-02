@@ -86,10 +86,8 @@ impl<I: Interner> Environment<I> {
         II: IntoIterator<Item = ProgramClause<I>>,
     {
         let mut env = self.clone();
-        env.clauses = <ProgramClauses<_> as Sequence<_>>::from(
-            interner,
-            env.clauses.iter(interner).cloned().chain(clauses),
-        );
+        env.clauses =
+            ProgramClauses::from_iter(interner, env.clauses.iter(interner).cloned().chain(clauses));
         env
     }
 }
@@ -1667,11 +1665,6 @@ pub struct QuantifiedWhereClauses<I: Interner> {
 }
 
 impl<I: Interner> QuantifiedWhereClauses<I> {
-    /// Creates an empty list of quantified where clauses.
-    pub fn new(interner: &I) -> Self {
-        Sequence::from(interner, None::<QuantifiedWhereClause<I>>)
-    }
-
     /// Get the interned quantified where clauses.
     pub fn interned(&self) -> &I::InternedQuantifiedWhereClauses {
         &self.interned
@@ -1871,7 +1864,7 @@ impl<T: HasInterner> Binders<T> {
     /// substitution will not change the value, i.e. `^0.0, ^0.1, ^0.2` and so
     /// on.
     pub fn identity_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
-        <Substitution<_> as Sequence<_>>::from(
+        Substitution::from_iter(
             interner,
             self.binders
                 .iter(interner)
@@ -1913,7 +1906,7 @@ where
     pub fn fuse_binders(self, interner: &T::Interner) -> Binders<T::Result> {
         let num_binders = self.len(interner);
         // generate a substitution to shift the indexes of the inner binder:
-        let subst = <Substitution<_> as Sequence<_>>::from(
+        let subst = Substitution::from_iter(
             interner,
             self.value
                 .binders
@@ -1922,7 +1915,7 @@ where
                 .map(|(i, pk)| (i + num_binders, pk).to_generic_arg(interner)),
         );
         let value = self.value.substitute(interner, &subst);
-        let binders = <VariableKinds<_> as Sequence<_>>::from(
+        let binders = VariableKinds::from_iter(
             interner,
             self.binders
                 .iter(interner)
@@ -2249,7 +2242,7 @@ impl<T: HasInterner> UCanonical<T> {
     /// Creates an identity substitution.
     pub fn trivial_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
         let binders = &self.canonical.binders;
-        <Substitution<_> as Sequence<_>>::from(
+        Substitution::from_iter(
             interner,
             binders
                 .iter(interner)
@@ -2357,7 +2350,7 @@ impl<I: Interner> Goal<I> {
             QuantifierKind::ForAll,
             Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
-                    <ProgramClauses<_> as Sequence<_>>::from(
+                    ProgramClauses::from_iter(
                         interner,
                         vec![DomainGoal::Compatible(()), DomainGoal::DownstreamType(ty)],
                     ),
@@ -2397,7 +2390,7 @@ where
         if let Some(goal0) = iter.next() {
             if let Some(goal1) = iter.next() {
                 // More than one goal to prove
-                let goals = <Goals<_> as Sequence<_>>::from(
+                let goals = Goals::from_iter(
                     interner,
                     Some(goal0).into_iter().chain(Some(goal1)).chain(iter),
                 );
@@ -2763,7 +2756,10 @@ pub trait Sequence<I: Interner>: Sized {
     fn as_slice(&self, interner: &I) -> &[Self::Element];
 
     /// Create a sequence from elements
-    fn from(interner: &I, elements: impl IntoIterator<Item = impl CastTo<Self::Element>>) -> Self {
+    fn from_iter(
+        interner: &I,
+        elements: impl IntoIterator<Item = impl CastTo<Self::Element>>,
+    ) -> Self {
         <Self as Sequence<I>>::from_fallible(
             interner,
             elements
@@ -2780,12 +2776,12 @@ pub trait Sequence<I: Interner>: Sized {
 
     /// Create a sequence from a single element.
     fn from1(interner: &I, element: impl CastTo<Self::Element>) -> Self {
-        <Self as Sequence<I>>::from(interner, Some(element))
+        Self::from_iter(interner, Some(element))
     }
 
     /// Create an empty sequence.
     fn empty(interner: &I) -> Self {
-        <Self as Sequence<I>>::from(interner, None::<Self::Element>)
+        Self::from_iter(interner, None::<Self::Element>)
     }
 
     /// Check whether this is an empty sequence.

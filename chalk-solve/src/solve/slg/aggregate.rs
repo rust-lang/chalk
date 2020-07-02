@@ -179,7 +179,7 @@ fn merge_into_guidance<I: Interner>(
         })
         .collect();
 
-    let aggr_subst = <Substitution<_> as Sequence<_>>::from(interner, aggr_generic_args);
+    let aggr_subst = Substitution::from_iter(interner, aggr_generic_args);
 
     infer.canonicalize(interner, &aggr_subst).quantified
 }
@@ -388,7 +388,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             substitution2.len(interner)
         );
 
-        let substitution = <Substitution<_> as Sequence<_>>::from(
+        let substitution = Substitution::from_iter(
             interner,
             substitution1
                 .iter(interner)

@@ -311,7 +311,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
                 interner,
                 &ConstrainedSubst {
                     subst,
-                    constraints: <Constraints<_> as Sequence<_>>::from(interner, constraints),
+                    constraints: Constraints::from_iter(interner, constraints),
                 },
             )
             .quantified
@@ -329,7 +329,7 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
                 interner,
                 &AnswerSubst {
                     subst,
-                    constraints: <Constraints<_> as Sequence<_>>::from(interner, constraints),
+                    constraints: Constraints::from_iter(interner, constraints),
                     delayed_subgoals,
                 },
             )
