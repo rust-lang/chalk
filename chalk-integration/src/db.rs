@@ -29,6 +29,9 @@ impl Database for ChalkDatabase {
     fn salsa_runtime(&self) -> &salsa::Runtime<ChalkDatabase> {
         &self.runtime
     }
+    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<ChalkDatabase> {
+        &mut self.runtime
+    }
 }
 
 impl ChalkDatabase {

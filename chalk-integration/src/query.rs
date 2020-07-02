@@ -16,12 +16,13 @@ use chalk_solve::wf;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
+use salsa::Database;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
+pub trait LoweringDatabase: RustIrDatabase<ChalkIr> + Database {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -50,7 +51,7 @@ pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
     /// cached state becomes invalid, so the query is marked as
     /// volatile, thus ensuring that the solver is recreated in every
     /// revision (i.e., each time source program changes).
-    #[salsa::volatile]
+    #[salsa::dependencies]
     fn solver(&self) -> Arc<Mutex<Solver<ChalkIr>>>;
 }
 
@@ -167,6 +168,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
 }
 
 fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver<ChalkIr>>> {
+    db.salsa_runtime().report_untracked_read();
     let choice = db.solver_choice();
     Arc::new(Mutex::new(choice.into_solver()))
 }
