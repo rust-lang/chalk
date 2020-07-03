@@ -9,7 +9,7 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Sequence, Substitution, UCanonical, UniverseMap,
+    QuantifierKind, Substitution, UCanonical, UniverseMap,
 };
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;

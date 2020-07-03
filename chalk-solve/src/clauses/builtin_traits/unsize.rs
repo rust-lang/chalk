@@ -8,8 +8,8 @@ use chalk_ir::{
     interner::HasInterner,
     visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
     ApplicationTy, Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal,
-    LifetimeOutlives, QuantifiedWhereClauses, Sequence, Substitution, TraitId, Ty, TyData,
-    TypeName, TypeOutlives, WhereClause,
+    LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyData, TypeName,
+    TypeOutlives, WhereClause,
 };
 
 struct UnsizeParameterCollector<'a, I: Interner> {

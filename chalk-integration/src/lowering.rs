@@ -3,8 +3,7 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId, ImplId,
-    OpaqueTyId, QuantifiedWhereClauses, Sequence, Substitution, ToGenericArg, TraitId, TyKind,
-    VariableKinds,
+    OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{

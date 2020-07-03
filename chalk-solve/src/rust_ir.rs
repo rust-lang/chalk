@@ -9,8 +9,8 @@ use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
     visit::{Visit, VisitResult},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
-    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Sequence, Substitution, ToGenericArg, TraitId,
-    TraitRef, Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 

@@ -8,7 +8,7 @@ use crate::{
     },
     RustIrDatabase,
 };
-use chalk_ir::{interner::Interner, ApplicationTy, Binders, Sequence, TypeName, VariableKinds};
+use chalk_ir::{interner::Interner, ApplicationTy, Binders, TypeName, VariableKinds};
 
 #[derive(Debug)]
 pub struct StubWrapper<'a, DB> {

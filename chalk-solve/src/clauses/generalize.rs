@@ -9,8 +9,8 @@
 use chalk_ir::{
     fold::{Fold, Folder},
     interner::{HasInterner, Interner},
-    Binders, BoundVar, DebruijnIndex, Fallible, Lifetime, LifetimeData, Sequence, Ty, TyData,
-    TyKind, VariableKind, VariableKinds,
+    Binders, BoundVar, DebruijnIndex, Fallible, Lifetime, LifetimeData, Ty, TyData, TyKind,
+    VariableKind, VariableKinds,
 };
 use rustc_hash::FxHashMap;
 

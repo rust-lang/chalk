@@ -2517,66 +2517,7 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
     }
 }
 
-/// Utility for defining new sequence-like interned types.
-pub trait Sequence<I: Interner>: Sized {
-    /// The element type of the sequence.
-    type Element: HasInterner<Interner = I> + CastTo<Self::Element>;
-
-    /// Try to create a sequence from elements
-    fn from_fallible<E>(
-        interner: &I,
-        elements: impl IntoIterator<Item = Result<impl CastTo<Self::Element>, E>>,
-    ) -> Result<Self, E>;
-
-    /// Returns a slice containing the elements in the sequence.
-    fn as_slice(&self, interner: &I) -> &[Self::Element];
-
-    /// Create a sequence from elements
-    fn from_iter(
-        interner: &I,
-        elements: impl IntoIterator<Item = impl CastTo<Self::Element>>,
-    ) -> Self {
-        <Self as Sequence<I>>::from_fallible(
-            interner,
-            elements
-                .into_iter()
-                .map(|el| -> Result<Self::Element, ()> { Ok(el.cast(interner)) }),
-        )
-        .unwrap()
-    }
-
-    /// Index into the sequence.
-    fn at(&self, interner: &I, index: usize) -> &Self::Element {
-        &self.as_slice(interner)[index]
-    }
-
-    /// Create a sequence from a single element.
-    fn from1(interner: &I, element: impl CastTo<Self::Element>) -> Self {
-        Self::from_iter(interner, Some(element))
-    }
-
-    /// Create an empty sequence.
-    fn empty(interner: &I) -> Self {
-        Self::from_iter(interner, None::<Self::Element>)
-    }
-
-    /// Check whether this is an empty sequence.
-    fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Get an iterator over the elements of the sequence.
-    fn iter(&self, interner: &I) -> std::slice::Iter<'_, Self::Element> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Get the length of the sequence.
-    fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-}
-
-macro_rules! sequence {
+macro_rules! interned_slice {
     ($seq:ident, $data:ident => $elem:ty, $intern:ident => $interned:ident) => {
         /// List of interned elements.
         #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
@@ -2591,10 +2532,9 @@ macro_rules! sequence {
             }
         }
 
-        impl<I: Interner> Sequence<I> for $seq<I> {
-            type Element = $elem;
+        impl<I: Interner> $seq<I> {
             /// Tries to create a sequence using an iterator of element-like things.
-            fn from_fallible<E>(
+            pub fn from_fallible<E>(
                 interner: &I,
                 elements: impl IntoIterator<Item = Result<impl CastTo<$elem>, E>>,
             ) -> Result<Self, E> {
@@ -2604,46 +2544,90 @@ macro_rules! sequence {
             }
 
             /// Returns a slice containing the elements.
-            fn as_slice(&self, interner: &I) -> &[$elem] {
+            pub fn as_slice(&self, interner: &I) -> &[$elem] {
                 Interner::$data(interner, &self.interned)
+            }
+
+            /// Create a sequence from elements
+            pub fn from_iter(
+                interner: &I,
+                elements: impl IntoIterator<Item = impl CastTo<$elem>>,
+            ) -> Self {
+                Self::from_fallible(
+                    interner,
+                    elements
+                        .into_iter()
+                        .map(|el| -> Result<$elem, ()> { Ok(el.cast(interner)) }),
+                )
+                .unwrap()
+            }
+
+            /// Index into the sequence.
+            pub fn at(&self, interner: &I, index: usize) -> &$elem {
+                &self.as_slice(interner)[index]
+            }
+
+            /// Create a sequence from a single element.
+            pub fn from1(interner: &I, element: impl CastTo<$elem>) -> Self {
+                Self::from_iter(interner, Some(element))
+            }
+
+            /// Create an empty sequence.
+            pub fn empty(interner: &I) -> Self {
+                Self::from_iter(interner, None::<$elem>)
+            }
+
+            /// Check whether this is an empty sequence.
+            pub fn is_empty(&self, interner: &I) -> bool {
+                self.as_slice(interner).is_empty()
+            }
+
+            /// Get an iterator over the elements of the sequence.
+            pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, $elem> {
+                self.as_slice(interner).iter()
+            }
+
+            /// Get the length of the sequence.
+            pub fn len(&self, interner: &I) -> usize {
+                self.as_slice(interner).len()
             }
         }
     };
 }
 
-sequence!(
+interned_slice!(
     QuantifiedWhereClauses,
     quantified_where_clauses_data => QuantifiedWhereClause<I>,
     intern_quantified_where_clauses => InternedQuantifiedWhereClauses
 );
 
-sequence!(
+interned_slice!(
     ProgramClauses,
     program_clauses_data => ProgramClause<I>,
     intern_program_clauses => InternedProgramClauses
 );
 
-sequence!(
+interned_slice!(
     VariableKinds,
     variable_kinds_data => VariableKind<I>,
     intern_generic_arg_kinds => InternedVariableKinds
 );
 
-sequence!(
+interned_slice!(
     CanonicalVarKinds,
     canonical_var_kinds_data => CanonicalVarKind<I>,
     intern_canonical_var_kinds => InternedCanonicalVarKinds
 );
 
-sequence!(Goals, goals_data => Goal<I>, intern_goals => InternedGoals);
+interned_slice!(Goals, goals_data => Goal<I>, intern_goals => InternedGoals);
 
-sequence!(
+interned_slice!(
     Constraints,
     constraints_data => InEnvironment<Constraint<I>>,
     intern_constraints => InternedConstraints
 );
 
-sequence!(
+interned_slice!(
     Substitution,
     substitution_data => GenericArg<I>,
     intern_substitution => InternedSubstitution

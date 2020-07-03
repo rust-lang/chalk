@@ -4,8 +4,8 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Sequence, Substitution,
-    TraitId, Ty, TyData, TypeName, VariableKinds,
+    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Substitution, TraitId,
+    Ty, TyData, TypeName, VariableKinds,
 };
 
 fn push_clauses<I: Interner>(

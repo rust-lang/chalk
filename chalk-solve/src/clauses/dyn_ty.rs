@@ -3,8 +3,8 @@ use rustc_hash::FxHashSet;
 use super::{builder::ClauseBuilder, generalize};
 use crate::RustIrDatabase;
 use chalk_ir::{
-    cast::Cast, fold::shift::Shift, interner::Interner, Binders, BoundVar, DebruijnIndex, Sequence,
-    TraitId, TraitRef, Ty, TyData, WhereClause,
+    cast::Cast, fold::shift::Shift, interner::Interner, Binders, BoundVar, DebruijnIndex, TraitId,
+    TraitRef, Ty, TyData, WhereClause,
 };
 
 /// If the self type `S` of an `Implemented` goal is a `dyn trait` type, we wish

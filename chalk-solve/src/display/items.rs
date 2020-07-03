@@ -8,7 +8,6 @@ use std::fmt::{Formatter, Result};
 use crate::rust_ir::*;
 use crate::split::Split;
 use chalk_ir::interner::Interner;
-use chalk_ir::Sequence;
 use itertools::Itertools;
 
 use super::{
