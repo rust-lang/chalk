@@ -591,6 +591,8 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
                 b.substitution.as_slice(interner),
             ),
             Ref(mutbl) => {
+                assert_eq!(2, a.substitution.len(interner));
+                assert_eq!(2, b.substitution.len(interner));
                 // The lifetime is `Contravariant`
                 Zip::zip_with(
                     zipper,
@@ -612,6 +614,8 @@ impl<I: Interner> Zip<I> for ApplicationTy<I> {
                 Ok(())
             }
             Raw(mutbl) => {
+                assert_eq!(1, a.substitution.len(interner));
+                assert_eq!(1, b.substitution.len(interner));
                 let ty_variance = match mutbl {
                     Mutability::Not => Variance::Covariant,
                     Mutability::Mut => Variance::Invariant,

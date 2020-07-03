@@ -334,17 +334,13 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 self.unify(&environment, Variance::Invariant, &a, &b)?;
             }
             GoalData::SubtypeGoal(SubtypeGoal { a, b }) => {
-                match (a.ty(self.interner()), b.ty(self.interner())) {
-                    (Some(a_ty), Some(b_ty)) => {
-                        if a_ty.inference_var(self.interner()).is_some()
-                            && b_ty.inference_var(self.interner()).is_some()
-                        {
-                            return Err(NoSolution);
-                        }
-                    }
-                    _ => {}
+                if a.inference_var(self.interner()).is_some()
+                    && b.inference_var(self.interner()).is_some()
+                {
+                    self.cannot_prove = true;
+                } else {
+                    self.unify(&environment, Variance::Covariant, &a, &b)?;
                 }
-                self.unify(&environment, Variance::Covariant, &a, &b)?;
             }
             GoalData::CannotProve(()) => {
                 debug!("Pushed a CannotProve goal, setting cannot_prove = true");

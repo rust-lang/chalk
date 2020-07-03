@@ -523,7 +523,7 @@ LeafGoal: LeafGoal = {
 
     <a:GenericArg> "=" <b:GenericArg> => LeafGoal::UnifyGenericArgs { a, b },
 
-    <a:GenericArg> "subtype" <b:GenericArg> => LeafGoal::SubtypeGenericArgs { a, b },
+    "Subtype" "(" <a:Ty> "," <b:Ty> ")" => LeafGoal::SubtypeGenericArgs { a, b },
 };
 
 TraitRef<S>: TraitRef = {

@@ -139,8 +139,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         },
         TyData::Function(fn_val) => {
             let bound_ref = fn_val.as_binders(interner);
-            //let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
-            //let bound_ref = Binders::new(VariableKinds::from(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
                 // The last parameter represents the function return type
                 let (arg_sub, fn_output_ty) = orig_sub

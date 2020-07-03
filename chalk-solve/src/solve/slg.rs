@@ -363,6 +363,22 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
             .relate(interner, db, environment, variance, a, b)?;
         Ok(into_ex_clause(interner, result, ex_clause))
     }
+
+    fn relate_tys_into_ex_clause(
+        &mut self,
+        interner: &I,
+        db: &dyn UnificationDatabase<I>,
+        environment: &Environment<I>,
+        variance: Variance,
+        a: &Ty<I>,
+        b: &Ty<I>,
+        ex_clause: &mut ExClause<I>,
+    ) -> Fallible<()> {
+        let result = self
+            .infer
+            .relate(interner, db, environment, variance, a, b)?;
+        Ok(into_ex_clause(interner, result, ex_clause))
+    }
 }
 
 /// Helper function

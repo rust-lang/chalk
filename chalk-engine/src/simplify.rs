@@ -75,17 +75,12 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                     Err(_) => return FallibleOrFloundered::NoSolution,
                 },
                 GoalData::SubtypeGoal(goal) => {
-                    match (goal.a.ty(context.interner()), goal.b.ty(context.interner())) {
-                        (Some(a_ty), Some(b_ty)) => {
-                            if a_ty.inference_var(context.interner()).is_some()
-                                && b_ty.inference_var(context.interner()).is_some()
-                            {
-                                return FallibleOrFloundered::Floundered;
-                            }
-                        }
-                        _ => {}
+                    if goal.a.inference_var(context.interner()).is_some()
+                        && goal.b.inference_var(context.interner()).is_some()
+                    {
+                        return FallibleOrFloundered::Floundered;
                     }
-                    match infer.relate_generic_args_into_ex_clause(
+                    match infer.relate_tys_into_ex_clause(
                         context.interner(),
                         context.unification_database(),
                         &environment,

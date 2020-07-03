@@ -405,7 +405,7 @@ pub enum DomainGoal {
 pub enum LeafGoal {
     DomainGoal { goal: DomainGoal },
     UnifyGenericArgs { a: GenericArg, b: GenericArg },
-    SubtypeGenericArgs { a: GenericArg, b: GenericArg },
+    SubtypeGenericArgs { a: Ty, b: Ty },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

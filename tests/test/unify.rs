@@ -343,7 +343,7 @@ fn subtype() {
         }
 
         goal {
-            for<'a> fn(&'a (), &'a ()) subtype for<'a, 'b> fn(&'a (), &'b ())
+            Subtype(for<'a> fn(&'a (), &'a ()), for<'a, 'b> fn(&'a (), &'b ()))
         } yields {
             "Unique"
         }

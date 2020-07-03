@@ -1869,11 +1869,11 @@ impl<I: Interner> Copy for EqGoal<I> where I::InternedGenericArg: Copy {}
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 #[allow(missing_docs)]
 pub struct SubtypeGoal<I: Interner> {
-    pub a: GenericArg<I>,
-    pub b: GenericArg<I>,
+    pub a: Ty<I>,
+    pub b: Ty<I>,
 }
 
-impl<I: Interner> Copy for SubtypeGoal<I> where I::InternedGenericArg: Copy {}
+impl<I: Interner> Copy for SubtypeGoal<I> where I::InternedType: Copy {}
 
 /// Proves that the given type alias **normalizes** to the given
 /// type. A projection `T::Foo` normalizes to the type `U` if we can

@@ -67,7 +67,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    /// The main entry points for the `Unifier` type and really the
+    /// The main entry point for the `Unifier` type and really the
     /// only type meant to be called externally. Performs a
     /// relation of `a` and `b` and returns the Unification Result.
     #[instrument(level = "debug", skip(self))]
@@ -114,16 +114,17 @@ impl<'t, I: Interner> Unifier<'t, I> {
                         }
                     },
                     Variance::Covariant => {
-                        self.push_subtype_goal(a.clone().cast(interner), b.clone().cast(interner));
+                        self.push_subtype_goal(a.clone(), b.clone());
                         Ok(())
                     },
                     Variance::Contravariant => {
-                        self.push_subtype_goal(b.clone().cast(interner), a.clone().cast(interner));
+                        self.push_subtype_goal(b.clone(), a.clone());
                         Ok(())
                     },
                 }
             }
 
+            // FIXME: needs to handle relating a var and ty; needs generalization
             // Relating an inference variable with a non-inference variable.
             (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Apply(_))
             | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Placeholder(_))
@@ -546,7 +547,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    fn push_subtype_goal(&mut self, a: GenericArg<I>, b: GenericArg<I>) {
+    fn push_subtype_goal(&mut self, a: Ty<I>, b: Ty<I>) {
         let subtype_goal = GoalData::SubtypeGoal(SubtypeGoal { a, b }).intern(self.interner());
         self.goals
             .push(InEnvironment::new(self.environment, subtype_goal));
