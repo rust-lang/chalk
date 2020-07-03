@@ -394,10 +394,10 @@ impl<I: Interner> Ty<I> {
         }
     }
 
-    /// Returns true if this is a `BoundVar` or `InferenceVar`.
-    pub fn is_var(&self, interner: &I) -> bool {
+    /// Returns true if this is a `BoundVar` or an `InferenceVar` of `TyKind::General`.
+    pub fn is_general_var(&self, interner: &I) -> bool {
         match self.data(interner) {
-            TyData::BoundVar(_) | TyData::InferenceVar(_, _) => true,
+            TyData::BoundVar(_) | TyData::InferenceVar(_, TyKind::General) => true,
             _ => false,
         }
     }

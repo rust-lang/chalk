@@ -225,9 +225,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     if trait_datum.is_auto_trait() {
                         push_auto_trait_impls_opaque(builder, trait_id, opaque_ty.opaque_ty_id)
                     }
-                } else if self_ty.bound_var(interner).is_some()
-                    || self_ty.inference_var(interner).is_some()
-                {
+                } else if self_ty.is_general_var(interner) {
                     return Err(Floundered);
                 }
             }
@@ -395,7 +393,7 @@ fn program_clauses_that_could_match<I: Interner>(
                 // Flounder if the self-type is unknown and the trait is non-enumerable.
                 //
                 // e.g., Normalize(<?X as Iterator>::Item = u32)
-                if (self_ty.is_var(interner)) && trait_datum.is_non_enumerable_trait() {
+                if (self_ty.is_general_var(interner)) && trait_datum.is_non_enumerable_trait() {
                     return Err(Floundered);
                 }
 
