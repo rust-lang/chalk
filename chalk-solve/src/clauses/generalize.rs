@@ -34,7 +34,10 @@ impl<I: Interner> Generalize<'_, I> {
         let value = value
             .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
             .unwrap();
-        Binders::new(VariableKinds::from(interner, generalize.binders), value)
+        Binders::new(
+            VariableKinds::from_iter(interner, generalize.binders),
+            value,
+        )
     }
 }
 

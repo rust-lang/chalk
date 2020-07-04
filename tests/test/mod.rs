@@ -22,7 +22,7 @@ pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, inte
         Some(Solution::Unique(solution)) => {
             let mut sorted = solution.value.constraints.as_slice(interner).to_vec();
             sorted.sort_by_key(|c| format!("{:?}", c));
-            solution.value.constraints = Constraints::from(interner, sorted);
+            solution.value.constraints = Constraints::from_iter(interner, sorted);
         }
         _ => {}
     }

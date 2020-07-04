@@ -4,7 +4,7 @@ macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
         chalk_ir::TyData::Apply(ApplicationTy {
             name: ty_name!($n),
-            substitution: chalk_ir::Substitution::from(
+            substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
@@ -14,7 +14,7 @@ macro_rules! ty {
     (function $n:tt $($arg:tt)*) => {
         chalk_ir::TyData::Function(Fn {
             num_binders: $n,
-            substitution: chalk_ir::Substitution::from(
+            substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
@@ -31,7 +31,7 @@ macro_rules! ty {
     (projection (item $n:tt) $($arg:tt)*) => {
             chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy  {
             associated_ty_id: AssocTypeId(chalk_integration::interner::RawId { index: $n }),
-            substitution: chalk_ir::Substitution::from(
+            substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),

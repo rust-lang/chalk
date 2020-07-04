@@ -45,7 +45,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         G: CastTo<Goal<I>>,
     {
         GoalData::Implies(
-            ProgramClauses::from(self.interner(), clauses),
+            ProgramClauses::from_iter(self.interner(), clauses),
             goal(self).cast(self.interner()),
         )
         .intern(self.interner())
@@ -132,7 +132,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         // actually an identity mapping, since this `forall` will be the innermost
         // debruijn binder and so forth, so there's no actual reason to
         // *do* the substitution, since it would effectively just be a clone.
-        let substitution: Substitution<I> = Substitution::from(
+        let substitution = Substitution::from_iter(
             interner,
             binders
                 .binders

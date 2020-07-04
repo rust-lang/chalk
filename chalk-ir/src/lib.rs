@@ -6,7 +6,7 @@
 // Allows macros to refer to this crate as `::chalk_ir`
 extern crate self as chalk_ir;
 
-use crate::cast::{Cast, CastTo};
+use crate::cast::{Cast, CastTo, Caster};
 use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
@@ -87,7 +87,7 @@ impl<I: Interner> Environment<I> {
     {
         let mut env = self.clone();
         env.clauses =
-            ProgramClauses::from(interner, env.clauses.iter(interner).cloned().chain(clauses));
+            ProgramClauses::from_iter(interner, env.clauses.iter(interner).cloned().chain(clauses));
         env
     }
 }
@@ -1113,6 +1113,10 @@ pub enum VariableKind<I: Interner> {
     Const(Ty<I>),
 }
 
+impl<I: Interner> interner::HasInterner for VariableKind<I> {
+    type Interner = I;
+}
+
 impl<I: Interner> Copy for VariableKind<I> where I::InternedType: Copy {}
 
 impl<I: Interner> VariableKind<I> {
@@ -1654,72 +1658,6 @@ impl<I: Interner> QuantifiedWhereClause<I> {
     }
 }
 
-/// List of quantified (forall/exists) where clauses.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct QuantifiedWhereClauses<I: Interner> {
-    interned: I::InternedQuantifiedWhereClauses,
-}
-
-impl<I: Interner> QuantifiedWhereClauses<I> {
-    /// Creates an empty list of quantified where clauses.
-    pub fn new(interner: &I) -> Self {
-        Self::from(interner, None::<QuantifiedWhereClause<I>>)
-    }
-
-    /// Get the interned quantified where clauses.
-    pub fn interned(&self) -> &I::InternedQuantifiedWhereClauses {
-        &self.interned
-    }
-
-    /// Creates a list of quantified where clauses from an iterator.
-    pub fn from(
-        interner: &I,
-        clauses: impl IntoIterator<Item = impl CastTo<QuantifiedWhereClause<I>>>,
-    ) -> Self {
-        Self::from_fallible(
-            interner,
-            clauses
-                .into_iter()
-                .map(|p| -> Result<QuantifiedWhereClause<I>, ()> { Ok(p.cast(interner)) }),
-        )
-        .unwrap()
-    }
-
-    /// Tries to create a list of quantified where clauses from an iterator.
-    pub fn from_fallible<E>(
-        interner: &I,
-        clauses: impl IntoIterator<Item = Result<impl CastTo<QuantifiedWhereClause<I>>, E>>,
-    ) -> Result<Self, E> {
-        use crate::cast::Caster;
-        Ok(QuantifiedWhereClauses {
-            interned: I::intern_quantified_where_clauses(
-                interner,
-                clauses.into_iter().casted(interner),
-            )?,
-        })
-    }
-
-    /// Get an iterator over the list of quantified where clauses.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, QuantifiedWhereClause<I>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Checks whether the list of quantified where clauses is empty.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Returns the number of quantified where clauses.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
-    /// Returns a slice containing the quantified where clauses.
-    pub fn as_slice(&self, interner: &I) -> &[QuantifiedWhereClause<I>] {
-        interner.quantified_where_clauses_data(&self.interned)
-    }
-}
-
 impl<I: Interner> DomainGoal<I> {
     /// Convert `Implemented(...)` into `FromEnv(...)`, but leave other
     /// goals unchanged.
@@ -1892,7 +1830,7 @@ impl<T: HasInterner> Binders<T> {
     /// substitution will not change the value, i.e. `^0.0, ^0.1, ^0.2` and so
     /// on.
     pub fn identity_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
-        Substitution::from(
+        Substitution::from_iter(
             interner,
             self.binders
                 .iter(interner)
@@ -1934,7 +1872,7 @@ where
     pub fn fuse_binders(self, interner: &T::Interner) -> Binders<T::Result> {
         let num_binders = self.len(interner);
         // generate a substitution to shift the indexes of the inner binder:
-        let subst = Substitution::from(
+        let subst = Substitution::from_iter(
             interner,
             self.value
                 .binders
@@ -1943,7 +1881,7 @@ where
                 .map(|(i, pk)| (i + num_binders, pk).to_generic_arg(interner)),
         );
         let value = self.value.substitute(interner, &subst);
-        let binders = VariableKinds::from(
+        let binders = VariableKinds::from_iter(
             interner,
             self.binders
                 .iter(interner)
@@ -2120,200 +2058,6 @@ impl<I: Interner> ProgramClause<I> {
     }
 }
 
-/// List of program clauses.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct ProgramClauses<I: Interner> {
-    interned: I::InternedProgramClauses,
-}
-
-impl<I: Interner> ProgramClauses<I> {
-    /// Creates an empty list of program clauses.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<ProgramClause<I>>)
-    }
-
-    /// Get the interned program clauses.
-    pub fn interned(&self) -> &I::InternedProgramClauses {
-        &self.interned
-    }
-
-    /// Creates a list of program clauses from an iterator.
-    pub fn from(
-        interner: &I,
-        clauses: impl IntoIterator<Item = impl CastTo<ProgramClause<I>>>,
-    ) -> Self {
-        Self::from_fallible(
-            interner,
-            clauses
-                .into_iter()
-                .map(|p| -> Result<ProgramClause<I>, ()> { Ok(p.cast(interner)) }),
-        )
-        .unwrap()
-    }
-
-    /// Tries to create a list of program clauses from an iterator.
-    pub fn from_fallible<E>(
-        interner: &I,
-        clauses: impl IntoIterator<Item = Result<impl CastTo<ProgramClause<I>>, E>>,
-    ) -> Result<Self, E> {
-        use crate::cast::Caster;
-        Ok(ProgramClauses {
-            interned: I::intern_program_clauses(interner, clauses.into_iter().casted(interner))?,
-        })
-    }
-
-    /// Get an iterator over the list of program clauses.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, ProgramClause<I>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Checks whether the list of program clauses is empty.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Returns the number of program clauses.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
-    /// Returns a slice containing the program clauses.
-    pub fn as_slice(&self, interner: &I) -> &[ProgramClause<I>] {
-        interner.program_clauses_data(&self.interned)
-    }
-}
-
-/// List of variable kinds.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct VariableKinds<I: Interner> {
-    interned: I::InternedVariableKinds,
-}
-
-impl<I: Interner> VariableKinds<I> {
-    /// Creates an empty list of variable kinds.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<VariableKind<I>>)
-    }
-
-    /// Get the interned variable kinds.
-    pub fn interned(&self) -> &I::InternedVariableKinds {
-        &self.interned
-    }
-
-    /// Creates a list of variable kinds using an iterator.
-    pub fn from(interner: &I, variable_kinds: impl IntoIterator<Item = VariableKind<I>>) -> Self {
-        Self::from_fallible(
-            interner,
-            variable_kinds
-                .into_iter()
-                .map(|p| -> Result<VariableKind<I>, ()> { Ok(p) }),
-        )
-        .unwrap()
-    }
-
-    /// Tries to create a list of variable kinds using an iterator.
-    pub fn from_fallible<E>(
-        interner: &I,
-        variable_kinds: impl IntoIterator<Item = Result<VariableKind<I>, E>>,
-    ) -> Result<Self, E> {
-        Ok(VariableKinds {
-            interned: I::intern_generic_arg_kinds(interner, variable_kinds.into_iter())?,
-        })
-    }
-
-    /// Creates a list of variable kinds from a single variable kind.
-    pub fn from1(interner: &I, variable_kind: VariableKind<I>) -> Self {
-        Self::from(interner, Some(variable_kind))
-    }
-
-    /// Get an iterator over the list of variable kinds.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, VariableKind<I>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Checks whether the list of variable kinds is empty.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Returns the number of variable kinds.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
-    /// Returns a slice containing the list of variable kinds.
-    pub fn as_slice(&self, interner: &I) -> &[VariableKind<I>] {
-        interner.variable_kinds_data(&self.interned)
-    }
-}
-
-/// List of variable kinds with universe index. Wraps `InternedCanonicalVarKinds`.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct CanonicalVarKinds<I: Interner> {
-    interned: I::InternedCanonicalVarKinds,
-}
-
-impl<I: Interner> CanonicalVarKinds<I> {
-    /// Creates an empty list of canonical variable kinds.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<CanonicalVarKind<I>>)
-    }
-
-    /// Get the interned canonical variable kinds.
-    pub fn interned(&self) -> &I::InternedCanonicalVarKinds {
-        &self.interned
-    }
-
-    /// Creates a list of canonical variable kinds using an iterator.
-    pub fn from(
-        interner: &I,
-        variable_kinds: impl IntoIterator<Item = CanonicalVarKind<I>>,
-    ) -> Self {
-        Self::from_fallible(
-            interner,
-            variable_kinds
-                .into_iter()
-                .map(|p| -> Result<CanonicalVarKind<I>, ()> { Ok(p) }),
-        )
-        .unwrap()
-    }
-
-    /// Tries to create a list of canonical variable kinds using an iterator.
-    pub fn from_fallible<E>(
-        interner: &I,
-        variable_kinds: impl IntoIterator<Item = Result<CanonicalVarKind<I>, E>>,
-    ) -> Result<Self, E> {
-        Ok(CanonicalVarKinds {
-            interned: I::intern_canonical_var_kinds(interner, variable_kinds.into_iter())?,
-        })
-    }
-
-    /// Creates a list of canonical variable kinds from a single canonical variable kind.
-    pub fn from1(interner: &I, variable_kind: CanonicalVarKind<I>) -> Self {
-        Self::from(interner, Some(variable_kind))
-    }
-
-    /// Get an iterator over the list of canonical variable kinds.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, CanonicalVarKind<I>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Checks whether the list of canonical variable kinds is empty.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Returns the number of canonical variable kinds.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
-    /// Returns a slice containing the canonical variable kinds.
-    pub fn as_slice(&self, interner: &I) -> &[CanonicalVarKind<I>] {
-        interner.canonical_var_kinds_data(&self.interned)
-    }
-}
-
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
 /// All unresolved existential variables are "renumbered" according to their
@@ -2366,7 +2110,7 @@ impl<T: HasInterner> UCanonical<T> {
     /// Creates an identity substitution.
     pub fn trivial_substitution(&self, interner: &T::Interner) -> Substitution<T::Interner> {
         let binders = &self.canonical.binders;
-        Substitution::from(
+        Substitution::from_iter(
             interner,
             binders
                 .iter(interner)
@@ -2394,66 +2138,6 @@ impl<T: HasInterner> UCanonical<T> {
                 })
                 .collect::<Vec<_>>(),
         )
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
-/// A list of goals.
-pub struct Goals<I: Interner> {
-    interned: I::InternedGoals,
-}
-
-impl<I: Interner> Goals<I> {
-    /// Creates an empty list of goals.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<Goal<I>>)
-    }
-
-    /// Get the interned list of goals.
-    pub fn interned(&self) -> &I::InternedGoals {
-        &self.interned
-    }
-
-    /// Creates `Goals` using an iterator of goal-like things.
-    pub fn from(interner: &I, goals: impl IntoIterator<Item = impl CastTo<Goal<I>>>) -> Self {
-        Self::from_fallible(
-            interner,
-            goals
-                .into_iter()
-                .map(|p| -> Result<Goal<I>, ()> { Ok(p.cast(interner)) }),
-        )
-        .unwrap()
-    }
-
-    /// Tries to create a `Goals` using an iterator of goal-like things.
-    pub fn from_fallible<E>(
-        interner: &I,
-        goals: impl IntoIterator<Item = Result<impl CastTo<Goal<I>>, E>>,
-    ) -> Result<Self, E> {
-        use crate::cast::Caster;
-        Ok(Goals {
-            interned: I::intern_goals(interner, goals.into_iter().casted(interner))?,
-        })
-    }
-
-    /// Get an iterator over the list of goals.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Goal<I>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Checks whether the list of goals is empty.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Returns the number of goals.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
-    /// Returns a slice containing the list of goals.
-    pub fn as_slice(&self, interner: &I) -> &[Goal<I>] {
-        interner.goals_data(&self.interned)
     }
 }
 
@@ -2503,7 +2187,7 @@ impl<I: Interner> Goal<I> {
             QuantifierKind::ForAll,
             Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
-                    ProgramClauses::from(
+                    ProgramClauses::from_iter(
                         interner,
                         vec![DomainGoal::Compatible(()), DomainGoal::DownstreamType(ty)],
                     ),
@@ -2543,7 +2227,7 @@ where
         if let Some(goal0) = iter.next() {
             if let Some(goal1) = iter.next() {
                 // More than one goal to prove
-                let goals = Goals::from(
+                let goals = Goals::from_iter(
                     interner,
                     Some(goal0).into_iter().chain(Some(goal1)).chain(iter),
                 );
@@ -2659,154 +2343,7 @@ where
 {
 }
 
-/// A list of constraints.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
-pub struct Constraints<I: Interner> {
-    interned: I::InternedConstraints,
-}
-
-impl<I: Interner> Constraints<I> {
-    /// Creates a list of constraints.
-    pub fn from(
-        interner: &I,
-        constraints: impl IntoIterator<Item = impl CastTo<InEnvironment<Constraint<I>>>>,
-    ) -> Self {
-        Self::from_fallible(
-            interner,
-            constraints
-                .into_iter()
-                .map(|p| -> Result<InEnvironment<Constraint<I>>, ()> { Ok(p.cast(interner)) }),
-        )
-        .unwrap()
-    }
-
-    /// Try to create a list of constraints.
-    pub fn from_fallible<E>(
-        interner: &I,
-        constraints: impl IntoIterator<Item = Result<impl CastTo<InEnvironment<Constraint<I>>>, E>>,
-    ) -> Result<Self, E> {
-        use crate::cast::Caster;
-        Ok(Constraints {
-            interned: I::intern_constraints(interner, constraints.into_iter().casted(interner))?,
-        })
-    }
-
-    /// Get the interned representation of the constraints.
-    pub fn interned(&self) -> &I::InternedConstraints {
-        &self.interned
-    }
-
-    /// Index into the list of constraints.
-    pub fn at(&self, interner: &I, index: usize) -> &InEnvironment<Constraint<I>> {
-        &self.as_slice(interner)[index]
-    }
-
-    /// Create a list of constraints from a single constraint.
-    pub fn from1(interner: &I, parameter: impl CastTo<InEnvironment<Constraint<I>>>) -> Self {
-        Self::from(interner, Some(parameter))
-    }
-
-    /// Create an empty list of constraints.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<InEnvironment<Constraint<I>>>)
-    }
-
-    /// Check whether this is an empty list of constraints.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Get an iterator over the constraints.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, InEnvironment<Constraint<I>>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Returns a slice containing the parameters associated with the substitution.
-    pub fn as_slice(&self, interner: &I) -> &[InEnvironment<Constraint<I>>] {
-        interner.constraints_data(&self.interned)
-    }
-
-    /// Get the length of the list of constraints.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-}
-
-/// A mapping of inference variables to instantiations thereof.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
-pub struct Substitution<I: Interner> {
-    /// Map free variable with given index to the value with the same
-    /// index. Naturally, the kind of the variable must agree with
-    /// the kind of the value.
-    interned: I::InternedSubstitution,
-}
-
 impl<I: Interner> Substitution<I> {
-    /// Create a substitution from parameters.
-    pub fn from(
-        interner: &I,
-        parameters: impl IntoIterator<Item = impl CastTo<GenericArg<I>>>,
-    ) -> Self {
-        Self::from_fallible(
-            interner,
-            parameters
-                .into_iter()
-                .map(|p| -> Result<GenericArg<I>, ()> { Ok(p.cast(interner)) }),
-        )
-        .unwrap()
-    }
-
-    /// Try to create a substitution from parameters.
-    pub fn from_fallible<E>(
-        interner: &I,
-        parameters: impl IntoIterator<Item = Result<impl CastTo<GenericArg<I>>, E>>,
-    ) -> Result<Self, E> {
-        use crate::cast::Caster;
-        Ok(Substitution {
-            interned: I::intern_substitution(interner, parameters.into_iter().casted(interner))?,
-        })
-    }
-
-    /// Get the interned representation of the substitution.
-    pub fn interned(&self) -> &I::InternedSubstitution {
-        &self.interned
-    }
-
-    /// Index into the list of parameters.
-    pub fn at(&self, interner: &I, index: usize) -> &GenericArg<I> {
-        &self.as_slice(interner)[index]
-    }
-
-    /// Create a substitution from a single parameter.
-    pub fn from1(interner: &I, parameter: impl CastTo<GenericArg<I>>) -> Self {
-        Self::from(interner, Some(parameter))
-    }
-
-    /// Create an empty substitution.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<GenericArg<I>>)
-    }
-
-    /// Check whether this is an empty substitution.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Get an iterator over the parameters of the substitution.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, GenericArg<I>> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Returns a slice containing the parameters associated with the substitution.
-    pub fn as_slice(&self, interner: &I) -> &[GenericArg<I>] {
-        interner.substitution_data(&self.interned)
-    }
-
-    /// Get the length of the substitution (number of parameters).
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
     /// A substitution is an **identity substitution** if it looks
     /// like this
     ///
@@ -2979,6 +2516,122 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
         self.interner()
     }
 }
+
+macro_rules! interned_slice {
+    ($seq:ident, $data:ident => $elem:ty, $intern:ident => $interned:ident) => {
+        /// List of interned elements.
+        #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+        pub struct $seq<I: Interner> {
+            interned: I::$interned,
+        }
+
+        impl<I: Interner> $seq<I> {
+            /// Get the interned elements.
+            pub fn interned(&self) -> &I::$interned {
+                &self.interned
+            }
+        }
+
+        impl<I: Interner> $seq<I> {
+            /// Tries to create a sequence using an iterator of element-like things.
+            pub fn from_fallible<E>(
+                interner: &I,
+                elements: impl IntoIterator<Item = Result<impl CastTo<$elem>, E>>,
+            ) -> Result<Self, E> {
+                Ok(Self {
+                    interned: I::$intern(interner, elements.into_iter().casted(interner))?,
+                })
+            }
+
+            /// Returns a slice containing the elements.
+            pub fn as_slice(&self, interner: &I) -> &[$elem] {
+                Interner::$data(interner, &self.interned)
+            }
+
+            /// Create a sequence from elements
+            pub fn from_iter(
+                interner: &I,
+                elements: impl IntoIterator<Item = impl CastTo<$elem>>,
+            ) -> Self {
+                Self::from_fallible(
+                    interner,
+                    elements
+                        .into_iter()
+                        .map(|el| -> Result<$elem, ()> { Ok(el.cast(interner)) }),
+                )
+                .unwrap()
+            }
+
+            /// Index into the sequence.
+            pub fn at(&self, interner: &I, index: usize) -> &$elem {
+                &self.as_slice(interner)[index]
+            }
+
+            /// Create a sequence from a single element.
+            pub fn from1(interner: &I, element: impl CastTo<$elem>) -> Self {
+                Self::from_iter(interner, Some(element))
+            }
+
+            /// Create an empty sequence.
+            pub fn empty(interner: &I) -> Self {
+                Self::from_iter(interner, None::<$elem>)
+            }
+
+            /// Check whether this is an empty sequence.
+            pub fn is_empty(&self, interner: &I) -> bool {
+                self.as_slice(interner).is_empty()
+            }
+
+            /// Get an iterator over the elements of the sequence.
+            pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, $elem> {
+                self.as_slice(interner).iter()
+            }
+
+            /// Get the length of the sequence.
+            pub fn len(&self, interner: &I) -> usize {
+                self.as_slice(interner).len()
+            }
+        }
+    };
+}
+
+interned_slice!(
+    QuantifiedWhereClauses,
+    quantified_where_clauses_data => QuantifiedWhereClause<I>,
+    intern_quantified_where_clauses => InternedQuantifiedWhereClauses
+);
+
+interned_slice!(
+    ProgramClauses,
+    program_clauses_data => ProgramClause<I>,
+    intern_program_clauses => InternedProgramClauses
+);
+
+interned_slice!(
+    VariableKinds,
+    variable_kinds_data => VariableKind<I>,
+    intern_generic_arg_kinds => InternedVariableKinds
+);
+
+interned_slice!(
+    CanonicalVarKinds,
+    canonical_var_kinds_data => CanonicalVarKind<I>,
+    intern_canonical_var_kinds => InternedCanonicalVarKinds
+);
+
+interned_slice!(Goals, goals_data => Goal<I>, intern_goals => InternedGoals);
+
+interned_slice!(
+    Constraints,
+    constraints_data => InEnvironment<Constraint<I>>,
+    intern_constraints => InternedConstraints
+);
+
+interned_slice!(
+    Substitution,
+    substitution_data => GenericArg<I>,
+    intern_substitution => InternedSubstitution
+);
 
 /// Combines a substitution (`subst`) with a set of region constraints
 /// (`constraints`). This represents the result of a query; the

@@ -526,7 +526,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" program clauses from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `ProgramClauses::from` (which will ultimately call this
+    /// `ProgramClauses::from_iter` (which will ultimately call this
     /// method).
     fn intern_program_clauses<E>(
         &self,
@@ -541,7 +541,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" quantified where clauses from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `QuantifiedWhereClauses::from` (which will ultimately call this
+    /// `QuantifiedWhereClauses::from_iter` (which will ultimately call this
     /// method).
     fn intern_quantified_where_clauses<E>(
         &self,
@@ -557,7 +557,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter kinds from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `VariableKinds::from` (which will ultimately call this
+    /// `VariableKinds::from_iter` (which will ultimately call this
     /// method).
     fn intern_generic_arg_kinds<E>(
         &self,
@@ -573,7 +573,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create "interned" variable kinds with universe index from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `CanonicalVarKinds::from` (which will ultimately call this
+    /// `CanonicalVarKinds::from_iter` (which will ultimately call this
     /// method).
     fn intern_canonical_var_kinds<E>(
         &self,
@@ -589,7 +589,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create "interned" constraints from `data`. This is not
     /// normally invoked dirctly; instead, you invoke
-    /// `Constraints::from` (which will ultimately call this
+    /// `Constraints::from_iter` (which will ultimately call this
     /// method).
     fn intern_constraints<E>(
         &self,

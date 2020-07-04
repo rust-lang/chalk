@@ -124,7 +124,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         // did matter, it would have been recorded)
         chalk_ir::TyData::Apply(ApplicationTy {
             name: TypeName::Tuple(0),
-            substitution: chalk_ir::Substitution::from(
+            substitution: chalk_ir::Substitution::from_iter(
                 self.db.interner(),
                 Vec::<chalk_ir::GenericArg<_>>::new(),
             ),

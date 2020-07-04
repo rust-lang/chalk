@@ -627,5 +627,5 @@ pub fn program_clauses_for_env<'db, I: Interner>(
         );
     }
 
-    ProgramClauses::from(db.interner(), closure)
+    ProgramClauses::from_iter(db.interner(), closure)
 }

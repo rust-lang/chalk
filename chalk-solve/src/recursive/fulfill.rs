@@ -504,7 +504,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             // No obligations remain, so we have definitively solved our goals,
             // and the current inference state is the unique way to solve them.
 
-            let constraints = Constraints::from(self.interner(), self.constraints.clone());
+            let constraints = Constraints::from_iter(self.interner(), self.constraints.clone());
             let constrained = self.infer.canonicalize(
                 self.solver.interner(),
                 &ConstrainedSubst {
