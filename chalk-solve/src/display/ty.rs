@@ -267,9 +267,9 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
         match self {
             LifetimeData::BoundVar(v) => write!(f, "'{}", s.display_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
-            LifetimeData::Placeholder(_) => unreachable!(
-                "cannot print placeholder variables; these should only be in goals not programs"
-            ),
+            // Note: placeholders should not occur in programs, but are currently used by
+            // rust-analyzer, because lifetimes are not implemented yet.
+            LifetimeData::Placeholder(ix) => write!(f, "_placeholder_{}_{}", ix.ui.counter, ix.idx),
             // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},
