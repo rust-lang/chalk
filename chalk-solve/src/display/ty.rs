@@ -269,7 +269,7 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
             // Note: placeholders should not occur in programs, but are currently used by
             // rust-analyzer, because lifetimes are not implemented yet.
-            LifetimeData::Placeholder(ix) => write!(f, "_placeholder_{}_{}", ix.ui.counter, ix.idx),
+            LifetimeData::Placeholder(ix) => write!(f, "'_placeholder_{}_{}", ix.ui.counter, ix.idx),
             // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},
