@@ -39,9 +39,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
             TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
             TyData::Apply(apply_ty) => apply_ty.fmt(s, f),
             TyData::Function(func) => func.fmt(s, f),
-            TyData::Placeholder(_) => unreachable!(
-                "cannot print placeholder variables; these should only be in goals not programs"
-            ),
+            TyData::Placeholder(_) => write!(f, "<placeholder>"),
         }
     }
 }
@@ -214,9 +212,12 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
                 )?;
             }
             TypeName::Error => write!(f, "{{error}}")?,
-            TypeName::Never => todo!("never type"),
-            TypeName::FnDef(_) => todo!("fn def type"),
-            TypeName::Closure(..) => todo!("closure type"),
+            TypeName::Never => write!(f, "!")?,
+
+            // FIXME: write out valid types for these variants
+            TypeName::FnDef(_) => write!(f, "<fn_def>")?,
+            TypeName::Closure(..) => write!(f, "<closure>")?,
+
             TypeName::Array => write!(
                 f,
                 "[{}; {}]",
@@ -267,9 +268,9 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
         match self {
             LifetimeData::BoundVar(v) => write!(f, "'{}", s.display_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
-            // Note: placeholders should not occur in programs, but are currently used by
-            // rust-analyzer, because lifetimes are not implemented yet.
-            LifetimeData::Placeholder(ix) => write!(f, "'_placeholder_{}_{}", ix.ui.counter, ix.idx),
+            LifetimeData::Placeholder(ix) => {
+                write!(f, "'_placeholder_{}_{}", ix.ui.counter, ix.idx)
+            }
             // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},
@@ -288,9 +289,7 @@ impl<I: Interner> RenderAsRust<I> for ConstValue<I> {
         match self {
             ConstValue::BoundVar(v) => write!(f, "{}", s.display_bound_var(v)),
             ConstValue::InferenceVar(_) => write!(f, "_"),
-            ConstValue::Placeholder(_) => unreachable!(
-                "cannot print placeholder variables; these should only be in goals not programs"
-            ),
+            ConstValue::Placeholder(_) => write!(f, "<const placeholder>"),
             ConstValue::Concrete(_value) => unimplemented!("const values"),
         }
     }
