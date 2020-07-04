@@ -418,9 +418,6 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
             impl_param_names_in_impl_env,
         );
 
-        // let params = s
-        //     .binder_var_display(&self.value.binders)
-        //     .collect::<Vec<_>>();
         let display_params = s
             .binder_var_display(&self.value.binders)
             .collect::<Vec<_>>();
