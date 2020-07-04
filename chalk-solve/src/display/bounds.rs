@@ -97,7 +97,8 @@ impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
     }
 }
 
-/// This implementation correct inside where clauses.
+/// This renders `TraitRef` as a clause in a where clause, as opposed to its
+/// usage in other places.
 impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
@@ -114,7 +115,8 @@ impl<I: Interner> RenderAsRust<I> for TraitRef<I> {
     }
 }
 
-/// This implementation correct inside where clauses.
+/// This renders `AliasEq` as a clause in a where clause, as opposed to its
+/// usage in other places.
 impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // we have: X: Y<A1, A2, A3, Z<B1, B2, B3>=D>
@@ -131,7 +133,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
                 let (assoc_ty_datum, trait_params, assoc_type_params) =
                     s.db.split_projection(&projection_ty);
                 // An alternate form might be `<{} as {}<{}>>::{}<{}> = {}` (with same
-                // parameter ordering). This alternate form would be using type equality
+                // parameter ordering). This alternate form would require type equality
                 // constraints (https://github.com/rust-lang/rust/issues/20041).
                 write!(
                     f,
