@@ -16,12 +16,16 @@ use chalk_solve::wf;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solver;
 use chalk_solve::SolverChoice;
+use salsa::Database;
+use std::clone::Clone;
+use std::cmp::{Eq, PartialEq};
 use std::collections::BTreeMap;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
+pub trait LoweringDatabase: RustIrDatabase<ChalkIr> + Database {
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -50,8 +54,45 @@ pub trait LoweringDatabase: RustIrDatabase<ChalkIr> {
     /// cached state becomes invalid, so the query is marked as
     /// volatile, thus ensuring that the solver is recreated in every
     /// revision (i.e., each time source program changes).
-    #[salsa::volatile]
-    fn solver(&self) -> Arc<Mutex<Solver<ChalkIr>>>;
+    // HACK: salsa requires that queries return types that implement `Eq`
+    fn solver(&self) -> ArcEq<Mutex<Solver<ChalkIr>>>;
+}
+
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct ArcEq<T>(Arc<T>);
+
+impl<T> ArcEq<T> {
+    pub fn new(value: T) -> Self {
+        Self(Arc::new(value))
+    }
+}
+
+impl<T> Deref for ArcEq<T> {
+    type Target = Arc<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for ArcEq<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<T> PartialEq<ArcEq<T>> for ArcEq<T> {
+    fn eq(&self, other: &ArcEq<T>) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl<T> Eq for ArcEq<T> {}
+
+impl<T> Clone for ArcEq<T> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
 }
 
 fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
@@ -166,7 +207,8 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
-fn solver(db: &impl LoweringDatabase) -> Arc<Mutex<Solver<ChalkIr>>> {
+fn solver(db: &impl LoweringDatabase) -> ArcEq<Mutex<Solver<ChalkIr>>> {
+    db.salsa_runtime().report_untracked_read();
     let choice = db.solver_choice();
-    Arc::new(Mutex::new(choice.into_solver()))
+    ArcEq::new(Mutex::new(choice.into_solver()))
 }
