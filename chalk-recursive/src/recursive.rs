@@ -37,11 +37,11 @@ struct Solver<'me, I: Interner> {
     context: &'me mut RecursiveContext<I>,
 }
 
-pub struct RecursiveSolverImpl<I: Interner> {
+pub struct RecursiveSolver<I: Interner> {
     ctx: Box<RecursiveContext<I>>,
 }
 
-impl<I: Interner> RecursiveSolverImpl<I> {
+impl<I: Interner> RecursiveSolver<I> {
     pub fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
         Self {
             ctx: Box::new(RecursiveContext::new(overflow_depth, caching_enabled)),
@@ -49,9 +49,9 @@ impl<I: Interner> RecursiveSolverImpl<I> {
     }
 }
 
-impl<I: Interner> fmt::Debug for RecursiveSolverImpl<I> {
+impl<I: Interner> fmt::Debug for RecursiveSolver<I> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "RecursiveSolverImpl")
+        write!(fmt, "RecursiveSolver")
     }
 }
 
@@ -293,7 +293,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     }
 }
 
-impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolverImpl<I> {
+impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
     fn solve(
         &mut self,
         program: &dyn RustIrDatabase<I>,

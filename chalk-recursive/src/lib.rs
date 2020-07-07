@@ -15,7 +15,7 @@ mod search_graph;
 pub mod solve;
 mod stack;
 
-pub use recursive::RecursiveSolverImpl;
+pub use recursive::RecursiveSolver;
 
 /// The `minimums` struct is used while solving to track whether we encountered
 /// any cycles in the process.

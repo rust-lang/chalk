@@ -8,13 +8,13 @@ use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 
 use std::fmt;
 
-pub struct SLGSolverImpl<I: Interner> {
+pub struct SLGSolver<I: Interner> {
     pub(crate) forest: Forest<I, SlgContext<I>>,
     pub(crate) max_size: usize,
     pub(crate) expected_answers: Option<usize>,
 }
 
-impl<I: Interner> SLGSolverImpl<I> {
+impl<I: Interner> SLGSolver<I> {
     pub fn new(max_size: usize, expected_answers: Option<usize>) -> Self {
         Self {
             forest: Forest::new(),
@@ -24,13 +24,13 @@ impl<I: Interner> SLGSolverImpl<I> {
     }
 }
 
-impl<I: Interner> fmt::Debug for SLGSolverImpl<I> {
+impl<I: Interner> fmt::Debug for SLGSolver<I> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "SLGSolverImpl")
+        write!(fmt, "SLGSolver")
     }
 }
 
-impl<I: Interner> Solver<I> for SLGSolverImpl<I> {
+impl<I: Interner> Solver<I> for SLGSolver<I> {
     fn solve(
         &mut self,
         program: &dyn RustIrDatabase<I>,
