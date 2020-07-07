@@ -6,7 +6,7 @@ use chalk_ir::visit::{SuperVisit, Visit, Visitor};
 use chalk_ir::*;
 use std::cmp::max;
 
-pub(crate) fn needs_truncation<I: Interner>(
+pub fn needs_truncation<I: Interner>(
     interner: &I,
     infer: &mut InferenceTable<I>,
     max_size: usize,
@@ -73,6 +73,8 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chalk_integration::{arg, ty, ty_name};
+
     #[test]
     fn one_type() {
         use chalk_integration::interner::ChalkIr;

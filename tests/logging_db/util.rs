@@ -5,18 +5,19 @@
 //! to `test/`. We can't compile without access to `test/`, so we can't be under
 //! of `test_util.rs`.
 use chalk_integration::{
-    db::ChalkDatabase, interner::ChalkIr, lowering::LowerGoal, program::Program,
-    query::LoweringDatabase,
+    db::ChalkDatabase, lowering::LowerGoal, program::Program, query::LoweringDatabase,
+    SolverChoice, SolverImpl,
 };
 use chalk_solve::ext::*;
+use chalk_solve::logging_db::LoggingRustIrDatabase;
+use chalk_solve::solve::Solver;
 use chalk_solve::RustIrDatabase;
-use chalk_solve::{logging_db::LoggingRustIrDatabase, SolverChoice};
 
 use crate::test::{assert_result, TestGoal};
 
 macro_rules! logging_db_output_sufficient {
     ($($arg:tt)*) => {{
-        use chalk_solve::SolverChoice;
+        use chalk_integration::SolverChoice;
         use crate::test::*;
         let (program, goals) = parse_test_data!($($arg)*);
         crate::logging_db::util::logging_db_output_sufficient(program, goals)
@@ -40,7 +41,7 @@ pub fn logging_db_output_sufficient(
         let program = db.program_ir().unwrap();
         let wrapped = LoggingRustIrDatabase::<_, Program, _>::new(program.clone());
         for (goal_text, solver_choice, expected) in goals.clone() {
-            let mut solver = solver_choice.into_solver();
+            let mut solver: SolverImpl = solver_choice.into();
 
             chalk_integration::tls::set_current_program(&program, || {
                 println!("----------------------------------------------------------------------");
@@ -81,7 +82,7 @@ pub fn logging_db_output_sufficient(
     };
 
     for (goal_text, solver_choice, expected) in goals {
-        let mut solver = solver_choice.into_solver::<ChalkIr>();
+        let mut solver: SolverImpl = solver_choice.into();
 
         chalk_integration::tls::set_current_program(&new_program, || {
             println!("----------------------------------------------------------------------");

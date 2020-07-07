@@ -7,7 +7,7 @@ use chalk_ir::*;
 use super::InferenceTable;
 
 impl<I: Interner> InferenceTable<I> {
-    pub(crate) fn u_canonicalize<T>(
+    pub fn u_canonicalize<T>(
         &mut self,
         interner: &I,
         value0: &Canonical<T>,
@@ -68,15 +68,15 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 #[derive(Debug)]
-pub(crate) struct UCanonicalized<T: HasInterner> {
+pub struct UCanonicalized<T: HasInterner> {
     /// The canonicalized result.
-    pub(crate) quantified: UCanonical<T>,
+    pub quantified: UCanonical<T>,
 
     /// A map between the universes in `quantified` and the original universes
-    pub(crate) universes: UniverseMap,
+    pub universes: UniverseMap,
 }
 
-pub(crate) trait UniverseMapExt {
+pub trait UniverseMapExt {
     fn add(&mut self, universe: UniverseIndex);
     fn map_universe_to_canonical(&self, universe: UniverseIndex) -> Option<UniverseIndex>;
     fn map_universe_from_canonical(&self, universe: UniverseIndex) -> UniverseIndex;

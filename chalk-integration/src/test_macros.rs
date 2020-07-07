@@ -1,8 +1,9 @@
 //! Useful macros for writing unit tests. They let you gin up dummy types and things.
 
+#[macro_export]
 macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
-        chalk_ir::TyData::Apply(ApplicationTy {
+        chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
             name: ty_name!($n),
             substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
@@ -12,7 +13,7 @@ macro_rules! ty {
     };
 
     (function $n:tt $($arg:tt)*) => {
-        chalk_ir::TyData::Function(Fn {
+        chalk_ir::TyData::Function(chalk_ir::Fn {
             num_binders: $n,
             substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
@@ -62,6 +63,7 @@ macro_rules! ty {
     };
 }
 
+#[macro_export]
 macro_rules! arg {
     ((lifetime $b:tt)) => {
         chalk_ir::GenericArg::new(
@@ -78,6 +80,7 @@ macro_rules! arg {
     };
 }
 
+#[macro_export]
 macro_rules! lifetime {
     (infer $b:expr) => {
         chalk_ir::LifetimeData::InferenceVar(chalk_ir::InferenceVar::from($b))
@@ -108,8 +111,11 @@ macro_rules! lifetime {
     };
 }
 
+#[macro_export]
 macro_rules! ty_name {
     ((item $n:expr)) => {
-        chalk_ir::TypeName::Adt(AdtId(chalk_integration::interner::RawId { index: $n }))
+        chalk_ir::TypeName::Adt(chalk_ir::AdtId(chalk_integration::interner::RawId {
+            index: $n,
+        }))
     };
 }

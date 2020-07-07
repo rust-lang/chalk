@@ -1,14 +1,14 @@
-use crate::infer::InferenceTable;
-use crate::solve::slg::{self, SlgContext, TruncatingInferenceTable};
+use crate::context;
+use crate::normalize_deep::DeepNormalizer;
+use crate::slg::{self, SlgContext, TruncatingInferenceTable};
+use crate::{ExClause, Literal, TimeStamp};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
+use chalk_solve::infer::InferenceTable;
 use tracing::{debug, instrument};
-
-use chalk_engine::context;
-use chalk_engine::{ExClause, Literal, TimeStamp};
 
 ///////////////////////////////////////////////////////////////////////////
 // SLG RESOLVENTS
@@ -209,7 +209,7 @@ impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenc
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
         canonical_answer_subst: &Canonical<AnswerSubst<I>>,
     ) -> Fallible<()> {
-        debug!(selected_goal = ?self.infer.normalize_deep(interner, selected_goal));
+        debug!(selected_goal = ?DeepNormalizer::normalize_deep(&mut self.infer, interner, selected_goal));
 
         // C' is now `answer`. No variables in common with G.
         let AnswerSubst {

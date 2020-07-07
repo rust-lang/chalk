@@ -7,23 +7,17 @@ use chalk_ir::*;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-#[cfg(test)]
-#[macro_use]
-mod test_macros;
-
 pub mod clauses;
 pub mod coherence;
-mod coinductive_goal;
+pub mod coinductive_goal;
 pub mod display;
 pub mod ext;
 pub mod goal_builder;
-mod infer;
+pub mod infer;
 pub mod logging;
 pub mod logging_db;
-#[cfg(feature = "recursive-solver")]
-pub mod recursive;
 pub mod rust_ir;
-mod solve;
+pub mod solve;
 pub mod split;
 pub mod wf;
 
@@ -165,7 +159,6 @@ pub use clauses::program_clauses_for_env;
 pub use solve::Guidance;
 pub use solve::Solution;
 pub use solve::Solver;
-pub use solve::SolverChoice;
 pub use solve::SubstitutionResult;
 
 #[macro_use]

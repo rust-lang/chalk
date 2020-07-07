@@ -9,9 +9,10 @@ use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::*;
 use chalk_integration::query::LoweringDatabase;
+use chalk_integration::SolverChoice;
 use chalk_solve::ext::*;
 use chalk_solve::logging;
-use chalk_solve::{RustIrDatabase, SolverChoice};
+use chalk_solve::RustIrDatabase;
 use docopt::Docopt;
 use rustyline::error::ReadlineError;
 

@@ -1,6 +1,6 @@
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::query::LoweringDatabase;
-use chalk_solve::SolverChoice;
+use chalk_integration::SolverChoice;
 
 #[test]
 fn lower_success() {

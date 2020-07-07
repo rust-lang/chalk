@@ -3,8 +3,8 @@ use std::ops::Index;
 use std::ops::IndexMut;
 use std::usize;
 
-use super::lib::{Minimums, Solution, UCanonicalGoal};
 use super::stack::StackDepth;
+use crate::{Minimums, Solution, UCanonicalGoal};
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use rustc_hash::FxHashMap;
 use tracing::{debug, instrument};

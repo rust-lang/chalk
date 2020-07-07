@@ -3,7 +3,7 @@ use std::{fmt, iter};
 use crate::ext::*;
 use crate::goal_builder::GoalBuilder;
 use crate::rust_ir::*;
-use crate::solve::SolverChoice;
+use crate::solve::Solver;
 use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::*;
@@ -38,9 +38,10 @@ impl<I: Interner> fmt::Display for WfError<I> {
 
 impl<I: Interner> std::error::Error for WfError<I> {}
 
-pub struct WfSolver<'db, I: Interner> {
+pub struct WfSolver<'db, I: Interner, S: Solver<I>, SC: Into<S> + Copy> {
     db: &'db dyn RustIrDatabase<I>,
-    solver_choice: SolverChoice,
+    solver_choice: SC,
+    _solver: std::marker::PhantomData<S>,
 }
 
 struct InputTypeCollector<'i, I: Interner> {
@@ -138,13 +139,19 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
     }
 }
 
-impl<'db, I> WfSolver<'db, I>
+impl<'db, I, S, SC> WfSolver<'db, I, S, SC>
 where
     I: Interner,
+    S: Solver<I>,
+    SC: Into<S> + Copy,
 {
     /// Constructs a new `WfSolver`.
-    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SolverChoice) -> Self {
-        Self { db, solver_choice }
+    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SC) -> Self {
+        Self {
+            db,
+            solver_choice,
+            _solver: std::marker::PhantomData,
+        }
     }
 
     pub fn verify_adt_decl(&self, adt_id: AdtId<I>) -> Result<(), WfError<I>> {
@@ -217,7 +224,7 @@ where
 
         let wg_goal = wg_goal.into_closed_goal(interner);
 
-        let is_legal = match self.solver_choice.into_solver().solve(self.db, &wg_goal) {
+        let is_legal = match self.solver_choice.into().solve(self.db, &wg_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };
@@ -249,7 +256,7 @@ where
 
         let is_legal = match self
             .solver_choice
-            .into_solver()
+            .into()
             .solve(self.db, &impl_goal.into_closed_goal(interner))
         {
             Some(sol) => sol.is_unique(),

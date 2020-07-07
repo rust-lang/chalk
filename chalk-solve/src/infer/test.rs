@@ -3,29 +3,7 @@
 use super::unify::UnificationResult;
 use super::*;
 use chalk_integration::interner::ChalkIr;
-
-#[test]
-fn infer() {
-    let interner = &ChalkIr;
-    let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
-    let environment0 = Environment::new(interner);
-    let a = table.new_variable(U0).to_ty(interner);
-    let b = table.new_variable(U0).to_ty(interner);
-    table
-        .unify(interner, &environment0, &a, &ty!(apply (item 0) (expr b)))
-        .unwrap();
-    assert_eq!(
-        table.normalize_deep(interner, &a),
-        ty!(apply (item 0) (expr b))
-    );
-    table
-        .unify(interner, &environment0, &b, &ty!(apply (item 1)))
-        .unwrap();
-    assert_eq!(
-        table.normalize_deep(interner, &a),
-        ty!(apply (item 0) (apply (item 1)))
-    );
-}
+use chalk_integration::{arg, lifetime, ty, ty_name};
 
 #[test]
 fn universe_error() {

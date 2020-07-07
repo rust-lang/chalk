@@ -8,7 +8,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical};
 use tracing::debug;
 
-pub struct Forest<I: Interner, C: Context<I>> {
+pub(crate) struct Forest<I: Interner, C: Context<I>> {
     pub(crate) tables: Tables<I>,
 
     /// This is a clock which always increases. It is

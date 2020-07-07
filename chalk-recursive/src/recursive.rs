@@ -1,21 +1,18 @@
-mod combine;
-mod fulfill;
-pub mod lib;
-mod search_graph;
-mod solve;
-mod stack;
-
-use self::lib::{Minimums, Solution, UCanonicalGoal};
-use self::search_graph::{DepthFirstNumber, SearchGraph};
-use self::solve::{SolveDatabase, SolveIteration};
-use self::stack::{Stack, StackDepth};
-use crate::{coinductive_goal::IsCoinductive, RustIrDatabase};
+use crate::search_graph::DepthFirstNumber;
+use crate::search_graph::SearchGraph;
+use crate::solve::{SolveDatabase, SolveIteration};
+use crate::stack::{Stack, StackDepth};
+use crate::{combine, Guidance, Minimums, Solution, UCanonicalGoal};
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Fallible};
+use chalk_ir::Fallible;
+use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, UCanonical};
+use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase};
 use rustc_hash::FxHashMap;
-use tracing::{debug, info, instrument};
+use std::fmt;
+use tracing::debug;
+use tracing::{info, instrument};
 
-pub(crate) struct RecursiveContext<I: Interner> {
+struct RecursiveContext<I: Interner> {
     stack: Stack,
 
     /// The "search graph" stores "in-progress results" that are still being
@@ -35,9 +32,27 @@ pub(crate) struct RecursiveContext<I: Interner> {
 /// so that each question is answered with effectively a "clean slate"**. This
 /// allows for better caching, and simplifies management of the inference
 /// context.
-pub(crate) struct Solver<'me, I: Interner> {
+struct Solver<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
     context: &'me mut RecursiveContext<I>,
+}
+
+pub struct RecursiveSolver<I: Interner> {
+    ctx: Box<RecursiveContext<I>>,
+}
+
+impl<I: Interner> RecursiveSolver<I> {
+    pub fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
+        Self {
+            ctx: Box::new(RecursiveContext::new(overflow_depth, caching_enabled)),
+        }
+    }
+}
+
+impl<I: Interner> fmt::Debug for RecursiveSolver<I> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "RecursiveSolver")
+    }
 }
 
 /// An extension trait for merging `Result`s
@@ -61,7 +76,7 @@ impl<T> MergeWith<T> for Fallible<T> {
 }
 
 impl<I: Interner> RecursiveContext<I> {
-    pub(crate) fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
+    pub fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
@@ -97,11 +112,11 @@ impl<'me, I: Interner> Solver<'me, I> {
     /// }`, `into_peeled_goal` can be used to create a canonical goal
     /// `SomeType<!1>: Foo<?0>`. This function will then return a
     /// solution with the substitution `?0 := u8`.
-    #[instrument(level = "debug", skip(self))]
     pub(crate) fn solve_root_goal(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
     ) -> Fallible<Solution<I>> {
+        debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.context.stack.is_empty());
         let minimums = &mut Minimums::new();
         self.solve_goal(canonical_goal.clone(), minimums)
@@ -128,7 +143,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
 
             debug!(
-                "loop iteration result = {:?} with minimums {:?}",
+                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
                 current_answer, minimums
             );
 
@@ -192,7 +207,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     ) -> Fallible<Solution<I>> {
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
-            debug!(?value, "cache hit");
+            debug!("solve_reduced_goal: cache hit, value={:?}", value);
             return value.clone();
         }
 
@@ -255,16 +270,16 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                     self.context
                         .search_graph
                         .move_to_cache(dfn, &mut self.context.cache);
-                    debug!(target: "solve_goal", "SCC head encountered, moving to cache");
+                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
                 } else {
                     debug!(
-                        target: "solve_goal", "SCC head encountered, rolling back as caching disabled"
+                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
                     );
                     self.context.search_graph.rollback_to(dfn);
                 }
             }
 
-            info!(target = "solve_goal", solution = ?result, prio = ?priority);
+            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
             result
         }
     }
@@ -275,5 +290,56 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
     fn db(&self) -> &dyn RustIrDatabase<I> {
         self.program
+    }
+}
+
+impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
+    fn solve(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> Option<chalk_solve::Solution<I>> {
+        self.ctx
+            .solver(program)
+            .solve_root_goal(goal)
+            .ok()
+            .map(|s| match s {
+                Solution::Unique(c) => chalk_solve::Solution::Unique(c),
+                Solution::Ambig(g) => chalk_solve::Solution::Ambig(match g {
+                    Guidance::Definite(g) => chalk_solve::Guidance::Definite(g),
+                    Guidance::Suggested(g) => chalk_solve::Guidance::Suggested(g),
+                    Guidance::Unknown => chalk_solve::Guidance::Unknown,
+                }),
+            })
+    }
+
+    fn solve_limited(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+        _should_continue: impl std::ops::Fn() -> bool,
+    ) -> Option<chalk_solve::Solution<I>> {
+        // TODO support should_continue in recursive solver
+        self.ctx
+            .solver(program)
+            .solve_root_goal(goal)
+            .ok()
+            .map(|s| match s {
+                Solution::Unique(c) => chalk_solve::Solution::Unique(c),
+                Solution::Ambig(g) => chalk_solve::Solution::Ambig(match g {
+                    Guidance::Definite(g) => chalk_solve::Guidance::Definite(g),
+                    Guidance::Suggested(g) => chalk_solve::Guidance::Suggested(g),
+                    Guidance::Unknown => chalk_solve::Guidance::Unknown,
+                }),
+            })
+    }
+
+    fn solve_multiple(
+        &mut self,
+        _program: &dyn RustIrDatabase<I>,
+        _goal: &UCanonical<InEnvironment<Goal<I>>>,
+        _f: impl FnMut(chalk_solve::SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+    ) -> bool {
+        unimplemented!("Recursive solver doesn't support multiple answers")
     }
 }

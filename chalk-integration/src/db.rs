@@ -4,7 +4,7 @@ use crate::{
     lowering::LowerGoal,
     program::Program,
     query::{Lowering, LoweringDatabase},
-    tls,
+    tls, SolverChoice,
 };
 use chalk_ir::{
     AdtId, AssocTypeId, Binders, Canonical, ClosureId, ConstrainedSubst, Environment, FnDefId,
@@ -15,7 +15,7 @@ use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
     FnDefDatum, FnDefInputsAndOutputDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
-use chalk_solve::{RustIrDatabase, Solution, SolverChoice, SubstitutionResult};
+use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 use salsa::Database;
 use std::sync::Arc;
 
