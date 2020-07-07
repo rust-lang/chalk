@@ -25,8 +25,6 @@ chalk-ir = { version = "0.17.0-dev.0", path = "../chalk-ir" }
 chalk-integration = { path = "../chalk-integration" }
 
 [features]
-default = ["slg-solver", "recursive-solver", "tracing-full"]
+default = ["tracing-full"]
 
-slg-solver = []
-recursive-solver = []
 tracing-full = ["tracing-subscriber", "tracing-tree"]

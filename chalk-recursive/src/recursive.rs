@@ -340,6 +340,6 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolverImpl<I> {
         _goal: &UCanonical<InEnvironment<Goal<I>>>,
         _f: impl FnMut(chalk_solve::SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
-        unimplemented!()
+        unimplemented!("Recursive solver doesn't support multiple answers")
     }
 }
