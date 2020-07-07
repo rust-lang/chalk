@@ -2,10 +2,14 @@ use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
+use chalk_solve::infer::InferenceTable;
 
-use super::InferenceTable;
+pub(crate) struct DeepNormalizer<'table, 'i, I: Interner> {
+    table: &'table mut InferenceTable<I>,
+    interner: &'i I,
+}
 
-impl<I: Interner> InferenceTable<I> {
+impl<I: Interner> DeepNormalizer<'_, '_, I> {
     /// Given a value `value` with variables in it, replaces those variables
     /// with their instantiated values (if any). Uninstantiated variables are
     /// left as-is.
@@ -17,23 +21,21 @@ impl<I: Interner> InferenceTable<I> {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    // XXX: can be moved to chalk-engine
-    pub fn normalize_deep<T: Fold<I>>(&mut self, interner: &I, value: &T) -> T::Result {
+    pub fn normalize_deep<T: Fold<I>>(
+        table: &mut InferenceTable<I>,
+        interner: &I,
+        value: &T,
+    ) -> T::Result {
         value
             .fold_with(
                 &mut DeepNormalizer {
                     interner,
-                    table: self,
+                    table: table,
                 },
                 DebruijnIndex::INNERMOST,
             )
             .unwrap()
     }
-}
-
-struct DeepNormalizer<'table, 'i, I: Interner> {
-    table: &'table mut InferenceTable<I>,
-    interner: &'i I,
 }
 
 impl<'i, I: Interner> Folder<'i, I> for DeepNormalizer<'_, 'i, I>

@@ -1,5 +1,7 @@
 use crate::context;
+use crate::normalize_deep::DeepNormalizer;
 use crate::{ExClause, Literal};
+
 use chalk_derive::HasInterner;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
@@ -242,7 +244,11 @@ impl<I: Interner> context::UnificationOps<I, SlgContext<I>> for TruncatingInfere
     }
 
     fn debug_ex_clause<'v>(&mut self, interner: &I, value: &'v ExClause<I>) -> Box<dyn Debug + 'v> {
-        Box::new(self.infer.normalize_deep(interner, value))
+        Box::new(DeepNormalizer::normalize_deep(
+            &mut self.infer,
+            interner,
+            value,
+        ))
     }
 
     fn fully_canonicalize_goal(

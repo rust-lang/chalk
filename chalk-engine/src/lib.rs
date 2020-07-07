@@ -68,6 +68,7 @@ pub mod context;
 mod derived;
 pub mod forest;
 mod logic;
+mod normalize_deep;
 mod simplify;
 pub mod slg;
 pub mod solve;

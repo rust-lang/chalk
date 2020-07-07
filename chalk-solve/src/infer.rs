@@ -6,7 +6,6 @@ use tracing::{debug, instrument};
 mod canonicalize;
 pub(crate) mod instantiate;
 mod invert;
-mod normalize_deep;
 mod test;
 pub mod ucanonicalize;
 pub mod unify;
@@ -140,7 +139,7 @@ impl<I: Interner> InferenceTable<I> {
 
     /// If type `leaf` is a free inference variable, and that variable has been
     /// bound, returns `Some(P)` where `P` is the parameter to which it has been bound.
-    pub(crate) fn probe_var(&mut self, leaf: InferenceVar) -> Option<GenericArg<I>> {
+    pub fn probe_var(&mut self, leaf: InferenceVar) -> Option<GenericArg<I>> {
         match self.unify.probe_value(EnaVariable::from(leaf)) {
             InferenceValue::Unbound(_) => None,
             InferenceValue::Bound(val) => Some(val),
