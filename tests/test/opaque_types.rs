@@ -56,10 +56,33 @@ fn opaque_where_clause() {
             trait Trait { }
             impl Trait for Ty { }
             opaque type T: Clone where T: Trait = Ty;
+
+            struct Vec<U> { }
+            impl<U> Trait for Vec<U> { }
+
+            opaque type S<U>: Clone where U: Trait = Vec<U>;
         }
 
         goal {
-            T: Trait
+            if (T: Trait) {
+                WellFormed(T)
+            }
+        } yields {
+            "Unique; substitution []"
+        }
+
+        goal {
+            WellFormed(T)
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<U> {
+                if (U : Trait) {
+                    WellFormed(S<U>)
+                }
+            }
         } yields {
             "Unique; substitution []"
         }
