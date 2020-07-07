@@ -154,24 +154,9 @@ contained within.
 ### Alias types
 
 The `Alias` variant wraps an `AliasTy` and is used to represent some form of *type
-alias*. These correspond to associated type projections like `<T as Iterator>::Item`
-but also `impl Trait` types and named type aliases like `type Foo<X> = Vec<X>`.
-
-Each alias has an alias id as well as parameters. Aliases effectively
-represent a *type function*.
-
-Aliases are quite special when equating types. In general, an alias
-type `A` can also be equal to *any other type* `T` (`AliasEq`) if evaluating the
-alias `A` yields `T`.
-
-However, some alias types can also be instantiated as "alias
-placeholders". This occurs when the precise type of the alias is not
-known, but we know that there is *some type* that it evaluates to (for
-example, `<T as Iterator>::Item` might be treated opaquely as
-`T::Item`; similarly `impl Trait` types are treated opaquely until the
-latter phases of the compiler). Alias placeholders are not represented
-with the `Alias` variant, but rather with the placeholder variant
-described previously.
+alias*. They are used to represent a number of related Rust concepts, include
+actual type aliases, associated types, and opaque types -- you can read about
+them in the [aliases chapter](./rust_types/aliases.md).
 
 ### Bound variables
 
