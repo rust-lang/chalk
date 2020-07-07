@@ -611,12 +611,22 @@ impl LowerProgram for Program {
                                                     .intern(interner),
                                                 )
                                             })
-                                            .chain(opaque_ty.where_clauses.lower(&env)?)
                                             .collect())
                                     },
                                 )?;
+                            let where_clauses: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
+                                .in_binders(
+                                Some(chalk_ir::WithKind::new(
+                                    chalk_ir::VariableKind::Ty(TyKind::General),
+                                    Atom::from(FIXME_SELF),
+                                )),
+                                |env| opaque_ty.where_clauses.lower(env),
+                            )?;
 
-                            Ok(OpaqueTyDatumBound { bounds })
+                            Ok(OpaqueTyDatumBound {
+                                bounds,
+                                where_clauses,
+                            })
                         })?;
 
                         opaque_ty_data.insert(

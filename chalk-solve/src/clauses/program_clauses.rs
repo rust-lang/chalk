@@ -128,13 +128,14 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
 }
 
 impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
-    /// Given `opaque type T<..>: A + B = HiddenTy;`, we generate:
+    /// Given `opaque type T<U>: A + B = HiddenTy where U: C;`, we generate:
     ///
     /// ```notrust
-    /// AliasEq(T<..> = HiddenTy) :- Reveal.
-    /// AliasEq(T<..> = !T<..>).
-    /// Implemented(!T<..>: A).
-    /// Implemented(!T<..>: B).
+    /// AliasEq(T<U> = HiddenTy) :- Reveal.
+    /// AliasEq(T<U> = !T<U>).
+    /// WF(T<U>) :- WF(U: C).
+    /// Implemented(!T<U>: A).
+    /// Implemented(!T<U>: B).
     /// ```
     /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
     #[instrument(level = "debug", skip(builder))]
@@ -180,7 +181,17 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 .cast(interner),
             ));
 
-            let substitution = Substitution::from1(interner, alias_placeholder_ty.clone());
+            // WF(!T<..>) :- WF(WC).
+            builder.push_binders(&opaque_ty_bound.where_clauses, |builder, where_clauses| {
+                builder.push_clause(
+                    WellFormed::Ty(alias_placeholder_ty.clone()),
+                    where_clauses
+                        .into_iter()
+                        .map(|wc| wc.into_well_formed_goal(interner)),
+                );
+            });
+
+            let substitution = Substitution::from1(interner, alias_placeholder_ty);
             for bound in opaque_ty_bound.bounds {
                 // Implemented(!T<..>: Bound).
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
