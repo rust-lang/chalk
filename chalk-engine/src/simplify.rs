@@ -76,7 +76,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                             context.into_goal(domain_goal.clone()),
                         )));
                 }
-                GoalData::CannotProve(()) => {
+                GoalData::CannotProve => {
                     debug!("Marking Strand as ambiguous because of a `CannotProve` subgoal");
                     ex_clause.ambiguous = true;
                 }

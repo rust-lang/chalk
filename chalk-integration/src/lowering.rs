@@ -1055,11 +1055,11 @@ impl LowerDomainGoal for DomainGoal {
                     trait_ref.lower(env)?,
                 )]
             }
-            DomainGoal::Compatible => vec![chalk_ir::DomainGoal::Compatible(())],
+            DomainGoal::Compatible => vec![chalk_ir::DomainGoal::Compatible],
             DomainGoal::DownstreamType { ty } => {
                 vec![chalk_ir::DomainGoal::DownstreamType(ty.lower(env)?)]
             }
-            DomainGoal::Reveal => vec![chalk_ir::DomainGoal::Reveal(())],
+            DomainGoal::Reveal => vec![chalk_ir::DomainGoal::Reveal],
             DomainGoal::ObjectSafe { id } => {
                 vec![chalk_ir::DomainGoal::ObjectSafe(env.lookup_trait(id)?)]
             }

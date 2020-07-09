@@ -1570,9 +1570,7 @@ pub enum DomainGoal<I: Interner> {
     /// Used to activate the "compatible modality" rules. Rules that introduce predicates that have
     /// to do with "all compatible universes" should depend on this clause so that they only apply
     /// if this is present.
-    ///
-    /// (HACK: Having `()` makes some of our macros work better.)
-    Compatible(()),
+    Compatible,
 
     /// Used to indicate that a given type is in a downstream crate. Downstream crates contain the
     /// current crate at some level of their dependencies.
@@ -1587,7 +1585,7 @@ pub enum DomainGoal<I: Interner> {
 
     /// Used to activate the "reveal mode", in which opaque (`impl Trait`) types can be equated
     /// to their actual type.
-    Reveal(()),
+    Reveal,
 
     /// Used to indicate that a trait is object safe.
     ObjectSafe(TraitId<I>),
@@ -2189,7 +2187,7 @@ impl<I: Interner> Goal<I> {
                 GoalData::Implies(
                     ProgramClauses::from_iter(
                         interner,
-                        vec![DomainGoal::Compatible(()), DomainGoal::DownstreamType(ty)],
+                        vec![DomainGoal::Compatible, DomainGoal::DownstreamType(ty)],
                     ),
                     self.shifted_in(interner),
                 )
@@ -2273,9 +2271,7 @@ pub enum GoalData<I: Interner> {
     /// X, Y where `X = Y` is not true. But we treat it as "cannot
     /// prove" so that `forall<X,Y> { not { X = Y } }` also winds up
     /// as cannot prove.
-    ///
-    /// (TOTAL HACK: Having a unit result makes some of our macros work better.)
-    CannotProve(()),
+    CannotProve,
 }
 
 impl<I: Interner> Copy for GoalData<I>

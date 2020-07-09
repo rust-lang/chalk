@@ -414,7 +414,7 @@ fn program_clauses_that_could_match<I: Interner>(
             }
             AliasTy::Opaque(_) => (),
         },
-        DomainGoal::Compatible(()) | DomainGoal::Reveal(()) => (),
+        DomainGoal::Compatible | DomainGoal::Reveal => (),
     };
 
     Ok(clauses)
@@ -460,7 +460,7 @@ fn push_clauses_for_compatible_normalize<I: Interner>(
                         .iter()
                         .cloned()
                         .casted(interner)
-                        .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
+                        .chain(iter::once(DomainGoal::Compatible.cast(interner)))
                         .chain(iter::once(
                             WhereClause::Implemented(trait_ref.clone()).cast(interner),
                         ))
@@ -470,7 +470,7 @@ fn push_clauses_for_compatible_normalize<I: Interner>(
                         .chain(iter::once(
                             DomainGoal::DownstreamType(type_parameters[i].clone()).cast(interner),
                         ))
-                        .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
+                        .chain(iter::once(GoalData::CannotProve.intern(interner))),
                 );
             }
         });

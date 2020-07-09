@@ -318,7 +318,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             GoalData::EqGoal(EqGoal { a, b }) => {
                 self.unify(&environment, &a, &b)?;
             }
-            GoalData::CannotProve(()) => {
+            GoalData::CannotProve => {
                 debug!("Pushed a CannotProve goal, setting cannot_prove = true");
                 self.cannot_prove = true;
             }
