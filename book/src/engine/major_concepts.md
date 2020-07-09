@@ -80,7 +80,7 @@ goal. Instead, the may want a *unique* solution to this goal. Indeed, when we
 solve for a given root [`Goal`], we return a since [`Solution`]. It is up to the
 implementation of [`Context`] to decide how a `Solution` is made, given a possibly
 infinite set of answers. One of example of this is the
-[`AntiUnifier`](https://rust-lang.github.io/chalk/chalk_solve/solve/slg/aggregate/struct.AntiUnifier.html)
+[`AntiUnifier`](https://rust-lang.github.io/chalk/chalk_engine/slg/aggregate/struct.AntiUnifier.html)
 from `chalk-solve`, which finds a minimal generalization of answers which don't
 unify. (For the example above, it would return only `Ambiguous`, since `A` and
 `B` can't unify.)
