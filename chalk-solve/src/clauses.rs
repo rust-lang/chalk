@@ -238,14 +238,15 @@ fn program_clauses_that_could_match<I: Interner>(
 
             // This is needed for the coherence related impls, as well
             // as for the `Implemented(Foo) :- FromEnv(Foo)` rule.
-            trait_datum.to_program_clauses(builder);
+            trait_datum.to_program_clauses(builder, environment);
 
             for impl_id in db.impls_for_trait(
                 trait_ref.trait_id,
                 trait_ref.substitution.as_slice(interner),
                 binders,
             ) {
-                db.impl_datum(impl_id).to_program_clauses(builder);
+                db.impl_datum(impl_id)
+                    .to_program_clauses(builder, environment);
             }
 
             // If this is a `Foo: Send` (or any auto-trait), then add
@@ -288,7 +289,25 @@ fn program_clauses_that_could_match<I: Interner>(
                     ..
                 })
                 | TyData::Alias(AliasTy::Opaque(OpaqueTy { opaque_ty_id, .. })) => {
-                    db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder);
+                    db.opaque_ty_data(*opaque_ty_id)
+                        .to_program_clauses(builder, environment);
+                }
+                _ => {}
+            }
+
+            // We don't actually do anything here, but we need to record the types it when logging
+            match self_ty.data(interner) {
+                TyData::Apply(ApplicationTy {
+                    name: TypeName::Adt(adt_id),
+                    ..
+                }) => {
+                    let _ = db.adt_datum(*adt_id);
+                }
+                TyData::Apply(ApplicationTy {
+                    name: TypeName::FnDef(fn_def_id),
+                    ..
+                }) => {
+                    let _ = db.fn_def_datum(*fn_def_id);
                 }
                 _ => {}
             }
@@ -309,7 +328,8 @@ fn program_clauses_that_could_match<I: Interner>(
                         ..
                     })
                     | TyData::Alias(AliasTy::Opaque(OpaqueTy { opaque_ty_id, .. })) => {
-                        db.opaque_ty_data(*opaque_ty_id).to_program_clauses(builder);
+                        db.opaque_ty_data(*opaque_ty_id)
+                            .to_program_clauses(builder, environment);
                     }
                     _ => {}
                 }
@@ -322,11 +342,11 @@ fn program_clauses_that_could_match<I: Interner>(
                 }
 
                 db.associated_ty_data(proj.associated_ty_id)
-                    .to_program_clauses(builder)
+                    .to_program_clauses(builder, environment)
             }
             AliasTy::Opaque(opaque_ty) => db
                 .opaque_ty_data(opaque_ty.opaque_ty_id)
-                .to_program_clauses(builder),
+                .to_program_clauses(builder, environment),
         },
         DomainGoal::Holds(WhereClause::LifetimeOutlives(..)) => {
             builder.push_bound_lifetime(|builder, a| {
@@ -363,7 +383,7 @@ fn program_clauses_that_could_match<I: Interner>(
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)
-                .to_program_clauses(builder);
+                .to_program_clauses(builder, environment);
         }
         DomainGoal::ObjectSafe(trait_id) => {
             if builder.db.is_object_safe(*trait_id) {
@@ -414,18 +434,21 @@ fn program_clauses_that_could_match<I: Interner>(
 
                 push_program_clauses_for_associated_type_values_in_impls_of(
                     builder,
+                    environment,
                     trait_id,
                     trait_parameters,
                     binders,
                 );
 
-                push_clauses_for_compatible_normalize(
-                    db,
-                    builder,
-                    interner,
-                    trait_id,
-                    proj.associated_ty_id,
-                );
+                if environment.has_compatible_clause(interner) {
+                    push_clauses_for_compatible_normalize(
+                        db,
+                        builder,
+                        interner,
+                        trait_id,
+                        proj.associated_ty_id,
+                    );
+                }
             }
             AliasTy::Opaque(_) => (),
         },
@@ -509,6 +532,7 @@ fn push_clauses_for_compatible_normalize<I: Interner>(
 #[instrument(level = "debug", skip(builder))]
 fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
+    environment: &Environment<I>,
     trait_id: TraitId<I>,
     trait_parameters: &[GenericArg<I>],
     binders: &CanonicalVarKinds<I>,
@@ -527,7 +551,7 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
         for &atv_id in &impl_datum.associated_ty_value_ids {
             let atv = builder.db.associated_ty_value(atv_id);
             debug!(?atv_id, ?atv);
-            atv.to_program_clauses(builder);
+            atv.to_program_clauses(builder, environment);
         }
     }
 }
@@ -550,18 +574,18 @@ fn match_ty<I: Interner>(
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
     Ok(match ty.data(interner) {
-        TyData::Apply(application_ty) => match_type_name(builder, interner, application_ty),
+        TyData::Apply(application_ty) => match_type_name(builder, environment, application_ty),
         TyData::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
         }
         TyData::Alias(AliasTy::Projection(proj)) => builder
             .db
             .associated_ty_data(proj.associated_ty_id)
-            .to_program_clauses(builder),
+            .to_program_clauses(builder, environment),
         TyData::Alias(AliasTy::Opaque(opaque_ty)) => builder
             .db
             .opaque_ty_data(opaque_ty.opaque_ty_id)
-            .to_program_clauses(builder),
+            .to_program_clauses(builder, environment),
         TyData::Function(quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
             quantified_ty
@@ -579,24 +603,28 @@ fn match_ty<I: Interner>(
 /// Lower a Rust IR application type to logic
 fn match_type_name<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
-    interner: &I,
+    environment: &Environment<I>,
     application: &ApplicationTy<I>,
 ) {
+    let interner = builder.interner();
     match application.name {
-        TypeName::Adt(adt_id) => match_adt(builder, adt_id),
+        TypeName::Adt(adt_id) => builder
+            .db
+            .adt_datum(adt_id)
+            .to_program_clauses(builder, environment),
         TypeName::OpaqueType(opaque_ty_id) => builder
             .db
             .opaque_ty_data(opaque_ty_id)
-            .to_program_clauses(builder),
+            .to_program_clauses(builder, environment),
         TypeName::Error => {}
         TypeName::AssociatedType(type_id) => builder
             .db
             .associated_ty_data(type_id)
-            .to_program_clauses(builder),
+            .to_program_clauses(builder, environment),
         TypeName::FnDef(fn_def_id) => builder
             .db
             .fn_def_datum(fn_def_id)
-            .to_program_clauses(builder),
+            .to_program_clauses(builder, environment),
         TypeName::Tuple(_)
         | TypeName::Scalar(_)
         | TypeName::Str
@@ -611,18 +639,18 @@ fn match_type_name<I: Interner>(
     }
 }
 
-fn match_alias_ty<I: Interner>(builder: &mut ClauseBuilder<'_, I>, alias: &AliasTy<I>) {
+fn match_alias_ty<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    environment: &Environment<I>,
+    alias: &AliasTy<I>,
+) {
     match alias {
         AliasTy::Projection(projection_ty) => builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)
-            .to_program_clauses(builder),
+            .to_program_clauses(builder, environment),
         _ => (),
     }
-}
-
-fn match_adt<I: Interner>(builder: &mut ClauseBuilder<'_, I>, adt_id: AdtId<I>) {
-    builder.db.adt_datum(adt_id).to_program_clauses(builder)
 }
 
 pub fn program_clauses_for_env<'db, I: Interner>(
@@ -638,7 +666,12 @@ pub fn program_clauses_for_env<'db, I: Interner>(
     let mut closure = last_round.clone();
     let mut next_round = FxHashSet::default();
     while !last_round.is_empty() {
-        elaborate_env_clauses(db, &last_round.drain().collect::<Vec<_>>(), &mut next_round);
+        elaborate_env_clauses(
+            db,
+            &last_round.drain().collect::<Vec<_>>(),
+            &mut next_round,
+            environment,
+        );
         last_round.extend(
             next_round
                 .drain()

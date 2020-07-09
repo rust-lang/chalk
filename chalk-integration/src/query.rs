@@ -172,20 +172,22 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
 
     let builder = &mut ClauseBuilder::new(db, &mut program_clauses);
 
+    let env = chalk_ir::Environment::new(builder.interner());
+
     program
         .associated_ty_data
         .values()
-        .for_each(|d| d.to_program_clauses(builder));
+        .for_each(|d| d.to_program_clauses(builder, &env));
 
     program
         .trait_data
         .values()
-        .for_each(|d| d.to_program_clauses(builder));
+        .for_each(|d| d.to_program_clauses(builder, &env));
 
     program
         .adt_data
         .values()
-        .for_each(|d| d.to_program_clauses(builder));
+        .for_each(|d| d.to_program_clauses(builder, &env));
 
     for (&auto_trait_id, _) in program
         .trait_data
@@ -201,12 +203,12 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
         // If we encounter a negative impl, do not generate any rule. Negative impls
         // are currently just there to deactivate default impls for auto traits.
         if datum.is_positive() {
-            datum.to_program_clauses(builder);
+            datum.to_program_clauses(builder, &env);
             datum
                 .associated_ty_value_ids
                 .iter()
                 .map(|&atv_id| db.associated_ty_value(atv_id))
-                .for_each(|atv| atv.to_program_clauses(builder));
+                .for_each(|atv| atv.to_program_clauses(builder, &env));
         }
     }
 

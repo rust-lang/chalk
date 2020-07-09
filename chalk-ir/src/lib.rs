@@ -90,6 +90,25 @@ impl<I: Interner> Environment<I> {
             ProgramClauses::from_iter(interner, env.clauses.iter(interner).cloned().chain(clauses));
         env
     }
+
+    /// True if any of the clauses in the environment have a consequence of `Compatible`.
+    /// Panics if the conditions or constraints of that clause are not empty.
+    pub fn has_compatible_clause(&self, interner: &I) -> bool {
+        self.clauses.as_slice(interner).iter().any(|c| {
+            let ProgramClauseData(implication) = c.data(interner);
+            match implication.skip_binders().consequence {
+                DomainGoal::Compatible => {
+                    // We currently don't generate `Compatible` with any conditions or constraints
+                    // If this was needed, for whatever reason, then a third "yes, but must evaluate"
+                    // return value would have to be added.
+                    assert!(implication.skip_binders().conditions.is_empty(interner));
+                    assert!(implication.skip_binders().constraints.is_empty(interner));
+                    true
+                }
+                _ => false,
+            }
+        })
+    }
 }
 
 /// A goal with an environment to solve it in.

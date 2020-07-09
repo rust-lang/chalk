@@ -129,7 +129,23 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     }
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
-        unimplemented!()
+        // Only needed because we always access the adt datum for logging
+        Arc::new(AdtDatum {
+            binders: Binders::empty(
+                &ChalkIr,
+                AdtDatumBound {
+                    variants: vec![],
+                    where_clauses: vec![],
+                },
+            ),
+            flags: AdtFlags {
+                fundamental: false,
+                phantom_data: false,
+                upstream: false,
+            },
+            id,
+            kind: AdtKind::Enum,
+        })
     }
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
