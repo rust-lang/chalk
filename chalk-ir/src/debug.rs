@@ -332,7 +332,7 @@ impl<I: Interner> Debug for GoalData<I> {
             GoalData::Not(ref g) => write!(fmt, "not {{ {:?} }}", g),
             GoalData::EqGoal(ref wc) => write!(fmt, "{:?}", wc),
             GoalData::DomainGoal(ref wc) => write!(fmt, "{:?}", wc),
-            GoalData::CannotProve(()) => write!(fmt, r"¯\_(ツ)_/¯"),
+            GoalData::CannotProve => write!(fmt, r"¯\_(ツ)_/¯"),
         }
     }
 }
@@ -717,9 +717,9 @@ impl<I: Interner> Debug for DomainGoal<I> {
             DomainGoal::LocalImplAllowed(tr) => {
                 write!(fmt, "LocalImplAllowed({:?})", tr.with_colon(),)
             }
-            DomainGoal::Compatible(_) => write!(fmt, "Compatible"),
+            DomainGoal::Compatible => write!(fmt, "Compatible"),
             DomainGoal::DownstreamType(n) => write!(fmt, "DownstreamType({:?})", n),
-            DomainGoal::Reveal(_) => write!(fmt, "Reveal"),
+            DomainGoal::Reveal => write!(fmt, "Reveal"),
             DomainGoal::ObjectSafe(n) => write!(fmt, "ObjectSafe({:?})", n),
         }
     }

@@ -527,7 +527,7 @@ impl WfWellKnownGoals {
             | WellKnownTrait::FnOnce
             | WellKnownTrait::FnMut
             | WellKnownTrait::Fn
-            | WellKnownTrait::Unsize => Some(GoalData::CannotProve(()).intern(interner)),
+            | WellKnownTrait::Unsize => Some(GoalData::CannotProve.intern(interner)),
         }
     }
 
@@ -585,10 +585,10 @@ impl WfWellKnownGoals {
                 | TypeName::Ref(Mutability::Not)
                 | TypeName::Never => return None,
                 TypeName::Adt(adt_id) => (*adt_id, substitution),
-                _ => return Some(GoalData::CannotProve(()).intern(interner)),
+                _ => return Some(GoalData::CannotProve.intern(interner)),
             },
 
-            _ => return Some(GoalData::CannotProve(()).intern(interner)),
+            _ => return Some(GoalData::CannotProve.intern(interner)),
         };
 
         // not { Implemented(ImplSelfTy: Drop) }
@@ -668,7 +668,7 @@ impl WfWellKnownGoals {
         let adt_id = match impl_datum.self_type_adt_id(interner) {
             Some(id) => id,
             // Drop can only be implemented on a nominal type
-            None => return Some(GoalData::CannotProve(()).intern(interner)),
+            None => return Some(GoalData::CannotProve.intern(interner)),
         };
 
         let mut gb = GoalBuilder::new(db);

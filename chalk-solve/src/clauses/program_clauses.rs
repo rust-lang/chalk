@@ -156,7 +156,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                     }
                     .cast(interner),
                 ),
-                iter::once(DomainGoal::Reveal(())),
+                iter::once(DomainGoal::Reveal),
             );
 
             // AliasEq(T<..> = !T<..>).
@@ -610,7 +610,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                             .iter()
                             .cloned()
                             .casted(interner)
-                            .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
+                            .chain(iter::once(DomainGoal::Compatible.cast(interner)))
                             .chain((0..i).map(|j| {
                                 DomainGoal::IsFullyVisible(type_parameters[j].clone())
                                     .cast(interner)
@@ -619,7 +619,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                                 DomainGoal::DownstreamType(type_parameters[i].clone())
                                     .cast(interner),
                             ))
-                            .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
+                            .chain(iter::once(GoalData::CannotProve.intern(interner))),
                     );
                 }
             }
@@ -649,13 +649,13 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                         .iter()
                         .cloned()
                         .casted(interner)
-                        .chain(iter::once(DomainGoal::Compatible(()).cast(interner)))
+                        .chain(iter::once(DomainGoal::Compatible.cast(interner)))
                         .chain(
                             trait_ref
                                 .type_parameters(interner)
                                 .map(|ty| DomainGoal::IsUpstream(ty).cast(interner)),
                         )
-                        .chain(iter::once(GoalData::CannotProve(()).intern(interner))),
+                        .chain(iter::once(GoalData::CannotProve.intern(interner))),
                 );
             }
 
