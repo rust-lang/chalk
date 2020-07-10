@@ -7,9 +7,9 @@ use crate::{
     tls, SolverChoice,
 };
 use chalk_ir::{
-    AdtId, AssocTypeId, Binders, Canonical, ClosureId, ConstrainedSubst, Environment, FnDefId,
-    GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause, ProgramClauses,
-    Substitution, TraitId, Ty, UCanonical,
+    AdtId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,
+    Environment, FnDefId, GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause,
+    ProgramClauses, Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -124,10 +124,11 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         &self,
         trait_id: TraitId<ChalkIr>,
         generic_args: &[GenericArg<ChalkIr>],
+        binders: &CanonicalVarKinds<ChalkIr>,
     ) -> Vec<ImplId<ChalkIr>> {
         self.program_ir()
             .unwrap()
-            .impls_for_trait(trait_id, generic_args)
+            .impls_for_trait(trait_id, generic_args, binders)
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<ChalkIr>) -> Vec<ImplId<ChalkIr>> {

@@ -243,6 +243,7 @@ fn program_clauses_that_could_match<I: Interner>(
             for impl_id in db.impls_for_trait(
                 trait_ref.trait_id,
                 trait_ref.substitution.as_slice(interner),
+                binders,
             ) {
                 db.impl_datum(impl_id).to_program_clauses(builder);
             }
@@ -415,6 +416,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     builder,
                     trait_id,
                     trait_parameters,
+                    binders,
                 );
 
                 push_clauses_for_compatible_normalize(
@@ -509,8 +511,12 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     trait_id: TraitId<I>,
     trait_parameters: &[GenericArg<I>],
+    binders: &CanonicalVarKinds<I>,
 ) {
-    for impl_id in builder.db.impls_for_trait(trait_id, trait_parameters) {
+    for impl_id in builder
+        .db
+        .impls_for_trait(trait_id, trait_parameters, binders)
+    {
         let impl_datum = builder.db.impl_datum(impl_id);
         if !impl_datum.is_positive() {
             continue;
