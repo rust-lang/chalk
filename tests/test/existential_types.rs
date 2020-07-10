@@ -399,3 +399,25 @@ fn dyn_lifetime_bound() {
         }
     }
 }
+
+#[test]
+fn dyn_associated_type_binding() {
+    test! {
+        program {
+            trait FnOnce<Args> { type Output; }
+        }
+
+        goal {
+            exists<T> {
+                forall<'static> {
+                    <dyn FnOnce<(), Output = i32> + 'static as FnOnce<()>>::Output = T
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            "Unique; substitution [?0 := Int(I32)], lifetime constraints []"
+        } yields[SolverChoice::slg_default()] {
+            // #234
+            "Ambiguous"
+        }
+    }
+}

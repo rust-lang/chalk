@@ -309,6 +309,13 @@ fn program_clauses_that_could_match<I: Interner>(
                     _ => {}
                 }
 
+                // If the self type is a `dyn trait` type, generate program-clauses
+                // for any associated type bindings it contains.
+                // FIXME: see the fixme for the analogous code for Implemented goals.
+                if let TyData::Dyn(_) = trait_self_ty.data(interner) {
+                    dyn_ty::build_dyn_self_ty_clauses(db, builder, trait_self_ty.clone())
+                }
+
                 db.associated_ty_data(proj.associated_ty_id)
                     .to_program_clauses(builder)
             }
