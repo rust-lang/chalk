@@ -395,9 +395,15 @@ impl<I: Interner> Ty<I> {
     }
 
     /// Returns true if this is a `BoundVar` or an `InferenceVar` of `TyKind::General`.
-    pub fn is_general_var(&self, interner: &I) -> bool {
+    pub fn is_general_var(&self, interner: &I, binders: &CanonicalVarKinds<I>) -> bool {
         match self.data(interner) {
-            TyData::BoundVar(_) | TyData::InferenceVar(_, TyKind::General) => true,
+            TyData::BoundVar(bv)
+                if bv.debruijn == DebruijnIndex::INNERMOST
+                    && binders.at(interner, bv.index).kind == VariableKind::Ty(TyKind::General) =>
+            {
+                true
+            }
+            TyData::InferenceVar(_, TyKind::General) => true,
             _ => false,
         }
     }

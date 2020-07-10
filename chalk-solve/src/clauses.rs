@@ -176,12 +176,13 @@ pub fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
+    binders: &CanonicalVarKinds<I>,
 ) -> Result<Vec<ProgramClause<I>>, Floundered> {
     let interner = db.interner();
 
     let custom_clauses = db.custom_clauses().into_iter();
-    let clauses_that_could_match =
-        program_clauses_that_could_match(db, environment, goal).map(|cl| cl.into_iter())?;
+    let clauses_that_could_match = program_clauses_that_could_match(db, environment, goal, binders)
+        .map(|cl| cl.into_iter())?;
 
     let clauses: Vec<ProgramClause<I>> = custom_clauses
         .chain(clauses_that_could_match)
@@ -207,6 +208,11 @@ fn program_clauses_that_could_match<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     environment: &Environment<I>,
     goal: &DomainGoal<I>,
+    // FIXME: These are the binders for `goal`. We're passing them separately
+    // because `goal` is not necessarily canonicalized: The recursive solver
+    // passes the canonical goal; the SLG solver instantiates the goal first.
+    // (See #568.)
+    binders: &CanonicalVarKinds<I>,
 ) -> Result<Vec<ProgramClause<I>>, Floundered> {
     let interner = db.interner();
     let mut clauses: Vec<ProgramClause<I>> = vec![];
@@ -225,7 +231,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     if trait_datum.is_auto_trait() {
                         push_auto_trait_impls_opaque(builder, trait_id, opaque_ty.opaque_ty_id)
                     }
-                } else if self_ty.is_general_var(interner) {
+                } else if self_ty.is_general_var(interner, binders) {
                     return Err(Floundered);
                 }
             }
@@ -393,7 +399,9 @@ fn program_clauses_that_could_match<I: Interner>(
                 // Flounder if the self-type is unknown and the trait is non-enumerable.
                 //
                 // e.g., Normalize(<?X as Iterator>::Item = u32)
-                if (self_ty.is_general_var(interner)) && trait_datum.is_non_enumerable_trait() {
+                if (self_ty.is_general_var(interner, binders))
+                    && trait_datum.is_non_enumerable_trait()
+                {
                     return Err(Floundered);
                 }
 

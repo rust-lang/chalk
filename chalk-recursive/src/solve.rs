@@ -69,12 +69,10 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                 // or from the lowered program, which includes fallback
                 // clauses. We try each approach in turn:
 
-                let InEnvironment { environment, goal } = &canonical_goal.canonical.value;
-
                 let (prog_solution, prog_prio) = {
                     debug_span!("prog_clauses");
 
-                    let prog_clauses = self.program_clauses_for_goal(environment, &goal);
+                    let prog_clauses = self.program_clauses_for_goal(&canonical_goal);
                     match prog_clauses {
                         Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
                         Err(Floundered) => {
@@ -202,10 +200,14 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
 
     fn program_clauses_for_goal(
         &self,
-        environment: &Environment<I>,
-        goal: &DomainGoal<I>,
+        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        program_clauses_for_goal(self.db(), environment, goal)
+        program_clauses_for_goal(
+            self.db(),
+            &canonical_goal.canonical.value.environment,
+            &canonical_goal.canonical.value.goal,
+            &canonical_goal.canonical.binders,
+        )
     }
 }
 
