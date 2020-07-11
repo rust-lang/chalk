@@ -727,3 +727,34 @@ fn canonicalization_regression() {
         }
     }
 }
+
+#[test]
+#[ignore]
+// this is a regression test for an infinite loop, but it doesn't actually work
+// because the code fails coherence checking.
+fn empty_definite_guidance() {
+    test! {
+        program {
+            trait Trait<T> {}
+
+            struct S<'a> {}
+            struct A {}
+
+            impl<'a> Trait<S<'a>> for A {}
+            impl<'a> Trait<S<'a>> for A where A: 'a {}
+
+            trait OtherTrait<'a> {}
+            impl<'a> OtherTrait<'a> for A where A: Trait<S<'a>> {}
+        }
+
+        goal {
+            forall<'static> {
+                A: OtherTrait<'static>
+            }
+        } yields[SolverChoice::slg_default()] {
+            "Unique"
+        } yields[SolverChoice::recursive()] {
+            "Ambiguous"
+        }
+    }
+}

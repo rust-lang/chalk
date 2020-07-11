@@ -148,12 +148,21 @@ impl<I: Interner> Solution<I> {
     }
 
     /// Determine whether this solution contains type information that *must*
-    /// hold.
-    pub(crate) fn has_definite(&self) -> bool {
-        match *self {
-            Solution::Unique(_) => true,
-            Solution::Ambig(Guidance::Definite(_)) => true,
-            _ => false,
+    /// hold, and returns the subst in that case.
+    pub(crate) fn definite_subst(&self, interner: &I) -> Option<Canonical<ConstrainedSubst<I>>> {
+        match self {
+            Solution::Unique(constrained) => Some(constrained.clone()),
+            Solution::Ambig(Guidance::Definite(canonical)) => {
+                let value = ConstrainedSubst {
+                    subst: canonical.value.clone(),
+                    constraints: Constraints::empty(interner),
+                };
+                Some(Canonical {
+                    value,
+                    binders: canonical.binders.clone(),
+                })
+            }
+            _ => None,
         }
     }
 

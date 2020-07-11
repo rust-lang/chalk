@@ -447,9 +447,12 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                             solution,
                         } = self.prove(wc, minimums)?;
 
-                        if solution.has_definite() {
-                            if let Some(constrained_subst) =
-                                solution.constrained_subst(self.interner())
+                        if let Some(constrained_subst) = solution.definite_subst(self.interner()) {
+                            if !constrained_subst.value.subst.is_empty(self.interner())
+                                || !constrained_subst
+                                    .value
+                                    .constraints
+                                    .is_empty(self.interner())
                             {
                                 self.apply_solution(free_vars, universes, constrained_subst);
                                 progress = true;
