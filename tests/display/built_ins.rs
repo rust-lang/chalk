@@ -1,24 +1,23 @@
 use super::*;
+
 #[test]
-fn test_function_type() {
+fn test_function_pointer_type() {
+    // Test we can print the `fn()` type at all. (impl blocks are simply used as
+    // a way to reference this concrete type conveniently)
     reparse_test!(
         program {
             struct Foo { }
             trait Baz<T> { }
             impl Baz<fn(Foo)> for Foo { }
-        }
-    );
-    reparse_test!(
-        program {
-            struct Foo { }
-            trait Baz { }
-            impl Baz for fn(Foo) { }
+            impl Baz<Foo> for fn(Foo) { }
         }
     );
 }
 
 #[test]
-fn test_function_type_generic() {
+fn test_generic_function_pointer_type() {
+    // Test we can print a `fn()` type which references generics introduced in
+    // outer scopes.
     reparse_test!(
         program {
             struct Foo<'a, T>
@@ -31,13 +30,21 @@ fn test_function_type_generic() {
 
 #[test]
 fn test_scalar_types() {
-    let basic = vec!["bool", "char", "f32", "f64"];
-    let sizes = vec!["size", "8", "16", "32", "64", "128"];
-    let prefixes = vec!["u", "i"];
-    let ints = prefixes
-        .iter()
-        .flat_map(|&p| sizes.iter().map(move |&size| format!("{}{}", p, size)));
-    let scalars = basic.iter().copied().map(str::to_owned).chain(ints);
+    // This is intended to test every scalar in a variety of places. In other
+    // words, test the matrix of {every scalar} x {concrete type usages}. This
+    // test should be updated to include new scalars, but it isn't super
+    // important that it includes every place a concrete type can be used.
+    let basic = &["bool", "char", "f32", "f64"];
+    let ints = {
+        let prefixes = &["u", "i"];
+        let sizes = &["size", "8", "16", "32", "64", "128"];
+        prefixes
+            .iter()
+            .flat_map(move |&p| sizes.iter().map(move |&size| format!("{}{}", p, size)))
+    };
+    let basic = basic.iter().copied().map(str::to_owned);
+
+    let scalars = basic.chain(ints);
 
     for scalar in scalars {
         reparse_test(&format!(
@@ -62,6 +69,7 @@ fn test_scalar_types() {
 
 #[test]
 fn test_slice_types() {
+    // Test that we print slice types correctly in a variety of places.
     reparse_test!(
         program {
             struct Foo<T> {
@@ -82,6 +90,7 @@ fn test_slice_types() {
 
 #[test]
 fn test_str_types() {
+    // Test that we print 'str' correctly in a variety of places.
     reparse_test!(
         program {
             struct Foo {
@@ -101,7 +110,8 @@ fn test_str_types() {
 }
 
 #[test]
-fn test_raw_ptr_types() {
+fn test_const_ptr() {
+    // Test that we can print *const ptrs in various places, including with generics.
     reparse_test!(
         program {
             struct Foo<T> {
@@ -116,8 +126,16 @@ fn test_raw_ptr_types() {
             impl Bar for *const u32 {
                 type Baz = *const u32;
             }
+            impl<T> Bar for *const T {
+                type Baz = *const T;
+            }
         }
     );
+}
+
+#[test]
+fn test_mut_ptr() {
+    // Test that we can print *mut ptrs in various places, including with generics.
     reparse_test!(
         program {
             struct Foo<T> {
@@ -132,25 +150,15 @@ fn test_raw_ptr_types() {
             impl Bar for *mut u32 {
                 type Baz = *mut u32;
             }
-        }
-    );
-    reparse_test!(
-        program {
-            trait Bar {
-                type Baz;
-            }
             impl<T> Bar for *mut T {
                 type Baz = *mut T;
-            }
-            impl<T> Bar for *const T {
-                type Baz = *const T;
             }
         }
     );
 }
 
 #[test]
-fn test_reference_types() {
+fn test_immutable_references() {
     reparse_test!(
         program {
             struct Foo<'a,T> {
@@ -165,8 +173,15 @@ fn test_reference_types() {
             impl<'a> Bar for &'a u32 {
                 type Baz = &'a u32;
             }
+            impl<'a,T> Bar for &'a T {
+                type Baz = &'a T;
+            }
         }
     );
+}
+
+#[test]
+fn test_mutable_references() {
     reparse_test!(
         program {
             struct Foo<'a,T> {
@@ -181,25 +196,16 @@ fn test_reference_types() {
             impl<'a> Bar for &'a mut u32 {
                 type Baz = &'a u32;
             }
-        }
-    );
-    reparse_test!(
-        program {
-            trait Bar {
-                type Baz;
-            }
             impl<'a,T> Bar for &'a mut T {
                 type Baz = &'a mut T;
-            }
-            impl<'a,T> Bar for &'a T {
-                type Baz = &'a T;
             }
         }
     );
 }
 
 #[test]
-fn test_tuples() {
+fn test_empty_tuple() {
+    // Test empty tuples print correctly
     reparse_test!(
         program {
             struct Fuu {
@@ -207,6 +213,12 @@ fn test_tuples() {
             }
         }
     );
+}
+
+#[test]
+fn test_one_and_many_tuples() {
+    // Test that single-element tuple is printed correctly with the required
+    // trailing comma that differentiates it from a parenthesized expression
     reparse_test!(
         program {
             struct Uff {
@@ -216,6 +228,11 @@ fn test_tuples() {
             struct Iff { }
         }
     );
+}
+
+#[test]
+fn test_tuples_using_generic_args() {
+    // Test 1, many tuples which contain generic parameters.
     reparse_test!(
         program {
             struct Foo<T> {
@@ -231,6 +248,11 @@ fn test_tuples() {
             }
         }
     );
+}
+
+#[test]
+fn test_impl_on_tuples_with_generics() {
+    // Test 0, 1, many tuples in one more place - impl blocks.
     reparse_test!(
         program {
             trait Blug {}
@@ -249,6 +271,7 @@ fn test_tuples() {
 
 #[test]
 fn test_array_types() {
+    // Test that we print array types correctly in multiple places they can occur.
     reparse_test!(
         program {
             struct Bazz { }

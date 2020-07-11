@@ -167,17 +167,12 @@ pub struct ReparseTestResult<'a> {
 
 /// Parses the input, lowers it, prints it, then re-parses and re-lowers,
 /// failing if the two lowered programs don't match.
-///
-/// Note: the comparison here does include IDs, so input order matters. In
-/// particular, `write_program` always writes in the order adts, traits, impls,
-/// then opaque_types. So the input program must also list things in this order,
-/// or the test will fail.
 pub fn reparse_test(program_text: &str) -> ReparseTestResult<'_> {
     reparse_into_different_test(program_text, program_text)
 }
 
 /// [`reparse_test`], but allows a non-convergent test program to be tested
-/// a different target.
+/// against a different target.
 pub fn reparse_into_different_test<'a>(
     program_text: &'a str,
     target_text: &'a str,

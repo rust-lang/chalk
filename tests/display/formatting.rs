@@ -1,5 +1,7 @@
 #[test]
 fn test_assoc_type_formatting() {
+    // Test associated type indentation
+    // This also tests spacing around trait, struct and impl items
     reparse_test!(
         program {
             struct Foo {}
@@ -23,6 +25,7 @@ impl [a-zA-Z0-9_-]+ for [a-zA-Z0-9_-]+ \{
 
 #[test]
 fn test_struct_field_formatting() {
+    // Test struct field indentation
     reparse_test!(
         program {
             struct Foo {}
@@ -48,6 +51,7 @@ struct [a-zA-Z0-9_-]+ \{
 
 #[test]
 fn test_where_clause_formatting() {
+    // Test where clause indentation and new-lining on impls, traits and structs
     reparse_test!(
     program {
         struct Foo where Foo: Baz, Foo: Bar {}
@@ -81,6 +85,8 @@ impl<'[a-zA-Z0-9_-]+> [a-zA-Z0-9_-]+ for dyn [a-zA-Z0-9_-]+ \+ '[a-zA-Z0-9_-]+ \
 
 #[test]
 fn test_assoc_ty_where_clause() {
+    // Test associated ty where clause indentation (this verifies that the
+    // indentation is context aware)
     reparse_test!(
         program {
             trait Bar {}
@@ -105,6 +111,7 @@ trait [a-zA-Z0-9_-]+ \{
 
 #[test]
 fn test_fn_where_clause() {
+    // Test where clause indentation, and fn type spacing
     reparse_test!(
         program {
             trait Bar {}
@@ -125,6 +132,9 @@ where
 
 #[test]
 fn test_name_disambiguation() {
+    // Tests name disambiguation, types with the same name are renamed to avoid
+    // confusion. This can happen if the logging db contains types from
+    // different modules.
     // we don't have modules in chalk so we can't actually test different
     // structs or traits with the same name in Chalk - but luckily our
     // implementation ignores types for name disambiguation, so we can test it

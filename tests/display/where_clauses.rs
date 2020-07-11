@@ -1,5 +1,7 @@
 #[test]
 fn test_alias_eq() {
+    // Test alias equals bounds (`Third<Assoc = Foo>`) in where clauses.
+
     // This test uses "produces" as a workaround for the lowering & writing
     // code's behavior. Specifically, `Foo: Bax<T, BaxT=T>` will be transformed
     // into `Foo: Bax<T, BaxT=T>, Foo: Bax<T>`, even if the where clause already
@@ -54,17 +56,9 @@ fn test_alias_eq() {
 
 #[test]
 fn test_dyn_on_left() {
-    reparse_test!(
-        program {
-            struct Foo { }
-            trait Bar { }
-            impl<'a> Bar for Foo
-            where
-                dyn Bar + 'a: Bar
-            {
-            }
-        }
-    );
+    // Test dyn on the left side of a where clause
+    // where dyn Bar + 'a: Bar
+    //       ^^^^^^^^^^^^
     reparse_test!(
         program {
             struct Foo { }
@@ -73,6 +67,11 @@ fn test_dyn_on_left() {
                 type Assoc<T>
                 where
                     dyn Bar + 'a: Bar;
+            }
+            impl<'a> Bar for Foo
+            where
+                dyn Bar + 'a: Bar
+            {
             }
         }
     );

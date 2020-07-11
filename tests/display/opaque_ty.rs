@@ -1,5 +1,7 @@
 #[test]
 fn opaque_types() {
+    // Test printing opaque type declarations, opaque types in associated types,
+    // and opaque types in impls.
     reparse_test!(
         program {
             struct Bar {}
@@ -18,6 +20,7 @@ fn opaque_types() {
 
 #[test]
 fn opaque_ty_no_bounds() {
+    // Test printing opaque types without any bounds
     reparse_test!(
         program {
             opaque type Foo: = ();
@@ -27,25 +30,24 @@ fn opaque_ty_no_bounds() {
 
 #[test]
 fn test_generic_opaque_types() {
+    // Test printing opaque types with generic parameters
     reparse_test!(
         program {
             struct Foo {}
             trait Bar<T> {}
             opaque type Baz<T>: Bar<T> = Foo;
-        }
-    );
-    reparse_test!(
-        program {
-            struct Foo<T> {}
+
+            struct Fou<T> {}
             struct Unit {}
-            trait Bar<T, U> {}
-            opaque type Boz<U>: Bar<Unit, U> = Foo<U>;
+            trait Bau<T, U> {}
+            opaque type Boz<U, T>: Bau<Unit, U> = Fou<T>;
         }
     );
 }
 
 #[test]
 fn test_opaque_type_as_type_value() {
+    // Test printing an opaque type as the value for an associated type
     reparse_test!(
         program {
             struct Foo {}
@@ -60,6 +62,11 @@ fn test_opaque_type_as_type_value() {
             opaque type Bax: Bar = Foo;
         }
     );
+}
+
+#[test]
+fn test_opaque_type_in_fn_ptr() {
+    // Test printing an opaque type as the parameter for a fn ptr type
     reparse_test!(
         program {
             struct Foo {}
@@ -76,7 +83,8 @@ fn test_opaque_type_as_type_value() {
 }
 
 #[test]
-fn test_generic_opaque_type_as_value1() {
+fn test_generic_opaque_type_as_value() {
+    // Test printing a generic opaque type as an associated type's value
     reparse_test!(
         program {
             struct Foo {}
@@ -91,6 +99,11 @@ fn test_generic_opaque_type_as_value1() {
             opaque type Baz<T>: Bar<T> = Foo;
         }
     );
+}
+
+#[test]
+fn test_generic_opaque_type_in_fn_ptr() {
+    // Test printing a generic opaque type as an fn ptr's parameter
     reparse_test!(
         program {
             struct Foo {}
@@ -101,28 +114,15 @@ fn test_generic_opaque_type_as_value1() {
             impl Faz for Foo {
                 type Assoc = fn(Baz<Foo>);
             }
+            impl<T> Bar<T> for Foo { }
             opaque type Baz<T>: Bar<T> = Foo;
-        }
-    );
-    reparse_test!(
-        program {
-            struct Foo<T> {}
-            struct Unit {}
-            trait Bar<T, U> {}
-            trait Fez {
-                type Assoc;
-            }
-            impl Fez for Foo<Unit> {
-                type Assoc = fn(Biiiz<Unit>);
-            }
-            impl<T, U> Bar<T, U> for Foo<T> {}
-            opaque type Biiiz<U>: Bar<Unit, U> = Foo<U>;
         }
     );
 }
 
 #[test]
 fn multiple_bounds() {
+    // Test printing an opaque type with multiple bounds
     reparse_test!(
         program {
             struct Baz {}
