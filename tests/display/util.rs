@@ -4,7 +4,7 @@
 //! with `display/mod.rs` for the name `mod display` when `test_util.rs` is
 //! compiled as a standalone test (rather than from `lib.rs`).
 use chalk_integration::{program::Program, query::LoweringDatabase, tls};
-use chalk_solve::display::write_items;
+use chalk_solve::{display::write_items, logging_db::RecordedItemId};
 use regex::Regex;
 use std::{fmt::Debug, sync::Arc};
 
@@ -46,12 +46,34 @@ macro_rules! reparse_test {
 /// returns the string representing the program.
 pub fn write_program(program: &Program) -> String {
     let mut out = String::new();
-    let ids = std::iter::empty()
-        .chain(program.adt_data.keys().copied().map(Into::into))
-        .chain(program.trait_data.keys().copied().map(Into::into))
-        .chain(program.impl_data.keys().copied().map(Into::into))
-        .chain(program.opaque_ty_data.keys().copied().map(Into::into))
-        .chain(program.fn_def_data.keys().copied().map(Into::into));
+    macro_rules! grab_ids {
+        ($map:expr) => {
+            $map.keys()
+                .copied()
+                .map(|id| (id.0, RecordedItemId::from(id)))
+        };
+    }
+    let mut ids = std::iter::empty()
+        .chain(grab_ids!(program.adt_data))
+        .chain(grab_ids!(program.trait_data))
+        .chain(grab_ids!(program.impl_data))
+        .chain(grab_ids!(program.opaque_ty_data))
+        .chain(grab_ids!(program.fn_def_data))
+        .collect::<Vec<_>>();
+
+    // sort by the RawIds so we maintain exact program input order (note: this
+    // is here rather than in logging_db.rs as we can't in general maintain this
+    // - only for `chalk_integration`'s RawIds).
+    //
+    // We need to maintain exact order because we abuse Program's Eq
+    // implementation to check the results of our tests, and which structs have
+    // which ids is part of that data.
+    ids.sort_by_key(|(raw_id, _)| *raw_id);
+
+    // then discard the RawId since the RecordedItemId has the same information,
+    // and is what we actually want to consume.
+    let ids = ids.into_iter().map(|(_, id)| id);
+
     write_items(&mut out, program, ids).unwrap();
     out
 }
