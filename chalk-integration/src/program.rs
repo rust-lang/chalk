@@ -3,9 +3,10 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders, ClosureId,
-    FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, Substitution, TraitId, Ty,
+    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders,
+    CanonicalVarKinds, ClosureId, FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy,
+    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -374,6 +375,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         &self,
         trait_id: TraitId<ChalkIr>,
         parameters: &[GenericArg<ChalkIr>],
+        _binders: &CanonicalVarKinds<ChalkIr>,
     ) -> Vec<ImplId<ChalkIr>> {
         let interner = self.interner();
         self.impl_data

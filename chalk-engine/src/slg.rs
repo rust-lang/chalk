@@ -98,7 +98,12 @@ impl<'me, I: Interner> context::ContextOps<I, SlgContext<I>> for SlgContextOps<'
         goal: &DomainGoal<I>,
         _infer: &mut TruncatingInferenceTable<I>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        let clauses: Vec<_> = program_clauses_for_goal(self.program, environment, goal)?;
+        let clauses: Vec<_> = program_clauses_for_goal(
+            self.program,
+            environment,
+            goal,
+            &CanonicalVarKinds::empty(self.program.interner()),
+        )?;
 
         Ok(clauses)
     }

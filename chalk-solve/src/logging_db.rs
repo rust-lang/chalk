@@ -150,9 +150,13 @@ where
         &self,
         trait_id: TraitId<I>,
         parameters: &[chalk_ir::GenericArg<I>],
+        binders: &CanonicalVarKinds<I>,
     ) -> Vec<ImplId<I>> {
         self.record(trait_id);
-        let impl_ids = self.db.borrow().impls_for_trait(trait_id, parameters);
+        let impl_ids = self
+            .db
+            .borrow()
+            .impls_for_trait(trait_id, parameters, binders);
         self.record_all(impl_ids.iter().copied());
         impl_ids
     }
@@ -368,8 +372,11 @@ where
         &self,
         trait_id: TraitId<I>,
         parameters: &[chalk_ir::GenericArg<I>],
+        binders: &CanonicalVarKinds<I>,
     ) -> Vec<ImplId<I>> {
-        self.db.borrow().impls_for_trait(trait_id, parameters)
+        self.db
+            .borrow()
+            .impls_for_trait(trait_id, parameters, binders)
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {

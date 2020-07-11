@@ -62,8 +62,15 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// apply. The parameters are provided as a "hint" to help the
     /// implementor do less work, but can be completely ignored if
     /// desired.
-    fn impls_for_trait(&self, trait_id: TraitId<I>, parameters: &[GenericArg<I>])
-        -> Vec<ImplId<I>>;
+    ///
+    /// The `binders` are for the `parameters`; if the recursive solver is used,
+    /// the parameters can contain bound variables referring to these binders.
+    fn impls_for_trait(
+        &self,
+        trait_id: TraitId<I>,
+        parameters: &[GenericArg<I>],
+        binders: &CanonicalVarKinds<I>,
+    ) -> Vec<ImplId<I>>;
 
     /// Returns the impls that require coherence checking. This is not the
     /// full set of impls that exist:

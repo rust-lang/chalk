@@ -9,7 +9,9 @@ use crate::{
     },
     RustIrDatabase,
 };
-use chalk_ir::{interner::Interner, ApplicationTy, Binders, TypeName, VariableKinds};
+use chalk_ir::{
+    interner::Interner, ApplicationTy, Binders, CanonicalVarKinds, TypeName, VariableKinds,
+};
 
 #[derive(Debug)]
 pub struct StubWrapper<'a, DB> {
@@ -136,6 +138,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         &self,
         _trait_id: chalk_ir::TraitId<I>,
         _parameters: &[chalk_ir::GenericArg<I>],
+        _binders: &CanonicalVarKinds<I>,
     ) -> Vec<chalk_ir::ImplId<I>> {
         // We panic here because the returned ids may not be collected,
         // resulting in unresolvable names.

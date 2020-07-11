@@ -145,6 +145,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         &self,
         trait_id: TraitId<ChalkIr>,
         parameters: &[GenericArg<ChalkIr>],
+        binders: &CanonicalVarKinds<ChalkIr>,
     ) -> Vec<ImplId<ChalkIr>> {
         if let PanickingMethod::ImplsForTrait = self.panicking_method {
             panic!("impls_for_trait panic");

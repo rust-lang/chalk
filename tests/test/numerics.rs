@@ -39,6 +39,9 @@ fn integer_index() {
 fn integer_kind_trait() {
     test! {
         program {
+            // this should even work for non-enumerable traits, because we don't
+            // need to enumerate *all* impls for this!
+            #[non_enumerable]
             trait Foo {}
             struct Bar {}
 
@@ -61,6 +64,7 @@ fn integer_kind_trait() {
 fn float_kind_trait() {
     test! {
         program {
+            #[non_enumerable]
             trait Foo {}
             struct Bar {}
 
