@@ -1,5 +1,6 @@
 #[test]
 fn test_const_generics() {
+    // Test we render const generic parameters correctly in a variety of places.
     reparse_test!(
         program {
             struct Usize { }
@@ -19,7 +20,8 @@ fn test_const_generics() {
 
 #[test]
 #[ignore]
-fn test_basic_const_values() {
+fn test_basic_const_values_in_impls() {
+    // Test we render const values correctly in impls.
     reparse_test!(
         program {
             struct Foo<const N> { }
@@ -29,12 +31,24 @@ fn test_basic_const_values() {
             impl Bar for Foo<2> { }
         }
     );
+}
+
+#[test]
+#[ignore]
+fn test_basic_const_values_in_opaque_ty_values() {
+    // Test we render const values correctly in opaque type values.
     reparse_test!(
         program {
             struct Foo<const N> { }
             opaque type Zed: = Foo<0>;
         }
     );
+}
+
+#[test]
+#[ignore]
+fn test_basic_const_values_in_assoc_ty_values() {
+    // Test we render const values correctly in associated type values.
     reparse_test!(
         program {
             struct Foo<const N> { }

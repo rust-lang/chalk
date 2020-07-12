@@ -1,15 +1,25 @@
 #[test]
-fn test_simple_enum_and_bounds() {
+fn test_simple_enum() {
     reparse_test!(
         program {
             enum Foo {}
         }
     );
+}
+
+#[test]
+fn test_enum_generics() {
     reparse_test!(
         program {
             enum Foo<T> {}
+            enum Bar<T,B> {}
         }
     );
+}
+
+#[test]
+fn test_enum_bounds() {
+    // Test printing where clauses
     reparse_test!(
         program {
             enum Foo<T> where T: Trait {}
@@ -20,14 +30,17 @@ fn test_simple_enum_and_bounds() {
 
 #[test]
 fn test_enum_fields() {
+    // Test printing enums with fields, enum fields with fields, and enum
+    // generics in enum fields.
     reparse_test!(
         program {
             enum Foo<T> {}
             enum Bar {}
-            enum Baz {
+            enum Baz<T> {
                 A {
                     x: Foo<Bar>,
-                    b: Bar
+                    b: Bar,
+                    y: Foo<T>
                 },
                 B(u32),
             }
@@ -41,22 +54,13 @@ fn test_enum_keywords() {
         program {
             #[upstream]
             enum UpstreamFoo {}
-        }
-    );
-    reparse_test!(
-        program {
+
             #[fundamental]
             enum FundamentalFoo<T> {}
-        }
-    );
-    reparse_test!(
-        program {
+
             #[phantom_data]
             enum PhantomFoo {}
-        }
-    );
-    reparse_test!(
-        program {
+
             #[upstream]
             #[fundamental]
             #[phantom_data]
@@ -71,28 +75,27 @@ fn test_enum_repr() {
         program {
             #[repr(C)]
             enum CFoo {}
-        }
-    );
-    reparse_test!(
-        program {
+
             #[repr(packed)]
             enum PackedFoo {}
-        }
-    );
-    reparse_test!(
-        program {
+
+            // Test all orderings of multiple `repr()` attributes
+
             #[repr(C)]
             #[repr(packed)]
             enum CPackedFoo {}
-        }
-    );
-    reparse_test!(
-        program {
+
             #[repr(packed)]
             #[repr(C)]
             enum PackedCFoo {}
         }
     );
+}
+
+#[test]
+fn test_enum_repr_and_keywords_ordered_correctly() {
+    // Test that when we print both `repr` and another keyword, we order them in
+    // a way accepted by the parser.
     reparse_test!(
         program {
             #[upstream]

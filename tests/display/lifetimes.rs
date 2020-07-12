@@ -1,5 +1,6 @@
 #[test]
 fn test_various_forall() {
+    // Test we print lifetime vars introduced by 'forall' in various situations.
     reparse_test!(
         program {
             struct Foo<'b> where forall<'a> Foo<'a>: Baz<'a> { }
@@ -17,6 +18,7 @@ fn test_various_forall() {
 
 #[test]
 fn test_lifetimes_in_structs() {
+    // Test printing lifetimes introduced by structs.
     reparse_test!(
         program {
             struct Foo<'b> { }
@@ -28,6 +30,7 @@ fn test_lifetimes_in_structs() {
 
 #[test]
 fn test_lifetime_outlives() {
+    // Test printing lifetime outlives where clauses in a few places they can appear.
     reparse_test!(
         program {
             struct Foo<'a, 'b>
@@ -35,12 +38,12 @@ fn test_lifetime_outlives() {
                 'a: 'b
             { }
 
-            trait Baz<'a,'b>
+            trait Baz<'a, 'b>
             where
                 'a: 'b
             { }
 
-            impl<'a,'b,'c> Baz<'a,'b> for Foo<'a,'c>
+            impl<'a, 'b, 'c> Baz<'a, 'b> for Foo<'a, 'c>
             where
                 'a: 'c,
                 'b: 'c

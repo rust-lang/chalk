@@ -25,7 +25,7 @@ pub use self::state::*;
 
 use self::utils::as_display;
 
-pub fn write_item<F, I, T>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
+fn write_item<F, I, T>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,

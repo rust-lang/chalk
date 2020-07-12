@@ -1,11 +1,17 @@
 #[test]
-fn test_self_in_trait_where() {
+fn test_self_in_trait_bounds() {
+    // Test 'Self' printing in trait where clauses.
     reparse_test!(
         program {
             trait Bkz {}
             trait Foo where Self: Bkz {}
         }
     );
+}
+
+#[test]
+fn test_self_in_forall() {
+    // Test 'Self' printing inside a forall clause.
     reparse_test!(
         program {
             trait Baz<'a> {}
@@ -15,25 +21,23 @@ fn test_self_in_trait_where() {
 }
 
 #[test]
-fn test_self_in_assoc_type() {
+fn test_self_in_assoc_type_declarations() {
+    // Test 'Self' in associated types declarations prints correctly.
     reparse_test!(
         program {
             trait Extra<T> {}
             trait Bez {}
             trait Foo {
-                type Assoc: Extra<Self>;
+                type Assoc1: Extra<Self>;
+                type Assoc2 where Self: Bez;
             }
         }
     );
+}
 
-    reparse_test!(
-        program {
-            trait Bez {}
-            trait Foo {
-                type Assoc where Self: Bez;
-            }
-        }
-    );
+#[test]
+fn test_self_in_generic_associated_type_declarations() {
+    // Test 'Self' in generic associated type declarations prints correctly.
     reparse_test!(
         program {
             trait Biz<T, U, V> {}
@@ -46,6 +50,7 @@ fn test_self_in_assoc_type() {
 
 #[test]
 fn test_self_in_dyn() {
+    // Test that 'Self' in dyn correctly refers to the outer Self correctly.
     reparse_test!(
         program {
             trait Bun<T> {}
@@ -54,6 +59,13 @@ fn test_self_in_dyn() {
             }
         }
     );
+}
+
+#[test]
+fn test_self_in_dyn_with_generics() {
+    // Test that 'Self' in dyn correctly refers to the outer Self when in the
+    // presence of generics introduced at the same time as that Self. In
+    // addition, test those generics also print correctly inside `dyn`.
     reparse_test!(
         program {
             trait Has<T> {}
@@ -70,22 +82,17 @@ fn test_self_in_dyn() {
 #[ignore]
 #[test]
 fn test_self_in_struct_bounds() {
+    // Test 'self' prints correctly in various places in struct where clauses.
     reparse_test!(
         program {
             trait Bax<T> {}
-            struct Foo<T> where T: Bax<Self> {}
-        }
-    );
-    reparse_test!(
-        program {
             trait Baz {}
-            struct Foo where Self: Baz {}
-        }
-    );
-    reparse_test!(
-        program {
-            trait Blz {}
-            struct Foo<T> where Self: Blz {}
+            struct Foo<T>
+            where
+                T: Bax<Self>,
+                Self: Baz
+            {
+            }
         }
     );
 }
@@ -93,7 +100,8 @@ fn test_self_in_struct_bounds() {
 // Self doesn't work in these circumstances yet (test programs fail to lower)
 #[ignore]
 #[test]
-fn test_self_in_impl_blocks() {
+fn test_self_in_impl_block_associated_types() {
+    // Test 'Self' prints correctly in associated type values.
     reparse_test!(
         program {
             trait Foo {
@@ -105,14 +113,14 @@ fn test_self_in_impl_blocks() {
             }
         }
     );
-    reparse_test!(
-        program {
-            trait Foo {}
-            trait Fin {}
-            struct Bux {}
-            impl Foo for Bux where Self: Fin {}
-        }
-    );
+}
+// Self doesn't work in these circumstances yet (test programs fail to lower)
+#[ignore]
+#[test]
+fn test_self_in_impl_block_associated_type_with_generics() {
+    // Test 'Self' prints correctly in impl blocks where we introduce
+    // generic parameters. In addition, test those parameters print correctly
+    // next to self.
     reparse_test!(
         program {
             trait Faux<T, U> {}
@@ -129,10 +137,26 @@ fn test_self_in_impl_blocks() {
     );
 }
 
+// Self doesn't work in these circumstances yet (test programs fail to lower)
+#[ignore]
+#[test]
+fn test_self_in_impl_block_where_clauses() {
+    // Test 'Self' prints correctly in impl block where clauses.
+    reparse_test!(
+        program {
+            trait Foo {}
+            trait Fin {}
+            struct Bux {}
+            impl Foo for Bux where Self: Fin {}
+        }
+    );
+}
+
 #[test]
 fn test_against_accidental_self() {
-    // In some of the writer code, it would be really easy to introduce a
-    // outputs the first generic parameter of things as "Self".
+    // In some of the writer code, it would be really easy to accidentally
+    // outputs the first generic parameter of an item as "Self". This tests
+    // against that.
     let in_structs = reparse_test!(
         program {
             struct Foo<T> {
