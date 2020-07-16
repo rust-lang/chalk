@@ -78,6 +78,18 @@ fn forall_equality() {
             InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
             InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
         }
+
+        goal {
+            for<'a, 'b> extern "Rust" fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> extern "C" fn(Ref<'c, Ref<'d, Unit>>)>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            for<'a, 'b> extern "Rust" fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> extern "Rust" fn(Ref<'c, Ref<'d, Unit>>)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
     }
 }
 
