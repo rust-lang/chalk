@@ -90,7 +90,7 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for Fn<I> {
+impl<I: Interner> RenderAsRust<I> for FnPointer<I> {
     fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db.interner();
         let s = &s.add_debrujin_index(None);

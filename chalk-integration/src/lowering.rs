@@ -1646,7 +1646,7 @@ impl LowerTy for Ty {
                     lowered_tys.push(ty.lower(&quantified_env)?.cast(interner));
                 }
 
-                let function = chalk_ir::Fn {
+                let function = chalk_ir::FnPointer {
                     num_binders: lifetime_names.len(),
                     substitution: Substitution::from_iter(interner, lowered_tys),
                 };

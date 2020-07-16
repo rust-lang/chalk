@@ -123,7 +123,7 @@ where
     }
 }
 
-impl<'a, I> IntoBindersAndValue<'a, I> for &'a Fn<I>
+impl<'a, I> IntoBindersAndValue<'a, I> for &'a FnPointer<I>
 where
     I: Interner,
 {
