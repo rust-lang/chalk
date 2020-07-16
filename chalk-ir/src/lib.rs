@@ -193,6 +193,15 @@ pub enum Scalar {
     Float(FloatTy),
 }
 
+/// Whether a function is safe or not.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Safety {
+    /// Safe
+    Safe,
+    /// Unsafe
+    Unsafe,
+}
+
 /// Whether a type is mutable or not.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Mutability {
@@ -863,6 +872,7 @@ impl InferenceVar {
 pub struct FnPointer<I: Interner> {
     pub num_binders: usize,
     pub abi: I::FnAbi,
+    pub safety: Safety,
     pub substitution: Substitution<I>,
 }
 

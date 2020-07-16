@@ -239,8 +239,13 @@ impl<I: Interner> Debug for FnPointer<I> {
             num_binders,
             substitution,
             abi,
+            safety,
         } = self;
-        write!(fmt, "{:?} for<{}> {:?}", abi, num_binders, substitution)
+        write!(
+            fmt,
+            "for<{}> {:?} {:?} {:?}",
+            num_binders, safety, abi, substitution
+        )
     }
 }
 

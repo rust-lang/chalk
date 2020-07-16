@@ -21,11 +21,13 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FnPointer<I> {
             num_binders,
             substitution,
             abi,
+            safety,
         } = self;
         Ok(FnPointer {
             num_binders: *num_binders,
             substitution: substitution.fold_with(folder, outer_binder.shifted_in())?,
             abi: TI::transfer_abi(*abi),
+            safety: *safety,
         })
     }
 }

@@ -259,6 +259,7 @@ pub enum Ty {
         lifetime_names: Vec<Identifier>,
         types: Vec<Box<Ty>>,
         abi: FnAbi,
+        safety: Safety,
     },
     Tuple {
         types: Vec<Box<Ty>>,
@@ -325,6 +326,18 @@ pub enum ScalarType {
 pub enum Mutability {
     Mut,
     Not,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Safety {
+    Safe,
+    Unsafe,
+}
+
+impl Default for Safety {
+    fn default() -> Self {
+        Self::Safe
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

@@ -1637,6 +1637,7 @@ impl LowerTy for Ty {
                 lifetime_names,
                 types,
                 abi,
+                safety,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
                     chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
@@ -1651,6 +1652,7 @@ impl LowerTy for Ty {
                     num_binders: lifetime_names.len(),
                     substitution: Substitution::from_iter(interner, lowered_tys),
                     abi: abi.lower()?,
+                    safety: ast_safety_to_chalk_safety(*safety),
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
@@ -2181,5 +2183,12 @@ fn ast_mutability_to_chalk_mutability(mutability: Mutability) -> chalk_ir::Mutab
     match mutability {
         Mutability::Mut => chalk_ir::Mutability::Mut,
         Mutability::Not => chalk_ir::Mutability::Not,
+    }
+}
+
+fn ast_safety_to_chalk_safety(safety: Safety) -> chalk_ir::Safety {
+    match safety {
+        Safety::Safe => chalk_ir::Safety::Safe,
+        Safety::Unsafe => chalk_ir::Safety::Unsafe,
     }
 }

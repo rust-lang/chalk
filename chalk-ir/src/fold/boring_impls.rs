@@ -267,6 +267,7 @@ copy_fold!(FloatTy);
 copy_fold!(Scalar);
 copy_fold!(ClausePriority);
 copy_fold!(Mutability);
+copy_fold!(Safety);
 
 #[doc(hidden)]
 #[macro_export]
