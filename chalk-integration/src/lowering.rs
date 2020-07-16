@@ -1199,6 +1199,8 @@ impl LowerFnDefn for FnDefn {
             id: fn_def_id,
             abi: self.abi.lower()?,
             binders,
+            safety: ast_safety_to_chalk_safety(self.safety),
+            variadic: self.variadic,
         })
     }
 }

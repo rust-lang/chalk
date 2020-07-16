@@ -99,17 +99,19 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         TyData::Apply(apply) => match apply.name {
             TypeName::FnDef(fn_def_id) => {
                 let fn_def_datum = builder.db.fn_def_datum(fn_def_id);
-                let bound = fn_def_datum
-                    .binders
-                    .substitute(builder.interner(), &apply.substitution);
-                push_clauses_for_apply(
-                    db,
-                    builder,
-                    well_known,
-                    trait_id,
-                    self_ty,
-                    &bound.inputs_and_output,
-                );
+                if fn_def_datum.safety == Safety::Safe && !fn_def_datum.variadic {
+                    let bound = fn_def_datum
+                        .binders
+                        .substitute(builder.interner(), &apply.substitution);
+                    push_clauses_for_apply(
+                        db,
+                        builder,
+                        well_known,
+                        trait_id,
+                        self_ty,
+                        &bound.inputs_and_output,
+                    );
+                }
                 Ok(())
             }
             TypeName::Closure(closure_id) => {
@@ -138,7 +140,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             }
             _ => Ok(()),
         },
-        TyData::Function(fn_val) if fn_val.safety == Safety::Safe => {
+        TyData::Function(fn_val) if fn_val.safety == Safety::Safe && !fn_val.variadic => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(VariableKinds::from_iter(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {

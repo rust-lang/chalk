@@ -74,6 +74,8 @@ pub struct FnDefn {
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
     pub abi: FnAbi,
+    pub safety: Safety,
+    pub variadic: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

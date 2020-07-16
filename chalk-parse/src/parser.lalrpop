@@ -140,7 +140,7 @@ FnReturn: Ty = {
 };
 
 FnDefn: FnDefn = {
-    <abi:FnAbi?> "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")"
+    <var:Variadic?> <safety:Safety?> <abi:FnAbi?> "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")"
         <ret_ty:FnReturn?> <w:QuantifiedWhereClauses> ";" => FnDefn
     {
         name: n,
@@ -149,6 +149,8 @@ FnDefn: FnDefn = {
         argument_types: args,
         return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
         abi: abi.unwrap_or_default(),
+        safety: safety.unwrap_or_default(),
+        variadic: var.unwrap_or(false),
     }
 };
 
