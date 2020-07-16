@@ -312,12 +312,13 @@ pub Ty: Ty = {
 };
 
 TyWithoutId: Ty = {
-    <l:ForLifetimes?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
+    <l:ForLifetimes?> <abi:FnAbi?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
         lifetime_names: l.unwrap_or_default(),
         types: types
                    .into_iter()
                    .chain(std::iter::once(ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() })))
-                   .map(Box::new).collect()
+                   .map(Box::new).collect(),
+        abi: abi.unwrap_or_default()
     },
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,

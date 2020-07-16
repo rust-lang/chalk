@@ -1636,6 +1636,7 @@ impl LowerTy for Ty {
             Ty::ForAll {
                 lifetime_names,
                 types,
+                abi,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
                     chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
@@ -1649,6 +1650,7 @@ impl LowerTy for Ty {
                 let function = chalk_ir::FnPointer {
                     num_binders: lifetime_names.len(),
                     substitution: Substitution::from_iter(interner, lowered_tys),
+                    abi: abi.lower()?,
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }

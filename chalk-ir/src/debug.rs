@@ -238,8 +238,9 @@ impl<I: Interner> Debug for FnPointer<I> {
         let FnPointer {
             num_binders,
             substitution,
+            abi,
         } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, substitution)
+        write!(fmt, "{:?} for<{}> {:?}", abi, num_binders, substitution)
     }
 }
 

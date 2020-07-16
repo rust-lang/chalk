@@ -258,6 +258,7 @@ pub enum Ty {
     ForAll {
         lifetime_names: Vec<Identifier>,
         types: Vec<Box<Ty>>,
+        abi: FnAbi,
     },
     Tuple {
         types: Vec<Box<Ty>>,

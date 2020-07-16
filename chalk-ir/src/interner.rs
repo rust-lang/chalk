@@ -633,6 +633,9 @@ pub trait TargetInterner<I: Interner>: Interner {
         &self,
         const_evaluated: &I::InternedConcreteConst,
     ) -> Self::InternedConcreteConst;
+
+    /// Transfer function ABI to the target interner.
+    fn transfer_abi(abi: I::FnAbi) -> Self::FnAbi;
 }
 
 impl<I: Interner> TargetInterner<I> for I {
@@ -661,6 +664,10 @@ impl<I: Interner> TargetInterner<I> for I {
         const_evaluated: &I::InternedConcreteConst,
     ) -> Self::InternedConcreteConst {
         const_evaluated.clone()
+    }
+
+    fn transfer_abi(abi: I::FnAbi) -> Self::FnAbi {
+        abi
     }
 }
 

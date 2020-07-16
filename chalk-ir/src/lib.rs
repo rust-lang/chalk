@@ -862,6 +862,7 @@ impl InferenceVar {
 #[allow(missing_docs)]
 pub struct FnPointer<I: Interner> {
     pub num_binders: usize,
+    pub abi: I::FnAbi,
     pub substitution: Substitution<I>,
 }
 
