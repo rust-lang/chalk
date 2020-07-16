@@ -4,8 +4,8 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Substitution, TraitId,
-    Ty, TyData, TypeName, VariableKinds,
+    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution,
+    TraitId, Ty, TyData, TypeName, VariableKinds,
 };
 
 fn push_clauses<I: Interner>(
@@ -138,7 +138,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             }
             _ => Ok(()),
         },
-        TyData::Function(fn_val) => {
+        TyData::Function(fn_val) if fn_val.safety == Safety::Safe => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(VariableKinds::from_iter(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
