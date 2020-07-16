@@ -315,15 +315,20 @@ Safety: Safety = {
     "unsafe" => Safety::Unsafe,
 };
 
+Variadic: bool = {
+    "variadic" => true,
+}
+
 TyWithoutId: Ty = {
-    <l:ForLifetimes?> <safety:Safety?> <abi:FnAbi?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
+    <l:ForLifetimes?> <var:Variadic?> <safety:Safety?> <abi:FnAbi?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
         lifetime_names: l.unwrap_or_default(),
         types: types
                    .into_iter()
                    .chain(std::iter::once(ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() })))
                    .map(Box::new).collect(),
         safety: safety.unwrap_or_default(),
-        abi: abi.unwrap_or_default()
+        abi: abi.unwrap_or_default(),
+        variadic: var.unwrap_or(false)
     },
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,

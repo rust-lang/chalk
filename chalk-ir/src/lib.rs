@@ -873,6 +873,7 @@ pub struct FnPointer<I: Interner> {
     pub num_binders: usize,
     pub abi: I::FnAbi,
     pub safety: Safety,
+    pub variadic: bool,
     pub substitution: Substitution<I>,
 }
 

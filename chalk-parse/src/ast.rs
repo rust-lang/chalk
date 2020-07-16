@@ -260,6 +260,7 @@ pub enum Ty {
         types: Vec<Box<Ty>>,
         abi: FnAbi,
         safety: Safety,
+        variadic: bool,
     },
     Tuple {
         types: Vec<Box<Ty>>,

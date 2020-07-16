@@ -240,6 +240,7 @@ impl<I: Interner> Debug for FnPointer<I> {
             substitution,
             abi,
             safety,
+            variadic: _,
         } = self;
         write!(
             fmt,
