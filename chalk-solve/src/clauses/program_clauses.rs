@@ -11,7 +11,7 @@ use tracing::instrument;
 /// or struct definition) into its associated "program clauses" --
 /// that is, into the lowered, logical rules that it defines.
 pub trait ToProgramClauses<I: Interner> {
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>);
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>, environment: &Environment<I>);
 }
 
 impl<I: Interner> ToProgramClauses<I> for ImplDatum<I> {
@@ -28,7 +28,11 @@ impl<I: Interner> ToProgramClauses<I> for ImplDatum<I> {
     /// generate nothing -- this is just a way to *opt out* from the
     /// default auto trait impls, it doesn't have any positive effect
     /// on its own.
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
         if self.is_positive() {
             let binders = self.binders.map_ref(|b| (&b.trait_ref, &b.where_clauses));
             builder.push_binders(&binders, |builder, (trait_ref, where_clauses)| {
@@ -64,7 +68,11 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
     ///         Implemented(Iter<'a, T>: 'a).   // (2)
     /// }
     /// ```
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
         let impl_datum = builder.db.impl_datum(self.impl_id);
         let associated_ty = builder.db.associated_ty_data(self.associated_ty_id);
 
@@ -130,7 +138,11 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// ```
     /// where `!T<..>` is the placeholder for the unnormalized type `T<..>`.
     #[instrument(level = "debug", skip(builder))]
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
         builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
             let interner = builder.interner();
             let substitution = builder.substitution_in_scope();
@@ -353,7 +365,11 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
     /// ```
     ///
     #[instrument(level = "debug", skip(builder))]
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         let id = self.id;
@@ -442,7 +458,11 @@ impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
     /// }
     /// ```
     #[instrument(level = "debug", skip(builder))]
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         let id = self.id;
 
@@ -570,7 +590,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
     /// To implement fundamental traits, we simply just do not add the rule above that allows
     /// upstream types to implement upstream traits. Fundamental traits are not allowed to
     /// compatibly do that.
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>, environment: &Environment<I>) {
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| &b.where_clauses);
         builder.push_binders(&binders, |builder, where_clauses| {
@@ -596,14 +616,43 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // conditions.
             let type_parameters: Vec<_> = trait_ref.type_parameters(interner).collect();
 
-            // Drop trait can't have downstream implementation because it can only
-            // be implemented with the same genericity as the struct definition,
-            // i.e. Drop implementation for `struct S<T: Eq> {}` is forced to be
-            // `impl Drop<T: Eq> for S<T> { ... }`. That means that orphan rules
-            // prevent Drop from being implemented in downstream crates.
-            if self.well_known != Some(WellKnownTrait::Drop) {
-                // Add all cases for potential downstream impls that could exist
-                for i in 0..type_parameters.len() {
+            if environment.has_compatible_clause(interner) {
+                // Note: even though we do check for a `Compatible` clause here,
+                // we also keep it as a condition for the clauses below, purely
+                // for logical consistency. But really, it's not needed and could be
+                // removed.
+
+                // Drop trait can't have downstream implementation because it can only
+                // be implemented with the same genericity as the struct definition,
+                // i.e. Drop implementation for `struct S<T: Eq> {}` is forced to be
+                // `impl Drop<T: Eq> for S<T> { ... }`. That means that orphan rules
+                // prevent Drop from being implemented in downstream crates.
+                if self.well_known != Some(WellKnownTrait::Drop) {
+                    // Add all cases for potential downstream impls that could exist
+                    for i in 0..type_parameters.len() {
+                        builder.push_clause(
+                            trait_ref.clone(),
+                            where_clauses
+                                .iter()
+                                .cloned()
+                                .casted(interner)
+                                .chain(iter::once(DomainGoal::Compatible.cast(interner)))
+                                .chain((0..i).map(|j| {
+                                    DomainGoal::IsFullyVisible(type_parameters[j].clone())
+                                        .cast(interner)
+                                }))
+                                .chain(iter::once(
+                                    DomainGoal::DownstreamType(type_parameters[i].clone())
+                                        .cast(interner),
+                                ))
+                                .chain(iter::once(GoalData::CannotProve.intern(interner))),
+                        );
+                    }
+                }
+
+                // Fundamental traits can be reasoned about negatively without any ambiguity, so no
+                // need for this rule if the trait is fundamental.
+                if !self.flags.fundamental {
                     builder.push_clause(
                         trait_ref.clone(),
                         where_clauses
@@ -611,14 +660,11 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                             .cloned()
                             .casted(interner)
                             .chain(iter::once(DomainGoal::Compatible.cast(interner)))
-                            .chain((0..i).map(|j| {
-                                DomainGoal::IsFullyVisible(type_parameters[j].clone())
-                                    .cast(interner)
-                            }))
-                            .chain(iter::once(
-                                DomainGoal::DownstreamType(type_parameters[i].clone())
-                                    .cast(interner),
-                            ))
+                            .chain(
+                                trait_ref
+                                    .type_parameters(interner)
+                                    .map(|ty| DomainGoal::IsUpstream(ty).cast(interner)),
+                            )
                             .chain(iter::once(GoalData::CannotProve.intern(interner))),
                     );
                 }
@@ -638,25 +684,6 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
                             .chain(Some(DomainGoal::IsLocal(type_parameters[i].clone()))),
                     );
                 }
-            }
-
-            // Fundamental traits can be reasoned about negatively without any ambiguity, so no
-            // need for this rule if the trait is fundamental.
-            if !self.flags.fundamental {
-                builder.push_clause(
-                    trait_ref.clone(),
-                    where_clauses
-                        .iter()
-                        .cloned()
-                        .casted(interner)
-                        .chain(iter::once(DomainGoal::Compatible.cast(interner)))
-                        .chain(
-                            trait_ref
-                                .type_parameters(interner)
-                                .map(|ty| DomainGoal::IsUpstream(ty).cast(interner)),
-                        )
-                        .chain(iter::once(GoalData::CannotProve.intern(interner))),
-                );
             }
 
             // Reverse implied bound rules: given (e.g.) `trait Foo: Bar + Baz`,
@@ -759,7 +786,11 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
     ///     FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self, 'a,T>).
     /// }
     /// ```
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>) {
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
         let interner = builder.interner();
         let binders = self.binders.map_ref(|b| (&b.where_clauses, &b.bounds));
         builder.push_binders(&binders, |builder, (where_clauses, bounds)| {

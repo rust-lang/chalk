@@ -9,7 +9,7 @@ use crate::Ty;
 use crate::{debug_span, TyData};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
-use chalk_ir::DebruijnIndex;
+use chalk_ir::{DebruijnIndex, Environment};
 use rustc_hash::FxHashSet;
 use tracing::instrument;
 
@@ -23,10 +23,11 @@ pub(super) fn elaborate_env_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     in_clauses: &[ProgramClause<I>],
     out: &mut FxHashSet<ProgramClause<I>>,
+    environment: &Environment<I>,
 ) {
     let mut this_round = vec![];
     in_clauses.visit_with(
-        &mut EnvElaborator::new(db, &mut this_round),
+        &mut EnvElaborator::new(db, &mut this_round, environment),
         DebruijnIndex::INNERMOST,
     );
     out.extend(this_round);
@@ -35,13 +36,19 @@ pub(super) fn elaborate_env_clauses<I: Interner>(
 struct EnvElaborator<'me, I: Interner> {
     db: &'me dyn RustIrDatabase<I>,
     builder: ClauseBuilder<'me, I>,
+    environment: &'me Environment<I>,
 }
 
 impl<'me, I: Interner> EnvElaborator<'me, I> {
-    fn new(db: &'me dyn RustIrDatabase<I>, out: &'me mut Vec<ProgramClause<I>>) -> Self {
+    fn new(
+        db: &'me dyn RustIrDatabase<I>,
+        out: &'me mut Vec<ProgramClause<I>>,
+        environment: &'me Environment<I>,
+    ) -> Self {
         EnvElaborator {
             db,
             builder: ClauseBuilder::new(db, out),
+            environment,
         }
     }
 }
@@ -58,12 +65,13 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     }
     #[instrument(level = "debug", skip(self, _outer_binder))]
     fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
-        let interner = self.db.interner();
-        match ty.data(interner) {
+        match ty.data(self.interner()) {
             TyData::Apply(application_ty) => {
-                match_type_name(&mut self.builder, interner, application_ty)
+                match_type_name(&mut self.builder, self.environment, application_ty)
             }
-            TyData::Alias(alias_ty) => match_alias_ty(&mut self.builder, alias_ty),
+            TyData::Alias(alias_ty) => {
+                match_alias_ty(&mut self.builder, self.environment, alias_ty)
+            }
             TyData::Placeholder(_) => {}
 
             // FIXME(#203) -- We haven't fully figured out the implied
@@ -81,7 +89,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
                 FromEnv::Trait(trait_ref) => {
                     let trait_datum = self.db.trait_datum(trait_ref.trait_id);
 
-                    trait_datum.to_program_clauses(&mut self.builder);
+                    trait_datum.to_program_clauses(&mut self.builder, self.environment);
 
                     // If we know that `T: Iterator`, then we also know
                     // things about `<T as Iterator>::Item`, so push those
@@ -89,7 +97,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
                     for &associated_ty_id in &trait_datum.associated_ty_ids {
                         self.db
                             .associated_ty_data(associated_ty_id)
-                            .to_program_clauses(&mut self.builder);
+                            .to_program_clauses(&mut self.builder, self.environment);
                     }
                 }
                 FromEnv::Ty(ty) => ty.visit_with(self, outer_binder),
