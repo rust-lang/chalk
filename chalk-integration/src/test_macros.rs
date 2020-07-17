@@ -13,12 +13,15 @@ macro_rules! ty {
     };
 
     (function $n:tt $($arg:tt)*) => {
-        chalk_ir::TyData::Function(chalk_ir::Fn {
+        chalk_ir::TyData::Function(chalk_ir::FnPointer {
             num_binders: $n,
             substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
+            safety: chalk_ir::Safety::Safe,
+            abi: <chalk_integration::interner::ChalkIr as chalk_ir::interner::Interner>::FnAbi::Rust,
+            variadic: false,
         }).intern(&chalk_integration::interner::ChalkIr)
     };
 
