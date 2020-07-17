@@ -81,28 +81,42 @@ fn forall_equality() {
 
         goal {
             // Function pointers with different ABIs should not be equal.
-            for<'a, 'b> extern "Rust" fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> extern "C" fn(Ref<'c, Ref<'d, Unit>>)>
+            extern "Rust" fn(): Eq<extern "C" fn()>
         } yields {
             "No possible solution"
         }
 
         goal {
             // Function pointers with identical ABIs should be equal.
-            for<'a, 'b> extern "Rust" fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> extern "Rust" fn(Ref<'c, Ref<'d, Unit>>)>
+            extern "Rust" fn(): Eq<extern "Rust" fn()>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
 
         goal {
             // Function pointers with different safety should not be equal.
-            for<'a, 'b> unsafe fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> fn(Ref<'c, Ref<'d, Unit>>)>
+            unsafe fn(): Eq<fn()>
         } yields {
             "No possible solution"
         }
 
         goal {
             // Function pointers with identical safety should be equal.
-            for<'a, 'b> unsafe fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> unsafe fn(Ref<'c, Ref<'d, Unit>>)>
+            unsafe fn(): Eq<unsafe fn()>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            // Variadic function pointers should not be equal to non-variadic fn pointers.
+            variadic fn(): Eq<fn()>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            // Variadic function pointers should be equal to variadic fn pointers.
+            variadic fn(): Eq<variadic fn()>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
