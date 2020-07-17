@@ -129,7 +129,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
             (&TyData::Function(ref fn1), &TyData::Function(ref fn2)) => {
-                if fn1.abi == fn2.abi && fn1.safety == fn2.safety {
+                if fn1.abi == fn2.abi && fn1.safety == fn2.safety && fn1.variadic == fn2.variadic {
                     self.unify_binders(fn1, fn2)
                 } else {
                     Err(NoSolution)
