@@ -86,6 +86,14 @@ fn opaque_where_clause() {
         } yields {
             "Unique; substitution []"
         }
+
+        goal {
+            forall<U> {
+                WellFormed(S<U>)
+            }
+        } yields {
+            "No possible solution"
+        }
     }
 }
 

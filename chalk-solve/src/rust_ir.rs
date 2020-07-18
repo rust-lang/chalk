@@ -643,9 +643,11 @@ pub struct OpaqueTyDatum<I: Interner> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
 pub struct OpaqueTyDatumBound<I: Interner> {
-    /// Trait bounds for the opaque type.
+    /// Trait bounds for the opaque type. These are bounds that the hidden type must meet.
     pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
     /// Where clauses that inform well-formedness conditions for the opaque type.
+    /// These are conditions on the generic parameters of the opaque type which must be true
+    /// for a reference to the opaque type to be well-formed.
     pub where_clauses: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
 
