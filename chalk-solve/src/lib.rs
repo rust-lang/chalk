@@ -21,6 +21,25 @@ pub mod solve;
 pub mod split;
 pub mod wf;
 
+/// Trait representing access to a database of rust types.
+///
+/// # `*_name` methods
+///
+/// This trait has a number of `*_name` methods with default implementations.
+/// These are used in the implementation for [`LoggingRustIrDatabase`], so that
+/// when printing `.chalk` files equivalent to the data used, we can use real
+/// names.
+///
+/// The default implementations simply fall back to calling [`Interner`] debug
+/// methods, and printing `"UnknownN"` (where `N` is the demultiplexing integer)
+/// if those methods return `None`.
+///
+/// The [`display::sanitize_debug_name`] utility is used in the default
+/// implementations, and might be useful when providing custom implementations.
+///
+/// [`LoggingRustIrDatabase`]: crate::logging_db::LoggingRustIrDatabase
+/// [`display::sanitize_debug_name`]: crate::display::sanitize_debug_name
+/// [`Interner`]: Interner
 pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns any "custom program clauses" that do not derive from
     /// Rust IR. Used only in testing the underlying solver.
@@ -144,21 +163,35 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         substs: &Substitution<I>,
     ) -> Substitution<I>;
 
-    /// Retrieves a trait's original name. No uniqueness guarantees.
-    /// TODO: remove this, use only interner debug methods
-    fn trait_name(&self, trait_id: TraitId<I>) -> String;
+    /// Retrieves a trait's original name. No uniqueness guarantees, but must
+    /// a valid Rust identifier.
+    fn trait_name(&self, trait_id: TraitId<I>) -> String {
+        crate::display::sanitize_debug_name(|f| I::debug_trait_id(trait_id, f))
+    }
 
-    /// Retrieves a struct's original name. No uniqueness guarantees.
-    fn adt_name(&self, struct_id: AdtId<I>) -> String;
+    /// Retrieves a struct's original name. No uniqueness guarantees, but must
+    /// a valid Rust identifier.
+    fn adt_name(&self, adt_id: AdtId<I>) -> String {
+        crate::display::sanitize_debug_name(|f| I::debug_adt_id(adt_id, f))
+    }
 
-    /// Retrieves the name of an associated type.
-    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String;
+    /// Retrieves the name of an associated type. No uniqueness guarantees, but must
+    /// a valid Rust identifier.
+    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
+        crate::display::sanitize_debug_name(|f| I::debug_assoc_type_id(assoc_ty_id, f))
+    }
 
-    /// Retrieves the name of an opaque type.
-    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String;
+    /// Retrieves the name of an opaque type. No uniqueness guarantees, but must
+    /// a valid Rust identifier.
+    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
+        crate::display::sanitize_debug_name(|f| I::debug_opaque_ty_id(opaque_ty_id, f))
+    }
 
-    /// Retrieves the name of a function definition
-    fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String;
+    /// Retrieves the name of a function definition. No uniqueness guarantees, but must
+    /// a valid Rust identifier.
+    fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
+        crate::display::sanitize_debug_name(|f| I::debug_fn_def_id(fn_def_id, f))
+    }
 }
 
 pub use clauses::program_clauses_for_env;
