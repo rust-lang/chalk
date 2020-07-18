@@ -139,7 +139,7 @@ impl tls::DebugContext for Program {
         if let Some(d) = self.associated_ty_data.get(&assoc_type_id) {
             write!(fmt, "({:?}::{})", d.trait_id, d.name)
         } else {
-            fmt.debug_struct("InvalidItemId")
+            fmt.debug_struct("InvalidAssocTypeId")
                 .field("index", &assoc_type_id.0)
                 .finish()
         }
@@ -153,8 +153,22 @@ impl tls::DebugContext for Program {
         if let Some(k) = self.opaque_ty_kinds.get(&opaque_ty_id) {
             write!(fmt, "{}", k.name)
         } else {
-            fmt.debug_struct("InvalidItemId")
+            fmt.debug_struct("InvalidOpaqueTyId")
                 .field("index", &opaque_ty_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_fn_def_id(
+        &self,
+        fn_def_id: FnDefId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.fn_def_kinds.get(&fn_def_id) {
+            write!(fmt, "{}", k.name)
+        } else {
+            fmt.debug_struct("InvalidFnDefId")
+                .field("index", &fn_def_id.0)
                 .finish()
         }
     }
