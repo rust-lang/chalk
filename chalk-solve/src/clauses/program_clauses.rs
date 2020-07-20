@@ -175,7 +175,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             // AliasEq(T<..> = !T<..>).
             builder.push_fact(DomainGoal::Holds(
                 AliasEq {
-                    alias: alias.clone(),
+                    alias,
                     ty: alias_placeholder_ty.clone(),
                 }
                 .cast(interner),
@@ -243,9 +243,9 @@ fn well_formed_program_clauses<'a, I, Wc>(
 {
     let interner = builder.interner();
     let appl_ty = application_ty(builder, type_name);
-    let ty = appl_ty.clone().intern(interner);
+    let ty = appl_ty.intern(interner);
     builder.push_clause(
-        WellFormed::Ty(ty.clone()),
+        WellFormed::Ty(ty),
         where_clauses
             .cloned()
             .map(|qwc| qwc.into_well_formed_goal(interner)),
@@ -271,8 +271,8 @@ fn well_formed_program_clauses<'a, I, Wc>(
 ///
 /// - builder -- the clause builder. We assume all the generic types from `Foo` are in scope
 /// - type_name -- in our example above, the name `Foo`
-fn fully_visible_program_clauses<'a, I>(
-    builder: &'a mut ClauseBuilder<'_, I>,
+fn fully_visible_program_clauses<I>(
+    builder: &mut ClauseBuilder<'_, I>,
     type_name: impl CastTo<TypeName<I>>,
 ) where
     I: Interner,
@@ -281,7 +281,7 @@ fn fully_visible_program_clauses<'a, I>(
     let appl_ty = application_ty(builder, type_name);
     let ty = appl_ty.clone().intern(interner);
     builder.push_clause(
-        DomainGoal::IsFullyVisible(ty.clone()),
+        DomainGoal::IsFullyVisible(ty),
         appl_ty
             .type_parameters(interner)
             .map(|typ| DomainGoal::IsFullyVisible(typ).cast::<Goal<_>>(interner)),
@@ -317,7 +317,7 @@ fn implied_bounds_program_clauses<'a, I, Wc>(
 {
     let interner = builder.interner();
     let appl_ty = application_ty(builder, type_name);
-    let ty = appl_ty.clone().intern(interner);
+    let ty = appl_ty.intern(interner);
 
     for qwc in where_clauses {
         builder.push_binders(&qwc, |builder, wc| {
@@ -723,7 +723,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // ```
             // Implemented(T: Foo) :- FromEnv(T: Foo)
             // ```
-            builder.push_clause(trait_ref.clone(), Some(trait_ref.clone().from_env()));
+            builder.push_clause(trait_ref.clone(), Some(trait_ref.from_env()));
         });
     }
 }

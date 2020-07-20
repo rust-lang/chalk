@@ -53,8 +53,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         environment: &'t Environment<I>,
     ) -> Self {
         Unifier {
-            environment: environment,
-            table: table,
+            environment,
+            table,
             goals: vec![],
             interner,
         }
@@ -475,11 +475,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         ));
         self.goals.push(InEnvironment::new(
             self.environment,
-            WhereClause::LifetimeOutlives(LifetimeOutlives {
-                a: b.clone(),
-                b: a.clone(),
-            })
-            .cast(self.interner),
+            WhereClause::LifetimeOutlives(LifetimeOutlives { a: b, b: a }).cast(self.interner),
         ));
     }
 }

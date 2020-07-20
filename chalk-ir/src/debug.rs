@@ -655,7 +655,7 @@ pub struct Angle<'a, T>(pub &'a [T]);
 
 impl<'a, T: Debug> Debug for Angle<'a, T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        if self.0.len() > 0 {
+        if !self.0.is_empty() {
             write!(fmt, "<")?;
             for (index, elem) in self.0.iter().enumerate() {
                 if index > 0 {

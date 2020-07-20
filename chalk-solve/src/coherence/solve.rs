@@ -41,7 +41,7 @@ impl<I: Interner, S: Solver<I>, SC: Into<S> + Copy> CoherenceSolver<'_, I, S, SC
                     (true, false) => record_specialization(l_id, r_id),
                     (false, true) => record_specialization(r_id, l_id),
                     (_, _) => {
-                        Err(CoherenceError::OverlappingImpls(self.trait_id))?;
+                        return Err(CoherenceError::OverlappingImpls(self.trait_id));
                     }
                 }
             }

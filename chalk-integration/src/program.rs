@@ -416,7 +416,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     }
 
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {
-        self.well_known_traits.get(&well_known_trait).map(|x| *x)
+        self.well_known_traits.get(&well_known_trait).copied()
     }
 
     fn program_clauses_for_env(

@@ -58,11 +58,11 @@ pub fn add_copy_program_clauses<I: Interner>(
                 let upvars = upvars.substitute(db.interner(), &closure_fn_substitution);
                 needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
             }
-            _ => return,
+            _ => {}
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
         // TODO(areredify)
         // when #368 lands, extend this to handle everything accordingly
-        _ => return,
+        _ => {}
     };
 }
