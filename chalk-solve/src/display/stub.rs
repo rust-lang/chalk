@@ -116,6 +116,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
             v.bound.binders,
             OpaqueTyDatumBound {
                 bounds: Binders::new(VariableKinds::empty(self.db.interner()), Vec::new()),
+                where_clauses: Binders::new(VariableKinds::empty(self.db.interner()), Vec::new()),
             },
         );
         Arc::new(v)
