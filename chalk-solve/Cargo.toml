@@ -12,11 +12,11 @@ edition = "2018"
 [dependencies]
 ena = "0.14.0"
 itertools = "0.9.0"
-petgraph = "0.5.0"
+petgraph = "0.5.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.2", optional = true }
-tracing-tree = { version = "0.1.1", optional = true }
-rustc-hash = { version = "1.0.0" }
+tracing-tree = { version = "0.1.4", optional = true }
+rustc-hash = { version = "1.1.0" }
 
 chalk-derive = { version = "0.19.0-dev.0", path = "../chalk-derive" }
 chalk-ir = { version = "0.19.0-dev.0", path = "../chalk-ir" }
