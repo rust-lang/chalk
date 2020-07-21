@@ -1,5 +1,6 @@
 name: Publish
 on:
+  workflow_dispatch: # We can add version input when 1.0 is released and scheduled releases are removed
   schedule:
     - cron: "0 0 * * 0" # midnight UTC on Sunday
 
@@ -18,7 +19,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable 
+          toolchain: stable
           profile: minimal
           override: true
 
