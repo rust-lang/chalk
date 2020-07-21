@@ -140,28 +140,31 @@ FnReturn: Ty = {
 };
 
 FnDefn: FnDefn = {
-    <var:Variadic?> <safety:Safety?> <abi:FnAbi?> "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")"
+    <safety:Safety?> <abi:FnAbi?> "fn" <n:Id> <p:Angle<VariableKind>>"(" <args:FnArgs> ")"
         <ret_ty:FnReturn?> <w:QuantifiedWhereClauses> ";" => FnDefn
     {
         name: n,
         variable_kinds: p,
         where_clauses: w,
-        argument_types: args,
+        variadic: args.is_variadic(),
+        argument_types: args.to_tys(),
         return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
         abi: abi.unwrap_or_default(),
         safety: safety.unwrap_or_default(),
-        variadic: var.unwrap_or(false),
     }
 };
 
 FnAbi: FnAbi = "extern" "\"" <id:Id> "\"" => FnAbi(id.str);
 
-FnArg: Ty = {
-    Id ":" <arg_ty: Ty> => arg_ty
+FnArg: FnArg = {
+    Id ":" "..." => FnArg::Variadic,
+    Id ":" <arg_ty: Ty> => FnArg::NonVariadic(arg_ty),
 };
 
-FnArgs: Vec<Ty> = {
-    <Comma<FnArg>>
+FnArgs: FnArgs = {
+    <Comma<FnArg>> =>? FnArgs::from_vec(<>).map_err(|e| lalrpop_util::ParseError::User {
+        error: e,
+    })
 };
 
 ClosureDefn: ClosureDefn = {
@@ -183,7 +186,7 @@ ClosureSelf: ClosureKind = {
 }
 
 ClosureArgs: Vec<Ty> = {
-    "," <args:FnArgs> => args,
+    "," <args:FnArgs> => args.to_tys(),
 }
 
 TraitDefn: TraitDefn = {
@@ -317,20 +320,28 @@ Safety: Safety = {
     "unsafe" => Safety::Unsafe,
 };
 
-Variadic: bool = {
-    "variadic" => true,
-}
+FnArgTy: FnArg = {
+    "..." => FnArg::Variadic,
+    <arg_ty: Ty> => FnArg::NonVariadic(arg_ty),
+};
+
+FnArgTys: FnArgs = {
+    <Comma<FnArgTy>> =>? FnArgs::from_vec(<>).map_err(|e| lalrpop_util::ParseError::User {
+        error: e,
+    })
+};
 
 TyWithoutId: Ty = {
-    <l:ForLifetimes?> <var:Variadic?> <safety:Safety?> <abi:FnAbi?> "fn" "(" <types:Comma<Ty>> ")" <ret_ty:FnReturn?> => Ty::ForAll {
+    <l:ForLifetimes?> <safety:Safety?> <abi:FnAbi?> "fn" "(" <types:FnArgTys> ")" <ret_ty:FnReturn?> => Ty::ForAll {
         lifetime_names: l.unwrap_or_default(),
+        variadic: types.is_variadic(),
         types: types
+                   .to_tys()
                    .into_iter()
                    .chain(std::iter::once(ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() })))
                    .map(Box::new).collect(),
         safety: safety.unwrap_or_default(),
         abi: abi.unwrap_or_default(),
-        variadic: var.unwrap_or(false)
     },
     <ScalarType> => Ty::Scalar { ty: <> },
     "str" => Ty::Str,

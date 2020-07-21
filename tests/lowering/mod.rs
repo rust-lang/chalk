@@ -731,15 +731,15 @@ fn extern_functions() {
 fn unsafe_variadic_functions() {
     lowering_success! {
         program {
-            unsafe fn foo();
-            variadic unsafe fn bar();
+            unsafe fn foo(_: u8);
+            unsafe fn bar(_: u8, _: ...);
             unsafe extern "C" fn baz();
         }
     }
     lowering_success! {
         program {
-            variadic fn foo();
-            variadic extern "C" fn bar();
+            fn foo(_: u8, _: ...);
+            extern "C" fn bar(_: u8, _: ...);
         }
     }
 }

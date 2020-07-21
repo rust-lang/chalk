@@ -466,3 +466,51 @@ pub enum ClosureKind {
     FnMut,
     FnOnce,
 }
+
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum FnArg {
+    NonVariadic(Ty),
+    Variadic,
+}
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum FnArgs {
+    NonVariadic(Vec<Ty>),
+    Variadic(Vec<Ty>),
+}
+
+impl FnArgs {
+    pub fn is_variadic(&self) -> bool {
+        match self {
+            Self::Variadic(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn to_tys(self) -> Vec<Ty> {
+        match self {
+            Self::NonVariadic(tys) | Self::Variadic(tys) => tys,
+        }
+    }
+
+    pub fn from_vec(mut args: Vec<FnArg>) -> Result<Self, &'static str> {
+        let mut tys = Vec::with_capacity(args.len());
+        let last = args.pop();
+        for arg in args {
+            match arg {
+                FnArg::NonVariadic(ty) => tys.push(ty),
+                FnArg::Variadic => {
+                    return Err("a variadic argument must be the last parameter in a function");
+                }
+            }
+        }
+
+        Ok(match last {
+            Some(FnArg::NonVariadic(ty)) => {
+                tys.push(ty);
+                FnArgs::NonVariadic(tys)
+            }
+            Some(FnArg::Variadic) => FnArgs::Variadic(tys),
+            None => FnArgs::NonVariadic(tys),
+        })
+    }
+}

@@ -109,14 +109,14 @@ fn forall_equality() {
 
         goal {
             // Variadic function pointers should not be equal to non-variadic fn pointers.
-            variadic fn(): Eq<fn()>
+            fn(u8, ...): Eq<fn(u8)>
         } yields {
             "No possible solution"
         }
 
         goal {
             // Variadic function pointers should be equal to variadic fn pointers.
-            variadic fn(): Eq<variadic fn()>
+            fn(u8, ...): Eq<fn(u8, ...)>
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
