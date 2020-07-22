@@ -7,6 +7,9 @@ fn opaque_bounds() {
             struct Ty { }
 
             trait Clone { }
+
+            impl Clone for Ty { }
+
             opaque type T: Clone = Ty;
         }
 
@@ -27,6 +30,7 @@ fn opaque_reveal() {
             impl Trait for Ty { }
 
             trait Clone { }
+            impl Clone for Ty { }
             opaque type T: Clone = Ty;
         }
 
@@ -53,11 +57,16 @@ fn opaque_where_clause() {
             struct Ty { }
 
             trait Clone { }
+            impl Clone for Ty { }
+
             trait Trait { }
             impl Trait for Ty { }
+
             opaque type T: Clone where T: Trait = Ty;
 
             struct Vec<U> { }
+
+            impl<V> Clone for Vec<V> { }
             impl<U> Trait for Vec<U> { }
 
             opaque type S<U>: Clone where U: Trait = Vec<U>;
@@ -130,6 +139,10 @@ fn opaque_generics() {
             struct Vec<T> { }
             struct Bar { }
 
+            impl<T> Iterator for Vec<T> {
+                type Item = T;
+            }
+
             opaque type Foo<X>: Iterator<Item = X> = Vec<X>;
         }
 
@@ -166,6 +179,9 @@ fn opaque_auto_traits() {
             struct Bar { }
             struct Baz { }
             trait Trait { }
+
+            impl Trait for Bar { }
+            impl Trait for Baz { }
 
             #[auto]
             trait Send { }
