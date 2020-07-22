@@ -11,6 +11,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.rust == 'nightly' }}
     strategy:
       matrix:
         rust: [stable, nightly]
