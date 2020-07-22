@@ -16,6 +16,7 @@ use tracing::debug;
 #[derive(Debug)]
 pub enum WfError<I: Interner> {
     IllFormedTypeDecl(chalk_ir::AdtId<I>),
+    IllFormedOpaqueTypeDecl(chalk_ir::OpaqueTyId<I>),
     IllFormedTraitImpl(chalk_ir::TraitId<I>),
 }
 
@@ -25,6 +26,11 @@ impl<I: Interner> fmt::Display for WfError<I> {
             WfError::IllFormedTypeDecl(id) => write!(
                 f,
                 "type declaration `{:?}` does not meet well-formedness requirements",
+                id
+            ),
+            WfError::IllFormedOpaqueTypeDecl(id) => write!(
+                f,
+                "opaque type declaration `{:?}` does not meet well-formedness requirements",
                 id
             ),
             WfError::IllFormedTraitImpl(id) => write!(
@@ -260,6 +266,70 @@ where
             Ok(())
         } else {
             Err(WfError::IllFormedTraitImpl(trait_id))
+        }
+    }
+
+    pub fn verify_opaque_ty_decl(&self, opaque_ty_id: OpaqueTyId<I>) -> Result<(), WfError<I>> {
+        // Given an opaque type like
+        // ```notrust
+        // opaque type Foo<T>: Clone where T: Bar = Baz;
+        // ```
+        let interner = self.db.interner();
+
+        let mut gb = GoalBuilder::new(self.db);
+
+        let datum = self.db.opaque_ty_data(opaque_ty_id);
+        let bound = &datum.bound;
+
+        // We make a goal like
+        //
+        // forall<T>
+        let goal = gb.forall(&bound, opaque_ty_id, |gb, _, bound, opaque_ty_id| {
+            // exists<Self>
+            gb.exists(
+                &bound.where_clauses,
+                (opaque_ty_id, &bound.bounds),
+                |gb, _, where_clauses, (opaque_ty_id, bounds)| {
+                    let interner = gb.interner();
+                    let clauses = where_clauses
+                        .iter()
+                        .cloned()
+                        .map(|wc| wc.into_from_env_goal(interner));
+                    let subst =
+                        Substitution::from1(interner, gb.db().hidden_opaque_type(opaque_ty_id));
+
+                    // if (WellFormed(T: Bar))
+                    gb.implies(clauses, |gb| {
+                        let interner = gb.interner();
+
+                        // all(WellFormed(Baz: Clone))
+                        gb.all(
+                            bounds
+                                .substitute(interner, &subst)
+                                .iter()
+                                .cloned()
+                                .map(|b| b.into_well_formed_goal(interner)),
+                        )
+                    })
+                },
+            )
+        });
+
+        debug!("WF opaque type goal: {:#?}", goal);
+
+        let is_legal = match self
+            .solver_choice
+            .into()
+            .solve(self.db, &goal.into_closed_goal(interner))
+        {
+            Some(sol) => sol.is_unique(),
+            None => false,
+        };
+
+        if is_legal {
+            Ok(())
+        } else {
+            Err(WfError::IllFormedOpaqueTypeDecl(opaque_ty_id))
         }
     }
 }
