@@ -17,22 +17,16 @@ use chalk_solve::rust_ir::{
 };
 use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 use salsa::Database;
+use std::fmt;
 use std::sync::Arc;
 
 #[salsa::database(Lowering)]
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ChalkDatabase {
-    runtime: salsa::Runtime<ChalkDatabase>,
+    storage: salsa::Storage<Self>,
 }
 
-impl Database for ChalkDatabase {
-    fn salsa_runtime(&self) -> &salsa::Runtime<ChalkDatabase> {
-        &self.runtime
-    }
-    fn salsa_runtime_mut(&mut self) -> &mut salsa::Runtime<ChalkDatabase> {
-        &mut self.runtime
-    }
-}
+impl Database for ChalkDatabase {}
 
 impl ChalkDatabase {
     pub fn with(program_text: &str, solver_choice: SolverChoice) -> Self {
@@ -220,5 +214,11 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
         self.program_ir().unwrap().fn_def_name(fn_def_id)
+    }
+}
+
+impl fmt::Debug for ChalkDatabase {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ChalkDatabase {{ }}")
     }
 }
