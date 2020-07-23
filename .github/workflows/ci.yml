@@ -116,7 +116,7 @@ jobs:
     name: bors build finished
     if: success()
     runs-on: ubuntu-latest
-    needs: [test, fmt, mdbook-linkcheck]
+    needs: [test, fmt]
 
     steps:
       - name: Mark the job as successful
@@ -126,7 +126,7 @@ jobs:
     name: bors build finished
     if: "!success()"
     runs-on: ubuntu-latest
-    needs: [test, fmt, mdbook-linkcheck]
+    needs: [test, fmt]
 
     steps:
       - name: Mark the job as a failure
