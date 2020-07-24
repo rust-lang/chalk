@@ -193,6 +193,15 @@ pub enum Scalar {
     Float(FloatTy),
 }
 
+/// Whether a function is safe or not.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Safety {
+    /// Safe
+    Safe,
+    /// Unsafe
+    Unsafe,
+}
+
 /// Whether a type is mutable or not.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Mutability {
@@ -503,7 +512,7 @@ pub enum TyData<I: Interner> {
     /// Note that "higher-ranked" types (starting with `for<>`) are either
     /// function types or dyn types, and do not appear otherwise in Rust
     /// surface syntax.
-    Function(Fn<I>),
+    Function(FnPointer<I>),
 
     /// References the binding at the given depth. The index is a [de
     /// Bruijn index], so it counts back through the in-scope binders.
@@ -860,12 +869,15 @@ impl InferenceVar {
 /// and we use deBruijn indices within `self.ty`
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 #[allow(missing_docs)]
-pub struct Fn<I: Interner> {
+pub struct FnPointer<I: Interner> {
     pub num_binders: usize,
+    pub abi: I::FnAbi,
+    pub safety: Safety,
+    pub variadic: bool,
     pub substitution: Substitution<I>,
 }
 
-impl<I: Interner> Copy for Fn<I> where I::InternedSubstitution: Copy {}
+impl<I: Interner> Copy for FnPointer<I> where I::InternedSubstitution: Copy {}
 
 /// Constants.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]

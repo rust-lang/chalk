@@ -728,6 +728,23 @@ fn extern_functions() {
 }
 
 #[test]
+fn unsafe_variadic_functions() {
+    lowering_success! {
+        program {
+            unsafe fn foo(_: u8);
+            unsafe fn bar(_: u8, _: ...);
+            unsafe extern "C" fn baz();
+        }
+    }
+    lowering_success! {
+        program {
+            fn foo(_: u8, _: ...);
+            extern "C" fn bar(_: u8, _: ...);
+        }
+    }
+}
+
+#[test]
 fn closures() {
     lowering_success! {
         program {

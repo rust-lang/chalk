@@ -232,14 +232,21 @@ impl Debug for InferenceVar {
     }
 }
 
-impl<I: Interner> Debug for Fn<I> {
+impl<I: Interner> Debug for FnPointer<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         // FIXME -- we should introduce some names or something here
-        let Fn {
+        let FnPointer {
             num_binders,
             substitution,
+            abi,
+            safety,
+            variadic: _,
         } = self;
-        write!(fmt, "for<{}> {:?}", num_binders, substitution)
+        write!(
+            fmt,
+            "for<{}> {:?} {:?} {:?}",
+            num_binders, safety, abi, substitution
+        )
     }
 }
 

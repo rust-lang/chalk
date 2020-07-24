@@ -78,6 +78,48 @@ fn forall_equality() {
             InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
             InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
         }
+
+        goal {
+            // Function pointers with different ABIs should not be equal.
+            extern "Rust" fn(): Eq<extern "C" fn()>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            // Function pointers with identical ABIs should be equal.
+            extern "Rust" fn(): Eq<extern "Rust" fn()>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            // Function pointers with different safety should not be equal.
+            unsafe fn(): Eq<fn()>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            // Function pointers with identical safety should be equal.
+            unsafe fn(): Eq<unsafe fn()>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            // Variadic function pointers should not be equal to non-variadic fn pointers.
+            fn(u8, ...): Eq<fn(u8)>
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            // Variadic function pointers should be equal to variadic fn pointers.
+            fn(u8, ...): Eq<fn(u8, ...)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
     }
 }
 

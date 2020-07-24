@@ -6,8 +6,8 @@
 use crate::interner::TargetInterner;
 use crate::*;
 
-impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
-    type Result = Fn<TI>;
+impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FnPointer<I> {
+    type Result = FnPointer<TI>;
     fn fold_with<'i>(
         &self,
         folder: &mut dyn Folder<'i, I, TI>,
@@ -17,13 +17,19 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Fn<I> {
         I: 'i,
         TI: 'i,
     {
-        let Fn {
+        let FnPointer {
             num_binders,
             substitution,
+            abi,
+            safety,
+            variadic,
         } = self;
-        Ok(Fn {
+        Ok(FnPointer {
             num_binders: *num_binders,
             substitution: substitution.fold_with(folder, outer_binder.shifted_in())?,
+            abi: TI::transfer_abi(*abi),
+            safety: *safety,
+            variadic: *variadic,
         })
     }
 }

@@ -43,6 +43,25 @@ fn function_implement_fn_traits() {
             "Unique; substitution [], lifetime constraints []"
         }
 
+        // Make sure unsafe function pointers don't implement FnOnce
+        goal {
+            unsafe fn(u8): FnOnce<(u8,)>
+        } yields {
+            "No possible solution"
+        }
+        // Same as above but for FnMut
+        goal {
+            unsafe fn(u8): FnMut<(u8,)>
+        } yields {
+            "No possible solution"
+        }
+        // Same as above but for Fn
+        goal {
+            unsafe fn(u8): Fn<(u8,)>
+        } yields {
+            "No possible solution"
+        }
+
         // Function pointres implicity return `()` when no return
         // type is specified - make sure that normalization understands
         // this
