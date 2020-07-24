@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - master
+      - auto
+      - try
   pull_request:
     branches:
       - "**"
