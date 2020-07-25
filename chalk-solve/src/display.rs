@@ -25,7 +25,7 @@ pub use self::state::*;
 
 use self::utils::as_display;
 
-fn write_item<F, I, T>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
+fn write_item<F, I, T>(f: &mut F, ws: &InternalWriterState<'_, I>, v: &T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,
@@ -64,7 +64,7 @@ where
     DB: RustIrDatabase<I>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
-    let ws = &WriterState::new(db);
+    let ws = &InternalWriterState::new(db);
     for id in ids {
         match id {
             RecordedItemId::Impl(id) => {
@@ -110,11 +110,11 @@ where
 ///
 /// Shared between the `Trait` in `dyn Trait` and [`OpaqueTyDatum`] bounds.
 fn display_self_where_clauses_as_bounds<'a, I: Interner>(
-    s: &'a WriterState<'a, I>,
+    s: &'a InternalWriterState<'a, I>,
     bounds: &'a [QuantifiedWhereClause<I>],
 ) -> impl Display + 'a {
     as_display(move |f| {
-        let interner = s.db.interner();
+        let interner = s.db().interner();
         write!(
             f,
             "{}",
@@ -143,7 +143,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                             WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
                                 AliasTy::Projection(projection_ty) => {
                                     let (assoc_ty_datum, trait_params, assoc_type_params) =
-                                        s.db.split_projection(&projection_ty);
+                                        s.db().split_projection(&projection_ty);
                                     display_trait_with_assoc_ty_value(
                                         s,
                                         assoc_ty_datum,
@@ -171,7 +171,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
 ///
 /// This is shared between where bounds, OpaqueTy, & dyn Trait.
 fn display_type_with_generics<'a, I: Interner>(
-    s: &'a WriterState<'a, I>,
+    s: &'a InternalWriterState<'a, I>,
     trait_name: impl RenderAsRust<I> + 'a,
     trait_params: impl IntoIterator<Item = &'a GenericArg<I>> + 'a,
 ) -> impl Display + 'a {
@@ -187,7 +187,7 @@ fn display_type_with_generics<'a, I: Interner>(
 ///
 /// This is shared between where bounds & dyn Trait.
 fn display_trait_with_assoc_ty_value<'a, I: Interner>(
-    s: &'a WriterState<'a, I>,
+    s: &'a InternalWriterState<'a, I>,
     assoc_ty_datum: Arc<AssociatedTyDatum<I>>,
     trait_params: &'a [GenericArg<I>],
     assoc_ty_params: &'a [GenericArg<I>],

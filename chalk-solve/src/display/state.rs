@@ -72,8 +72,8 @@ impl<T: Copy + Ord> DefIdAliases<T> {
 }
 
 #[derive(Clone, Debug)]
-pub struct WriterState<'a, I: Interner> {
-    pub(super) db: &'a dyn RustIrDatabase<I>,
+pub struct InternalWriterState<'a, I: Interner> {
+    db: &'a dyn RustIrDatabase<I>,
     indent_level: usize,
     debrujin_indices_deep: u32,
     // lowered_(inverted_debrujin_idx, index) -> src_correct_(inverted_debrujin_idx, index)
@@ -85,9 +85,9 @@ pub struct WriterState<'a, I: Interner> {
 }
 
 type IndexWithinBinding = usize;
-impl<'a, I: Interner> WriterState<'a, I> {
+impl<'a, I: Interner> InternalWriterState<'a, I> {
     pub fn new(db: &'a dyn RustIrDatabase<I>) -> Self {
-        WriterState {
+        InternalWriterState {
             db,
             indent_level: 0,
             debrujin_indices_deep: 0,
@@ -98,8 +98,12 @@ impl<'a, I: Interner> WriterState<'a, I> {
         }
     }
 
+    pub(super) fn db(&self) -> &'a dyn RustIrDatabase<I> {
+        self.db
+    }
+
     pub(super) fn add_indent(&self) -> Self {
-        WriterState {
+        InternalWriterState {
             indent_level: self.indent_level + 1,
             ..self.clone()
         }
@@ -125,7 +129,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
     /// If `self_binding` is `Some`, then it will introduce a new variable named
     /// `Self` with the within-debrujin index given within and the innermost
     /// debrujian index after increasing debrujin index.  
-    #[must_use = "this returns a new `WriterState`, and does not modify the existing one"]
+    #[must_use = "this returns a new `InternalWriterState`, and does not modify the existing one"]
     pub(super) fn add_debrujin_index(&self, self_binding: Option<IndexWithinBinding>) -> Self {
         let mut new_state = self.clone();
         new_state.debrujin_indices_deep += 1;
@@ -139,7 +143,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
     ///
     /// Each of the parameters in `lowered_vars` will be mapped to its
     /// corresponding variable in `original_vars` when printed through the
-    /// `WriterState` returned from this method.
+    /// `InternalWriterState` returned from this method.
     ///
     /// `lowered_vars` and `original_vars` must have the same length.
     pub(super) fn add_parameter_mapping(
@@ -154,7 +158,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
             .chain(lowered_vars.zip(original_vars))
             .collect::<BTreeMap<_, _>>();
 
-        WriterState {
+        InternalWriterState {
             remapping: Rc::new(remapping),
             ..self.clone()
         }
@@ -210,7 +214,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
         binders: &'b VariableKinds<I>,
     ) -> impl Iterator<Item = InvertedBoundVar> + 'b {
         binders
-            .iter(self.db.interner())
+            .iter(self.db().interner())
             .enumerate()
             .map(move |(idx, _param)| self.indices_for_introduced_bound_var(idx))
     }
@@ -220,7 +224,7 @@ impl<'a, I: Interner> WriterState<'a, I> {
         binders: &'b VariableKinds<I>,
     ) -> impl Iterator<Item = String> + 'b {
         binders
-            .iter(self.db.interner())
+            .iter(self.db().interner())
             .zip(self.binder_var_indices(binders))
             .map(move |(parameter, var)| match parameter {
                 VariableKind::Ty(_) => format!("{}", self.apply_mappings(var)),
