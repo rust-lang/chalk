@@ -81,20 +81,6 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
 
         let mut conditions = implication.conditions.fold_with(self, outer_binder)?;
         let constraints = implication.constraints.fold_with(self, outer_binder)?;
-        if new_params.is_empty() {
-            // shift the clause out since we didn't use the dummy binder
-            return Ok(ProgramClauseData(Binders::empty(
-                interner,
-                ProgramClauseImplication {
-                    consequence,
-                    conditions,
-                    constraints,
-                    priority: implication.priority,
-                }
-                .shifted_out(interner)?,
-            ))
-            .intern(interner));
-        }
 
         binders.extend(new_params.into_iter());
 
