@@ -8,7 +8,7 @@ use super::state::InternalWriterState;
 /// Displays `RenderAsRust` data.
 ///
 /// This is a utility struct for making `RenderAsRust` nice to use with rust format macros.
-pub struct DisplayRenderAsRust<'a, I: Interner, T> {
+pub(in crate::display) struct DisplayRenderAsRust<'a, I: Interner, T> {
     s: &'a InternalWriterState<'a, I>,
     rar: &'a T,
 }
@@ -19,7 +19,7 @@ impl<I: Interner, T: RenderAsRust<I>> Display for DisplayRenderAsRust<'_, I, T> 
     }
 }
 
-pub trait RenderAsRust<I: Interner> {
+pub(in crate::display) trait RenderAsRust<I: Interner> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &mut Formatter<'_>) -> Result;
     fn display<'a>(&'a self, s: &'a InternalWriterState<'a, I>) -> DisplayRenderAsRust<'a, I, Self>
     where

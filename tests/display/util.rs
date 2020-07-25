@@ -3,8 +3,11 @@
 //! This can't live as a submodule of `test_util.rs`, as then it would conflict
 //! with `display/mod.rs` for the name `mod display` when `test_util.rs` is
 //! compiled as a standalone test (rather than from `lib.rs`).
-use chalk_integration::{program::Program, query::LoweringDatabase, tls};
-use chalk_solve::{display::write_items, logging_db::RecordedItemId};
+use chalk_integration::{interner::ChalkIr, program::Program, query::LoweringDatabase, tls};
+use chalk_solve::{
+    display::{write_items, WriterState},
+    logging_db::RecordedItemId,
+};
 use regex::Regex;
 use std::{fmt::Debug, sync::Arc};
 
@@ -42,10 +45,9 @@ macro_rules! reparse_test {
     };
 }
 
-/// Sends all items in a `chalk_integration::Program` through `display` code and
-/// returns the string representing the program.
-pub fn write_program(program: &Program) -> String {
-    let mut out = String::new();
+/// Retrieves all item ids from a given `Program` necessary to print the entire
+/// program.
+pub fn program_item_ids(program: &Program) -> impl Iterator<Item = RecordedItemId<ChalkIr>> + '_ {
     macro_rules! grab_ids {
         ($map:expr) => {
             $map.keys()
@@ -74,7 +76,15 @@ pub fn write_program(program: &Program) -> String {
     // and is what we actually want to consume.
     let ids = ids.into_iter().map(|(_, id)| id);
 
-    write_items(&mut out, program, ids).unwrap();
+    ids
+}
+
+/// Sends all items in a `chalk_integration::Program` through `display` code and
+/// returns the string representing the program.
+pub fn write_program(program: &Program) -> String {
+    let mut out = String::new();
+    let ids = program_item_ids(program);
+    write_items::<_, _, Program, _, _>(&mut out, &WriterState::new(program), ids).unwrap();
     out
 }
 

@@ -12,7 +12,10 @@ use std::{
 };
 
 use crate::rust_ir::*;
-use crate::{display, RustIrDatabase};
+use crate::{
+    display::{self, WriterState},
+    RustIrDatabase,
+};
 use chalk_ir::{interner::Interner, *};
 
 mod id_collector;
@@ -32,7 +35,7 @@ where
     P: Borrow<DB>,
     I: Interner,
 {
-    db: P,
+    ws: WriterState<I, DB, P>,
     def_ids: Mutex<BTreeSet<RecordedItemId<I>>>,
     _phantom: PhantomData<DB>,
 }
@@ -45,7 +48,7 @@ where
 {
     pub fn new(db: P) -> Self {
         LoggingRustIrDatabase {
-            db,
+            ws: WriterState::new(db),
             def_ids: Default::default(),
             _phantom: PhantomData,
         }
@@ -60,9 +63,9 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let def_ids = self.def_ids.lock().unwrap();
-        let stub_ids = id_collector::collect_unrecorded_ids(self.db.borrow(), &def_ids);
-        display::write_stub_items(f, self.db.borrow(), stub_ids)?;
-        display::write_items(f, self.db.borrow(), def_ids.iter().copied())
+        let stub_ids = id_collector::collect_unrecorded_ids(self.ws.db(), &def_ids);
+        display::write_stub_items(f, &self.ws, stub_ids)?;
+        display::write_items(f, &self.ws, def_ids.iter().copied())
     }
 }
 
@@ -95,55 +98,55 @@ where
     I: Interner,
 {
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
-        self.db.borrow().custom_clauses()
+        self.ws.db().custom_clauses()
     }
 
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocTypeId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
-        let ty_datum = self.db.borrow().associated_ty_data(ty);
+        let ty_datum = self.ws.db().associated_ty_data(ty);
         self.record(ty_datum.trait_id);
         ty_datum
     }
 
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.record(trait_id);
-        self.db.borrow().trait_datum(trait_id)
+        self.ws.db().trait_datum(trait_id)
     }
 
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
         self.record(adt_id);
-        self.db.borrow().adt_datum(adt_id)
+        self.ws.db().adt_datum(adt_id)
     }
 
     fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
         self.record(id);
-        self.db.borrow().adt_repr(id)
+        self.ws.db().adt_repr(id)
     }
 
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.record(impl_id);
-        self.db.borrow().impl_datum(impl_id)
+        self.ws.db().impl_datum(impl_id)
     }
 
     fn hidden_opaque_type(&self, id: OpaqueTyId<I>) -> Ty<I> {
         self.record(id);
-        self.db.borrow().hidden_opaque_type(id)
+        self.ws.db().hidden_opaque_type(id)
     }
 
     fn associated_ty_value(
         &self,
         id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
-        let value = self.db.borrow().associated_ty_value(id);
+        let value = self.ws.db().associated_ty_value(id);
         self.record(value.impl_id);
         value
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
         self.record(id);
-        self.db.borrow().opaque_ty_data(id)
+        self.ws.db().opaque_ty_data(id)
     }
 
     fn impls_for_trait(
@@ -153,30 +156,27 @@ where
         binders: &CanonicalVarKinds<I>,
     ) -> Vec<ImplId<I>> {
         self.record(trait_id);
-        let impl_ids = self
-            .db
-            .borrow()
-            .impls_for_trait(trait_id, parameters, binders);
+        let impl_ids = self.ws.db().impls_for_trait(trait_id, parameters, binders);
         self.record_all(impl_ids.iter().copied());
         impl_ids
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {
         self.record(trait_id);
-        self.db.borrow().local_impls_to_coherence_check(trait_id)
+        self.ws.db().local_impls_to_coherence_check(trait_id)
     }
 
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
         self.record(auto_trait_id);
         self.record(adt_id);
-        self.db.borrow().impl_provided_for(auto_trait_id, adt_id)
+        self.ws.db().impl_provided_for(auto_trait_id, adt_id)
     }
 
     fn well_known_trait_id(
         &self,
         well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
-        let trait_id = self.db.borrow().well_known_trait_id(well_known_trait);
+        let trait_id = self.ws.db().well_known_trait_id(well_known_trait);
         trait_id.map(|id| self.record(id));
         trait_id
     }
@@ -185,46 +185,46 @@ where
         &self,
         environment: &chalk_ir::Environment<I>,
     ) -> chalk_ir::ProgramClauses<I> {
-        self.db.borrow().program_clauses_for_env(environment)
+        self.ws.db().program_clauses_for_env(environment)
     }
 
     fn interner(&self) -> &I {
-        self.db.borrow().interner()
+        self.ws.db().interner()
     }
 
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
-        self.db.borrow().trait_name(trait_id)
+        self.ws.db().trait_name(trait_id)
     }
 
     fn adt_name(&self, adt_id: AdtId<I>) -> String {
-        self.db.borrow().adt_name(adt_id)
+        self.ws.db().adt_name(adt_id)
     }
 
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
-        self.db.borrow().assoc_type_name(assoc_ty_id)
+        self.ws.db().assoc_type_name(assoc_ty_id)
     }
 
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
-        self.db.borrow().opaque_type_name(opaque_ty_id)
+        self.ws.db().opaque_type_name(opaque_ty_id)
     }
 
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
         self.record(trait_id);
-        self.db.borrow().is_object_safe(trait_id)
+        self.ws.db().is_object_safe(trait_id)
     }
 
     fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
         self.record(fn_def_id);
-        self.db.borrow().fn_def_datum(fn_def_id)
+        self.ws.db().fn_def_datum(fn_def_id)
     }
 
     fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
-        self.db.borrow().fn_def_name(fn_def_id)
+        self.ws.db().fn_def_name(fn_def_id)
     }
 
     fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind {
         // TODO: record closure IDs
-        self.db.borrow().closure_kind(closure_id, substs)
+        self.ws.db().closure_kind(closure_id, substs)
     }
 
     fn closure_inputs_and_output(
@@ -233,14 +233,12 @@ where
         substs: &Substitution<I>,
     ) -> Binders<FnDefInputsAndOutputDatum<I>> {
         // TODO: record closure IDs
-        self.db
-            .borrow()
-            .closure_inputs_and_output(closure_id, substs)
+        self.ws.db().closure_inputs_and_output(closure_id, substs)
     }
 
     fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>> {
         // TODO: record closure IDs
-        self.db.borrow().closure_upvars(closure_id, substs)
+        self.ws.db().closure_upvars(closure_id, substs)
     }
 
     fn closure_fn_substitution(
@@ -249,7 +247,7 @@ where
         substs: &Substitution<I>,
     ) -> Substitution<I> {
         // TODO: record closure IDs
-        self.db.borrow().closure_fn_substitution(closure_id, substs)
+        self.ws.db().closure_fn_substitution(closure_id, substs)
     }
 }
 
@@ -327,45 +325,45 @@ where
     P: Borrow<DB> + Debug,
 {
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
-        self.db.borrow().custom_clauses()
+        self.db.custom_clauses()
     }
 
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocTypeId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
-        self.db.borrow().associated_ty_data(ty)
+        self.db.associated_ty_data(ty)
     }
 
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
-        self.db.borrow().trait_datum(trait_id)
+        self.db.trait_datum(trait_id)
     }
 
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>> {
-        self.db.borrow().adt_datum(adt_id)
+        self.db.adt_datum(adt_id)
     }
 
     fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
-        self.db.borrow().adt_repr(id)
+        self.db.adt_repr(id)
     }
 
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
-        self.db.borrow().impl_datum(impl_id)
+        self.db.impl_datum(impl_id)
     }
 
     fn associated_ty_value(
         &self,
         id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
-        self.db.borrow().associated_ty_value(id)
+        self.db.associated_ty_value(id)
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
-        self.db.borrow().opaque_ty_data(id)
+        self.db.opaque_ty_data(id)
     }
 
     fn hidden_opaque_type(&self, id: OpaqueTyId<I>) -> Ty<I> {
-        self.db.borrow().hidden_opaque_type(id)
+        self.db.hidden_opaque_type(id)
     }
 
     fn impls_for_trait(
@@ -380,62 +378,62 @@ where
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {
-        self.db.borrow().local_impls_to_coherence_check(trait_id)
+        self.db.local_impls_to_coherence_check(trait_id)
     }
 
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
-        self.db.borrow().impl_provided_for(auto_trait_id, adt_id)
+        self.db.impl_provided_for(auto_trait_id, adt_id)
     }
 
     fn well_known_trait_id(
         &self,
         well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
-        self.db.borrow().well_known_trait_id(well_known_trait)
+        self.db.well_known_trait_id(well_known_trait)
     }
 
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<I>,
     ) -> chalk_ir::ProgramClauses<I> {
-        self.db.borrow().program_clauses_for_env(environment)
+        self.db.program_clauses_for_env(environment)
     }
 
     fn interner(&self) -> &I {
-        self.db.borrow().interner()
+        self.db.interner()
     }
 
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool {
-        self.db.borrow().is_object_safe(trait_id)
+        self.db.is_object_safe(trait_id)
     }
 
     fn trait_name(&self, trait_id: TraitId<I>) -> String {
-        self.db.borrow().trait_name(trait_id)
+        self.db.trait_name(trait_id)
     }
 
     fn adt_name(&self, adt_id: AdtId<I>) -> String {
-        self.db.borrow().adt_name(adt_id)
+        self.db.adt_name(adt_id)
     }
 
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
-        self.db.borrow().assoc_type_name(assoc_ty_id)
+        self.db.assoc_type_name(assoc_ty_id)
     }
 
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
-        self.db.borrow().opaque_type_name(opaque_ty_id)
+        self.db.opaque_type_name(opaque_ty_id)
     }
 
     fn fn_def_datum(&self, fn_def_id: chalk_ir::FnDefId<I>) -> Arc<FnDefDatum<I>> {
-        self.db.borrow().fn_def_datum(fn_def_id)
+        self.db.fn_def_datum(fn_def_id)
     }
 
     fn fn_def_name(&self, fn_def_id: FnDefId<I>) -> String {
-        self.db.borrow().fn_def_name(fn_def_id)
+        self.db.fn_def_name(fn_def_id)
     }
 
     fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind {
         // TODO: record closure IDs
-        self.db.borrow().closure_kind(closure_id, substs)
+        self.db.closure_kind(closure_id, substs)
     }
 
     fn closure_inputs_and_output(
@@ -449,7 +447,7 @@ where
     }
 
     fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>> {
-        self.db.borrow().closure_upvars(closure_id, substs)
+        self.db.closure_upvars(closure_id, substs)
     }
 
     fn closure_fn_substitution(
@@ -457,7 +455,7 @@ where
         closure_id: ClosureId<I>,
         substs: &Substitution<I>,
     ) -> Substitution<I> {
-        self.db.borrow().closure_fn_substitution(closure_id, substs)
+        self.db.closure_fn_substitution(closure_id, substs)
     }
 }
 

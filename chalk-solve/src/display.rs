@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     fmt::{Display, Result},
     sync::Arc,
 };
@@ -20,7 +21,7 @@ mod state;
 mod stub;
 mod ty;
 
-pub use self::render_trait::*;
+use self::render_trait::*;
 pub use self::state::*;
 
 use self::utils::as_display;
@@ -44,48 +45,51 @@ where
 /// fields are skipped. Associated types are ???? skipped.
 ///
 /// `RecordedItemId::Impl` is not supported.
-pub fn write_stub_items<F, I, DB, T>(f: &mut F, db: &DB, ids: T) -> Result
+pub fn write_stub_items<F, I, DB, P, T>(f: &mut F, ws: &WriterState<I, DB, P>, ids: T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,
     DB: RustIrDatabase<I>,
+    P: Borrow<DB>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
-    write_items(f, &stub::StubWrapper::new(db), ids)
+    let wrapped_db = &ws.wrap_db_ref(|db| stub::StubWrapper::new(db.borrow()));
+
+    write_items(f, wrapped_db, ids)
 }
 
 /// Writes out each item recorded by a [`LoggingRustIrDatabase`].
 ///
 /// [`LoggingRustIrDatabase`]: crate::logging_db::LoggingRustIrDatabase
-pub fn write_items<F, I, DB, T>(f: &mut F, db: &DB, ids: T) -> Result
+pub fn write_items<F, I, DB, P, T>(f: &mut F, ws: &WriterState<I, DB, P>, ids: T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,
     DB: RustIrDatabase<I>,
+    P: Borrow<DB>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
-    let ws = &InternalWriterState::new(db);
     for id in ids {
         match id {
             RecordedItemId::Impl(id) => {
-                let v = db.impl_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().impl_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::Adt(id) => {
-                let v = db.adt_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().adt_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::Trait(id) => {
-                let v = db.trait_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().trait_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::OpaqueTy(id) => {
-                let v = db.opaque_ty_data(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().opaque_ty_data(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::FnDef(id) => {
-                let v = db.fn_def_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().fn_def_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
         }
     }

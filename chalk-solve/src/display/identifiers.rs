@@ -34,7 +34,11 @@ impl<I: Interner> RenderAsRust<I> for TraitId<I> {
 impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // TODO: use debug methods?
-        f.write_str(&s.db().assoc_type_name(*self))
+        write!(
+            f,
+            "{}",
+            s.alias_for_id_name(self.0, s.db().assoc_type_name(*self))
+        )
     }
 }
 
