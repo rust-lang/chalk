@@ -58,28 +58,68 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
         }
     }
 
+    /// Convert a program clause to rem
+    ///
+    /// Consider this (nonsense) example:
+    ///
+    /// ```notrust
+    /// forall<X> {
+    ///     Implemented(<X as Iterator>::Item>: Debug) :-
+    ///         Implemented(X: Debug)
+    /// }
+    /// ```
+    ///
+    /// we would lower this into:
+    ///
+    /// ```notrust
+    /// forall<X, Y> {
+    ///     Implemented(Y: Debug) :-
+    ///         AliasEq(<X as Iterator>::Item>, Y),
+    ///         Implemented(X: Debug)
+    /// }
+    /// ```
     fn fold_program_clause(
         &mut self,
         clause: &ProgramClause<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<ProgramClause<I>> {
         let interner = self.interner;
+        assert!(self.new_params.is_empty());
+        assert!(self.new_goals.is_empty());
 
         let ProgramClauseData(binders) = clause.data(interner);
 
         let implication = binders.skip_binders();
         let mut binders: Vec<_> = binders.binders.as_slice(interner).into();
 
+        // Adjust the outer binder to account for the binder in the program clause
         let outer_binder = outer_binder.shifted_in();
 
+        // First lower the "consequence" -- in our example that is
+        //
+        // ```
+        // Implemented(<X as Iterator>::Item: Debug)
+        // ```
+        //
+        // then save out the `new_params` and `new_goals` vectors to store any new variables created as a result.
+        // In this case, that would be the `Y` parameter and `AliasEq(<X as Iterator>::Item, Y)` goals.
+        //
+        // Note that these new parameters will have indices that come after the existing parameters,
+        // so any references to existing parameters like `X` in the "conditions" are still valid even if we insert new parameters.
         self.binders_len = binders.len();
+
         let consequence = implication.consequence.fold_with(self, outer_binder)?;
-        // Immediately move `new_params` out of of the folder struct so it's safe
-        // to call `.fold_with` again
-        let new_params = replace(&mut self.new_params, vec![]);
-        let new_goals = replace(&mut self.new_goals, vec![]);
+        let mut new_params = replace(&mut self.new_params, vec![]);
+        let mut new_goals = replace(&mut self.new_goals, vec![]);
+
+        // Now fold the conditions (in our example, Implemented(X: Debug).
+        // The resulting list might be expanded to include new AliasEq goals.
 
         let mut conditions = implication.conditions.fold_with(self, outer_binder)?;
+
+        new_params.extend(replace(&mut self.new_params, vec![]));
+        new_goals.extend(replace(&mut self.new_goals, vec![]));
+
         let constraints = implication.constraints.fold_with(self, outer_binder)?;
 
         binders.extend(new_params.into_iter());
@@ -102,7 +142,8 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
     }
 
     fn fold_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> Fallible<Goal<I>> {
-        assert!(self.new_params.is_empty(), true);
+        assert!(self.new_params.is_empty());
+        assert!(self.new_goals.is_empty());
 
         let interner = self.interner;
         match goal.data(interner) {
