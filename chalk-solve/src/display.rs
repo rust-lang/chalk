@@ -31,7 +31,7 @@ where
     I: Interner,
     T: RenderAsRust<I>,
 {
-    write!(f, "{}\n", v.display(ws))
+    writeln!(f, "{}", v.display(ws))
 }
 
 /// Writes stubs for items which were referenced by name, but for which we

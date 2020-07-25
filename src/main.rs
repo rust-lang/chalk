@@ -18,7 +18,7 @@ use rustyline::error::ReadlineError;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-const USAGE: &'static str = "
+const USAGE: &str = "
 chalk repl
 
 Usage:
@@ -140,9 +140,8 @@ fn run() -> Result<()> {
         // Check that a program was provided.
         // TODO: It's customary to print Usage info when an error like this
         // happens.
-        let prog = prog.ok_or(format!(
-            "error: cannot eval without a program; use `--program` to specify one."
-        ))?;
+        let prog =
+            prog.ok_or("error: cannot eval without a program; use `--program` to specify one.")?;
 
         // Evaluate the goal(s). If any goal returns an error, print the error
         // and exit.
@@ -228,9 +227,9 @@ fn process(
         // The command is either "print", "lowered", or a goal.
 
         // Check that a program has been loaded.
-        let prog = prog.as_ref().ok_or(format!(
-            "no program currently loaded; type 'help' to see available commands"
-        ))?;
+        let prog = prog
+            .as_ref()
+            .ok_or("no program currently loaded; type 'help' to see available commands")?;
 
         // Attempt to parse the program.
         prog.db.with_program(|_| -> Result<()> {

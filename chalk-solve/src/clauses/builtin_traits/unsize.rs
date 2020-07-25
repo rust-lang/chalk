@@ -43,14 +43,11 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
     fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> Self::Result {
         let interner = self.interner;
 
-        match constant.data(interner).value {
-            ConstValue::BoundVar(bound_var) => {
-                // check if bound var refers to the outermost binder
-                if bound_var.debruijn.shifted_in() == outer_binder {
-                    self.parameters.insert(bound_var.index);
-                }
+        if let ConstValue::BoundVar(bound_var) = constant.data(interner).value {
+            // check if bound var refers to the outermost binder
+            if bound_var.debruijn.shifted_in() == outer_binder {
+                self.parameters.insert(bound_var.index);
             }
-            _ => (),
         }
     }
 
@@ -141,12 +138,11 @@ fn principal_id<'a, I: Interner>(
 ) -> Option<TraitId<I>> {
     let interner = db.interner();
 
-    return bounds
+    bounds
         .skip_binders()
         .iter(interner)
         .filter_map(|b| b.trait_id())
-        .filter(|&id| !db.trait_datum(id).is_auto_trait())
-        .next();
+        .find(|&id| !db.trait_datum(id).is_auto_trait())
 }
 
 fn auto_trait_ids<'a, I: Interner>(
@@ -384,7 +380,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             let unsize_parameter_candidates =
                 outer_binder_parameters_used(interner, &adt_tail_field);
 
-            if unsize_parameter_candidates.len() == 0 {
+            if unsize_parameter_candidates.is_empty() {
                 return;
             }
             // Ensure none of the other fields mention the parameters used

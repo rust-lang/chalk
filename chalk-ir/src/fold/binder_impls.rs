@@ -87,9 +87,6 @@ where
         let binders = CanonicalVarKinds {
             interned: TI::transfer_canonical_var_kinds(self_binders.interned().clone()),
         };
-        Ok(Canonical {
-            binders: binders,
-            value: value,
-        })
+        Ok(Canonical { binders, value })
     }
 }

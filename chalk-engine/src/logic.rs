@@ -492,13 +492,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                         } = canonical_strand;
                         let (infer, ex_clause) =
                             context.instantiate_ex_clause(num_universes, &canonical_ex_clause);
-                        let strand = Strand {
+                        Strand {
                             infer,
                             ex_clause,
-                            selected_subgoal: selected_subgoal.clone(),
+                            selected_subgoal,
                             last_pursued_time,
-                        };
-                        strand
+                        }
                     })
             });
             match next_strand {
@@ -598,7 +597,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                     infer: strand.infer.clone(),
                     ex_clause: strand.ex_clause.clone(),
                     selected_subgoal: Some(next_subgoal),
-                    last_pursued_time: strand.last_pursued_time.clone(),
+                    last_pursued_time: strand.last_pursued_time,
                 };
                 let table = self.stack.top().table;
                 let canonical_next_strand = Forest::canonicalize_strand(self.context, next_strand);
@@ -749,7 +748,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 // and maybe come back to it.
                 self.flounder_subgoal(&mut strand.ex_clause, selected_subgoal.subgoal_index);
 
-                return false;
+                false
             }
             Literal::Negative(_) => {
                 // Floundering on a negative literal isn't like a
@@ -771,7 +770,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 // This strand has no solution. It is no longer active,
                 // so it dropped at the end of this scope.
 
-                return true;
+                true
             }
         }
     }
@@ -803,7 +802,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 strand.ex_clause.delayed_subgoals.push(subgoal);
 
                 self.stack.top().active_strand = Some(strand);
-                return Ok(());
+                Ok(())
             }
             Literal::Negative(_) => {
                 // We don't allow coinduction for negative literals
@@ -961,7 +960,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
             }
         }
-        let floundered = strand.ex_clause.floundered_subgoals.len() > 0;
+        let floundered = !strand.ex_clause.floundered_subgoals.is_empty();
         if floundered {
             debug!("all remaining subgoals floundered for the table");
         } else {
@@ -978,7 +977,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                 match self.stack.pop_and_take_caller_strand() {
                     Some(caller_strand) => {
                         self.stack.top().active_strand = Some(caller_strand);
-                        return NoRemainingSubgoalsResult::Success;
+                        NoRemainingSubgoalsResult::Success
                     }
                     None => {
                         // That was the root table, so we are done --
@@ -997,9 +996,9 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
                             self.forest.tables[table].enqueue_strand(strand);
                         }
 
-                        return NoRemainingSubgoalsResult::RootAnswerAvailable;
+                        NoRemainingSubgoalsResult::RootAnswerAvailable
                     }
-                };
+                }
             }
             None => {
                 debug!("answer is not available (or not new)");
@@ -1010,9 +1009,9 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
 
                 // Now we yield with `QuantumExceeded`
                 self.unwind_stack();
-                return NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded);
+                NoRemainingSubgoalsResult::RootSearchFail(RootSearchFail::QuantumExceeded)
             }
-        };
+        }
     }
 
     /// A "refinement" strand is used in coinduction. When the root

@@ -37,7 +37,7 @@ pub fn perform_orphan_check<I: Interner, S: Solver<I>, SC: Into<S>>(
 
     if !is_allowed {
         let trait_id = impl_datum.trait_id();
-        Err(CoherenceError::FailedOrphanCheck(trait_id))?;
+        return Err(CoherenceError::FailedOrphanCheck(trait_id));
     }
 
     Ok(())

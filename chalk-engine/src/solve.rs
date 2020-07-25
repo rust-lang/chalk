@@ -63,12 +63,10 @@ impl<I: Interner> Solver<I> for SLGSolver<I> {
                 AnswerResult::Answer(answer) => {
                     if !answer.ambiguous {
                         SubstitutionResult::Definite(answer.subst)
+                    } else if ops.is_trivial_constrained_substitution(&answer.subst) {
+                        SubstitutionResult::Floundered
                     } else {
-                        if ops.is_trivial_constrained_substitution(&answer.subst) {
-                            SubstitutionResult::Floundered
-                        } else {
-                            SubstitutionResult::Ambiguous(answer.subst)
-                        }
+                        SubstitutionResult::Ambiguous(answer.subst)
                     }
                 }
                 AnswerResult::Floundered => SubstitutionResult::Floundered,

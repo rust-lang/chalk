@@ -85,11 +85,11 @@ pub fn add_sized_program_clauses<I: Interner>(
             | TypeName::Scalar(_)
             | TypeName::Raw(_)
             | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),
-            _ => return,
+            _ => {}
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
         // TODO(areredify)
         // when #368 lands, extend this to handle everything accordingly
-        _ => return,
+        _ => {}
     }
 }

@@ -140,7 +140,7 @@ impl<'k> Env<'k> {
                 });
             } else {
                 return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::FnDef(id.clone()),
+                    name: chalk_ir::TypeName::FnDef(*id),
                     substitution: chalk_ir::Substitution::empty(interner),
                 })
                 .intern(interner)
@@ -158,7 +158,7 @@ impl<'k> Env<'k> {
                 });
             } else {
                 return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Closure(id.clone()),
+                    name: chalk_ir::TypeName::Closure(*id),
                     // See note in `program`. Unlike rustc, we store upvars separately.
                     substitution: chalk_ir::Substitution::empty(interner),
                 })
@@ -526,7 +526,7 @@ impl LowerProgram for Program {
                                 trait_id: TraitId(raw_id),
                                 id: lookup.id,
                                 name: assoc_ty_defn.name.str.clone(),
-                                binders: binders,
+                                binders,
                             }),
                         );
                     }
@@ -1418,10 +1418,10 @@ trait LowerQuantifiedInlineBoundVec {
 impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
     fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>> {
         fn trait_identifier(bound: &InlineBound) -> &Identifier {
-            return match bound {
+            match bound {
                 InlineBound::TraitBound(tb) => &tb.trait_name,
                 InlineBound::AliasEqBound(ab) => &ab.trait_bound.trait_name,
-            };
+            }
         }
 
         let mut regular_traits = Vec::new();
@@ -1505,10 +1505,7 @@ impl LowerProjectionTy for ProjectionTy {
             trait_id,
             substitution: trait_substitution,
         } = trait_ref.lower(env)?;
-        let lookup = match env
-            .associated_ty_lookups
-            .get(&(trait_id.into(), name.str.clone()))
-        {
+        let lookup = match env.associated_ty_lookups.get(&(trait_id, name.str.clone())) {
             Some(lookup) => lookup,
             None => Err(RustIrError::MissingAssociatedType(self.name.clone()))?,
         };
@@ -1681,7 +1678,7 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(ty.clone())),
+                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(*ty)),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
@@ -1708,9 +1705,7 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Raw { mutability, ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Raw(ast_mutability_to_chalk_mutability(
-                    mutability.clone(),
-                )),
+                name: chalk_ir::TypeName::Raw(ast_mutability_to_chalk_mutability(*mutability)),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
                     std::iter::once(Ok(ty.lower(env)?)),
@@ -1723,9 +1718,7 @@ impl LowerTy for Ty {
                 lifetime,
                 ty,
             } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Ref(ast_mutability_to_chalk_mutability(
-                    mutability.clone(),
-                )),
+                name: chalk_ir::TypeName::Ref(ast_mutability_to_chalk_mutability(*mutability)),
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
                     &[
@@ -1772,9 +1765,7 @@ impl LowerConst for Const {
             }
             Const::Value(value) => Ok(chalk_ir::ConstData {
                 ty: get_type_of_u32(),
-                value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst {
-                    interned: value.clone(),
-                }),
+                value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst { interned: *value }),
             }
             .intern(interner)),
         }
@@ -1807,14 +1798,13 @@ impl LowerLifetime for Lifetime {
         match self {
             Lifetime::Id { name } => {
                 let parameter = env.lookup_generic_arg(&name)?;
-                parameter
-                    .lifetime(interner)
-                    .map(|l| l.clone())
-                    .ok_or_else(|| RustIrError::IncorrectParameterKind {
+                parameter.lifetime(interner).copied().ok_or_else(|| {
+                    RustIrError::IncorrectParameterKind {
                         identifier: name.clone(),
                         expected: Kind::Lifetime,
                         actual: parameter.kind(),
-                    })
+                    }
+                })
             }
         }
     }
@@ -1957,7 +1947,7 @@ impl LowerTrait for TraitDefn {
 
         let trait_datum = rust_ir::TraitDatum {
             id: trait_id,
-            binders: binders,
+            binders,
             flags: self.flags.lower(),
             associated_ty_ids,
             well_known: self.well_known.map(|t| t.lower()),
@@ -2038,7 +2028,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 // in the assumptions of an `if` goal, e.g. `if (T: Trait) { ... }` lowers to
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
                 let where_clauses = hyp
-                    .into_iter()
+                    .iter()
                     .flat_map(|h| h.lower_clause(env).apply_result())
                     .map(|result| result.map(|h| h.into_from_env_clause(interner)));
                 let where_clauses =

@@ -179,7 +179,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
 
         // object safe
         if s.db.is_object_safe(self.id) {
-            write!(f, "#[object_safe]\n")?;
+            writeln!(f, "#[object_safe]")?;
         }
 
         // well-known
@@ -194,7 +194,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Fn => "fn",
                 WellKnownTrait::Unsize => "unsize",
             };
-            write!(f, "#[lang({})]\n", name)?;
+            writeln!(f, "#[lang({})]", name)?;
         }
 
         // trait declaration
@@ -240,7 +240,7 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         // ^^^^^^^^^^^
         // impl<T> Foo<T> for Bar<T> where T: Baz { }
         if self.impl_type == ImplType::External {
-            write!(f, "#[upstream]\n")?;
+            writeln!(f, "#[upstream]")?;
         }
 
         // impl keyword

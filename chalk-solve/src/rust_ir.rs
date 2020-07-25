@@ -164,7 +164,7 @@ impl<I: Interner> Visit<I> for FnDefDatum<I> {
         if result.return_early() {
             return result;
         }
-        return result.combine(self.binders.visit_with(visitor, outer_binder));
+        result.combine(self.binders.visit_with(visitor, outer_binder))
     }
 }
 
@@ -516,7 +516,7 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
         if result.return_early() {
             return result;
         }
-        return result.combine(self.binders.visit_with(visitor, outer_binder));
+        result.combine(self.binders.visit_with(visitor, outer_binder))
     }
 }
 

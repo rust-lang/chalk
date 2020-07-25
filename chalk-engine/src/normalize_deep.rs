@@ -28,10 +28,7 @@ impl<I: Interner> DeepNormalizer<'_, '_, I> {
     ) -> T::Result {
         value
             .fold_with(
-                &mut DeepNormalizer {
-                    interner,
-                    table: table,
-                },
+                &mut DeepNormalizer { interner, table },
                 DebruijnIndex::INNERMOST,
             )
             .unwrap()

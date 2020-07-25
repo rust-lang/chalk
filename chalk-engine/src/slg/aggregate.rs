@@ -307,7 +307,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         if index1 != index2 {
             self.new_ty_variable()
         } else {
-            TyData::Placeholder(index1.clone()).intern(interner)
+            TyData::Placeholder(*index1).intern(interner)
         }
     }
 
@@ -465,7 +465,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             }
 
             (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => {
-                self.new_const_variable(ty.clone())
+                self.new_const_variable(ty)
             }
 
             (ConstValue::Placeholder(_), ConstValue::Placeholder(_)) => {

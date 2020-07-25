@@ -53,7 +53,7 @@ pub trait VisitResult: Sized {
 /// Unit type for a visitor indicates a "side-effecting" visitor that
 /// should visit an entire term.
 impl VisitResult for () {
-    fn new() -> () {}
+    fn new() -> Self {}
 
     fn return_early(&self) -> bool {
         false

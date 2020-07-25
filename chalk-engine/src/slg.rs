@@ -34,11 +34,11 @@ pub(crate) struct SlgContextOps<'me, I: Interner> {
 }
 
 impl<I: Interner> SlgContextOps<'_, I> {
-    pub(crate) fn new<'p>(
-        program: &'p dyn RustIrDatabase<I>,
+    pub(crate) fn new(
+        program: &dyn RustIrDatabase<I>,
         max_size: usize,
         expected_answers: Option<usize>,
-    ) -> SlgContextOps<'p, I> {
+    ) -> SlgContextOps<'_, I> {
         SlgContextOps {
             program,
             max_size,
