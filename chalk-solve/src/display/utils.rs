@@ -47,8 +47,5 @@ pub fn sanitize_debug_name(func: impl Fn(&mut Formatter<'_>) -> Option<Result>) 
     }
 
     // now the actual sanitization
-    debug_out
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
-        .collect()
+    debug_out.replace(|c: char| !c.is_ascii_alphanumeric(), "_")
 }
