@@ -40,10 +40,10 @@ pub fn logging_db_output_sufficient(
 
         let program = db.program_ir().unwrap();
         let wrapped = LoggingRustIrDatabase::<_, Program, _>::new(program.clone());
-        for (goal_text, solver_choice, expected) in goals.clone() {
-            let mut solver: SolverImpl = solver_choice.into();
+        chalk_integration::tls::set_current_program(&program, || {
+            for (goal_text, solver_choice, expected) in goals.clone() {
+                let mut solver: SolverImpl = solver_choice.into();
 
-            chalk_integration::tls::set_current_program(&program, || {
                 println!("----------------------------------------------------------------------");
                 println!("---- first run on original test code ---------------------------------");
                 println!("goal {}", goal_text);
@@ -63,10 +63,10 @@ pub fn logging_db_output_sufficient(
                     }
                     _ => panic!("only aggregated test goals supported for logger goals"),
                 }
-            });
-        }
+            }
 
-        wrapped.to_string()
+            wrapped.to_string()
+        })
     };
 
     println!("----------------------------------------------------------------------");

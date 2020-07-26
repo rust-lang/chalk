@@ -139,7 +139,7 @@ impl tls::DebugContext for Program {
         if let Some(d) = self.associated_ty_data.get(&assoc_type_id) {
             write!(fmt, "({:?}::{})", d.trait_id, d.name)
         } else {
-            fmt.debug_struct("InvalidItemId")
+            fmt.debug_struct("InvalidAssocTypeId")
                 .field("index", &assoc_type_id.0)
                 .finish()
         }
@@ -153,8 +153,22 @@ impl tls::DebugContext for Program {
         if let Some(k) = self.opaque_ty_kinds.get(&opaque_ty_id) {
             write!(fmt, "{}", k.name)
         } else {
-            fmt.debug_struct("InvalidItemId")
+            fmt.debug_struct("InvalidOpaqueTyId")
                 .field("index", &opaque_ty_id.0)
+                .finish()
+        }
+    }
+
+    fn debug_fn_def_id(
+        &self,
+        fn_def_id: FnDefId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(k) = self.fn_def_kinds.get(&fn_def_id) {
+            write!(fmt, "{}", k.name)
+        } else {
+            fmt.debug_struct("InvalidFnDefId")
+                .field("index", &fn_def_id.0)
                 .finish()
         }
     }
@@ -471,31 +485,17 @@ impl RustIrDatabase<ChalkIr> for Program {
         substs.clone()
     }
 
-    fn trait_name(&self, trait_id: TraitId<ChalkIr>) -> String {
-        self.trait_kinds.get(&trait_id).unwrap().name.to_string()
-    }
-
-    fn adt_name(&self, struct_id: AdtId<ChalkIr>) -> String {
-        self.adt_kinds.get(&struct_id).unwrap().name.to_string()
-    }
-
+    // The default implementation for `RustIrDatabase::assoc_type_name` outputs
+    // the name in the format `(Trait::AssocTypeName)`, which is reformatted to
+    // `_Trait__AssocTypeName_`. This doesn't match the input names, which is
+    // normally acceptable, but causes the re-parse tests for the .chalk syntax
+    // writer to fail. This is because they use the `Eq` implementation on
+    // Program, which checks for name equality.
     fn assoc_type_name(&self, assoc_type_id: AssocTypeId<ChalkIr>) -> String {
         self.associated_ty_data
             .get(&assoc_type_id)
             .unwrap()
             .name
             .to_string()
-    }
-
-    fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
-        self.opaque_ty_kinds
-            .get(&opaque_ty_id)
-            .unwrap()
-            .name
-            .to_string()
-    }
-
-    fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
-        self.fn_def_kinds.get(&fn_def_id).unwrap().name.to_string()
     }
 }

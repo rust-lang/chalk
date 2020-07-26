@@ -22,6 +22,7 @@ mod ty;
 
 pub use self::render_trait::*;
 pub use self::state::*;
+pub use self::utils::sanitize_debug_name;
 
 use self::utils::as_display;
 
