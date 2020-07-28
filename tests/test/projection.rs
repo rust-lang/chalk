@@ -968,19 +968,6 @@ fn rust_analyzer_regression() {
             }
         }
 
-        //fn try_reduce_with<PI, R, T>(pi: PI, reduce_op: R) -> Option<T>
-        //    where
-        //        PI: ParallelIterator<Item = T>,
-        //        R: FnOnce(T::Ok) -> T,
-        //        T: Try,
-        //    {
-        //        pi.drive_unindexed()
-        //    }
-        //
-        // where `drive_unindexed` is a method in `ParallelIterator`:
-        //
-        // fn drive_unindexed(self) -> ();
-
         goal {
             forall<PI, R, T> {
                 if (
@@ -991,8 +978,8 @@ fn rust_analyzer_regression() {
                     PI: ParallelIterator
                 }
             }
-        } yields_first[SolverChoice::slg(4, None)] {
-            "Floundered"
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
