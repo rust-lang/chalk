@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 string_cache = "0.8.0"
-salsa = "0.14.0"
+salsa = "0.15.0"
 tracing = "0.1"
 
 chalk-derive = { version = "0.20.0-dev.0", path = "../chalk-derive" }

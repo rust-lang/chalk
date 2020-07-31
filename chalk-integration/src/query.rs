@@ -25,7 +25,9 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 #[salsa::query_group(Lowering)]
-pub trait LoweringDatabase: RustIrDatabase<ChalkIr> + Database {
+pub trait LoweringDatabase:
+    RustIrDatabase<ChalkIr> + Database + Upcast<dyn RustIrDatabase<ChalkIr>>
+{
     #[salsa::input]
     fn program_text(&self) -> Arc<String>;
 
@@ -56,6 +58,31 @@ pub trait LoweringDatabase: RustIrDatabase<ChalkIr> + Database {
     /// revision (i.e., each time source program changes).
     // HACK: salsa requires that queries return types that implement `Eq`
     fn solver(&self) -> ArcEq<Mutex<SolverImpl>>;
+}
+
+// Needed to go from dyn LoweringDatabase -> dyn RustIrDatabase
+// These traits are basically vendored (slightly modified) from https://github.com/connicpu/upcast
+pub trait Upcast<U: ?Sized> {
+    fn upcast(&self) -> &U;
+}
+
+pub trait UpcastFrom<T: ?Sized> {
+    fn upcast_from(val: &T) -> &Self;
+}
+
+impl<'a, T: RustIrDatabase<ChalkIr> + 'a> UpcastFrom<T> for dyn RustIrDatabase<ChalkIr> + 'a {
+    fn upcast_from(val: &T) -> &(dyn RustIrDatabase<ChalkIr> + 'a) {
+        val
+    }
+}
+
+impl<T: ?Sized, U: ?Sized> Upcast<U> for T
+where
+    U: UpcastFrom<T>,
+{
+    fn upcast(&self) -> &U {
+        U::upcast_from(self)
+    }
 }
 
 #[derive(Debug)]
@@ -95,19 +122,19 @@ impl<T> Clone for ArcEq<T> {
     }
 }
 
-fn program_ir(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
+fn program_ir(db: &dyn LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let text = db.program_text();
     Ok(Arc::new(chalk_parse::parse_program(&text)?.lower()?))
 }
 
-fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
+fn orphan_check(db: &dyn LoweringDatabase) -> Result<(), ChalkError> {
     let program = db.program_ir()?;
 
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
         for impl_id in local_impls {
             orphan::perform_orphan_check::<ChalkIr, SolverImpl, SolverChoice>(
-                db,
+                db.upcast(),
                 db.solver_choice(),
                 impl_id,
             )?;
@@ -117,7 +144,7 @@ fn orphan_check(db: &impl LoweringDatabase) -> Result<(), ChalkError> {
 }
 
 fn coherence(
-    db: &impl LoweringDatabase,
+    db: &dyn LoweringDatabase,
 ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
 
@@ -127,7 +154,7 @@ fn coherence(
             .keys()
             .map(|&trait_id| {
                 let solver: CoherenceSolver<ChalkIr, SolverImpl, SolverChoice> =
-                    CoherenceSolver::new(db, db.solver_choice(), trait_id);
+                    CoherenceSolver::new(db.upcast(), db.solver_choice(), trait_id);
                 let priorities = solver.specialization_priorities()?;
                 Ok((trait_id, priorities))
             })
@@ -139,14 +166,14 @@ fn coherence(
     priorities_map
 }
 
-fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
+fn checked_program(db: &dyn LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let program = db.program_ir()?;
 
     db.coherence()?;
 
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let solver: wf::WfSolver<ChalkIr, SolverImpl, SolverChoice> =
-            wf::WfSolver::new(db, db.solver_choice());
+            wf::WfSolver::new(db.upcast(), db.solver_choice());
         for &id in program.adt_data.keys() {
             solver.verify_adt_decl(id)?;
         }
@@ -161,7 +188,7 @@ fn checked_program(db: &impl LoweringDatabase) -> Result<Arc<Program>, ChalkErro
     Ok(program)
 }
 
-fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, ChalkError> {
+fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, ChalkError> {
     let program = db.program_ir()?;
 
     // Construct the set of *clauses*; these are sort of a compiled form
@@ -170,7 +197,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     //       forall P0...Pn. Something :- Conditions
     let mut program_clauses = program.custom_clauses.clone();
 
-    let builder = &mut ClauseBuilder::new(db, &mut program_clauses);
+    let builder = &mut ClauseBuilder::new(db.upcast(), &mut program_clauses);
 
     let env = chalk_ir::Environment::new(builder.interner());
 
@@ -215,7 +242,7 @@ fn environment(db: &impl LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Ch
     Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
-fn solver(db: &impl LoweringDatabase) -> ArcEq<Mutex<SolverImpl>> {
+fn solver(db: &dyn LoweringDatabase) -> ArcEq<Mutex<SolverImpl>> {
     db.salsa_runtime().report_untracked_read();
     let choice = db.solver_choice();
     ArcEq::new(Mutex::new(choice.into()))
