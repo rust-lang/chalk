@@ -285,34 +285,30 @@ where
         //
         // forall<T>
         let goal = gb.forall(&bound, opaque_ty_id, |gb, _, bound, opaque_ty_id| {
-            // exists<Self>
-            gb.exists(
-                &bound.where_clauses,
-                (opaque_ty_id, &bound.bounds),
-                |gb, _, where_clauses, (opaque_ty_id, bounds)| {
-                    let interner = gb.interner();
-                    let clauses = where_clauses
+            let interner = gb.interner();
+
+            let subst = Substitution::from1(interner, gb.db().hidden_opaque_type(opaque_ty_id));
+
+            let bounds = bound.bounds.substitute(interner, &subst);
+            let where_clauses = bound.where_clauses.substitute(interner, &subst);
+
+            let clauses = where_clauses
+                .iter()
+                .cloned()
+                .map(|wc| wc.into_from_env_goal(interner));
+
+            // if (WellFormed(T: Bar))
+            gb.implies(clauses, |gb| {
+                let interner = gb.interner();
+
+                // all(WellFormed(Baz: Clone))
+                gb.all(
+                    bounds
                         .iter()
                         .cloned()
-                        .map(|wc| wc.into_from_env_goal(interner));
-                    let subst =
-                        Substitution::from1(interner, gb.db().hidden_opaque_type(opaque_ty_id));
-
-                    // if (WellFormed(T: Bar))
-                    gb.implies(clauses, |gb| {
-                        let interner = gb.interner();
-
-                        // all(WellFormed(Baz: Clone))
-                        gb.all(
-                            bounds
-                                .substitute(interner, &subst)
-                                .iter()
-                                .cloned()
-                                .map(|b| b.into_well_formed_goal(interner)),
-                        )
-                    })
-                },
-            )
+                        .map(|b| b.into_well_formed_goal(interner)),
+                )
+            })
         });
 
         debug!("WF opaque type goal: {:#?}", goal);

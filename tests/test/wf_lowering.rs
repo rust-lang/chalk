@@ -1116,4 +1116,16 @@ fn ill_formed_opaque_ty() {
             "opaque type declaration `T` does not meet well-formedness requirements"
         }
     }
+
+    lowering_error! {
+        program {
+            trait Foo { }
+            struct NotFoo { }
+            struct IsFoo { }
+            impl Foo for IsFoo { }
+            opaque type T: Foo = NotFoo;
+        } error_msg {
+            "opaque type declaration `T` does not meet well-formedness requirements"
+        }
+    }
 }
