@@ -1,7 +1,9 @@
 use crate::context::Context;
 use crate::index_struct;
 use crate::strand::Strand;
+use crate::tables::Tables;
 use crate::{Minimums, TableIndex, TimeStamp};
+use std::fmt;
 use std::ops::{Index, IndexMut, Range};
 
 use chalk_ir::interner::Interner;
@@ -11,6 +13,44 @@ use chalk_ir::interner::Interner;
 pub(crate) struct Stack<I: Interner, C: Context<I>> {
     /// Stack: as described above, stores the in-progress goals.
     stack: Vec<StackEntry<I, C>>,
+}
+
+impl<I: Interner, C: Context<I>> Stack<I, C> {
+    // This isn't actually used, but it can be helpful when debugging stack issues
+    #[allow(dead_code)]
+    pub(crate) fn debug_with<'a>(&'a self, tables: &'a Tables<I>) -> StackDebug<'_, I, C> {
+        StackDebug {
+            stack: self,
+            tables,
+        }
+    }
+}
+
+pub(crate) struct StackDebug<'a, I: Interner, C: Context<I>> {
+    stack: &'a Stack<I, C>,
+    tables: &'a Tables<I>,
+}
+
+impl<I: Interner, C: Context<I>> fmt::Debug for StackDebug<'_, I, C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "---- Stack ----")?;
+        for entry in self.stack.stack.iter() {
+            writeln!(f, "  --- StackEntry ---")?;
+            writeln!(
+                f,
+                "  Table {:?} with goal {:?}",
+                entry.table, self.tables[entry.table].table_goal
+            )?;
+            writeln!(f, "  Active strand: {:#?}", entry.active_strand)?;
+            writeln!(
+                f,
+                "  Additional strands: {:#?}",
+                self.tables[entry.table].strands().collect::<Vec<_>>()
+            )?;
+        }
+        write!(f, "---- End Stack ----")?;
+        Ok(())
+    }
 }
 
 impl<I: Interner, C: Context<I>> Default for Stack<I, C> {

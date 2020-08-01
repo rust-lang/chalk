@@ -456,8 +456,6 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
         self.stack
             .push(initial_table, Minimums::MAX, self.forest.increment_clock());
         loop {
-            // FIXME: use depth for debug/info printing
-
             let clock = self.stack.top().clock;
             // If we had an active strand, continue to pursue it
             let table = self.stack.top().table;
@@ -1067,13 +1065,13 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
     }
 
     fn on_no_strands_left(&mut self) -> Result<(), RootSearchFail> {
-        debug!("no more strands available (or all cycles)");
+        let table = self.stack.top().table;
+        debug!("no more strands available (or all cycles) for {:?}", table);
 
         // No more strands left to try! This is either because all
         // strands have failed, because all strands encountered a
         // cycle, or all strands have would give ambiguous answers.
 
-        let table = self.stack.top().table;
         if self.forest.tables[table].strands_mut().count() == 0 {
             // All strands for the table T on the top of the stack
             // have **failed**. Hence we can pop it off the stack and
@@ -1120,36 +1118,12 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             };
         }
 
-        let num_universes = self.forest.tables[table].table_goal.universes;
-        let table_answer_mode = self.forest.tables[table].answer_mode;
-        let forest = &mut self.forest;
-        let context = &self.context;
-        let strand_is_participating = |strand: &CanonicalStrand<I>| {
-            let (_, ex_clause) =
-                context.instantiate_ex_clause(num_universes, &strand.canonical_ex_clause);
-            match (table_answer_mode, ex_clause.ambiguous) {
-                (AnswerMode::Complete, true) => false,
-                (AnswerMode::Complete, false) => true,
-                (AnswerMode::Ambiguous, _) => true,
-            }
-        };
-        if forest.tables[table]
-            .strands_mut()
-            .all(|s| !strand_is_participating(s))
-        {
-            // If no strands are participating, then that means they are all
-            // ambiguous and we are in complete mode.
-            debug!("All strands would return ambiguous answers.");
-            match self.forest.tables[table].answer_mode {
-                AnswerMode::Complete => {
-                    debug!("Allowing ambiguous answers.");
-                    self.forest.tables[table].answer_mode = AnswerMode::Ambiguous;
-                    return Err(RootSearchFail::QuantumExceeded);
-                }
-                AnswerMode::Ambiguous => {
-                    unreachable!();
-                }
-            }
+        // We can't consider this table as part of a cycle unless we've handled
+        // all strands, not just non-ambiguous ones. See chalk#571.
+        if let AnswerMode::Complete = self.forest.tables[table].answer_mode {
+            debug!("Allowing ambiguous answers.");
+            self.forest.tables[table].answer_mode = AnswerMode::Ambiguous;
+            return Err(RootSearchFail::QuantumExceeded);
         }
 
         let clock = self.stack.top().clock;
@@ -1168,9 +1142,7 @@ impl<'forest, I: Interner, C: Context<I> + 'forest, CO: ContextOps<I, C> + 'fore
             // then no more answers are forthcoming. We can clear all
             // the strands for those things recursively.
             let table = self.stack.top().table;
-            // N.B. If we try to pursue a strand and it's found to be ambiguous,
-            // we know that isn't part of a cycle.
-            let cyclic_strands = self.forest.tables[table].drain_strands(strand_is_participating);
+            let cyclic_strands = self.forest.tables[table].take_strands();
             self.clear_strands_after_cycle(cyclic_strands);
 
             // Now we yield with `QuantumExceeded`

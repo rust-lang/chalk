@@ -7,6 +7,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{Goal, InEnvironment, UCanonical};
 
 /// See `Forest`.
+#[derive(Debug)]
 pub(crate) struct Tables<I: Interner> {
     /// Maps from a canonical goal to the index of its table.
     table_indices: FxHashMap<UCanonical<InEnvironment<Goal<I>>>, TableIndex>,

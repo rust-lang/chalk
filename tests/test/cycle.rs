@@ -220,3 +220,44 @@ fn infinite_recursion() {
         }
     }
 }
+
+// Regression test for chalk#571
+#[test]
+fn cycle_with_ambiguity() {
+    test! {
+        program {
+            #[non_enumerable]
+            #[lang(sized)]
+            trait Sized { }
+            trait From<T> {}
+            trait ToOwned {
+                type Owned;
+            }
+
+            impl<T> ToOwned for [T] where T: Sized {
+                type Owned = Vec<T>;
+            }
+
+            struct Rc<T> { }
+
+            struct Vec<T> {}
+            struct Cow<T> {}
+
+            impl<T> From<Vec<T>> for Rc<[T]> {}
+            impl<B> From<Cow<B>> for Rc<B>
+            where
+                B: ToOwned,
+                Rc<B>: From<<B as ToOwned>::Owned>
+            {
+            }
+        }
+
+        goal {
+            exists<S, T> {
+                Rc<S>: From<T>
+            }
+        } yields[SolverChoice::slg_default()] {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
