@@ -372,9 +372,7 @@ where
         parameters: &[chalk_ir::GenericArg<I>],
         binders: &CanonicalVarKinds<I>,
     ) -> Vec<ImplId<I>> {
-        self.db
-            .borrow()
-            .impls_for_trait(trait_id, parameters, binders)
+        self.db.impls_for_trait(trait_id, parameters, binders)
     }
 
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>> {
@@ -441,9 +439,7 @@ where
         closure_id: ClosureId<I>,
         substs: &Substitution<I>,
     ) -> Binders<FnDefInputsAndOutputDatum<I>> {
-        self.db
-            .borrow()
-            .closure_inputs_and_output(closure_id, substs)
+        self.db.closure_inputs_and_output(closure_id, substs)
     }
 
     fn closure_upvars(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Binders<Ty<I>> {

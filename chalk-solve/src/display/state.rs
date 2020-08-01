@@ -148,12 +148,14 @@ where
     ///
     /// `f` will be run on the internal database, and the returned result will
     /// wrap the result from `f`. For consistency, `f` should always contain the
-    /// given database, and must keep the same ID<->item relationships.  
+    /// given database, and must keep the same ID<->item relationships.
     pub(super) fn wrap_db_ref<'a, DB2: ?Sized, P2, F>(&'a self, f: F) -> WriterState<I, DB2, P2>
     where
-        P: 'a,
         DB2: RustIrDatabase<I>,
         P2: Borrow<DB2>,
+        // We need to pass in `&'a P` specifically to guarantee that the `&P`
+        // can outlive the function body, and thus that it's safe to store `&P`
+        // in `P2`.
         F: FnOnce(&'a P) -> P2,
     {
         WriterState {
