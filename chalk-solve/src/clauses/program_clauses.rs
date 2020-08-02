@@ -869,7 +869,6 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
 
             // add new type parameter U
             builder.push_bound_ty(|builder, ty| {
-                let alias = AliasTy::Projection(projection.clone());
                 // `Normalize(<T as Foo>::Assoc -> U)`
                 let normalize = Normalize {
                     alias: AliasTy::Projection(projection.clone()),
@@ -878,8 +877,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
 
                 // `AliasEq(<T as Foo>::Assoc = U)`
                 let projection_eq = AliasEq {
-                    alias: alias.clone(),
-                    ty: ty.clone(),
+                    alias: AliasTy::Projection(projection),
+                    ty,
                 };
 
                 // Projection equality rule from above.
@@ -888,7 +887,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 //        AliasEq(<T as Foo>::Assoc = U) :-
                 //            Normalize(<T as Foo>::Assoc -> U).
                 //    }
-                builder.push_clause(projection_eq.clone(), Some(normalize));
+                builder.push_clause(projection_eq, Some(normalize));
             });
         });
     }

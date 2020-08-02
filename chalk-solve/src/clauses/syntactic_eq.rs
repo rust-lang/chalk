@@ -1,4 +1,4 @@
-use std::{iter, mem::replace};
+use std::{iter, mem::take};
 
 use chalk_ir::{
     cast::Cast,
@@ -9,6 +9,9 @@ use chalk_ir::{
     VariableKind, VariableKinds,
 };
 
+/// Converts a set of clauses to require only syntactic equality.
+/// This is done by introducing new parameters and subgoals in cases
+/// where semantic equality may diverge, for instance in unnormalized projections.
 pub fn syn_eq_lower<I: Interner, T: Fold<I>>(interner: &I, clause: &T) -> <T as Fold<I>>::Result {
     let mut folder = SynEqFolder {
         interner,
@@ -24,8 +27,15 @@ pub fn syn_eq_lower<I: Interner, T: Fold<I>>(interner: &I, clause: &T) -> <T as 
 
 struct SynEqFolder<'i, I: Interner> {
     interner: &'i I,
+    /// Stores the kinds of new parameters introduced during folding.
+    /// The new parameters will either be added to an enclosing `exists` binder (when lowering a goal)
+    /// or to an enclosing `forall` binder (when lowering a program clause).
     new_params: Vec<VariableKind<I>>,
+    /// For each new parameter `X`, a new goal is introduced to define it, e.g. `AliasEq(<T as Iterator>::Item, X)
     new_goals: Vec<Goal<I>>,
+
+    /// Stores the current number of variables in the binder we are adding parameters to.
+    /// Incremented for each new variable added.
     binders_len: usize,
 }
 
@@ -50,7 +60,6 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
                     .cast(interner),
                 );
                 self.binders_len += 1;
-                ty.super_fold_with(self, outer_binder)?;
                 Ok(new_ty)
             }
             TyData::Function(_) => Ok(ty.clone()),
@@ -95,6 +104,9 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
         // Adjust the outer binder to account for the binder in the program clause
         let outer_binder = outer_binder.shifted_in();
 
+        // Set binders_len to binders.len() since new parameters will be added into the existing forall<...> binder on the program clause.
+        self.binders_len = binders.len();
+
         // First lower the "consequence" -- in our example that is
         //
         // ```
@@ -106,21 +118,22 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
         //
         // Note that these new parameters will have indices that come after the existing parameters,
         // so any references to existing parameters like `X` in the "conditions" are still valid even if we insert new parameters.
-        self.binders_len = binders.len();
-
         let consequence = implication.consequence.fold_with(self, outer_binder)?;
-        let mut new_params = replace(&mut self.new_params, vec![]);
-        let mut new_goals = replace(&mut self.new_goals, vec![]);
+
+        let mut new_params = take(&mut self.new_params);
+        let mut new_goals = take(&mut self.new_goals);
 
         // Now fold the conditions (in our example, Implemented(X: Debug).
         // The resulting list might be expanded to include new AliasEq goals.
-
         let mut conditions = implication.conditions.fold_with(self, outer_binder)?;
 
-        new_params.extend(replace(&mut self.new_params, vec![]));
-        new_goals.extend(replace(&mut self.new_goals, vec![]));
+        new_params.extend(take(&mut self.new_params));
+        new_goals.extend(take(&mut self.new_goals));
 
         let constraints = implication.constraints.fold_with(self, outer_binder)?;
+
+        new_params.extend(take(&mut self.new_params));
+        new_goals.extend(take(&mut self.new_goals));
 
         binders.extend(new_params.into_iter());
 
@@ -151,14 +164,16 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
             _ => return goal.super_fold_with(self, outer_binder),
         };
 
+        // Set binders_len to zero as in the exists<..> binder we will create, there are no existing variables.
         self.binders_len = 0;
+
         // shifted in because we introduce a new binder
         let outer_binder = outer_binder.shifted_in();
         let syn_goal = goal
             .shifted_in(interner)
             .super_fold_with(self, outer_binder)?;
-        let new_params = replace(&mut self.new_params, vec![]);
-        let new_goals = replace(&mut self.new_goals, vec![]);
+        let new_params = take(&mut self.new_params);
+        let new_goals = take(&mut self.new_goals);
 
         if new_params.is_empty() {
             return Ok(goal.clone());
