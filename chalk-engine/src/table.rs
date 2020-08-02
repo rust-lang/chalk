@@ -10,6 +10,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{AnswerSubst, Canonical, Goal, InEnvironment, UCanonical};
 use tracing::{debug, info, instrument};
 
+#[derive(Debug)]
 pub(crate) struct Table<I: Interner> {
     /// The goal this table is trying to solve (also the key to look
     /// it up).
@@ -83,17 +84,6 @@ impl<I: Interner> Table<I> {
 
     pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<I>> {
         mem::replace(&mut self.strands, VecDeque::new())
-    }
-
-    pub(crate) fn drain_strands(
-        &mut self,
-        test: impl Fn(&CanonicalStrand<I>) -> bool,
-    ) -> VecDeque<CanonicalStrand<I>> {
-        let old = mem::replace(&mut self.strands, VecDeque::new());
-        let (test_in, test_out): (VecDeque<CanonicalStrand<I>>, VecDeque<CanonicalStrand<I>>) =
-            old.into_iter().partition(test);
-        let _ = mem::replace(&mut self.strands, test_out);
-        test_in
     }
 
     /// Remove the next strand from the queue that meets the given criteria
