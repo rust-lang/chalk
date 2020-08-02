@@ -9,12 +9,12 @@ use itertools::Itertools;
 
 use super::{
     display_self_where_clauses_as_bounds, display_type_with_generics, render_trait::RenderAsRust,
-    state::WriterState,
+    state::InternalWriterState,
 };
 
 impl<I: Interner> RenderAsRust<I> for TyData<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db().interner();
         match self {
             TyData::Dyn(dyn_ty) => {
                 // the lifetime needs to be outside of the bounds, so we
@@ -45,7 +45,7 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
             AliasTy::Projection(projection_ty) => projection_ty.fmt(s, f),
             AliasTy::Opaque(opaque_ty) => opaque_ty.fmt(s, f),
@@ -54,14 +54,14 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // <X as Y<A1, A2, A3>>::Z<B1, B2, B3>
 
         // Now, we split out A*, Y/Z and B*:
         // trait_params is X, A1, A2, A3,
         // assoc_type_params is B1, B2, B3,
         // assoc_ty_datum stores info about Y and Z.
-        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db.split_projection(&self);
+        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db().split_projection(&self);
         write!(
             f,
             "<{} as {}>::{}",
@@ -80,8 +80,8 @@ impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db().interner();
         write!(
             f,
             "{}",
@@ -91,8 +91,8 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTy<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for FnPointer<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db().interner();
         let s = &s.add_debrujin_index(None);
         if self.num_binders > 0 {
             write!(
@@ -117,8 +117,8 @@ impl<I: Interner> RenderAsRust<I> for FnPointer<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db.interner();
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+        let interner = s.db().interner();
         match self.name {
             TypeName::Adt(sid) => {
                 write!(f, "{}", sid.display(s))?;
@@ -129,7 +129,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             TypeName::AssociatedType(assoc_type_id) => {
                 // (Iterator::Item)(x)
                 // should be written in Rust as <X as Iterator>::Item
-                let datum = s.db.associated_ty_data(assoc_type_id);
+                let datum = s.db().associated_ty_data(assoc_type_id);
                 assert!(
                     self.len_type_parameters(interner) >= 1,
                     "AssociatedType should have at least 1 parameter"
@@ -230,7 +230,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for Scalar {
-    fn fmt(&self, _s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, _s: &InternalWriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
         use chalk_ir::{FloatTy::*, IntTy::*, UintTy::*};
         write!(
             f,
@@ -264,7 +264,7 @@ impl<I: Interner> RenderAsRust<I> for Scalar {
 }
 
 impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
             LifetimeData::BoundVar(v) => write!(f, "'{}", s.display_bound_var(v)),
             LifetimeData::InferenceVar(_) => write!(f, "'_"),
@@ -279,13 +279,13 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for ConstData<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         write!(f, "{}", self.value.display(s))
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for ConstValue<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
         match self {
             ConstValue::BoundVar(v) => write!(f, "{}", s.display_bound_var(v)),
             ConstValue::InferenceVar(_) => write!(f, "_"),
@@ -296,7 +296,7 @@ impl<I: Interner> RenderAsRust<I> for ConstValue<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for GenericArgData<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         match self {
             GenericArgData::Ty(ty) => write!(f, "{}", ty.display(s)),
             GenericArgData::Lifetime(lt) => write!(f, "{}", lt.display(s)),
@@ -306,28 +306,28 @@ impl<I: Interner> RenderAsRust<I> for GenericArgData<I> {
 }
 
 impl<I: Interner> RenderAsRust<I> for Ty<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to TyData
-        self.data(s.db.interner()).fmt(s, f)
+        self.data(s.db().interner()).fmt(s, f)
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for Lifetime<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to LifetimeData
-        self.data(s.db.interner()).fmt(s, f)
+        self.data(s.db().interner()).fmt(s, f)
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for Const<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
-        self.data(s.db.interner()).fmt(s, f)
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        self.data(s.db().interner()).fmt(s, f)
     }
 }
 
 impl<I: Interner> RenderAsRust<I> for GenericArg<I> {
-    fn fmt(&self, s: &WriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to GenericArgData
-        self.data(s.db.interner()).fmt(s, f)
+        self.data(s.db().interner()).fmt(s, f)
     }
 }

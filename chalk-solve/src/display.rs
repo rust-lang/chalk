@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     fmt::{Display, Result},
     sync::Arc,
 };
@@ -20,13 +21,13 @@ mod state;
 mod stub;
 mod ty;
 
-pub use self::render_trait::*;
+use self::render_trait::*;
 pub use self::state::*;
 pub use self::utils::sanitize_debug_name;
 
 use self::utils::as_display;
 
-fn write_item<F, I, T>(f: &mut F, ws: &WriterState<'_, I>, v: &T) -> Result
+fn write_item<F, I, T>(f: &mut F, ws: &InternalWriterState<'_, I>, v: &T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,
@@ -45,48 +46,51 @@ where
 /// fields are skipped. Associated types are ???? skipped.
 ///
 /// `RecordedItemId::Impl` is not supported.
-pub fn write_stub_items<F, I, DB, T>(f: &mut F, db: &DB, ids: T) -> Result
+pub fn write_stub_items<F, I, DB, P, T>(f: &mut F, ws: &WriterState<I, DB, P>, ids: T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,
     DB: RustIrDatabase<I>,
+    P: Borrow<DB>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
-    write_items(f, &stub::StubWrapper::new(db), ids)
+    let wrapped_db = &ws.wrap_db_ref(|db| stub::StubWrapper::new(db.borrow()));
+
+    write_items(f, wrapped_db, ids)
 }
 
 /// Writes out each item recorded by a [`LoggingRustIrDatabase`].
 ///
 /// [`LoggingRustIrDatabase`]: crate::logging_db::LoggingRustIrDatabase
-pub fn write_items<F, I, DB, T>(f: &mut F, db: &DB, ids: T) -> Result
+pub fn write_items<F, I, DB, P, T>(f: &mut F, ws: &WriterState<I, DB, P>, ids: T) -> Result
 where
     F: std::fmt::Write + ?Sized,
     I: Interner,
     DB: RustIrDatabase<I>,
+    P: Borrow<DB>,
     T: IntoIterator<Item = RecordedItemId<I>>,
 {
-    let ws = &WriterState::new(db);
     for id in ids {
         match id {
             RecordedItemId::Impl(id) => {
-                let v = db.impl_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().impl_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::Adt(id) => {
-                let v = db.adt_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().adt_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::Trait(id) => {
-                let v = db.trait_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().trait_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::OpaqueTy(id) => {
-                let v = db.opaque_ty_data(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().opaque_ty_data(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
             RecordedItemId::FnDef(id) => {
-                let v = db.fn_def_datum(id);
-                write_item(f, ws, &*v)?;
+                let v = ws.db().fn_def_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
         }
     }
@@ -111,11 +115,11 @@ where
 ///
 /// Shared between the `Trait` in `dyn Trait` and [`OpaqueTyDatum`] bounds.
 fn display_self_where_clauses_as_bounds<'a, I: Interner>(
-    s: &'a WriterState<'a, I>,
+    s: &'a InternalWriterState<'a, I>,
     bounds: &'a [QuantifiedWhereClause<I>],
 ) -> impl Display + 'a {
     as_display(move |f| {
-        let interner = s.db.interner();
+        let interner = s.db().interner();
         write!(
             f,
             "{}",
@@ -144,7 +148,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                             WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
                                 AliasTy::Projection(projection_ty) => {
                                     let (assoc_ty_datum, trait_params, assoc_type_params) =
-                                        s.db.split_projection(&projection_ty);
+                                        s.db().split_projection(&projection_ty);
                                     display_trait_with_assoc_ty_value(
                                         s,
                                         assoc_ty_datum,
@@ -172,7 +176,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
 ///
 /// This is shared between where bounds, OpaqueTy, & dyn Trait.
 fn display_type_with_generics<'a, I: Interner>(
-    s: &'a WriterState<'a, I>,
+    s: &'a InternalWriterState<'a, I>,
     trait_name: impl RenderAsRust<I> + 'a,
     trait_params: impl IntoIterator<Item = &'a GenericArg<I>> + 'a,
 ) -> impl Display + 'a {
@@ -188,7 +192,7 @@ fn display_type_with_generics<'a, I: Interner>(
 ///
 /// This is shared between where bounds & dyn Trait.
 fn display_trait_with_assoc_ty_value<'a, I: Interner>(
-    s: &'a WriterState<'a, I>,
+    s: &'a InternalWriterState<'a, I>,
     assoc_ty_datum: Arc<AssociatedTyDatum<I>>,
     trait_params: &'a [GenericArg<I>],
     assoc_ty_params: &'a [GenericArg<I>],

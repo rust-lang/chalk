@@ -118,10 +118,10 @@ fn test_generic_vars_inside_assoc_bounds() {
         program {
             struct Foo { }
             trait Bar<T, U> {
-                type Assoc;
+                type Quz;
             }
             trait Baz<U> {
-                type Assoc<T>: Bar<T, U, Assoc=Foo>;
+                type Zuq<T>: Bar<T, U, Quz=Foo>;
             }
         }
     );

@@ -14,6 +14,7 @@ mod opaque_ty;
 mod self_;
 mod struct_;
 mod trait_;
+mod unique_names;
 mod where_clauses;
 
 use self::util::*;
