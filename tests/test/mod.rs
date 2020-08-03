@@ -49,7 +49,11 @@ pub enum TestGoal {
 macro_rules! test {
     (program $program:tt $($goals:tt)*) => {{
         let (program, goals) = parse_test_data!(program $program $($goals)*);
-        solve_goal(program, goals)
+        solve_goal(program, goals, true)
+    }};
+    (disable_coherence; program $program:tt $($goals:tt)*) => {{
+        let (program, goals) = parse_test_data!(program $program $($goals)*);
+        solve_goal(program, goals, false)
     }};
 }
 
@@ -215,7 +219,7 @@ macro_rules! parse_test_data {
     };
 }
 
-fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
+fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, coherence: bool) {
     with_tracing_logs(|| {
         println!("program {}", program_text);
         assert!(program_text.starts_with("{"));
@@ -226,7 +230,11 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
             SolverChoice::default(),
         );
 
-        let program = db.checked_program().unwrap();
+        let program = if coherence {
+            db.checked_program().unwrap()
+        } else {
+            db.program_ir().unwrap()
+        };
 
         for (goal_text, solver_choice, expected) in goals {
             match (&solver_choice, &expected) {

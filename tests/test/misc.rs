@@ -729,11 +729,9 @@ fn canonicalization_regression() {
 }
 
 #[test]
-#[ignore]
-// this is a regression test for an infinite loop, but it doesn't actually work
-// because the code fails coherence checking.
 fn empty_definite_guidance() {
     test! {
+        disable_coherence;
         program {
             trait Trait<T> {}
 
@@ -751,6 +749,9 @@ fn empty_definite_guidance() {
             forall<'static> {
                 A: OtherTrait<'static>
             }
+            // the program fails coherence, so which answer we get here exactly
+            // isn't that important -- this is mainly a regression test for a
+            // recursive solver infinite loop.
         } yields[SolverChoice::slg_default()] {
             "Unique"
         } yields[SolverChoice::recursive()] {
