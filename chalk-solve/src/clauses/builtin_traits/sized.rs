@@ -4,7 +4,7 @@ use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{AdtId, ApplicationTy, Substitution, TyData, TypeName};
+use chalk_ir::{AdtId, ApplicationTy, Substitution, TyData, TyKind, TypeName};
 
 fn push_adt_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
@@ -70,6 +70,8 @@ pub fn add_sized_program_clauses<I: Interner>(
     trait_ref: &TraitRef<I>,
     ty: &TyData<I>,
 ) {
+    // TODO(areredify)
+    // when #368 lands, extend this to handle everything accordingly
     match ty {
         TyData::Apply(ApplicationTy { name, substitution }) => match name {
             TypeName::Adt(adt_id) => {
@@ -85,11 +87,22 @@ pub fn add_sized_program_clauses<I: Interner>(
             | TypeName::Scalar(_)
             | TypeName::Raw(_)
             | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),
-            _ => {}
+
+            TypeName::AssociatedType(_)
+            | TypeName::Slice
+            | TypeName::OpaqueType(_)
+            | TypeName::Str
+            | TypeName::Error => {}
         },
-        TyData::Function(_) => builder.push_fact(trait_ref.clone()),
-        // TODO(areredify)
-        // when #368 lands, extend this to handle everything accordingly
-        _ => {}
+
+        TyData::Function(_)
+        | TyData::InferenceVar(_, TyKind::Float)
+        | TyData::InferenceVar(_, TyKind::Integer) => builder.push_fact(trait_ref.clone()),
+
+        TyData::InferenceVar(_, TyKind::General)
+        | TyData::Placeholder(_)
+        | TyData::Dyn(_)
+        | TyData::Alias(_)
+        | TyData::BoundVar(_) => {}
     }
 }
