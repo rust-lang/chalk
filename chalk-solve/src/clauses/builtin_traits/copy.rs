@@ -1,8 +1,12 @@
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{ApplicationTy, Mutability, Substitution, TyData, TyKind, TypeName};
+use chalk_ir::{
+    ApplicationTy, CanonicalVarKinds, Mutability, Substitution, TyData, TyKind, TypeName,
+    VariableKind,
+};
 use std::iter;
+use tracing::instrument;
 
 fn push_tuple_copy_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
@@ -29,11 +33,13 @@ fn push_tuple_copy_conditions<I: Interner>(
     );
 }
 
+#[instrument(skip(db, builder))]
 pub fn add_copy_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: &TraitRef<I>,
     ty: &TyData<I>,
+    binders: &CanonicalVarKinds<I>,
 ) {
     match ty {
         TyData::Apply(ApplicationTy { name, substitution }) => match name {
@@ -72,13 +78,26 @@ pub fn add_copy_program_clauses<I: Interner>(
             | TypeName::Str
             | TypeName::Error => {}
         },
+
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
+
         TyData::InferenceVar(_, kind) => match kind {
             TyKind::Integer | TyKind::Float => builder.push_fact(trait_ref.clone()),
             TyKind::General => {}
         },
+
+        TyData::BoundVar(bound_var) => {
+            let var_kind = &binders.at(db.interner(), bound_var.index).kind;
+            match var_kind {
+                VariableKind::Ty(TyKind::Integer) | VariableKind::Ty(TyKind::Float) => {
+                    builder.push_fact(trait_ref.clone())
+                }
+                VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
+            }
+        }
+
         // TODO(areredify)
         // when #368 lands, extend this to handle everything accordingly
-        TyData::Alias(_) | TyData::Dyn(_) | TyData::BoundVar(_) | TyData::Placeholder(_) => {}
+        TyData::Alias(_) | TyData::Dyn(_) | TyData::Placeholder(_) => {}
     };
 }
