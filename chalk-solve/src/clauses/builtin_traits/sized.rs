@@ -73,8 +73,6 @@ pub fn add_sized_program_clauses<I: Interner>(
     ty: &TyData<I>,
     binders: &CanonicalVarKinds<I>,
 ) {
-    // TODO(areredify)
-    // when #368 lands, extend this to handle everything accordingly
     match ty {
         TyData::Apply(ApplicationTy { name, substitution }) => match name {
             TypeName::Adt(adt_id) => {

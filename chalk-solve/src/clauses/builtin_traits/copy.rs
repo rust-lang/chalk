@@ -2,8 +2,7 @@ use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    ApplicationTy, CanonicalVarKinds, Mutability, Substitution, TyData, TyKind, TypeName,
-    VariableKind,
+    ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyKind, TypeName, VariableKind,
 };
 use std::iter;
 use tracing::instrument;
@@ -65,17 +64,17 @@ pub fn add_copy_program_clauses<I: Interner>(
                 needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
             }
 
-            TypeName::Ref(Mutability::Not)
+            // these impls are in libcore
+            TypeName::Ref(_)
             | TypeName::Raw(_)
             | TypeName::Scalar(_)
-            | TypeName::Never => builder.push_fact(trait_ref.clone()),
+            | TypeName::Never
+            | TypeName::Str => {}
 
-            TypeName::Ref(Mutability::Mut)
-            | TypeName::Adt(_)
+            TypeName::Adt(_)
             | TypeName::AssociatedType(_)
             | TypeName::Slice
             | TypeName::OpaqueType(_)
-            | TypeName::Str
             | TypeName::Error => {}
         },
 
@@ -96,8 +95,6 @@ pub fn add_copy_program_clauses<I: Interner>(
             }
         }
 
-        // TODO(areredify)
-        // when #368 lands, extend this to handle everything accordingly
         TyData::Alias(_) | TyData::Dyn(_) | TyData::Placeholder(_) => {}
     };
 }

@@ -43,8 +43,6 @@ fn functions_are_copy() {
     }
 }
 
-use crate::test::*;
-
 #[test]
 fn function_implement_fn_traits() {
     test! {
