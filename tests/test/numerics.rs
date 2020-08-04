@@ -189,3 +189,39 @@ fn integers_are_not_floats() {
         }
     }
 }
+
+#[test]
+fn integers_are_copy() {
+    test! {
+        program {
+            #[lang(copy)]
+            trait Copy { }
+        }
+
+        goal {
+            exists<int I> {
+                I: Copy
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn integers_are_sized() {
+    test! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+        }
+
+        goal {
+            exists<int I> {
+                I: Sized
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
