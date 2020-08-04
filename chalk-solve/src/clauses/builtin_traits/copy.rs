@@ -1,7 +1,7 @@
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{ApplicationTy, Substitution, TyData, TypeName};
+use chalk_ir::{ApplicationTy, Mutability, Substitution, TyData, TyKind, TypeName};
 use std::iter;
 
 fn push_tuple_copy_conditions<I: Interner>(
@@ -58,11 +58,27 @@ pub fn add_copy_program_clauses<I: Interner>(
                 let upvars = upvars.substitute(db.interner(), &closure_fn_substitution);
                 needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
             }
-            _ => {}
+
+            TypeName::Ref(Mutability::Not)
+            | TypeName::Raw(_)
+            | TypeName::Scalar(_)
+            | TypeName::Never => builder.push_fact(trait_ref.clone()),
+
+            TypeName::Ref(Mutability::Mut)
+            | TypeName::Adt(_)
+            | TypeName::AssociatedType(_)
+            | TypeName::Slice
+            | TypeName::OpaqueType(_)
+            | TypeName::Str
+            | TypeName::Error => {}
         },
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
+        TyData::InferenceVar(_, kind) => match kind {
+            TyKind::Integer | TyKind::Float => builder.push_fact(trait_ref.clone()),
+            TyKind::General => {}
+        },
         // TODO(areredify)
         // when #368 lands, extend this to handle everything accordingly
-        _ => {}
+        TyData::Alias(_) | TyData::Dyn(_) | TyData::BoundVar(_) | TyData::Placeholder(_) => {}
     };
 }
