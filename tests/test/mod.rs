@@ -317,7 +317,6 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
 
 mod arrays;
 mod auto_traits;
-mod builtin_impls;
 mod closures;
 mod coherence_goals;
 mod coinduction;
@@ -340,4 +339,5 @@ mod slices;
 mod string;
 mod tuples;
 mod unify;
+mod unsize;
 mod wf_goals;
