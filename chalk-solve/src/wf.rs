@@ -38,10 +38,9 @@ impl<I: Interner> fmt::Display for WfError<I> {
 
 impl<I: Interner> std::error::Error for WfError<I> {}
 
-pub struct WfSolver<'db, I: Interner, S: Solver<I>, SC: Into<S> + Copy> {
+pub struct WfSolver<'db, 'solver, I: Interner> {
     db: &'db dyn RustIrDatabase<I>,
-    solver_choice: SC,
-    _solver: std::marker::PhantomData<S>,
+    solver: &'solver mut dyn Solver<I>,
 }
 
 struct InputTypeCollector<'i, I: Interner> {
@@ -139,22 +138,16 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
     }
 }
 
-impl<'db, I, S, SC> WfSolver<'db, I, S, SC>
+impl<'db, 'solver, I> WfSolver<'db, 'solver, I>
 where
     I: Interner,
-    S: Solver<I>,
-    SC: Into<S> + Copy,
 {
     /// Constructs a new `WfSolver`.
-    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SC) -> Self {
-        Self {
-            db,
-            solver_choice,
-            _solver: std::marker::PhantomData,
-        }
+    pub fn new(db: &'db dyn RustIrDatabase<I>, solver: &'solver mut dyn Solver<I>) -> Self {
+        Self { db, solver }
     }
 
-    pub fn verify_adt_decl(&self, adt_id: AdtId<I>) -> Result<(), WfError<I>> {
+    pub fn verify_adt_decl(&mut self, adt_id: AdtId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
 
         // Given a struct like
@@ -224,7 +217,7 @@ where
 
         let wg_goal = wg_goal.into_closed_goal(interner);
 
-        let is_legal = match self.solver_choice.into().solve(self.db, &wg_goal) {
+        let is_legal = match self.solver.solve(self.db, &wg_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };
@@ -236,7 +229,7 @@ where
         }
     }
 
-    pub fn verify_trait_impl(&self, impl_id: ImplId<I>) -> Result<(), WfError<I>> {
+    pub fn verify_trait_impl(&mut self, impl_id: ImplId<I>) -> Result<(), WfError<I>> {
         let interner = self.db.interner();
 
         let impl_datum = self.db.impl_datum(impl_id);
@@ -255,8 +248,7 @@ where
         debug!("WF trait goal: {:?}", impl_goal);
 
         let is_legal = match self
-            .solver_choice
-            .into()
+            .solver
             .solve(self.db, &impl_goal.into_closed_goal(interner))
         {
             Some(sol) => sol.is_unique(),

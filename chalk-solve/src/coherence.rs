@@ -11,11 +11,10 @@ use std::sync::Arc;
 pub mod orphan;
 mod solve;
 
-pub struct CoherenceSolver<'db, I: Interner, S, SC: Into<S> + Copy> {
+pub struct CoherenceSolver<'db, 'solver, I: Interner> {
     db: &'db dyn RustIrDatabase<I>,
-    solver_choice: SC,
+    solver: &'solver mut dyn Solver<I>,
     trait_id: TraitId<I>,
-    _solver: std::marker::PhantomData<S>,
 }
 
 #[derive(Debug)]
@@ -72,24 +71,25 @@ impl<I: Interner> SpecializationPriorities<I> {
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct SpecializationPriority(usize);
 
-impl<'db, I, S, SC> CoherenceSolver<'db, I, S, SC>
+impl<'db, 'solver, I> CoherenceSolver<'db, 'solver, I>
 where
     I: Interner,
-    S: Solver<I>,
-    SC: Into<S> + Copy,
 {
     /// Constructs a new `CoherenceSolver`.
-    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SC, trait_id: TraitId<I>) -> Self {
+    pub fn new(
+        db: &'db dyn RustIrDatabase<I>,
+        solver: &'solver mut dyn Solver<I>,
+        trait_id: TraitId<I>,
+    ) -> Self {
         Self {
             db,
-            solver_choice,
+            solver,
             trait_id,
-            _solver: std::marker::PhantomData,
         }
     }
 
     pub fn specialization_priorities(
-        &self,
+        &mut self,
     ) -> Result<Arc<SpecializationPriorities<I>>, CoherenceError<I>> {
         let mut result = SpecializationPriorities::<I>::new();
 
@@ -105,7 +105,7 @@ where
     }
 
     // Build the forest of specialization relationships.
-    fn build_specialization_forest(&self) -> Result<Graph<ImplId<I>, ()>, CoherenceError<I>> {
+    fn build_specialization_forest(&mut self) -> Result<Graph<ImplId<I>, ()>, CoherenceError<I>> {
         // The forest is returned as a graph but built as a GraphMap; this is
         // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraphMap::new();

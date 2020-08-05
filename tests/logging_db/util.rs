@@ -5,12 +5,10 @@
 //! to `test/`. We can't compile without access to `test/`, so we can't be under
 //! of `test_util.rs`.
 use chalk_integration::{
-    db::ChalkDatabase, lowering::LowerGoal, program::Program, query::LoweringDatabase,
-    SolverChoice, SolverImpl,
+    db::ChalkDatabase, lowering::LowerGoal, program::Program, query::LoweringDatabase, SolverChoice,
 };
 use chalk_solve::ext::*;
 use chalk_solve::logging_db::LoggingRustIrDatabase;
-use chalk_solve::solve::Solver;
 use chalk_solve::RustIrDatabase;
 
 use crate::test::{assert_result, TestGoal};
@@ -42,7 +40,7 @@ pub fn logging_db_output_sufficient(
         let wrapped = LoggingRustIrDatabase::<_, Program, _>::new(program.clone());
         chalk_integration::tls::set_current_program(&program, || {
             for (goal_text, solver_choice, expected) in goals.clone() {
-                let mut solver: SolverImpl = solver_choice.into();
+                let mut solver = solver_choice.into_solver();
 
                 println!("----------------------------------------------------------------------");
                 println!("---- first run on original test code ---------------------------------");
@@ -82,7 +80,7 @@ pub fn logging_db_output_sufficient(
     };
 
     for (goal_text, solver_choice, expected) in goals {
-        let mut solver: SolverImpl = solver_choice.into();
+        let mut solver = solver_choice.into_solver();
 
         chalk_integration::tls::set_current_program(&new_program, || {
             println!("----------------------------------------------------------------------");

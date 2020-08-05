@@ -44,7 +44,7 @@ impl<I: Interner> Solver<I> for SLGSolver<I> {
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
         let ops = SlgContextOps::new(program, self.max_size, self.expected_answers);
         ops.make_solution(goal, self.forest.iter_answers(&ops, goal), should_continue)
@@ -54,7 +54,7 @@ impl<I: Interner> Solver<I> for SLGSolver<I> {
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        mut f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+        f: &mut dyn FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool {
         let ops = SlgContextOps::new(program, self.max_size, self.expected_answers);
         let mut answers = self.forest.iter_answers(&ops, goal);

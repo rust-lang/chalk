@@ -261,7 +261,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                     TestGoal::All(expected) => {
                         let mut expected = expected.into_iter();
                         assert!(
-                            db.solve_multiple(&peeled_goal, |result, next_result| {
+                            db.solve_multiple(&peeled_goal, &mut |result, next_result| {
                                 match expected.next() {
                                     Some(expected) => {
                                         assert_same(
@@ -286,26 +286,23 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>) {
                     }
                     TestGoal::First(expected) => {
                         let mut expected = expected.into_iter();
-                        db.solve_multiple(&peeled_goal, |result, next_result| {
-                            match expected.next() {
-                                Some(solution) => {
-                                    assert_same(
-                                        &format!(
-                                            "{}",
-                                            result.as_ref().map(|v| v.display(&ChalkIr))
-                                        ),
-                                        solution,
+                        db.solve_multiple(&peeled_goal, &mut |result, next_result| match expected
+                            .next()
+                        {
+                            Some(solution) => {
+                                assert_same(
+                                    &format!("{}", result.as_ref().map(|v| v.display(&ChalkIr))),
+                                    solution,
+                                );
+                                if !next_result {
+                                    assert!(
+                                        expected.next().is_none(),
+                                        "Not enough solutions found"
                                     );
-                                    if !next_result {
-                                        assert!(
-                                            expected.next().is_none(),
-                                            "Not enough solutions found"
-                                        );
-                                    }
-                                    true
                                 }
-                                None => false,
+                                true
                             }
+                            None => false,
                         });
                         assert!(expected.next().is_none(), "Not enough solutions found");
                     }

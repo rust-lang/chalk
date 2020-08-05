@@ -15,7 +15,7 @@ use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
     FnDefDatum, FnDefInputsAndOutputDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
-use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
+use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
 use salsa::Database;
 use std::fmt;
 use std::sync::Arc;
@@ -62,7 +62,7 @@ impl ChalkDatabase {
     pub fn solve_multiple(
         &self,
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<ChalkIr>>>, bool) -> bool,
+        f: &mut dyn FnMut(SubstitutionResult<Canonical<ConstrainedSubst<ChalkIr>>>, bool) -> bool,
     ) -> bool {
         let solver = self.solver();
         let solution = solver.lock().unwrap().solve_multiple(self, goal, f);

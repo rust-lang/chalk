@@ -14,10 +14,10 @@ use tracing::{debug, instrument};
 //     forall<T> { LocalImplAllowed(MyType<T>: Trait) }
 //
 // This must be provable in order to pass the orphan check.
-#[instrument(level = "debug", skip(db, solver_choice))]
-pub fn perform_orphan_check<I: Interner, S: Solver<I>, SC: Into<S>>(
+#[instrument(level = "debug", skip(db, solver))]
+pub fn perform_orphan_check<I: Interner>(
     db: &dyn RustIrDatabase<I>,
-    solver_choice: SC,
+    solver: &mut dyn Solver<I>,
     impl_id: ImplId<I>,
 ) -> Result<(), CoherenceError<I>> {
     let impl_datum = db.impl_datum(impl_id);
@@ -32,7 +32,7 @@ pub fn perform_orphan_check<I: Interner, S: Solver<I>, SC: Into<S>>(
         .cast(db.interner());
 
     let canonical_goal = &impl_allowed.into_closed_goal(db.interner());
-    let is_allowed = solver_choice.into().solve(db, canonical_goal).is_some();
+    let is_allowed = solver.solve(db, canonical_goal).is_some();
     debug!("overlaps = {:?}", is_allowed);
 
     if !is_allowed {
