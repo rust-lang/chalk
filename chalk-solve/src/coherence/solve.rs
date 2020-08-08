@@ -10,9 +10,9 @@ use chalk_ir::*;
 use itertools::Itertools;
 use tracing::{debug, instrument};
 
-impl<I: Interner> CoherenceSolver<'_, '_, I> {
+impl<I: Interner> CoherenceSolver<'_, I> {
     pub(super) fn visit_specializations_of_trait(
-        &mut self,
+        &self,
         mut record_specialization: impl FnMut(ImplId<I>, ImplId<I>),
     ) -> Result<(), CoherenceError<I>> {
         // Ignore impls for marker traits as they are allowed to overlap.
@@ -83,7 +83,7 @@ impl<I: Interner> CoherenceSolver<'_, '_, I> {
     //      not { compatible { exists<T> { exists<U> { Vec<T> = Vec<U>, T: Bar, U: Baz } } } }
     //
     #[instrument(level = "debug", skip(self))]
-    fn disjoint(&mut self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
+    fn disjoint(&self, lhs: &ImplDatum<I>, rhs: &ImplDatum<I>) -> bool {
         let interner = self.db.interner();
 
         let (lhs_binders, lhs_bound) = lhs.binders.as_ref().into();
@@ -130,7 +130,8 @@ impl<I: Interner> CoherenceSolver<'_, '_, I> {
             .negate(interner);
 
         let canonical_goal = &goal.into_closed_goal(interner);
-        let solution = self.solver.solve(self.db, canonical_goal);
+        let mut fresh_solver = (self.solver_builder)();
+        let solution = fresh_solver.solve(self.db, canonical_goal);
         let result = match solution {
             // Goal was proven with a unique solution, so no impl was found that causes these two
             // to overlap
@@ -192,7 +193,7 @@ impl<I: Interner> CoherenceSolver<'_, '_, I> {
     // }
     // ```
     #[instrument(level = "debug", skip(self))]
-    fn specializes(&mut self, less_special_id: ImplId<I>, more_special_id: ImplId<I>) -> bool {
+    fn specializes(&self, less_special_id: ImplId<I>, more_special_id: ImplId<I>) -> bool {
         let more_special = &self.db.impl_datum(more_special_id);
         let less_special = &self.db.impl_datum(less_special_id);
         debug_span!("specializes", ?less_special, ?more_special);
@@ -249,7 +250,8 @@ impl<I: Interner> CoherenceSolver<'_, '_, I> {
         );
 
         let canonical_goal = &goal.into_closed_goal(interner);
-        let result = match self.solver.solve(self.db, canonical_goal) {
+        let mut fresh_solver = (self.solver_builder)();
+        let result = match fresh_solver.solve(self.db, canonical_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };

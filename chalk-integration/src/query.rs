@@ -132,8 +132,8 @@ fn orphan_check(db: &dyn LoweringDatabase) -> Result<(), ChalkError> {
 
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
-        let mut solver = db.solver_choice().into_solver();
         for impl_id in local_impls {
+            let mut solver = db.solver_choice().into_solver();
             orphan::perform_orphan_check::<ChalkIr>(db.upcast(), &mut *solver, impl_id)?;
         }
         Ok(())
@@ -144,14 +144,15 @@ fn coherence(
     db: &dyn LoweringDatabase,
 ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
-    let mut solver = db.solver_choice().into_solver();
+    let solver_choice = db.solver_choice();
     let priorities_map = tls::set_current_program(&program, || -> Result<_, ChalkError> {
+        let solver_builder = || solver_choice.into_solver();
         let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
             .trait_data
             .keys()
             .map(|&trait_id| {
-                let mut solver: CoherenceSolver<ChalkIr> =
-                    CoherenceSolver::new(db.upcast(), &mut *solver, trait_id);
+                let solver: CoherenceSolver<ChalkIr> =
+                    CoherenceSolver::new(db.upcast(), &solver_builder, trait_id);
                 let priorities = solver.specialization_priorities()?;
                 Ok((trait_id, priorities))
             })
@@ -168,10 +169,10 @@ fn checked_program(db: &dyn LoweringDatabase) -> Result<Arc<Program>, ChalkError
 
     db.coherence()?;
 
-    let mut solver = db.solver_choice().into_solver();
-
+    let solver_choice = db.solver_choice();
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
-        let mut solver: wf::WfSolver<ChalkIr> = wf::WfSolver::new(db.upcast(), &mut *solver);
+        let solver_builder = || solver_choice.into_solver();
+        let solver: wf::WfSolver<ChalkIr> = wf::WfSolver::new(db.upcast(), &solver_builder);
         for &id in program.adt_data.keys() {
             solver.verify_adt_decl(id)?;
         }
