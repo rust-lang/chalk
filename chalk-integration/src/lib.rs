@@ -13,9 +13,9 @@ pub mod tls;
 
 use chalk_engine::solve::SLGSolver;
 use chalk_ir::interner::HasInterner;
-use chalk_ir::{Binders, Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
+use chalk_ir::Binders;
 use chalk_recursive::RecursiveSolver;
-use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
+use chalk_solve::Solver;
 use interner::ChalkIr;
 
 pub use interner::{Identifier, RawId};
@@ -78,68 +78,23 @@ impl SolverChoice {
             caching_enabled: true,
         }
     }
+
+    pub fn into_solver(self) -> Box<dyn Solver<ChalkIr>> {
+        match self {
+            SolverChoice::SLG {
+                max_size,
+                expected_answers,
+            } => Box::new(SLGSolver::new(max_size, expected_answers)),
+            SolverChoice::Recursive {
+                overflow_depth,
+                caching_enabled,
+            } => Box::new(RecursiveSolver::new(overflow_depth, caching_enabled)),
+        }
+    }
 }
 
 impl Default for SolverChoice {
     fn default() -> Self {
         SolverChoice::slg(10, None)
-    }
-}
-
-#[derive(Debug)]
-pub enum SolverImpl {
-    Slg(SLGSolver<ChalkIr>),
-    Recursive(RecursiveSolver<ChalkIr>),
-}
-
-impl Solver<ChalkIr> for SolverImpl {
-    fn solve(
-        &mut self,
-        program: &dyn RustIrDatabase<ChalkIr>,
-        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-    ) -> Option<Solution<ChalkIr>> {
-        match self {
-            Self::Slg(solve) => solve.solve(program, goal),
-            Self::Recursive(solve) => solve.solve(program, goal),
-        }
-    }
-
-    fn solve_limited(
-        &mut self,
-        program: &dyn RustIrDatabase<ChalkIr>,
-        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        should_continue: impl std::ops::Fn() -> bool,
-    ) -> Option<Solution<ChalkIr>> {
-        match self {
-            Self::Slg(solve) => solve.solve_limited(program, goal, should_continue),
-            Self::Recursive(solve) => solve.solve_limited(program, goal, should_continue),
-        }
-    }
-
-    fn solve_multiple(
-        &mut self,
-        program: &dyn RustIrDatabase<ChalkIr>,
-        goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
-        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<ChalkIr>>>, bool) -> bool,
-    ) -> bool {
-        match self {
-            Self::Slg(solve) => solve.solve_multiple(program, goal, f),
-            Self::Recursive(solve) => solve.solve_multiple(program, goal, f),
-        }
-    }
-}
-
-impl Into<SolverImpl> for SolverChoice {
-    fn into(self) -> SolverImpl {
-        match self {
-            SolverChoice::SLG {
-                max_size,
-                expected_answers,
-            } => SolverImpl::Slg(SLGSolver::new(max_size, expected_answers)),
-            SolverChoice::Recursive {
-                overflow_depth,
-                caching_enabled,
-            } => SolverImpl::Recursive(RecursiveSolver::new(overflow_depth, caching_enabled)),
-        }
     }
 }

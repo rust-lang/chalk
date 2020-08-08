@@ -172,7 +172,7 @@ where
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<Solution<I>>;
 
     /// Attempts to solve the given goal, which must be in canonical
@@ -201,6 +201,6 @@ where
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        f: impl FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+        f: &mut dyn FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool;
 }

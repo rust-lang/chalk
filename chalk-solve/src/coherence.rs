@@ -11,11 +11,10 @@ use std::sync::Arc;
 pub mod orphan;
 mod solve;
 
-pub struct CoherenceSolver<'db, I: Interner, S, SC: Into<S> + Copy> {
-    db: &'db dyn RustIrDatabase<I>,
-    solver_choice: SC,
+pub struct CoherenceSolver<'a, I: Interner> {
+    db: &'a dyn RustIrDatabase<I>,
+    solver_builder: &'a dyn Fn() -> Box<dyn Solver<I>>,
     trait_id: TraitId<I>,
-    _solver: std::marker::PhantomData<S>,
 }
 
 #[derive(Debug)]
@@ -72,19 +71,20 @@ impl<I: Interner> SpecializationPriorities<I> {
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct SpecializationPriority(usize);
 
-impl<'db, I, S, SC> CoherenceSolver<'db, I, S, SC>
+impl<'a, I> CoherenceSolver<'a, I>
 where
     I: Interner,
-    S: Solver<I>,
-    SC: Into<S> + Copy,
 {
     /// Constructs a new `CoherenceSolver`.
-    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SC, trait_id: TraitId<I>) -> Self {
+    pub fn new(
+        db: &'a dyn RustIrDatabase<I>,
+        solver_builder: &'a dyn Fn() -> Box<dyn Solver<I>>,
+        trait_id: TraitId<I>,
+    ) -> Self {
         Self {
             db,
-            solver_choice,
+            solver_builder,
             trait_id,
-            _solver: std::marker::PhantomData,
         }
     }
 

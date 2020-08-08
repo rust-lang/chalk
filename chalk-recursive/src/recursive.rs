@@ -317,7 +317,7 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        _should_continue: impl std::ops::Fn() -> bool,
+        _should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<chalk_solve::Solution<I>> {
         // TODO support should_continue in recursive solver
         self.ctx
@@ -338,7 +338,10 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         &mut self,
         _program: &dyn RustIrDatabase<I>,
         _goal: &UCanonical<InEnvironment<Goal<I>>>,
-        _f: impl FnMut(chalk_solve::SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
+        _f: &mut dyn FnMut(
+            chalk_solve::SubstitutionResult<Canonical<ConstrainedSubst<I>>>,
+            bool,
+        ) -> bool,
     ) -> bool {
         unimplemented!("Recursive solver doesn't support multiple answers")
     }

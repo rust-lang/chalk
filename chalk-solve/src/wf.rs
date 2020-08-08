@@ -38,10 +38,9 @@ impl<I: Interner> fmt::Display for WfError<I> {
 
 impl<I: Interner> std::error::Error for WfError<I> {}
 
-pub struct WfSolver<'db, I: Interner, S: Solver<I>, SC: Into<S> + Copy> {
-    db: &'db dyn RustIrDatabase<I>,
-    solver_choice: SC,
-    _solver: std::marker::PhantomData<S>,
+pub struct WfSolver<'a, I: Interner> {
+    db: &'a dyn RustIrDatabase<I>,
+    solver_builder: &'a dyn Fn() -> Box<dyn Solver<I>>,
 }
 
 struct InputTypeCollector<'i, I: Interner> {
@@ -139,19 +138,16 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
     }
 }
 
-impl<'db, I, S, SC> WfSolver<'db, I, S, SC>
+impl<'a, I> WfSolver<'a, I>
 where
     I: Interner,
-    S: Solver<I>,
-    SC: Into<S> + Copy,
 {
     /// Constructs a new `WfSolver`.
-    pub fn new(db: &'db dyn RustIrDatabase<I>, solver_choice: SC) -> Self {
-        Self {
-            db,
-            solver_choice,
-            _solver: std::marker::PhantomData,
-        }
+    pub fn new(
+        db: &'a dyn RustIrDatabase<I>,
+        solver_builder: &'a dyn Fn() -> Box<dyn Solver<I>>,
+    ) -> Self {
+        Self { db, solver_builder }
     }
 
     pub fn verify_adt_decl(&self, adt_id: AdtId<I>) -> Result<(), WfError<I>> {
@@ -223,8 +219,8 @@ where
         );
 
         let wg_goal = wg_goal.into_closed_goal(interner);
-
-        let is_legal = match self.solver_choice.into().solve(self.db, &wg_goal) {
+        let mut fresh_solver = (self.solver_builder)();
+        let is_legal = match fresh_solver.solve(self.db, &wg_goal) {
             Some(sol) => sol.is_unique(),
             None => false,
         };
@@ -254,11 +250,8 @@ where
 
         debug!("WF trait goal: {:?}", impl_goal);
 
-        let is_legal = match self
-            .solver_choice
-            .into()
-            .solve(self.db, &impl_goal.into_closed_goal(interner))
-        {
+        let mut fresh_solver = (self.solver_builder)();
+        let is_legal = match fresh_solver.solve(self.db, &impl_goal.into_closed_goal(interner)) {
             Some(sol) => sol.is_unique(),
             None => false,
         };

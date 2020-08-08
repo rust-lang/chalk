@@ -8,7 +8,6 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::tls;
 use crate::SolverChoice;
-use crate::SolverImpl;
 use chalk_ir::TraitId;
 use chalk_solve::clauses::builder::ClauseBuilder;
 use chalk_solve::clauses::program_clauses::ToProgramClauses;
@@ -16,6 +15,7 @@ use chalk_solve::coherence::orphan;
 use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_solve::wf;
 use chalk_solve::RustIrDatabase;
+use chalk_solve::Solver;
 use salsa::Database;
 use std::clone::Clone;
 use std::cmp::{Eq, PartialEq};
@@ -57,7 +57,7 @@ pub trait LoweringDatabase:
     /// volatile, thus ensuring that the solver is recreated in every
     /// revision (i.e., each time source program changes).
     // HACK: salsa requires that queries return types that implement `Eq`
-    fn solver(&self) -> ArcEq<Mutex<SolverImpl>>;
+    fn solver(&self) -> ArcEq<Mutex<Box<dyn Solver<ChalkIr>>>>;
 }
 
 // Needed to go from dyn LoweringDatabase -> dyn RustIrDatabase
@@ -133,11 +133,8 @@ fn orphan_check(db: &dyn LoweringDatabase) -> Result<(), ChalkError> {
     tls::set_current_program(&program, || -> Result<(), ChalkError> {
         let local_impls = program.local_impl_ids();
         for impl_id in local_impls {
-            orphan::perform_orphan_check::<ChalkIr, SolverImpl, SolverChoice>(
-                db.upcast(),
-                db.solver_choice(),
-                impl_id,
-            )?;
+            let mut solver = db.solver_choice().into_solver();
+            orphan::perform_orphan_check::<ChalkIr>(db.upcast(), &mut *solver, impl_id)?;
         }
         Ok(())
     })
@@ -147,14 +144,15 @@ fn coherence(
     db: &dyn LoweringDatabase,
 ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
-
+    let solver_choice = db.solver_choice();
     let priorities_map = tls::set_current_program(&program, || -> Result<_, ChalkError> {
+        let solver_builder = || solver_choice.into_solver();
         let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
             .trait_data
             .keys()
             .map(|&trait_id| {
-                let solver: CoherenceSolver<ChalkIr, SolverImpl, SolverChoice> =
-                    CoherenceSolver::new(db.upcast(), db.solver_choice(), trait_id);
+                let solver: CoherenceSolver<ChalkIr> =
+                    CoherenceSolver::new(db.upcast(), &solver_builder, trait_id);
                 let priorities = solver.specialization_priorities()?;
                 Ok((trait_id, priorities))
             })
@@ -171,9 +169,10 @@ fn checked_program(db: &dyn LoweringDatabase) -> Result<Arc<Program>, ChalkError
 
     db.coherence()?;
 
+    let solver_choice = db.solver_choice();
     let () = tls::set_current_program(&program, || -> Result<(), ChalkError> {
-        let solver: wf::WfSolver<ChalkIr, SolverImpl, SolverChoice> =
-            wf::WfSolver::new(db.upcast(), db.solver_choice());
+        let solver_builder = || solver_choice.into_solver();
+        let solver: wf::WfSolver<ChalkIr> = wf::WfSolver::new(db.upcast(), &solver_builder);
         for &id in program.adt_data.keys() {
             solver.verify_adt_decl(id)?;
         }
@@ -242,8 +241,8 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
     Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
-fn solver(db: &dyn LoweringDatabase) -> ArcEq<Mutex<SolverImpl>> {
+fn solver(db: &dyn LoweringDatabase) -> ArcEq<Mutex<Box<dyn Solver<ChalkIr>>>> {
     db.salsa_runtime().report_untracked_read();
     let choice = db.solver_choice();
-    ArcEq::new(Mutex::new(choice.into()))
+    ArcEq::new(Mutex::new(choice.into_solver()))
 }
