@@ -6,6 +6,7 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
+use chalk_ir::GoalData;
 use std::fmt::Debug;
 
 impl<I: Interner> InferenceTable<I> {
@@ -445,7 +446,17 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             (&ConstValue::Concrete(ref ev), &ConstValue::Unevaluated(ref expr)) |
             (&ConstValue::Unevaluated(ref expr), &ConstValue::Concrete(ref ev)) => {
-                if ev.const_eq(a_ty, &expr.try_eval(a_ty, interner).map_err(|_| NoSolution)?, interner) {
+                let ev2 = match expr.try_eval(a_ty, interner) {
+                    Ok(ev2) => ev2,
+                    Err(ConstEvalError::TooGeneric) => return Ok(
+                        self.goals.push(InEnvironment::new(
+                            self.environment,
+                            GoalData::CannotProve.intern(interner)
+                        ))
+                    )
+                };
+
+                if ev.const_eq(a_ty, &ev2, interner) {
                     Ok(())
                 } else {
                     Err(NoSolution)
@@ -455,22 +466,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (&ConstValue::Unevaluated(ref expr1), &ConstValue::Unevaluated(ref expr2)) => {
                 if expr1.const_eq(a_ty, expr2, interner) {
                     Ok(())
-                } else if let (Ok(ev1), Ok(ev2)) = (expr1.try_eval(a_ty, interner), expr2.try_eval(b_ty, interner)) {
-                    if ev1.const_eq(a_ty, &ev2, interner) {
-                        Ok(())
-                    } else {
-                        Err(NoSolution)
-                    }
                 } else {
-                    Err(NoSolution)
+                    match (expr1.try_eval(a_ty, interner), expr2.try_eval(b_ty, interner)) {
+                        (Ok(ev1), Ok(ev2)) if ev1.const_eq(a_ty, &ev2, interner) => Ok(()),
+                        (Ok(_), Ok(_)) => Err(NoSolution),
+                        (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => Ok(
+                            self.goals.push(InEnvironment::new(
+                                self.environment,
+                                GoalData::CannotProve.intern(interner)
+                            ))
+                        )
+                    }
                 }
             }
 
             (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
-            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),
-
-            // Can't see inside an unevaluated const expression
-            (&ConstValue::Unevaluated(_), &ConstValue::Placeholder(_))
+            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_))
+            | (&ConstValue::Unevaluated(_), &ConstValue::Placeholder(_))
             | (&ConstValue::Placeholder(_), &ConstValue::Unevaluated(_)) => Err(NoSolution),
 
             (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => panic!(

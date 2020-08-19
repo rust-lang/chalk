@@ -204,13 +204,12 @@ fn unevaluated_impl_generic() {
             "Unique"
         }
 
-        // We don't know if the constant evaluates to an invalid value
         goal {
-            exists<N> {
+            exists<const N> {
                 S<N>: Trait
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            "Unique; substitution [?0 := ?], lifetime constraints []"
         }
     }
 }
@@ -228,6 +227,7 @@ fn placeholders_eq() {
             "No possible solution"
         }
 
+        // TODO: Make this a const test
         goal {
             exists<C> {
                 forall<D> {
@@ -239,8 +239,8 @@ fn placeholders_eq() {
         }
 
         goal {
-            forall<C> {
-                exists<D> {
+            forall<const C> {
+                exists<const D> {
                     C = D
                 }
             }
@@ -249,8 +249,8 @@ fn placeholders_eq() {
         }
 
         goal {
-            forall<C1, C2> {
-                exists<D1, D2> {
+            forall<const C1, const C2> {
+                exists<const D1, const D2> {
                     C1 = D1, C2 = D2, D1 = D2
                 }
             }
