@@ -4,7 +4,7 @@ use chalk_ir::{
     cast::Cast,
     fold::{shift::Shift, Fold, Folder, SuperFold},
     interner::Interner,
-    AliasEq, AliasTy, Binders, BoundVar, DebruijnIndex, EqGoal, Fallible, Goal, GoalData, Goals,
+    AliasTy, Binders, BoundVar, DebruijnIndex, EqGoal, Fallible, Goal, GoalData, Goals,
     ProgramClause, ProgramClauseData, ProgramClauseImplication, QuantifierKind, Ty, TyData, TyKind,
     VariableKind, VariableKinds,
 };
@@ -50,19 +50,7 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
 
         let new_ty = TyData::BoundVar(bound_var).intern(interner);
         match ty.data(interner) {
-            TyData::Alias(alias @ AliasTy::Projection(_)) => {
-                self.new_params.push(VariableKind::Ty(TyKind::General));
-                self.new_goals.push(
-                    AliasEq {
-                        alias: alias.clone(),
-                        ty: new_ty.clone(),
-                    }
-                    .cast(interner),
-                );
-                self.binders_len += 1;
-                Ok(new_ty)
-            }
-            TyData::Function(_) => {
+            TyData::Alias(AliasTy::Projection(_)) | TyData::Function(_) => {
                 self.new_params.push(VariableKind::Ty(TyKind::General));
                 self.new_goals.push(
                     EqGoal {

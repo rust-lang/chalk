@@ -1,13 +1,11 @@
 use super::program_clauses::ToProgramClauses;
 use crate::clauses::builder::ClauseBuilder;
 use crate::clauses::{match_alias_ty, match_ty};
-use crate::AliasEq;
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
-use crate::WhereClause;
 use crate::{debug_span, TyData};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
@@ -89,32 +87,25 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     }
 
     fn visit_domain_goal(&mut self, domain_goal: &DomainGoal<I>, outer_binder: DebruijnIndex) {
-        match domain_goal {
-            DomainGoal::FromEnv(from_env) => {
-                debug_span!("visit_domain_goal", ?from_env);
-                match from_env {
-                    FromEnv::Trait(trait_ref) => {
-                        let trait_datum = self.db.trait_datum(trait_ref.trait_id);
+        if let DomainGoal::FromEnv(from_env) = domain_goal {
+            debug_span!("visit_domain_goal", ?from_env);
+            match from_env {
+                FromEnv::Trait(trait_ref) => {
+                    let trait_datum = self.db.trait_datum(trait_ref.trait_id);
 
-                        trait_datum.to_program_clauses(&mut self.builder, self.environment);
+                    trait_datum.to_program_clauses(&mut self.builder, self.environment);
 
-                        // If we know that `T: Iterator`, then we also know
-                        // things about `<T as Iterator>::Item`, so push those
-                        // implied bounds too:
-                        for &associated_ty_id in &trait_datum.associated_ty_ids {
-                            self.db
-                                .associated_ty_data(associated_ty_id)
-                                .to_program_clauses(&mut self.builder, self.environment);
-                        }
+                    // If we know that `T: Iterator`, then we also know
+                    // things about `<T as Iterator>::Item`, so push those
+                    // implied bounds too:
+                    for &associated_ty_id in &trait_datum.associated_ty_ids {
+                        self.db
+                            .associated_ty_data(associated_ty_id)
+                            .to_program_clauses(&mut self.builder, self.environment);
                     }
-                    FromEnv::Ty(ty) => ty.visit_with(self, outer_binder),
                 }
+                FromEnv::Ty(ty) => ty.visit_with(self, outer_binder),
             }
-            DomainGoal::Holds(WhereClause::AliasEq(AliasEq { alias, ty })) => {
-                match_alias_ty(&mut self.builder, self.environment, alias);
-                ty.visit_with(self, outer_binder);
-            }
-            _ => {}
         }
     }
 }
