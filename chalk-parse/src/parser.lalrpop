@@ -405,6 +405,7 @@ Lifetime: Lifetime = {
 
 ConstWithoutId: Const = {
     ConstValue => Const::Value(<>),
+    UnevaluatedConst => Const::Unevaluated(<>),
 };
 
 Const : Const = {
@@ -610,3 +611,8 @@ LifetimeId: Identifier = {
 };
 
 ConstValue: u32 = <s:r"[0-9]+"> => u32::from_str_radix(s, 10).unwrap();
+
+UnevaluatedConst: Option<u32> = {
+    "?" => None,
+    <s:ConstValue> "?" => Some(<>),
+}

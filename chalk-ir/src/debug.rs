@@ -59,6 +59,12 @@ impl<I: Interner> Debug for ConcreteConst<I> {
     }
 }
 
+impl<I: Interner> Debug for UnevaluatedConst<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "{:?}", self.interned)
+    }
+}
+
 impl<I: Interner> Debug for GenericArg<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_generic_arg(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
@@ -320,6 +326,7 @@ impl<I: Interner> Debug for ConstData<I> {
             ConstValue::InferenceVar(var) => write!(fmt, "{:?}", var),
             ConstValue::Placeholder(index) => write!(fmt, "{:?}", index),
             ConstValue::Concrete(evaluated) => write!(fmt, "{:?}", evaluated),
+            ConstValue::Unevaluated(expr) => write!(fmt, "{:?}", expr),
         }
     }
 }

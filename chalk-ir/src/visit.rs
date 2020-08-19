@@ -366,6 +366,7 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
             ConstValue::Concrete(_) => R::new(),
+            ConstValue::Unevaluated(_) => R::new(),
         }
     }
 }

@@ -33,7 +33,7 @@ use crate::Ty;
 use crate::TyData;
 use crate::VariableKind;
 use crate::VariableKinds;
-use crate::{Const, ConstData};
+use crate::{Const, ConstData, ConstEvalError};
 use std::fmt::{self, Debug};
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -92,6 +92,15 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// it can only make a query asking about equality of two
     /// evaluated consts.
     type InternedConcreteConst: Debug + Clone + Eq + Hash;
+
+    /// "Interned" representation of an unevaluated const expression. In normal user code,
+    /// `Self::InternedUnevaluatedConst` is not referenced. Instead,
+    /// we refer to `UnevaluatedConst<Self>`, which wraps this type.
+    ///
+    /// `InternedUnevaluatedConst` instances are not created by chalk,
+    /// it can only evaluate them with the [`try_eval_const`] method
+    /// and check for (syntactic for now) equality between them.
+    type InternedUnevaluatedConst: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "generic parameter", which can
     /// be either a type or a lifetime.  In normal user code,
@@ -456,13 +465,24 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
     fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
-    /// Deterermine whether two concrete const values are equal.
+    /// Determine whether two concrete const values are equal.
     fn const_eq(
         &self,
         ty: &Self::InternedType,
         c1: &Self::InternedConcreteConst,
         c2: &Self::InternedConcreteConst,
     ) -> bool;
+
+    /// Determine whether two unevaluated const expressions are equal.
+    fn unevaluated_const_eq(
+        &self,
+        ty: &Self::InternedType,
+        c1: &Self::InternedUnevaluatedConst,
+        c2: &Self::InternedUnevaluatedConst,
+    ) -> bool;
+
+    /// Attempt to evaluate a const to a concrete const.
+    fn try_eval_const(&self, ty: &Self::InternedType, constant: &Self::InternedUnevaluatedConst) -> Result<Self::InternedConcreteConst, ConstEvalError>;
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -634,6 +654,12 @@ pub trait TargetInterner<I: Interner>: Interner {
         const_evaluated: &I::InternedConcreteConst,
     ) -> Self::InternedConcreteConst;
 
+    /// Transfer unevaluated constant expressions to the target interner.
+    fn transfer_unevaluated_const(
+        &self,
+        const_unevaluated: &I::InternedUnevaluatedConst,
+    ) -> Self::InternedUnevaluatedConst;
+
     /// Transfer function ABI to the target interner.
     fn transfer_abi(abi: I::FnAbi) -> Self::FnAbi;
 }
@@ -664,6 +690,13 @@ impl<I: Interner> TargetInterner<I> for I {
         const_evaluated: &I::InternedConcreteConst,
     ) -> Self::InternedConcreteConst {
         const_evaluated.clone()
+    }
+
+    fn transfer_unevaluated_const(
+        &self,
+        const_unevaluated: &I::InternedUnevaluatedConst,
+    ) -> Self::InternedUnevaluatedConst {
+        const_unevaluated.clone()
     }
 
     fn transfer_abi(abi: I::FnAbi) -> Self::FnAbi {

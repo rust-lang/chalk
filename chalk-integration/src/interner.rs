@@ -5,6 +5,7 @@ use chalk_ir::{
     Constraint, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
     SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind, VariableKinds,
+    ConstEvalError
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
@@ -44,6 +45,7 @@ impl Interner for ChalkIr {
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedConst = Arc<ConstData<ChalkIr>>;
     type InternedConcreteConst = u32;
+    type InternedUnevaluatedConst = Option<u32>;
     type InternedGenericArg = GenericArgData<ChalkIr>;
     type InternedGoal = Arc<GoalData<ChalkIr>>;
     type InternedGoals = Vec<Goal<ChalkIr>>;
@@ -238,6 +240,22 @@ impl Interner for ChalkIr {
 
     fn const_eq(&self, _ty: &Arc<TyData<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
         c1 == c2
+    }
+
+    fn unevaluated_const_eq(
+        &self,
+        _ty: &Arc<TyData<ChalkIr>>,
+        c1: &Option<u32>,
+        c2: &Option<u32>,
+    ) -> bool {
+        c1 == c2
+    }
+
+    fn try_eval_const(&self, _ty: &Arc<TyData<ChalkIr>>, constant: &Option<u32>) -> Result<u32, ConstEvalError> {
+        match constant {
+            Some(c) => Ok(*c),
+            None => Err(ConstEvalError::TooGeneric),
+        }
     }
 
     fn intern_generic_arg(&self, generic_arg: GenericArgData<ChalkIr>) -> GenericArgData<ChalkIr> {

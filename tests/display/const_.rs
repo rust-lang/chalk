@@ -35,6 +35,20 @@ fn test_basic_const_values_in_impls() {
 
 #[test]
 #[ignore]
+fn test_const_unevaluated() {
+    // Test we render unevaluated const expressions with literals correctly
+    reparse_test!(
+        program {
+            struct Foo<const N> { }
+            trait Bar { }
+            impl Bar for Foo<0?> { }
+            impl Bar for Foo<?> { }
+        }
+    );
+}
+
+#[test]
+#[ignore]
 fn test_basic_const_values_in_opaque_ty_values() {
     // Test we render const values correctly in opaque type values.
     reparse_test!(
@@ -61,3 +75,4 @@ fn test_basic_const_values_in_assoc_ty_values() {
         }
     );
 }
+

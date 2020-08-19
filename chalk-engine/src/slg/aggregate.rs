@@ -483,6 +483,34 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 }
             }
 
+            (ConstValue::Concrete(e), ConstValue::Unevaluated(u)) |
+            (ConstValue::Unevaluated(u), ConstValue::Concrete(e)) => {
+                let ev = match u.try_eval(&ty, interner) {
+                    Ok(ev) => ev,
+                    Err(_) => return self.new_const_variable(ty),
+                };
+
+                if e.const_eq(&ty, &ev, interner) {
+                    ConstData { ty: ty.clone(), value: ConstValue::Concrete(ev) }.intern(interner)
+                } else {
+                    self.new_const_variable(ty)
+                }
+            }
+
+            (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
+                if u1.const_eq(&ty, u2, interner) {
+                    c1.clone()
+                } else if let (Ok(e1), Ok(e2)) = (u1.try_eval(&ty, interner), u2.try_eval(&ty, interner)) {
+                    if e1.const_eq(&ty, &e2, interner) {
+                        ConstData { ty: ty.clone(), value: ConstValue::Concrete(e1) }.intern(interner)
+                    } else {
+                        self.new_const_variable(ty)
+                    }
+                } else {
+                    self.new_const_variable(ty)
+                }
+            }
+
             (ConstValue::Placeholder(_), _) | (_, ConstValue::Placeholder(_)) => {
                 self.new_const_variable(ty)
             }

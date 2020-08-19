@@ -415,17 +415,33 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     .expect("unification of two unbound variables cannot fail"))
             }
 
-            // Unifying an inference variables with a non-inference variable.
+            // Unifying an inference variable with a non-inference variable.
             (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
             | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
-                debug!(?var, ty=?b, "unify_var_ty");
+                debug!(?var, ty=?b, "unify_var_const");
                 self.unify_var_const(var, b)
             }
 
             (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
             | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
-                debug!(?var, ty=?a, "unify_var_ty");
+                debug!(?var, ty=?a, "unify_var_const");
                 self.unify_var_const(var, a)
+            }
+
+            // It is important not to unify an inference variable with just any
+            // unevaluated const expression because the expression could contain
+            // a copy of the inference variable.
+            // In particular, ?X should not unify with ?X + 1
+            (&ConstValue::InferenceVar(var), &ConstValue::Unevaluated(_)) => {
+                let c = b.try_eval(interner).map_err(|_| NoSolution)?;
+                debug!(?var, ty=?c, "unify_var_const");
+                self.unify_var_const(var, &c)
+            }
+
+            (&ConstValue::Unevaluated(_), &ConstValue::InferenceVar(var)) => {
+                let c = a.try_eval(interner).map_err(|_| NoSolution)?;
+                debug!(?var, ty=?c, "unify_var_const");
+                self.unify_var_const(var, &c)
             }
 
             (&ConstValue::Placeholder(p1), &ConstValue::Placeholder(p2)) => {
@@ -440,8 +456,35 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
+            (&ConstValue::Concrete(ref ev), &ConstValue::Unevaluated(ref expr)) |
+            (&ConstValue::Unevaluated(ref expr), &ConstValue::Concrete(ref ev)) => {
+                if ev.const_eq(a_ty, &expr.try_eval(a_ty, interner).map_err(|_| NoSolution)?, interner) {
+                    Ok(())
+                } else {
+                    Err(NoSolution)
+                }
+            }
+
+            (&ConstValue::Unevaluated(ref expr1), &ConstValue::Unevaluated(ref expr2)) => {
+                if expr1.const_eq(a_ty, expr2, interner) {
+                    Ok(())
+                } else if let (Ok(ev1), Ok(ev2)) = (expr1.try_eval(a_ty, interner), expr2.try_eval(b_ty, interner)) {
+                    if ev1.const_eq(a_ty, &ev2, interner) {
+                        Ok(())
+                    } else {
+                        Err(NoSolution)
+                    }
+                } else {
+                    Err(NoSolution)
+                }
+            }
+
             (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
             | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),
+
+            // Can't see inside an unevaluated const expression
+            (&ConstValue::Unevaluated(_), &ConstValue::Placeholder(_))
+            | (&ConstValue::Placeholder(_), &ConstValue::Unevaluated(_)) => Err(NoSolution),
 
             (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",

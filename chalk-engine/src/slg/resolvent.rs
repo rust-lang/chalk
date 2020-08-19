@@ -29,7 +29,7 @@ use tracing::{debug, instrument};
 //
 // From EWFS:
 //
-// Let G be an X-clause A :- D | L1,...Ln, where N > 0, and Li be selected atom.
+// Let G be an X-clause A :- D | L1,...Ln, where n > 0, and Li be selected atom.
 //
 // Let C be an X-clause with no delayed literals. Let
 //
@@ -507,6 +507,37 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 Ok(())
             }
 
+            (ConstValue::Concrete(c), ConstValue::Unevaluated(u)) |
+            (ConstValue::Unevaluated(u), ConstValue::Concrete(c)) => {
+                match u.try_eval(answer_ty, interner) {
+                    Ok(ev) => assert!(c.const_eq(answer_ty, &ev, interner)),
+
+                    Err(ConstEvalError::TooGeneric) => panic!(
+                        "structural mismatch between answer `{:?}` and pending goal `{:?}`",
+                        answer, pending,
+                    ),
+                }
+                Ok(())
+            }
+
+            (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
+                if u1.const_eq(answer_ty, u2, interner) {
+                    Ok(())
+                } else {
+                    match (u1.try_eval(answer_ty, interner), u2.try_eval(answer_ty, interner)) {
+                        (Ok(ev1), Ok(ev2)) => {
+                            assert!(ev1.const_eq(answer_ty, &ev2, interner));
+                            Ok(())
+                        }
+
+                        (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => panic!(
+                            "structural mismatch between answer `{:?}` and pending goal `{:?}`",
+                            answer, pending,
+                        ),
+                    }
+                }
+            }
+
             (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
@@ -514,7 +545,8 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
             (ConstValue::BoundVar(_), _)
             | (ConstValue::Placeholder(_), _)
-            | (ConstValue::Concrete(_), _) => panic!(
+            | (ConstValue::Concrete(_), _)
+            | (ConstValue::Unevaluated(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

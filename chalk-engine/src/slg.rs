@@ -448,7 +448,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
         }
     }
 
-    /// Returns true if the two consts could be unequal.    
+    /// Returns true if the two lifetimes could be unequal.    
     fn aggregate_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
         true
     }
@@ -495,8 +495,28 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 !c1.const_eq(new_ty, c2, interner)
             }
 
-            // Only variants left are placeholder = concrete, which always fails
-            (ConstValue::Placeholder(_), _) | (ConstValue::Concrete(_), _) => true,
+            (ConstValue::Concrete(c), ConstValue::Unevaluated(u)) |
+            (ConstValue::Unevaluated(u), ConstValue::Concrete(c)) => {
+                if let Ok(ev) = u.try_eval(new_ty, interner) {
+                    !c.const_eq(new_ty, &ev, interner)
+                } else {
+                    true
+                }
+            }
+
+            (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
+                if u1.const_eq(new_ty, u2, interner) {
+                    false
+                } else if let (Ok(c1), Ok(c2)) = (u1.try_eval(new_ty, interner), u2.try_eval(current_ty, interner)) {
+                    !c1.const_eq(new_ty, &c2, interner)
+                } else {
+                    true
+                }
+            }
+
+            // Only variants left are placeholder = concrete, which always fails, and
+            // placeholder = unevaluated, which we can't know for sure
+            (ConstValue::Placeholder(_), _) | (_, ConstValue::Placeholder(_)) => true,
         }
     }
 

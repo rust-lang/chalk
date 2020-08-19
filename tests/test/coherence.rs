@@ -516,3 +516,80 @@ fn orphan_check() {
         }
     }
 }
+
+#[test]
+fn unevaluated_const_no_intersect() {
+    lowering_success! {
+        program {
+            trait Foo<const N> { }
+            struct Baz { }
+
+            impl Foo<3> for Baz {}
+            impl Foo<2?> for Baz {}
+        } 
+    }
+
+    lowering_success! {
+        program {
+            trait Foo<const N> { }
+            struct Baz { }
+
+            impl Foo<3?> for Baz {}
+            impl Foo<2?> for Baz {}
+        } 
+    }
+}
+
+#[test]
+fn unevaluated_const_intersect() {
+    lowering_error! {
+        program {
+            trait Foo<const N> { }
+            struct Baz { }
+
+            impl Foo<3> for Baz {}
+            impl Foo<3?> for Baz {}
+        } error_msg {
+            "overlapping impls of trait `Foo`"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo<const N> { }
+            struct Baz { }
+
+            impl Foo<3?> for Baz {}
+            impl Foo<3?> for Baz {}
+        } error_msg {
+            "overlapping impls of trait `Foo`"
+        }
+    }
+}
+
+#[test]
+fn unevaluated_const_too_generic() {
+    lowering_error! {
+        program {
+            trait Foo<const N> { }
+            struct Baz { }
+
+            impl Foo<3> for Baz {}
+            impl Foo<?> for Baz {}
+        } error_msg {
+            "overlapping impls of trait `Foo`"
+        }
+    }
+
+    lowering_error! {
+        program {
+            trait Foo<const N> { }
+            struct Baz { }
+
+            impl Foo<?> for Baz {}
+            impl Foo<?> for Baz {}
+        } error_msg {
+            "overlapping impls of trait `Foo`"
+        }
+    }
+}

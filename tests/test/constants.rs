@@ -28,11 +28,28 @@ fn single_impl() {
         }
 
         goal {
+            S<3?>: Trait
+        } yields {
+            "Unique"
+        }
+
+        goal {
             S<5>: Trait
         } yields {
             "No possible solution"
         }
 
+        goal {
+            S<5?>: Trait
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            S<?>: Trait
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
 
         goal {
             forall<const N> {
@@ -101,6 +118,99 @@ fn generic_impl() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn unevaluated_impl() {
+    test! {
+        program {
+            struct S<const N> {}
+
+            trait Trait {}
+
+            impl Trait for S<3?> {}
+        }
+
+        goal {
+            exists<const N> {
+                S<N>: Trait
+            }
+        } yields {
+            "Unique; substitution [?0 := 3], lifetime constraints []"
+        }
+
+        goal {
+            forall<const N> {
+                S<N>: Trait
+            }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            S<8>: Trait
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            S<3>: Trait
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            S<?>: Trait
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+
+        goal {
+            S<3?>: Trait
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            S<8?>: Trait
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn unevaluated_impl_generic() {
+    test! {
+        program {
+            struct S<const N> {}
+
+            trait Trait {}
+
+            impl Trait for S<?> {}
+        }
+
+        goal {
+            S<0>: Trait
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+
+        goal {
+            S<?>: Trait
+        } yields {
+            "Unique"
+        }
+
+        // We don't know if the constant evaluates to an invalid value
+        goal {
+            exists<N> {
+                S<N>: Trait
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
         }
     }
 }

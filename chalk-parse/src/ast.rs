@@ -168,6 +168,7 @@ pub enum GenericArg {
 pub enum Const {
     Id(Identifier),
     Value(u32),
+    Unevaluated(Option<u32>),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

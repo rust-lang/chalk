@@ -929,7 +929,14 @@ impl<I: Interner> Const<I> {
             ConstValue::InferenceVar(_) => false,
             ConstValue::Placeholder(_) => false,
             ConstValue::Concrete(_) => false,
+            ConstValue::Unevaluated(_) => todo!("needs_shift for ConstValue::Unevaluated"),
         }
+    }
+
+    /// Tries to evaluate the constant.
+    /// This is guaranteed to return a concrete constant or an error.
+    pub fn try_eval(&self, interner: &I) -> Result<Const<I>, ConstEvalError> {
+        Ok(Self::new(interner, self.data(interner).try_eval(interner)?))
     }
 }
 
@@ -940,6 +947,21 @@ pub struct ConstData<I: Interner> {
     pub ty: Ty<I>,
     /// The value of the constant.
     pub value: ConstValue<I>,
+}
+
+impl<I: Interner> ConstData<I> {
+    /// Tries to evaluate the constant.
+    /// This is guaranteed to return a concrete constant or an error.
+    pub fn try_eval(&self, interner: &I) -> Result<ConstData<I>, ConstEvalError> {
+        match &self.value {
+            ConstValue::BoundVar(_) | ConstValue::InferenceVar(_) | ConstValue::Placeholder(_) => Err(ConstEvalError::TooGeneric),
+            ConstValue::Concrete(_) => Ok(self.clone()),
+            ConstValue::Unevaluated(expr) => Ok(ConstData {
+                ty: self.ty.clone(),
+                value: ConstValue::Concrete(expr.try_eval(&self.ty, interner)?)
+            }),
+        }
+    }
 }
 
 /// A constant value, not necessarily concrete.
@@ -953,9 +975,14 @@ pub enum ConstValue<I: Interner> {
     Placeholder(PlaceholderIndex),
     /// Concrete constant value.
     Concrete(ConcreteConst<I>),
+    /// Unevaluated constant expression.
+    Unevaluated(UnevaluatedConst<I>),
 }
 
-impl<I: Interner> Copy for ConstValue<I> where I::InternedConcreteConst: Copy {}
+impl<I: Interner> Copy for ConstValue<I> 
+where
+    I::InternedConcreteConst: Copy,
+    I::InternedUnevaluatedConst: Copy, {}
 
 impl<I: Interner> ConstData<I> {
     /// Wraps the constant data in a `Const`.
@@ -976,6 +1003,42 @@ impl<I: Interner> ConcreteConst<I> {
     /// Checks whether two concrete constants are equal.
     pub fn const_eq(&self, ty: &Ty<I>, other: &ConcreteConst<I>, interner: &I) -> bool {
         interner.const_eq(&ty.interned, &self.interned, &other.interned)
+    }
+}
+
+/// Unevaluated const expression, which can be evaluated
+#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
+pub struct UnevaluatedConst<I: Interner> {
+    /// The interned expression
+    pub interned: I::InternedUnevaluatedConst,
+}
+
+impl<I: Interner> UnevaluatedConst<I> {
+    /// Attempts to evaluate the const expression.
+    pub fn try_eval(&self, ty: &Ty<I>, interner: &I) -> Result<ConcreteConst<I>, ConstEvalError> {
+        Ok(ConcreteConst {interned: interner.try_eval_const(&ty.interned, &self.interned)?})
+    }
+
+    /// Checks whether two unevaluated constants are equal.
+    pub fn const_eq(&self, ty: &Ty<I>, other: &UnevaluatedConst<I>, interner: &I) -> bool {
+        interner.unevaluated_const_eq(&ty.interned, &self.interned, &other.interned)
+    }
+}
+
+/// An error that can occur when evaluating a const expression.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ConstEvalError {
+    /// A generic argument's value was not known.
+    TooGeneric,
+}
+
+impl std::error::Error for ConstEvalError {}
+
+impl std::fmt::Display for ConstEvalError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            ConstEvalError::TooGeneric => write!(f, "Const expression was too generic"),
+        }
     }
 }
 

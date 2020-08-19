@@ -1763,11 +1763,17 @@ impl LowerConst for Const {
                     })
                     .map(|c| c.clone())
             }
+            
             Const::Value(value) => Ok(chalk_ir::ConstData {
                 ty: get_type_of_u32(),
                 value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst { interned: *value }),
             }
             .intern(interner)),
+
+            Const::Unevaluated(unev) => Ok(chalk_ir::ConstData {
+                ty: get_type_of_u32(),
+                value: chalk_ir::ConstValue::Unevaluated(chalk_ir::UnevaluatedConst { interned: *unev }),
+            }.intern(interner)),
         }
     }
 }
