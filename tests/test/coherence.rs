@@ -518,6 +518,18 @@ fn orphan_check() {
 }
 
 #[test]
+fn unevaluated_const_unknown() {
+    lowering_success! {
+        program {
+            trait Foo<const N> {}
+            struct Baz {}
+
+            impl Foo<?> for Baz {}
+        }
+    }
+}
+
+#[test]
 fn unevaluated_const_no_intersect() {
     lowering_success! {
         program {
@@ -526,7 +538,7 @@ fn unevaluated_const_no_intersect() {
 
             impl Foo<3> for Baz {}
             impl Foo<2?> for Baz {}
-        } 
+        }
     }
 
     lowering_success! {
@@ -536,7 +548,7 @@ fn unevaluated_const_no_intersect() {
 
             impl Foo<3?> for Baz {}
             impl Foo<2?> for Baz {}
-        } 
+        }
     }
 }
 
@@ -586,7 +598,7 @@ fn unevaluated_const_too_generic() {
             trait Foo<const N> { }
             struct Baz { }
 
-            impl Foo<?> for Baz {}
+            impl Foo<3?> for Baz {}
             impl Foo<?> for Baz {}
         } error_msg {
             "overlapping impls of trait `Foo`"

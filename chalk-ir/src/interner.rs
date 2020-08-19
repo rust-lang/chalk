@@ -482,7 +482,11 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     ) -> bool;
 
     /// Attempt to evaluate a const to a concrete const.
-    fn try_eval_const(&self, ty: &Self::InternedType, constant: &Self::InternedUnevaluatedConst) -> Result<Self::InternedConcreteConst, ConstEvalError>;
+    fn try_eval_const(
+        &self,
+        ty: &Self::InternedType,
+        constant: &Self::InternedUnevaluatedConst,
+    ) -> Result<Self::InternedConcreteConst, ConstEvalError>;
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke

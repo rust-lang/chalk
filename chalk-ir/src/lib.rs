@@ -11,6 +11,7 @@ use crate::fold::shift::Shift;
 use crate::fold::{Fold, Folder, Subst, SuperFold};
 use crate::visit::{SuperVisit, Visit, VisitExt, VisitResult, Visitor};
 use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 pub use crate::debug::SeparatorTraitRef;
@@ -929,7 +930,8 @@ impl<I: Interner> Const<I> {
             ConstValue::InferenceVar(_) => false,
             ConstValue::Placeholder(_) => false,
             ConstValue::Concrete(_) => false,
-            ConstValue::Unevaluated(_) => todo!("needs_shift for ConstValue::Unevaluated"),
+            // We assume for now that an unevaluated const expression doesn't contain bound vars
+            ConstValue::Unevaluated(_) => false,
         }
     }
 
@@ -954,11 +956,13 @@ impl<I: Interner> ConstData<I> {
     /// This is guaranteed to return a concrete constant or an error.
     pub fn try_eval(&self, interner: &I) -> Result<ConstData<I>, ConstEvalError> {
         match &self.value {
-            ConstValue::BoundVar(_) | ConstValue::InferenceVar(_) | ConstValue::Placeholder(_) => Err(ConstEvalError::TooGeneric),
+            ConstValue::BoundVar(_) | ConstValue::InferenceVar(_) | ConstValue::Placeholder(_) => {
+                Err(ConstEvalError::TooGeneric)
+            }
             ConstValue::Concrete(_) => Ok(self.clone()),
             ConstValue::Unevaluated(expr) => Ok(ConstData {
                 ty: self.ty.clone(),
-                value: ConstValue::Concrete(expr.try_eval(&self.ty, interner)?)
+                value: ConstValue::Concrete(expr.try_eval(&self.ty, interner)?),
             }),
         }
     }
@@ -976,13 +980,16 @@ pub enum ConstValue<I: Interner> {
     /// Concrete constant value.
     Concrete(ConcreteConst<I>),
     /// Unevaluated constant expression.
+    /// We assume for now that this does not contain inference vars or bound vars.
     Unevaluated(UnevaluatedConst<I>),
 }
 
-impl<I: Interner> Copy for ConstValue<I> 
+impl<I: Interner> Copy for ConstValue<I>
 where
     I::InternedConcreteConst: Copy,
-    I::InternedUnevaluatedConst: Copy, {}
+    I::InternedUnevaluatedConst: Copy,
+{
+}
 
 impl<I: Interner> ConstData<I> {
     /// Wraps the constant data in a `Const`.
@@ -1016,12 +1023,30 @@ pub struct UnevaluatedConst<I: Interner> {
 impl<I: Interner> UnevaluatedConst<I> {
     /// Attempts to evaluate the const expression.
     pub fn try_eval(&self, ty: &Ty<I>, interner: &I) -> Result<ConcreteConst<I>, ConstEvalError> {
-        Ok(ConcreteConst {interned: interner.try_eval_const(&ty.interned, &self.interned)?})
+        Ok(ConcreteConst {
+            interned: interner.try_eval_const(&ty.interned, &self.interned)?,
+        })
     }
 
     /// Checks whether two unevaluated constants are equal.
     pub fn const_eq(&self, ty: &Ty<I>, other: &UnevaluatedConst<I>, interner: &I) -> bool {
         interner.unevaluated_const_eq(&ty.interned, &self.interned, &other.interned)
+    }
+}
+
+/// A mock unevaluated const expression.
+/// `Some(n)` evaluates to `n`,
+/// and `None` evaluates to a specific but unknown constant.
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub struct UnevaluatedConstData(pub Option<u32>);
+
+impl Debug for UnevaluatedConstData {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self.0 {
+            Some(n) => write!(fmt, "{}?", n)?,
+            None => write!(fmt, "?")?,
+        }
+        Ok(())
     }
 }
 
@@ -1035,9 +1060,9 @@ pub enum ConstEvalError {
 impl std::error::Error for ConstEvalError {}
 
 impl std::fmt::Display for ConstEvalError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
-            ConstEvalError::TooGeneric => write!(f, "Const expression was too generic"),
+            ConstEvalError::TooGeneric => write!(fmt, "Const expression was too generic"),
         }
     }
 }

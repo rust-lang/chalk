@@ -417,31 +417,18 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // Unifying an inference variable with a non-inference variable.
             (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
-            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
+            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_))
+            // Note that we assume that the unevaluated const doesn't contain inference variables
+            | (&ConstValue::InferenceVar(var), &ConstValue::Unevaluated(_)) => {
                 debug!(?var, ty=?b, "unify_var_const");
                 self.unify_var_const(var, b)
             }
 
             (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
-            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
+            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var))
+            | (&ConstValue::Unevaluated(_), &ConstValue::InferenceVar(var)) => {
                 debug!(?var, ty=?a, "unify_var_const");
                 self.unify_var_const(var, a)
-            }
-
-            // It is important not to unify an inference variable with just any
-            // unevaluated const expression because the expression could contain
-            // a copy of the inference variable.
-            // In particular, ?X should not unify with ?X + 1
-            (&ConstValue::InferenceVar(var), &ConstValue::Unevaluated(_)) => {
-                let c = b.try_eval(interner).map_err(|_| NoSolution)?;
-                debug!(?var, ty=?c, "unify_var_const");
-                self.unify_var_const(var, &c)
-            }
-
-            (&ConstValue::Unevaluated(_), &ConstValue::InferenceVar(var)) => {
-                let c = a.try_eval(interner).map_err(|_| NoSolution)?;
-                debug!(?var, ty=?c, "unify_var_const");
-                self.unify_var_const(var, &c)
             }
 
             (&ConstValue::Placeholder(p1), &ConstValue::Placeholder(p2)) => {

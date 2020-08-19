@@ -550,13 +550,16 @@ where
                 }),
             }
             .intern(folder.target_interner())),
-            
+
             ConstValue::Unevaluated(unev) => Ok(ConstData {
                 ty: fold_ty()?,
                 value: ConstValue::Unevaluated(UnevaluatedConst {
-                    interned: folder.target_interner().transfer_unevaluated_const(&unev.interned),
-                })
-            }.intern(folder.target_interner())),
+                    interned: folder
+                        .target_interner()
+                        .transfer_unevaluated_const(&unev.interned),
+                }),
+            }
+            .intern(folder.target_interner())),
         }
     }
 }

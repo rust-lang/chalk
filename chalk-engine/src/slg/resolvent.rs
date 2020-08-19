@@ -507,8 +507,8 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 Ok(())
             }
 
-            (ConstValue::Concrete(c), ConstValue::Unevaluated(u)) |
-            (ConstValue::Unevaluated(u), ConstValue::Concrete(c)) => {
+            (ConstValue::Concrete(c), ConstValue::Unevaluated(u))
+            | (ConstValue::Unevaluated(u), ConstValue::Concrete(c)) => {
                 match u.try_eval(answer_ty, interner) {
                     Ok(ev) => assert!(c.const_eq(answer_ty, &ev, interner)),
 
@@ -524,13 +524,17 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 if u1.const_eq(answer_ty, u2, interner) {
                     Ok(())
                 } else {
-                    match (u1.try_eval(answer_ty, interner), u2.try_eval(answer_ty, interner)) {
+                    match (
+                        u1.try_eval(answer_ty, interner),
+                        u2.try_eval(answer_ty, interner),
+                    ) {
                         (Ok(ev1), Ok(ev2)) => {
                             assert!(ev1.const_eq(answer_ty, &ev2, interner));
                             Ok(())
                         }
 
-                        (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => panic!(
+                        (Err(ConstEvalError::TooGeneric), _)
+                        | (_, Err(ConstEvalError::TooGeneric)) => panic!(
                             "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                             answer, pending,
                         ),

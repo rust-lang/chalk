@@ -75,4 +75,3 @@ fn test_basic_const_values_in_assoc_ty_values() {
         }
     );
 }
-

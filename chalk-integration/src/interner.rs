@@ -2,10 +2,10 @@ use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData,
-    Constraint, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
+    ConstEvalError, Constraint, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
-    SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind, VariableKinds,
-    ConstEvalError
+    SeparatorTraitRef, Substitution, TraitId, Ty, UnevaluatedConstData, VariableKind,
+    VariableKinds,
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
@@ -45,7 +45,7 @@ impl Interner for ChalkIr {
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedConst = Arc<ConstData<ChalkIr>>;
     type InternedConcreteConst = u32;
-    type InternedUnevaluatedConst = Option<u32>;
+    type InternedUnevaluatedConst = UnevaluatedConstData;
     type InternedGenericArg = GenericArgData<ChalkIr>;
     type InternedGoal = Arc<GoalData<ChalkIr>>;
     type InternedGoals = Vec<Goal<ChalkIr>>;
@@ -245,15 +245,19 @@ impl Interner for ChalkIr {
     fn unevaluated_const_eq(
         &self,
         _ty: &Arc<TyData<ChalkIr>>,
-        c1: &Option<u32>,
-        c2: &Option<u32>,
+        c1: &UnevaluatedConstData,
+        c2: &UnevaluatedConstData,
     ) -> bool {
         c1 == c2
     }
 
-    fn try_eval_const(&self, _ty: &Arc<TyData<ChalkIr>>, constant: &Option<u32>) -> Result<u32, ConstEvalError> {
-        match constant {
-            Some(c) => Ok(*c),
+    fn try_eval_const(
+        &self,
+        _ty: &Arc<TyData<ChalkIr>>,
+        constant: &UnevaluatedConstData,
+    ) -> Result<u32, ConstEvalError> {
+        match constant.0 {
+            Some(c) => Ok(c),
             None => Err(ConstEvalError::TooGeneric),
         }
     }
