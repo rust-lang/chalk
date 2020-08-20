@@ -934,12 +934,6 @@ impl<I: Interner> Const<I> {
             ConstValue::Unevaluated(_) => false,
         }
     }
-
-    /// Tries to evaluate the constant.
-    /// This is guaranteed to return a concrete constant or an error.
-    pub fn try_eval(&self, interner: &I) -> Result<Const<I>, ConstEvalError> {
-        Ok(Self::new(interner, self.data(interner).try_eval(interner)?))
-    }
 }
 
 /// Constant data, containing the constant's type and value.
@@ -949,23 +943,6 @@ pub struct ConstData<I: Interner> {
     pub ty: Ty<I>,
     /// The value of the constant.
     pub value: ConstValue<I>,
-}
-
-impl<I: Interner> ConstData<I> {
-    /// Tries to evaluate the constant.
-    /// This is guaranteed to return a concrete constant or an error.
-    pub fn try_eval(&self, interner: &I) -> Result<ConstData<I>, ConstEvalError> {
-        match &self.value {
-            ConstValue::BoundVar(_) | ConstValue::InferenceVar(_) | ConstValue::Placeholder(_) => {
-                Err(ConstEvalError::TooGeneric)
-            }
-            ConstValue::Concrete(_) => Ok(self.clone()),
-            ConstValue::Unevaluated(expr) => Ok(ConstData {
-                ty: self.ty.clone(),
-                value: ConstValue::Concrete(expr.try_eval(&self.ty, interner)?),
-            }),
-        }
-    }
 }
 
 /// A constant value, not necessarily concrete.
