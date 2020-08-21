@@ -133,6 +133,7 @@ fn unevaluated_impl() {
             impl Trait for S<3?> {}
         }
 
+        // Tests unification of unevaluated const and inference var
         goal {
             exists<const N> {
                 S<N>: Trait
@@ -141,6 +142,7 @@ fn unevaluated_impl() {
             "Unique; substitution [?0 := 3?], lifetime constraints []"
         }
 
+        // Tests unification of unevaluated const and placeholder const
         goal {
             forall<const N> {
                 S<N>: Trait
@@ -149,30 +151,35 @@ fn unevaluated_impl() {
             "No possible solution"
         }
 
+        // Tests mismatched unification of unevaluated const and concrete const
         goal {
             S<8>: Trait
         } yields {
             "No possible solution"
         }
 
+        // Tests matched unification of unevaluated const and concrete const
         goal {
             S<3>: Trait
         } yields {
             "Unique"
         }
 
+        // Tests unification of known unevaluated const and unknown unevaluated const
         goal {
             S<?>: Trait
         } yields {
             "Ambiguous; no inference guidance"
         }
 
+        // Tests matched unification of unevaluated consts
         goal {
             S<3?>: Trait
         } yields {
             "Unique"
         }
 
+        // Tests mismatched unification of unevaluated consts
         goal {
             S<8?>: Trait
         } yields {
@@ -192,18 +199,21 @@ fn unevaluated_impl_generic() {
             impl Trait for S<?> {}
         }
 
+        // Tests unification of unknown unevaluated const and evaluated const
         goal {
             S<0>: Trait
         } yields {
             "Ambiguous; no inference guidance"
         }
 
+        // Tests unification of two unknown unevaluated consts
         goal {
             S<?>: Trait
         } yields {
             "Unique"
         }
 
+        // Tests unification of unknown unevaluated const and placeholder const
         goal {
             exists<const N> {
                 S<N>: Trait
