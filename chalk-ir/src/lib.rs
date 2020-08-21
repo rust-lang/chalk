@@ -1011,22 +1011,6 @@ impl<I: Interner> UnevaluatedConst<I> {
     }
 }
 
-/// A mock unevaluated const expression.
-/// `Some(n)` evaluates to `n`,
-/// and `None` evaluates to a specific but unknown constant.
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
-pub struct UnevaluatedConstData(pub Option<u32>);
-
-impl Debug for UnevaluatedConstData {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        match self.0 {
-            Some(n) => write!(fmt, "{}?", n)?,
-            None => write!(fmt, "?")?,
-        }
-        Ok(())
-    }
-}
-
 /// An error that can occur when evaluating a const expression.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ConstEvalError {

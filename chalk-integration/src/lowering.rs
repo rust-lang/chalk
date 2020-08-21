@@ -15,6 +15,7 @@ use string_cache::DefaultAtom as Atom;
 use tracing::{debug, instrument};
 
 use crate::error::RustIrError;
+use crate::interner::UnevaluatedConstData;
 use crate::program::Program as LoweredProgram;
 use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 
@@ -1773,7 +1774,7 @@ impl LowerConst for Const {
             Const::Unevaluated(unev) => Ok(chalk_ir::ConstData {
                 ty: get_type_of_u32(),
                 value: chalk_ir::ConstValue::Unevaluated(chalk_ir::UnevaluatedConst {
-                    interned: chalk_ir::UnevaluatedConstData(*unev),
+                    interned: UnevaluatedConstData(*unev),
                 }),
             }
             .intern(interner)),
