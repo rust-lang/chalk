@@ -473,14 +473,6 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         c2: &Self::InternedConcreteConst,
     ) -> bool;
 
-    /// Determine whether two unevaluated const expressions are equal.
-    fn unevaluated_const_eq(
-        &self,
-        ty: &Self::InternedType,
-        c1: &Self::InternedUnevaluatedConst,
-        c2: &Self::InternedUnevaluatedConst,
-    ) -> bool;
-
     /// Attempt to evaluate a const to a concrete const.
     fn try_eval_const(
         &self,

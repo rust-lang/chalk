@@ -258,15 +258,6 @@ impl Interner for ChalkIr {
         c1 == c2
     }
 
-    fn unevaluated_const_eq(
-        &self,
-        _ty: &Arc<TyData<ChalkIr>>,
-        c1: &UnevaluatedConstData,
-        c2: &UnevaluatedConstData,
-    ) -> bool {
-        c1 == c2
-    }
-
     fn try_eval_const(
         &self,
         _ty: &Arc<TyData<ChalkIr>>,

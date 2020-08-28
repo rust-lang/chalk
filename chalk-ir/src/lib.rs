@@ -1004,11 +1004,6 @@ impl<I: Interner> UnevaluatedConst<I> {
             interned: interner.try_eval_const(&ty.interned, &self.interned)?,
         })
     }
-
-    /// Checks whether two unevaluated constants are equal.
-    pub fn const_eq(&self, ty: &Ty<I>, other: &UnevaluatedConst<I>, interner: &I) -> bool {
-        interner.unevaluated_const_eq(&ty.interned, &self.interned, &other.interned)
-    }
 }
 
 /// An error that can occur when evaluating a const expression.
