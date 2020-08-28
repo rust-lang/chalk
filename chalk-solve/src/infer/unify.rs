@@ -464,25 +464,22 @@ impl<'t, I: Interner> Unifier<'t, I> {
             }
 
             (&ConstValue::Unevaluated(ref expr1), &ConstValue::Unevaluated(ref expr2)) => {
-                if expr1.const_eq(a_ty, expr2, interner) {
-                    Ok(())
-                } else {
-                    match (expr1.try_eval(a_ty, interner), expr2.try_eval(b_ty, interner)) {
-                        (Ok(ev1), Ok(ev2)) if ev1.const_eq(a_ty, &ev2, interner) => Ok(()),
-                        (Ok(_), Ok(_)) => Err(NoSolution),
-                        (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => Ok(
-                            self.goals.push(InEnvironment::new(
-                                self.environment,
-                                GoalData::CannotProve.intern(interner)
-                            ))
-                        )
-                    }
+                match (expr1.try_eval(a_ty, interner), expr2.try_eval(b_ty, interner)) {
+                    (Ok(ev1), Ok(ev2)) if ev1.const_eq(a_ty, &ev2, interner) => Ok(()),
+                    (Ok(_), Ok(_)) => Err(NoSolution),
+                    (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => Ok(
+                        self.goals.push(InEnvironment::new(
+                            self.environment,
+                            GoalData::CannotProve.intern(interner)
+                        ))
+                    )
                 }
             }
 
             (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
-            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_))
-            | (&ConstValue::Unevaluated(_), &ConstValue::Placeholder(_))
+            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),
+
+            (&ConstValue::Unevaluated(_), &ConstValue::Placeholder(_))
             | (&ConstValue::Placeholder(_), &ConstValue::Unevaluated(_)) => Err(NoSolution),
 
             (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => panic!(

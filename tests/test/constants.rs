@@ -188,41 +188,55 @@ fn unevaluated_impl() {
     }
 }
 
-#[test]
-fn unevaluated_impl_generic() {
-    test! {
-        program {
-            struct S<const N> {}
-
-            trait Trait {}
-
-            impl Trait for S<?> {}
-        }
-
-        // Tests unification of unknown unevaluated const and evaluated const
-        goal {
-            S<0>: Trait
-        } yields {
-            "Ambiguous; no inference guidance"
-        }
-
-        // Tests unification of two unknown unevaluated consts
-        goal {
-            S<?>: Trait
-        } yields {
-            "Unique"
-        }
-
-        // Tests unification of unknown unevaluated const and placeholder const
-        goal {
-            exists<const N> {
-                S<N>: Trait
-            }
-        } yields {
-            "Unique; substitution [?0 := ?], lifetime constraints []"
-        }
-    }
-}
+// FIXME: This won't even lower
+// because `impl Trait for S<?>` fails the orphan rules
+// because `LocalImplAllowed(S<?>: Trait)` can't be proven
+// because `?` != `?`.
+//#[test]
+//fn unevaluated_impl_generic() {
+//    test! {
+//        program {
+//            struct S<const N> {}
+//
+//            trait Trait {}
+//
+//            impl Trait for S<?> {}
+//        }
+//
+//        // Tests unification of unknown unevaluated const and evaluated const
+//        goal {
+//            S<0>: Trait
+//        } yields {
+//            "Ambiguous; no inference guidance"
+//        }
+//
+//        // Tests unification of two unknown unevaluated consts
+//        goal {
+//            S<?>: Trait
+//        } yields {
+//            "Ambiguous; no inference guidance"
+//        }
+//
+//        // Tests unification of unknown unevaluated const and inference var
+//        // We don't know if ? evaluates to a valid const, so even this is ambiguous
+//        goal {
+//            exists<const N> {
+//                S<N>: Trait
+//            }
+//        } yields {
+//            "Ambiguous; no inference guidance"
+//        }
+//
+//        // Tests unification of unknown unevaluated const and placeholder const
+//        goal {
+//            forall<const N> {
+//                S<N>: Trait
+//            }
+//        } yields {
+//            "No possible solution"
+//        }
+//    }
+//}
 
 #[test]
 fn placeholders_eq() {

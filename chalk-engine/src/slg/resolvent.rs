@@ -42,7 +42,7 @@ use tracing::{debug, instrument};
 //
 // Then:
 //
-//     S(A :- D | L1...Li-1, L1'...L'm, Li+1...Ln)
+//     S(A :- D | L1...Li-1, L'1...L'm, Li+1...Ln)
 //
 // is the SLG resolvent of G with C.
 
@@ -521,25 +521,20 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             }
 
             (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
-                if u1.const_eq(answer_ty, u2, interner) {
-                    Ok(())
-                } else {
-                    match (
-                        u1.try_eval(answer_ty, interner),
-                        u2.try_eval(answer_ty, interner),
-                    ) {
-                        (Ok(ev1), Ok(ev2)) => {
-                            assert!(ev1.const_eq(answer_ty, &ev2, interner));
-                            Ok(())
-                        }
+                match (
+                    u1.try_eval(answer_ty, interner),
+                    u2.try_eval(answer_ty, interner),
+                ) {
+                    (Ok(c1), Ok(c2)) => assert!(c1.const_eq(answer_ty, &c2, interner)),
 
-                        (Err(ConstEvalError::TooGeneric), _)
-                        | (_, Err(ConstEvalError::TooGeneric)) => panic!(
+                    (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => {
+                        panic!(
                             "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                             answer, pending,
-                        ),
+                        )
                     }
                 }
+                Ok(())
             }
 
             (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => panic!(

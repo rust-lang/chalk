@@ -505,9 +505,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
             }
 
             (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
-                if u1.const_eq(new_ty, u2, interner) {
-                    false
-                } else if let (Ok(c1), Ok(c2)) = (
+                if let (Ok(c1), Ok(c2)) = (
                     u1.try_eval(new_ty, interner),
                     u2.try_eval(current_ty, interner),
                 ) {

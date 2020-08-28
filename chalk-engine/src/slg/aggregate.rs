@@ -502,22 +502,22 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             }
 
             (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
-                if u1.const_eq(&ty, u2, interner) {
-                    c1.clone()
-                } else if let (Ok(e1), Ok(e2)) =
-                    (u1.try_eval(&ty, interner), u2.try_eval(&ty, interner))
-                {
-                    if e1.const_eq(&ty, &e2, interner) {
-                        ConstData {
-                            ty: ty.clone(),
-                            value: ConstValue::Concrete(e1),
+                match (u1.try_eval(&ty, interner), u2.try_eval(&ty, interner)) {
+                    (Ok(e1), Ok(e2)) => {
+                        if e1.const_eq(&ty, &e2, interner) {
+                            ConstData {
+                                ty: ty.clone(),
+                                value: ConstValue::Concrete(e1),
+                            }
+                            .intern(interner)
+                        } else {
+                            self.new_const_variable(ty)
                         }
-                        .intern(interner)
-                    } else {
+                    }
+
+                    (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => {
                         self.new_const_variable(ty)
                     }
-                } else {
-                    self.new_const_variable(ty)
                 }
             }
 
