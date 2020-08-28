@@ -447,9 +447,17 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                             solution,
                         } = self.prove(wc, minimums)?;
 
-                        if solution.has_definite() {
-                            if let Some(constrained_subst) =
-                                solution.constrained_subst(self.interner())
+                        if let Some(constrained_subst) = solution.definite_subst(self.interner()) {
+                            // If the substitution is empty, we won't actually make any progress by applying it!
+                            // So we need to check this to prevent endless loops.
+                            // (An ambiguous solution with empty substitution
+                            // can probably not happen in valid code, but it can
+                            // happen e.g. when there are overlapping impls.)
+                            if !constrained_subst.value.subst.is_empty(self.interner())
+                                || !constrained_subst
+                                    .value
+                                    .constraints
+                                    .is_empty(self.interner())
                             {
                                 self.apply_solution(free_vars, universes, constrained_subst);
                                 progress = true;
