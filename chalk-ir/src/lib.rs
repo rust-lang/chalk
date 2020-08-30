@@ -934,6 +934,21 @@ impl<I: Interner> Const<I> {
             ConstValue::Unevaluated(_) => false,
         }
     }
+
+    /// Tries to evaluate the constant.
+    /// Returns the original constant in the case that it's too generic to evaluate.
+    /// Returns `None` if the constant is invalid.
+    pub fn try_eval(&self, interner: &I) -> Option<Const<I>> {
+        let data = self.data(interner);
+
+        Some(Self::new(
+            interner,
+            ConstData {
+                ty: data.ty.clone(),
+                value: data.value.try_eval(&data.ty, interner)?,
+            },
+        ))
+    }
 }
 
 /// Constant data, containing the constant's type and value.
@@ -966,6 +981,24 @@ where
     I::InternedConcreteConst: Copy,
     I::InternedUnevaluatedConst: Copy,
 {
+}
+
+impl<I: Interner> ConstValue<I> {
+    /// Tries to evaluate the constant.
+    /// Returns the original constant in the case that it's too generic to evaluate.
+    /// Returns `None` if the constant is invalid.
+    pub fn try_eval(&self, ty: &Ty<I>, interner: &I) -> Option<ConstValue<I>> {
+        match &self {
+            ConstValue::BoundVar(_)
+            | ConstValue::InferenceVar(_)
+            | ConstValue::Placeholder(_)
+            | ConstValue::Concrete(_) => Some(self.clone()),
+            ConstValue::Unevaluated(expr) => match expr.try_eval(ty, interner) {
+                Ok(c) => Some(ConstValue::Concrete(c)),
+                Err(ConstEvalError::TooGeneric) => Some(self.clone()),
+            },
+        }
+    }
 }
 
 impl<I: Interner> ConstData<I> {

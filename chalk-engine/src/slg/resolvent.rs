@@ -471,6 +471,10 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
             return Zip::zip_with(self, answer, &pending);
         }
 
+        // Turn evaluatable unevaluated consts into concrete consts
+        let answer = answer.try_eval(interner).ok_or(NoSolution)?;
+        let pending = pending.try_eval(interner).ok_or(NoSolution)?;
+
         let ConstData {
             ty: answer_ty,
             value: answer_value,
@@ -507,35 +511,8 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 Ok(())
             }
 
-            (ConstValue::Concrete(c), ConstValue::Unevaluated(u))
-            | (ConstValue::Unevaluated(u), ConstValue::Concrete(c)) => {
-                match u.try_eval(answer_ty, interner) {
-                    Ok(ev) => assert!(c.const_eq(answer_ty, &ev, interner)),
-
-                    Err(ConstEvalError::TooGeneric) => panic!(
-                        "structural mismatch between answer `{:?}` and pending goal `{:?}`",
-                        answer, pending,
-                    ),
-                }
-                Ok(())
-            }
-
-            (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
-                match (
-                    u1.try_eval(answer_ty, interner),
-                    u2.try_eval(answer_ty, interner),
-                ) {
-                    (Ok(c1), Ok(c2)) => assert!(c1.const_eq(answer_ty, &c2, interner)),
-
-                    (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => {
-                        panic!(
-                            "structural mismatch between answer `{:?}` and pending goal `{:?}`",
-                            answer, pending,
-                        )
-                    }
-                }
-                Ok(())
-            }
+            // For now, the unevalutable unevaluated const is too generic.
+            (ConstValue::Unevaluated(_), ConstValue::Unevaluated(_)) => Err(NoSolution),
 
             (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",

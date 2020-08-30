@@ -389,6 +389,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let a = n_a.as_ref().unwrap_or(a);
         let b = n_b.as_ref().unwrap_or(b);
 
+        // Turn evaluatable unevaluated consts into concrete consts
+        let a = a.try_eval(interner).ok_or(NoSolution)?;
+        let b = b.try_eval(interner).ok_or(NoSolution)?;
+
         debug_span!("unify_const_const", ?a, ?b);
 
         let ConstData {
@@ -418,19 +422,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // Unifying an inference variable with a non-inference variable.
             (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
-            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_))
-            // Note that we assume that the unevaluated const doesn't contain inference variables
-            | (&ConstValue::InferenceVar(var), &ConstValue::Unevaluated(_)) => {
+            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
                 debug!(?var, ty=?b, "unify_var_const");
-                self.unify_var_const(var, b)
+                self.unify_var_const(var, &b)
             }
 
             (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
-            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var))
-            | (&ConstValue::Unevaluated(_), &ConstValue::InferenceVar(var)) => {
+            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
                 debug!(?var, ty=?a, "unify_var_const");
-                self.unify_var_const(var, a)
+                self.unify_var_const(var, &a)
             }
+
+            // Note that we assume that the unevaluated const doesn't contain inference variables.
+            // Also, for now, the unevalutable unevaluated const is too generic.
+            (&ConstValue::InferenceVar(_), &ConstValue::Unevaluated(_))
+            | (&ConstValue::Unevaluated(_), &ConstValue::InferenceVar(_)) => Ok(self.goals.push(
+                InEnvironment::new(self.environment, GoalData::CannotProve.intern(interner)),
+            )),
 
             (&ConstValue::Placeholder(p1), &ConstValue::Placeholder(p2)) => {
                 Zip::zip_with(self, &p1, &p2)
@@ -444,37 +452,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
-            (&ConstValue::Concrete(ref ev), &ConstValue::Unevaluated(ref expr)) |
-            (&ConstValue::Unevaluated(ref expr), &ConstValue::Concrete(ref ev)) => {
-                let ev2 = match expr.try_eval(a_ty, interner) {
-                    Ok(ev2) => ev2,
-                    Err(ConstEvalError::TooGeneric) => return Ok(
-                        self.goals.push(InEnvironment::new(
-                            self.environment,
-                            GoalData::CannotProve.intern(interner)
-                        ))
-                    )
-                };
+            // For now, the unevalutable unevaluated const is too generic.
+            (&ConstValue::Concrete(_), &ConstValue::Unevaluated(_))
+            | (&ConstValue::Unevaluated(_), &ConstValue::Concrete(_)) => Ok(self.goals.push(
+                InEnvironment::new(self.environment, GoalData::CannotProve.intern(interner)),
+            )),
 
-                if ev.const_eq(a_ty, &ev2, interner) {
-                    Ok(())
-                } else {
-                    Err(NoSolution)
-                }
-            }
-
-            (&ConstValue::Unevaluated(ref expr1), &ConstValue::Unevaluated(ref expr2)) => {
-                match (expr1.try_eval(a_ty, interner), expr2.try_eval(b_ty, interner)) {
-                    (Ok(ev1), Ok(ev2)) if ev1.const_eq(a_ty, &ev2, interner) => Ok(()),
-                    (Ok(_), Ok(_)) => Err(NoSolution),
-                    (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => Ok(
-                        self.goals.push(InEnvironment::new(
-                            self.environment,
-                            GoalData::CannotProve.intern(interner)
-                        ))
-                    )
-                }
-            }
+            // For now, the unevalutable unevaluated const is too generic.
+            (&ConstValue::Unevaluated(_), &ConstValue::Unevaluated(_)) => Ok(self.goals.push(
+                InEnvironment::new(self.environment, GoalData::CannotProve.intern(interner)),
+            )),
 
             (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
             | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),

@@ -448,6 +448,15 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
         // It would be nice to check that c1 and c2 have the same type, even though
         // on this stage of solving they should already have the same type.
 
+        // Turn evaluatable unevaluated consts into concrete consts
+        let (c1, c2) = match (c1.try_eval(interner), c2.try_eval(interner)) {
+            (Some(c1), Some(c2)) => (c1, c2),
+            (None, Some(c)) | (Some(c), None) => return c.clone(),
+            // FIXME: This is the case where both constants are invalid.
+            // What's the right thing to do here?
+            (None, None) => return self.new_const_variable(c1.data(interner).ty.clone()),
+        };
+
         let ConstData {
             ty: c1_ty,
             value: c1_value,
@@ -483,43 +492,12 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 }
             }
 
-            (ConstValue::Concrete(e), ConstValue::Unevaluated(u))
-            | (ConstValue::Unevaluated(u), ConstValue::Concrete(e)) => {
-                let ev = match u.try_eval(&ty, interner) {
-                    Ok(ev) => ev,
-                    Err(_) => return self.new_const_variable(ty),
-                };
+            // For now, the unevalutable unevaluated const is too generic.
+            (ConstValue::Concrete(_), ConstValue::Unevaluated(_))
+            | (ConstValue::Unevaluated(_), ConstValue::Concrete(_)) => self.new_const_variable(ty),
 
-                if e.const_eq(&ty, &ev, interner) {
-                    ConstData {
-                        ty: ty.clone(),
-                        value: ConstValue::Concrete(ev),
-                    }
-                    .intern(interner)
-                } else {
-                    self.new_const_variable(ty)
-                }
-            }
-
-            (ConstValue::Unevaluated(u1), ConstValue::Unevaluated(u2)) => {
-                match (u1.try_eval(&ty, interner), u2.try_eval(&ty, interner)) {
-                    (Ok(e1), Ok(e2)) => {
-                        if e1.const_eq(&ty, &e2, interner) {
-                            ConstData {
-                                ty: ty.clone(),
-                                value: ConstValue::Concrete(e1),
-                            }
-                            .intern(interner)
-                        } else {
-                            self.new_const_variable(ty)
-                        }
-                    }
-
-                    (Err(ConstEvalError::TooGeneric), _) | (_, Err(ConstEvalError::TooGeneric)) => {
-                        self.new_const_variable(ty)
-                    }
-                }
-            }
+            // For now, the unevalutable unevaluated const is too generic.
+            (ConstValue::Unevaluated(_), ConstValue::Unevaluated(_)) => self.new_const_variable(ty),
 
             (ConstValue::Placeholder(_), _) | (_, ConstValue::Placeholder(_)) => {
                 self.new_const_variable(ty)

@@ -139,7 +139,7 @@ fn unevaluated_impl() {
                 S<N>: Trait
             }
         } yields {
-            "Unique; substitution [?0 := 3?], lifetime constraints []"
+            "Unique; substitution [?0 := 3], lifetime constraints []"
         }
 
         // Tests unification of unevaluated const and placeholder const
