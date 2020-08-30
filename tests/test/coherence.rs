@@ -517,11 +517,7 @@ fn orphan_check() {
     }
 }
 
-// FIXME: The following test fails by violation of the orphan rules.
-// This is because right now, unevaluated const expressions have a
-// temporary reflexivity hole, where ? != ?,
-// which messes with the SLG resolvent.
-// The test should be uncommented when the reflexivity hole is fixed.
+// FIXME: The following test fails by structural mismatch of ? and ?
 //#[test]
 //fn unevaluated_const_unknown() {
 //    lowering_success! {
@@ -584,12 +580,7 @@ fn unevaluated_const_intersect() {
     }
 }
 
-// FIXME: The following test fails by violation of the orphan rules.
-// This is because right now, unevaluated const expressions have a
-// temporary reflexivity hole, where ? != ?,
-// which messes with the SLG resolvent.
-// The test should be uncommented when the reflexivity hole is fixed.
-// It is supposed to fail because of overlapping impls.
+// FIXME: The following test fails by structural mismatch of ? and ?
 //#[test]
 //fn unevaluated_const_too_generic() {
 //    lowering_error! {
