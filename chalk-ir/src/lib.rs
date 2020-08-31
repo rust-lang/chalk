@@ -865,15 +865,21 @@ impl InferenceVar {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, HasInterner, Debug)]
+#[allow(missing_docs)]
+pub struct FnSig<I: Interner> {
+    pub abi: I::FnAbi,
+    pub safety: Safety,
+    pub variadic: bool,
+}
+
 /// for<'a...'z> X -- all binders are instantiated at once,
 /// and we use deBruijn indices within `self.ty`
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 #[allow(missing_docs)]
 pub struct FnPointer<I: Interner> {
     pub num_binders: usize,
-    pub abi: I::FnAbi,
-    pub safety: Safety,
-    pub variadic: bool,
+    pub sig: FnSig<I>,
     pub substitution: Substitution<I>,
 }
 

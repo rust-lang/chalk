@@ -1208,10 +1208,12 @@ impl LowerFnDefn for FnDefn {
 
         Ok(rust_ir::FnDefDatum {
             id: fn_def_id,
-            abi: self.abi.lower()?,
+            sig: chalk_ir::FnSig {
+                abi: self.abi.lower()?,
+                safety: ast_safety_to_chalk_safety(self.safety),
+                variadic: self.variadic,
+            },
             binders,
-            safety: ast_safety_to_chalk_safety(self.safety),
-            variadic: self.variadic,
         })
     }
 }
@@ -1662,9 +1664,11 @@ impl LowerTy for Ty {
                 let function = chalk_ir::FnPointer {
                     num_binders: lifetime_names.len(),
                     substitution: Substitution::from_iter(interner, lowered_tys),
-                    abi: abi.lower()?,
-                    safety: ast_safety_to_chalk_safety(*safety),
-                    variadic: *variadic,
+                    sig: chalk_ir::FnSig {
+                        abi: abi.lower()?,
+                        safety: ast_safety_to_chalk_safety(*safety),
+                        variadic: *variadic,
+                    },
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
@@ -1992,7 +1996,7 @@ impl LowerGoal<LoweredProgram> for Goal {
         let fn_def_abis: BTreeMap<_, _> = program
             .fn_def_data
             .iter()
-            .map(|fn_def_data| (*fn_def_data.0, fn_def_data.1.abi))
+            .map(|fn_def_data| (*fn_def_data.0, fn_def_data.1.sig.abi))
             .collect();
 
         let env = Env {

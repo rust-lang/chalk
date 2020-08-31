@@ -9,8 +9,8 @@ use chalk_ir::interner::{Interner, TargetInterner};
 use chalk_ir::{
     visit::{Visit, VisitResult},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
-    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Safety, Substitution, ToGenericArg, TraitId,
-    TraitRef, Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -144,9 +144,7 @@ pub struct AdtRepr {
 /// a specific function definition.
 pub struct FnDefDatum<I: Interner> {
     pub id: FnDefId<I>,
-    pub abi: I::FnAbi,
-    pub safety: Safety,
-    pub variadic: bool,
+    pub sig: chalk_ir::FnSig<I>,
     pub binders: Binders<FnDefDatumBound<I>>,
 }
 
