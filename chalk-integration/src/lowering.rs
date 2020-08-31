@@ -381,7 +381,7 @@ impl LowerProgram for Program {
                     let id = FnDefId(raw_id);
                     fn_def_ids.insert(type_kind.name.clone(), id);
                     fn_def_kinds.insert(id, type_kind);
-                    fn_def_abis.insert(id, defn.abi.lower()?);
+                    fn_def_abis.insert(id, defn.sig.abi.lower()?);
                 }
                 Item::ClosureDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -1208,12 +1208,22 @@ impl LowerFnDefn for FnDefn {
 
         Ok(rust_ir::FnDefDatum {
             id: fn_def_id,
-            sig: chalk_ir::FnSig {
-                abi: self.abi.lower()?,
-                safety: ast_safety_to_chalk_safety(self.safety),
-                variadic: self.variadic,
-            },
+            sig: self.sig.lower()?,
             binders,
+        })
+    }
+}
+
+trait LowerFnSig {
+    fn lower(&self) -> LowerResult<chalk_ir::FnSig<ChalkIr>>;
+}
+
+impl LowerFnSig for FnSig {
+    fn lower(&self) -> LowerResult<chalk_ir::FnSig<ChalkIr>> {
+        Ok(chalk_ir::FnSig {
+            abi: self.abi.lower()?,
+            safety: ast_safety_to_chalk_safety(self.safety),
+            variadic: self.variadic,
         })
     }
 }
@@ -1648,9 +1658,7 @@ impl LowerTy for Ty {
             Ty::ForAll {
                 lifetime_names,
                 types,
-                abi,
-                safety,
-                variadic,
+                sig,
             } => {
                 let quantified_env = env.introduce(lifetime_names.iter().map(|id| {
                     chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, id.str.clone())
@@ -1664,11 +1672,7 @@ impl LowerTy for Ty {
                 let function = chalk_ir::FnPointer {
                     num_binders: lifetime_names.len(),
                     substitution: Substitution::from_iter(interner, lowered_tys),
-                    sig: chalk_ir::FnSig {
-                        abi: abi.lower()?,
-                        safety: ast_safety_to_chalk_safety(*safety),
-                        variadic: *variadic,
-                    },
+                    sig: sig.lower()?,
                 };
                 Ok(chalk_ir::TyData::Function(function).intern(interner))
             }
