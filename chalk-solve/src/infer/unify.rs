@@ -467,11 +467,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
             DebruijnIndex::INNERMOST,
         )?;
 
+        debug!("unify_var_const: var {:?} set to {:?}", var, c1);
         self.table
             .unify
-            .unify_var_value(var, InferenceValue::from_const(interner, c1.clone()))
+            .unify_var_value(var, InferenceValue::from_const(interner, c1))
             .unwrap();
-        debug!("unify_var_const: var {:?} set to {:?}", var, c);
 
         Ok(())
     }
