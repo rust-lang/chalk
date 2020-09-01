@@ -865,6 +865,7 @@ impl InferenceVar {
     }
 }
 
+/// A function signature.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, HasInterner, Debug)]
 #[allow(missing_docs)]
 pub struct FnSig<I: Interner> {
