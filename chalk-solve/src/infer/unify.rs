@@ -455,11 +455,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let interner = self.interner;
         let var = EnaVariable::from(var);
 
+        // Determine the universe index associated with this
+        // variable. This is basically a count of the number of
+        // `forall` binders that had been introduced at the point
+        // this variable was created -- though it may change over time
+        // as the variable is unified.
+        let universe_index = self.table.universe_of_unbound_var(var);
+
+        let c1 = c.fold_with(
+            &mut OccursCheck::new(self, var, universe_index),
+            DebruijnIndex::INNERMOST,
+        )?;
+
+        debug!("unify_var_const: var {:?} set to {:?}", var, c1);
         self.table
             .unify
-            .unify_var_value(var, InferenceValue::from_const(interner, c.clone()))
+            .unify_var_value(var, InferenceValue::from_const(interner, c1))
             .unwrap();
-        debug!("unify_var_const: var {:?} set to {:?}", var, c);
 
         Ok(())
     }
@@ -557,6 +569,20 @@ where
         }
     }
 
+    fn fold_free_placeholder_const(
+        &mut self,
+        ty: &Ty<I>,
+        universe: PlaceholderIndex,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let interner = self.interner();
+        if self.universe_index < universe.ui {
+            Err(NoSolution)
+        } else {
+            Ok(universe.to_const(interner, ty.clone())) // no need to shift, not relative to depth
+        }
+    }
+
     #[instrument(level = "debug", skip(self))]
     fn fold_free_placeholder_lifetime(
         &mut self,
@@ -629,6 +655,51 @@ where
                 }
 
                 Ok(var.to_ty_with_kind(interner, kind))
+            }
+        }
+    }
+
+    fn fold_inference_const(
+        &mut self,
+        ty: &Ty<I>,
+        var: InferenceVar,
+        _outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let interner = self.interner();
+        let var = EnaVariable::from(var);
+        match self.unifier.table.unify.probe_value(var) {
+            // If this variable already has a value, fold over that value instead.
+            InferenceValue::Bound(normalized_const) => {
+                let normalized_const = normalized_const.assert_const_ref(interner);
+                let normalized_const =
+                    normalized_const.fold_with(self, DebruijnIndex::INNERMOST)?;
+                assert!(!normalized_const.needs_shift(interner));
+                Ok(normalized_const)
+            }
+
+            // Otherwise, check the universe of the variable, and also
+            // check for cycles with `self.var` (which this will soon
+            // become the value of).
+            InferenceValue::Unbound(ui) => {
+                if self.unifier.table.unify.unioned(var, self.var) {
+                    return Err(NoSolution);
+                }
+
+                if self.universe_index < ui {
+                    // Scenario is like:
+                    //
+                    // forall<const A> exists<const B> ?C = Foo<B>
+                    //
+                    // where A is in universe 0 and B is in universe 1.
+                    // This is OK, if B is promoted to universe 0.
+                    self.unifier
+                        .table
+                        .unify
+                        .unify_var_value(var, InferenceValue::Unbound(self.universe_index))
+                        .unwrap();
+                }
+
+                Ok(var.to_const(interner, ty.clone()))
             }
         }
     }

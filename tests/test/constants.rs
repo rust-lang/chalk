@@ -119,8 +119,8 @@ fn placeholders_eq() {
         }
 
         goal {
-            exists<C> {
-                forall<D> {
+            exists<const C> {
+                forall<const D> {
                     C = D
                 }
             }
@@ -129,8 +129,8 @@ fn placeholders_eq() {
         }
 
         goal {
-            forall<C> {
-                exists<D> {
+            forall<const C> {
+                exists<const D> {
                     C = D
                 }
             }
@@ -139,8 +139,8 @@ fn placeholders_eq() {
         }
 
         goal {
-            forall<C1, C2> {
-                exists<D1, D2> {
+            forall<const C1, const C2> {
+                exists<const D1, const D2> {
                     C1 = D1, C2 = D2, D1 = D2
                 }
             }
