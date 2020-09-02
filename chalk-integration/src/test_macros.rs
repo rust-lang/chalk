@@ -19,9 +19,11 @@ macro_rules! ty {
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
-            safety: chalk_ir::Safety::Safe,
-            abi: <chalk_integration::interner::ChalkIr as chalk_ir::interner::Interner>::FnAbi::Rust,
-            variadic: false,
+            sig: chalk_ir::FnSig {
+                safety: chalk_ir::Safety::Safe,
+                abi: <chalk_integration::interner::ChalkIr as chalk_ir::interner::Interner>::FnAbi::Rust,
+                variadic: false,
+            }
         }).intern(&chalk_integration::interner::ChalkIr)
     };
 

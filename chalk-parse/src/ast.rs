@@ -67,15 +67,20 @@ pub struct AdtRepr {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FnSig {
+    pub abi: FnAbi,
+    pub safety: Safety,
+    pub variadic: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct FnDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
-    pub abi: FnAbi,
-    pub safety: Safety,
-    pub variadic: bool,
+    pub sig: FnSig,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -261,9 +266,7 @@ pub enum Ty {
     ForAll {
         lifetime_names: Vec<Identifier>,
         types: Vec<Box<Ty>>,
-        abi: FnAbi,
-        safety: Safety,
-        variadic: bool,
+        sig: FnSig,
     },
     Tuple {
         types: Vec<Box<Ty>>,
