@@ -29,10 +29,10 @@ comment like so:
 
 The reference implementation of these rules is to be found in
 [`chalk/chalk-solve/src/clauses.rs`][chalk_rules]. They are also ported in
-rustc in the [`librustc_traits`][librustc_traits] crate.
+rustc in the [`rustc_traits`][rustc_traits] crate.
 
 [chalk_rules]: https://github.com/rust-lang/chalk/blob/master/chalk-solve/src/clauses.rs
-[librustc_traits]: https://github.com/rust-lang/rust/tree/master/src/librustc_traits
+[rustc_traits]: https://github.com/rust-lang/rust/tree/master/compiler/rustc_traits
 
 ## Lowering where clauses
 
