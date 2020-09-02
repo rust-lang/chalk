@@ -5,7 +5,7 @@ the underlying concept used to implement "existential `impl Trait`" in Rust.
 They don't have a direct surface syntax, but uses of `impl Trait` in particular
 source locations create a hidden opaque type:
 
-```rust
+```rust,ignore
 fn as_u32s<'a, T: Copy + Into<u32>>(
     elements: &'a [T],
 ) -> impl Iterator<Item = u32> + 'a {

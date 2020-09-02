@@ -156,7 +156,7 @@ contained within.
 The `Alias` variant wraps an `AliasTy` and is used to represent some form of *type
 alias*. They are used to represent a number of related Rust concepts, include
 actual type aliases, associated types, and opaque types -- you can read about
-them in the [aliases chapter](./rust_types/aliases.md).
+them in the [aliases chapter](./rust_types/alias.md).
 
 ### Bound variables
 
