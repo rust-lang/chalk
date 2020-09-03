@@ -313,11 +313,8 @@ where
 
         debug!("WF opaque type goal: {:#?}", goal);
 
-        let is_legal = match self
-            .solver_choice
-            .into()
-            .solve(self.db, &goal.into_closed_goal(interner))
-        {
+        let mut new_solver = (self.solver_builder)();
+        let is_legal = match new_solver.solve(self.db, &goal.into_closed_goal(interner)) {
             Some(sol) => sol.is_unique(),
             None => false,
         };
