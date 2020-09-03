@@ -177,6 +177,10 @@ fn checked_program(db: &dyn LoweringDatabase) -> Result<Arc<Program>, ChalkError
             solver.verify_adt_decl(id)?;
         }
 
+        for &opaque_ty_id in program.opaque_ty_data.keys() {
+            solver.verify_opaque_ty_decl(opaque_ty_id)?;
+        }
+
         for &impl_id in program.impl_data.keys() {
             solver.verify_trait_impl(impl_id)?;
         }
