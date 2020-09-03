@@ -35,6 +35,13 @@ impl<I: Interner> Debug for ClosureId<I> {
     }
 }
 
+impl<I: Interner> Debug for ExternDefId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        I::debug_extern_def_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "ExternDefId({:?})", self.0))
+    }
+}
+
 impl<I: Interner> Debug for Ty<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_ty(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
@@ -184,7 +191,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Never => write!(fmt, "Never"),
             TypeName::Array => write!(fmt, "{{array}}"),
             TypeName::Closure(id) => write!(fmt, "{{closure:{:?}}}", id),
-            TypeName::Extern => write!(fmt, "{{extern}}"),
+            TypeName::Extern(extern_ty) => write!(fmt, "{:?}", extern_ty),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }

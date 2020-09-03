@@ -8,6 +8,7 @@ use crate::CanonicalVarKinds;
 use crate::ClosureId;
 use crate::Constraint;
 use crate::Constraints;
+use crate::ExternDefId;
 use crate::FnDefId;
 use crate::GenericArg;
 use crate::GenericArgData;
@@ -240,6 +241,16 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     #[allow(unused_variables)]
     fn debug_closure_id(
         fn_def_id: ClosureId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of a extern-def-id.
+    /// Returns `None` to fallback to the default debug output.
+    #[allow(unused_variables)]
+    fn debug_extern_def_id(
+        extern_def_id: ExternDefId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
