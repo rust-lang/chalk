@@ -184,6 +184,7 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::Never => write!(fmt, "Never"),
             TypeName::Array => write!(fmt, "{{array}}"),
             TypeName::Closure(id) => write!(fmt, "{{closure:{:?}}}", id),
+            TypeName::Extern => write!(fmt, "{{extern}}"),
             TypeName::Error => write!(fmt, "{{error}}"),
         }
     }
