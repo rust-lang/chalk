@@ -329,6 +329,7 @@ mod constants;
 mod cycle;
 mod existential_types;
 mod fn_def;
+mod foreign_types;
 mod implied_bounds;
 mod impls;
 mod misc;

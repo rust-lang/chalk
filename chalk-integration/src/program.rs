@@ -4,8 +4,8 @@ use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders,
-    CanonicalVarKinds, ClosureId, FnDefId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy,
-    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    CanonicalVarKinds, ClosureId, FnDefId, ForeignDefId, GenericArg, Goal, Goals, ImplId, Lifetime,
+    OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
     Substitution, TraitId, Ty,
 };
 use chalk_solve::rust_ir::{
@@ -89,6 +89,9 @@ pub struct Program {
 
     /// Store the traits marked with `#[object_safe]`
     pub object_safe_traits: HashSet<TraitId<ChalkIr>>,
+
+    /// For each foreign type `extern { type A; }`
+    pub foreign_ty_ids: BTreeMap<Identifier, ForeignDefId<ChalkIr>>,
 }
 
 impl Program {

@@ -217,6 +217,7 @@ impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
             // FIXME: write out valid types for these variants
             TypeName::FnDef(_) => write!(f, "<fn_def>")?,
             TypeName::Closure(..) => write!(f, "<closure>")?,
+            TypeName::Foreign(_) => write!(f, "<foreign>")?,
 
             TypeName::Array => write!(
                 f,

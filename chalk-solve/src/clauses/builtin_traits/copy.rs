@@ -75,6 +75,7 @@ pub fn add_copy_program_clauses<I: Interner>(
             | TypeName::AssociatedType(_)
             | TypeName::Slice
             | TypeName::OpaqueType(_)
+            | TypeName::Foreign(_)
             | TypeName::Error => {}
         },
 
