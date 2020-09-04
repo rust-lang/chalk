@@ -874,17 +874,6 @@ impl LowerVariableKind for VariableKind {
     }
 }
 
-trait LowerWhereClauses {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause];
-
-    fn lower_where_clauses(
-        &self,
-        env: &Env,
-    ) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
-        self.where_clauses().lower(env)
-    }
-}
-
 impl LowerTypeKind for AdtDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
         let interner = &ChalkIr;
@@ -913,12 +902,6 @@ impl LowerTypeKind for FnDefn {
     }
 }
 
-impl LowerWhereClauses for FnDefn {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
-    }
-}
-
 impl LowerTypeKind for ClosureDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
         let interner = &ChalkIr;
@@ -930,12 +913,6 @@ impl LowerTypeKind for ClosureDefn {
                 crate::Unit,
             ),
         })
-    }
-}
-
-impl LowerWhereClauses for AdtDefn {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
     }
 }
 
@@ -967,18 +944,6 @@ impl LowerTypeKind for OpaqueTyDefn {
                 crate::Unit,
             ),
         })
-    }
-}
-
-impl LowerWhereClauses for TraitDefn {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
-    }
-}
-
-impl LowerWhereClauses for Impl {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
     }
 }
 
@@ -1150,16 +1115,13 @@ impl LowerAdtDefn for AdtDefn {
         }
 
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let variants: LowerResult<_> = self
-                .variants
-                .iter()
-                .map(|v| self.lower_adt_variant(v, env))
-                .collect();
-            let where_clauses = self.lower_where_clauses(env)?;
-
             Ok(rust_ir::AdtDatumBound {
-                variants: variants?,
-                where_clauses,
+                variants: self
+                    .variants
+                    .iter()
+                    .map(|v| self.lower_adt_variant(v, env))
+                    .collect::<LowerResult<_>>()?,
+                where_clauses: self.where_clauses.lower(env)?,
             })
         })?;
 
@@ -1210,7 +1172,7 @@ impl LowerFnDefn for FnDefn {
         env: &Env,
     ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
         let binders = env.in_binders(self.all_parameters(), |env| {
-            let where_clauses = self.lower_where_clauses(env)?;
+            let where_clauses = self.where_clauses.lower(env)?;
 
             let inputs_and_output = env.in_binders(vec![], |env| {
                 let args: LowerResult<_> =
@@ -1867,7 +1829,7 @@ impl LowerImpl for Impl {
                 ))?;
             }
 
-            let where_clauses = self.lower_where_clauses(&env)?;
+            let where_clauses = self.where_clauses.lower(&env)?;
             debug!(where_clauses = ?trait_ref);
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
@@ -1964,7 +1926,7 @@ impl LowerTrait for TraitDefn {
             }
 
             Ok(rust_ir::TraitDatumBound {
-                where_clauses: self.lower_where_clauses(env)?,
+                where_clauses: self.where_clauses.lower(env)?,
             })
         })?;
 
