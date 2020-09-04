@@ -2,8 +2,9 @@ use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId, ImplId,
-    OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId, TyKind, VariableKinds,
+    self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, ExternDefId,
+    FnDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
+    TyKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -408,7 +409,7 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
-                Item::Extern(_) => unimplemented!("extern"),
+                Item::Extern(_) => continue,
             };
         }
 
@@ -426,6 +427,8 @@ impl LowerProgram for Program {
         let mut opaque_ty_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
+        let mut extern_ty_ids = BTreeMap::new();
+
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
                 adt_ids: &adt_ids,
@@ -639,7 +642,9 @@ impl LowerProgram for Program {
                         );
                     }
                 }
-                Item::Extern(_) => unimplemented!("extern (2)"),
+                Item::Extern(ExternDefn(ref ident)) => {
+                    extern_ty_ids.insert(ident.str.clone(), ExternDefId(raw_id));
+                }
             }
         }
 
@@ -669,6 +674,7 @@ impl LowerProgram for Program {
             hidden_opaque_types,
             custom_clauses,
             object_safe_traits,
+            extern_ty_ids,
         };
 
         Ok(program)
