@@ -3,7 +3,7 @@
 
 use crate::error::ChalkError;
 use crate::interner::ChalkIr;
-use crate::lowering::LowerProgram;
+use crate::lowering::Lower;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::tls;
