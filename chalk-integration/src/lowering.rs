@@ -34,6 +34,7 @@ type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
+type ExternIds = BTreeMap<Ident, chalk_ir::ExternDefId<ChalkIr>>;
 
 type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
 
@@ -54,6 +55,7 @@ struct Env<'k> {
     opaque_ty_kinds: &'k OpaqueTyKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
     auto_traits: &'k AutoTraits,
+    extern_ty_ids: &'k ExternIds,
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
@@ -178,6 +180,16 @@ impl<'k> Env<'k> {
                 .cast(interner),
             );
         }
+
+        if let Some(id) = self.extern_ty_ids.get(&name.str) {
+            return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Extern(*id),
+                substitution: chalk_ir::Substitution::empty(interner),
+            })
+            .intern(interner)
+            .cast(interner));
+        }
+
         if let Some(_) = self.trait_ids.get(&name.str) {
             return Err(RustIrError::NotStruct(name.clone()));
         }
@@ -445,6 +457,7 @@ impl LowerProgram for Program {
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
                 auto_traits: &auto_traits,
+                extern_ty_ids: &extern_ty_ids,
             };
 
             match *item {
@@ -2024,6 +2037,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             trait_kinds: &program.trait_kinds,
             opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,
+            extern_ty_ids: &program.extern_ty_ids,
             parameter_map: BTreeMap::new(),
             auto_traits: &auto_traits,
         };
