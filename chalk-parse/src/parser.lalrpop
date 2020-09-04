@@ -20,6 +20,12 @@ Item: Option<Item> = {
     OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
+    ExternType => Some(Item::Extern(<>)),
+};
+
+// FIXME support sequences of extern types, like "extern { type A; type B; }"
+ExternType: ExternDefn = {
+    "extern" "{" "type" <id:Id> ";" "}" => ExternDefn(id),
 };
 
 Comment: () = r"//.*";
