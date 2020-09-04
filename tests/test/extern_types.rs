@@ -3,6 +3,28 @@
 use super::*;
 
 #[test]
+fn extern_ty_trait_impl() {
+    test! {
+        program {
+            extern { type A; }
+            trait Foo {}
+            impl Foo for A {}
+        }
+
+        goal { A: Foo } yields { "Unique" }
+    }
+}
+
+#[test]
+fn extern_ty_single() {
+    lowering_success! {
+        program {
+            extern { type A; }
+        }
+    }
+}
+
+#[test]
 fn extern_ty_is_well_formed() {
     test! {
         program {
