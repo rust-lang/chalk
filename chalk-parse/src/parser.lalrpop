@@ -20,11 +20,11 @@ Item: Option<Item> = {
     OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
-    ExternType => Some(Item::Extern(<>)),
+    ForeignType => Some(Item::Foreign(<>)),
 };
 
-ExternType: ExternDefn = {
-    "extern" "type" <id:Id> ";" => ExternDefn(id),
+ForeignType: ForeignDefn = {
+    "extern" "type" <id:Id> ";" => ForeignDefn(id),
 };
 
 Comment: () = r"//.*";

@@ -254,8 +254,8 @@ pub enum TypeName<I: Interner> {
     /// A closure.
     Closure(ClosureId<I>),
 
-    /// extern types
-    Extern(ExternDefId<I>),
+    /// foreign types
+    Foreign(ForeignDefId<I>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.
@@ -366,9 +366,9 @@ pub struct FnDefId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClosureId<I: Interner>(pub I::DefId);
 
-/// Id for extern types.
+/// Id for foreign types.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ExternDefId<I: Interner>(pub I::DefId);
+pub struct ForeignDefId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 

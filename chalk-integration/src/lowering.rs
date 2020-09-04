@@ -2,8 +2,8 @@ use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, ExternDefId,
-    FnDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
+    self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId,
+    ForeignDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
     TyKind, VariableKinds,
 };
 use chalk_parse::ast::*;
@@ -34,7 +34,7 @@ type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
-type ExternIds = BTreeMap<Ident, chalk_ir::ExternDefId<ChalkIr>>;
+type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
 
 type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
 
@@ -55,7 +55,7 @@ struct Env<'k> {
     opaque_ty_kinds: &'k OpaqueTyKinds,
     associated_ty_lookups: &'k AssociatedTyLookups,
     auto_traits: &'k AutoTraits,
-    extern_ty_ids: &'k ExternIds,
+    foreign_ty_ids: &'k ForeignIds,
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     parameter_map: ParameterMap,
@@ -181,9 +181,9 @@ impl<'k> Env<'k> {
             );
         }
 
-        if let Some(id) = self.extern_ty_ids.get(&name.str) {
+        if let Some(id) = self.foreign_ty_ids.get(&name.str) {
             return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Extern(*id),
+                name: chalk_ir::TypeName::Foreign(*id),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)
@@ -421,7 +421,7 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
-                Item::Extern(_) => continue,
+                Item::Foreign(_) => continue,
             };
         }
 
@@ -439,7 +439,7 @@ impl LowerProgram for Program {
         let mut opaque_ty_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
-        let mut extern_ty_ids = BTreeMap::new();
+        let mut foreign_ty_ids = BTreeMap::new();
 
         for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
             let empty_env = Env {
@@ -457,7 +457,7 @@ impl LowerProgram for Program {
                 associated_ty_lookups: &associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
                 auto_traits: &auto_traits,
-                extern_ty_ids: &extern_ty_ids,
+                foreign_ty_ids: &foreign_ty_ids,
             };
 
             match *item {
@@ -655,8 +655,8 @@ impl LowerProgram for Program {
                         );
                     }
                 }
-                Item::Extern(ExternDefn(ref ident)) => {
-                    extern_ty_ids.insert(ident.str.clone(), ExternDefId(raw_id));
+                Item::Foreign(ForeignDefn(ref ident)) => {
+                    foreign_ty_ids.insert(ident.str.clone(), ForeignDefId(raw_id));
                 }
             }
         }
@@ -687,7 +687,7 @@ impl LowerProgram for Program {
             hidden_opaque_types,
             custom_clauses,
             object_safe_traits,
-            extern_ty_ids,
+            foreign_ty_ids,
         };
 
         Ok(program)
@@ -2037,7 +2037,7 @@ impl LowerGoal<LoweredProgram> for Goal {
             trait_kinds: &program.trait_kinds,
             opaque_ty_kinds: &program.opaque_ty_kinds,
             associated_ty_lookups: &associated_ty_lookups,
-            extern_ty_ids: &program.extern_ty_ids,
+            foreign_ty_ids: &program.foreign_ty_ids,
             parameter_map: BTreeMap::new(),
             auto_traits: &auto_traits,
         };

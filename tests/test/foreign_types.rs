@@ -1,10 +1,10 @@
-//! Tests for extern types
+//! Tests for foreign types
 
 use super::*;
 
-// extern types don't implement any builtin traits
+// foreign types don't implement any builtin traits
 #[test]
-fn extern_ty_trait_impl() {
+fn foreign_ty_trait_impl() {
     test! {
         program {
             extern type A;
@@ -17,7 +17,7 @@ fn extern_ty_trait_impl() {
 }
 
 #[test]
-fn extern_ty_lowering() {
+fn foreign_ty_lowering() {
     lowering_success! {
         program {
             extern type A;
@@ -25,9 +25,9 @@ fn extern_ty_lowering() {
     }
 }
 
-// extern types are always well-formed
+// foreign types are always well-formed
 #[test]
-fn extern_ty_is_well_formed() {
+fn foreign_ty_is_well_formed() {
     test! {
         program {
             extern type A;
@@ -37,9 +37,9 @@ fn extern_ty_is_well_formed() {
     }
 }
 
-// extern types don't implement any builtin traits
+// foreign types don't implement any builtin traits
 #[test]
-fn extern_ty_is_not_sized() {
+fn foreign_ty_is_not_sized() {
     test! {
         program {
             #[lang(sized)] trait Sized {}
@@ -50,9 +50,9 @@ fn extern_ty_is_not_sized() {
     }
 }
 
-// extern types don't implement any builtin traits
+// foreign types don't implement any builtin traits
 #[test]
-fn extern_ty_is_not_copy() {
+fn foreign_ty_is_not_copy() {
     test! {
         program {
             #[lang(copy)] trait Copy {}
@@ -63,9 +63,9 @@ fn extern_ty_is_not_copy() {
     }
 }
 
-// extern types don't implement any builtin traits
+// foreign types don't implement any builtin traits
 #[test]
-fn extern_ty_is_not_clone() {
+fn foreign_ty_is_not_clone() {
     test! {
         program {
             #[lang(clone)] trait Clone {}

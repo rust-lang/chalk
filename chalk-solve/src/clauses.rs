@@ -636,7 +636,7 @@ fn match_type_name<I: Interner>(
         | TypeName::Array
         | TypeName::Never
         | TypeName::Closure(_)
-        | TypeName::Extern(_) => {
+        | TypeName::Foreign(_) => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
     }

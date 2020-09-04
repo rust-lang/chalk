@@ -93,7 +93,7 @@ pub fn add_sized_program_clauses<I: Interner>(
             | TypeName::Slice
             | TypeName::OpaqueType(_)
             | TypeName::Str
-            | TypeName::Extern(_)
+            | TypeName::Foreign(_)
             | TypeName::Error => {}
         },
 
