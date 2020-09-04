@@ -408,6 +408,7 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
+                Item::Extern(_) => unimplemented!("extern"),
             };
         }
 
@@ -638,6 +639,7 @@ impl LowerProgram for Program {
                         );
                     }
                 }
+                Item::Extern(_) => unimplemented!("extern (2)"),
             }
         }
 

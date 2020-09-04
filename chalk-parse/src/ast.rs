@@ -27,7 +27,11 @@ pub enum Item {
     OpaqueTyDefn(OpaqueTyDefn),
     Impl(Impl),
     Clause(Clause),
+    Extern(ExternDefn),
 }
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternDefn(pub Identifier);
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AdtDefn {
