@@ -24,7 +24,7 @@ Item: Option<Item> = {
 };
 
 ExternType: ExternDefn = {
-    "extern" "{" "type" <id:Id> ";" "}" => ExternDefn(id),
+    "extern" "type" <id:Id> ";" => ExternDefn(id),
 };
 
 Comment: () = r"//.*";
