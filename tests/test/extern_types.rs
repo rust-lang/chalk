@@ -17,6 +17,7 @@ fn extern_ty_is_well_formed() {
 fn extern_ty_is_not_sized() {
     test! {
         program {
+            #[lang(sized)] trait Sized {}
             extern { type A; }
         }
 
@@ -28,6 +29,7 @@ fn extern_ty_is_not_sized() {
 fn extern_ty_is_not_copy() {
     test! {
         program {
+            #[lang(copy)] trait Copy {}
             extern { type A; }
         }
 
@@ -39,6 +41,7 @@ fn extern_ty_is_not_copy() {
 fn extern_ty_is_not_clone() {
     test! {
         program {
+            #[lang(clone)] trait Clone {}
             extern { type A; }
         }
 
