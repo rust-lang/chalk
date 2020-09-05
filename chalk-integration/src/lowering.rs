@@ -815,13 +815,13 @@ fn lower_variable_kind(variable_kind: &VariableKind) -> chalk_ir::WithKind<Chalk
     chalk_ir::WithKind::new(kind, n.str.clone())
 }
 
-trait LowerInEnv {
+trait Lower {
     type Lowered;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered>;
 }
 
-impl LowerInEnv for [QuantifiedWhereClause] {
+impl Lower for [QuantifiedWhereClause] {
     type Lowered = Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -834,7 +834,7 @@ impl LowerInEnv for [QuantifiedWhereClause] {
     }
 }
 
-impl LowerInEnv for WhereClause {
+impl Lower for WhereClause {
     type Lowered = Vec<chalk_ir::WhereClause<ChalkIr>>;
 
     /// Lower from an AST `where` clause to an internal IR.
@@ -874,7 +874,7 @@ impl LowerInEnv for WhereClause {
     }
 }
 
-impl LowerInEnv for QuantifiedWhereClause {
+impl Lower for QuantifiedWhereClause {
     type Lowered = Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
 
     /// Lower from an AST `where` clause to an internal IR.
@@ -888,7 +888,7 @@ impl LowerInEnv for QuantifiedWhereClause {
     }
 }
 
-impl LowerInEnv for DomainGoal {
+impl Lower for DomainGoal {
     type Lowered = Vec<chalk_ir::DomainGoal<ChalkIr>>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -940,7 +940,7 @@ impl LowerInEnv for DomainGoal {
     }
 }
 
-impl LowerInEnv for LeafGoal {
+impl Lower for LeafGoal {
     type Lowered = chalk_ir::Goal<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1057,7 +1057,7 @@ fn lower_fn_abi(fn_abi: &FnAbi) -> LowerResult<ChalkFnAbi> {
     }
 }
 
-impl LowerInEnv for ClosureDefn {
+impl Lower for ClosureDefn {
     type Lowered = (
         rust_ir::ClosureKind,
         chalk_ir::Binders<rust_ir::FnDefInputsAndOutputDatum<ChalkIr>>,
@@ -1085,7 +1085,7 @@ fn lower_closure_kind(closure_kind: &ClosureKind) -> rust_ir::ClosureKind {
     }
 }
 
-impl LowerInEnv for TraitRef {
+impl Lower for TraitRef {
     type Lowered = chalk_ir::TraitRef<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1101,7 +1101,7 @@ impl LowerInEnv for TraitRef {
     }
 }
 
-impl LowerInEnv for TraitBound {
+impl Lower for TraitBound {
     type Lowered = rust_ir::TraitBound<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1144,7 +1144,7 @@ impl LowerInEnv for TraitBound {
     }
 }
 
-impl LowerInEnv for AliasEqBound {
+impl Lower for AliasEqBound {
     type Lowered = rust_ir::AliasEqBound<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1189,7 +1189,7 @@ impl LowerInEnv for AliasEqBound {
     }
 }
 
-impl LowerInEnv for InlineBound {
+impl Lower for InlineBound {
     type Lowered = rust_ir::InlineBound<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1201,7 +1201,7 @@ impl LowerInEnv for InlineBound {
     }
 }
 
-impl LowerInEnv for QuantifiedInlineBound {
+impl Lower for QuantifiedInlineBound {
     type Lowered = rust_ir::QuantifiedInlineBound<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1211,7 +1211,7 @@ impl LowerInEnv for QuantifiedInlineBound {
     }
 }
 
-impl LowerInEnv for [QuantifiedInlineBound] {
+impl Lower for [QuantifiedInlineBound] {
     type Lowered = Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1269,7 +1269,7 @@ fn lower_trait_flags(trait_flags: &TraitFlags) -> rust_ir::TraitFlags {
     }
 }
 
-impl LowerInEnv for ProjectionTy {
+impl Lower for ProjectionTy {
     type Lowered = chalk_ir::ProjectionTy<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1319,7 +1319,7 @@ impl LowerInEnv for ProjectionTy {
     }
 }
 
-impl LowerInEnv for Ty {
+impl Lower for Ty {
     type Lowered = chalk_ir::Ty<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1515,7 +1515,7 @@ impl LowerInEnv for Ty {
     }
 }
 
-impl LowerInEnv for Const {
+impl Lower for Const {
     type Lowered = chalk_ir::Const<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1541,7 +1541,7 @@ impl LowerInEnv for Const {
     }
 }
 
-impl LowerInEnv for GenericArg {
+impl Lower for GenericArg {
     type Lowered = chalk_ir::GenericArg<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1555,7 +1555,7 @@ impl LowerInEnv for GenericArg {
     }
 }
 
-impl LowerInEnv for Lifetime {
+impl Lower for Lifetime {
     type Lowered = chalk_ir::Lifetime<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1620,7 +1620,7 @@ fn lower_impl(
     })
 }
 
-impl LowerInEnv for Clause {
+impl Lower for Clause {
     type Lowered = Vec<chalk_ir::ProgramClause<ChalkIr>>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
@@ -1753,7 +1753,7 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
     goal.lower(&env)
 }
 
-impl LowerInEnv for Goal {
+impl Lower for Goal {
     type Lowered = chalk_ir::Goal<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
