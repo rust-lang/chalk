@@ -307,11 +307,10 @@ impl<'k> Env<'k> {
         T: HasInterner<Interner = ChalkIr>,
         OP: FnOnce(&Self) -> LowerResult<T>,
     {
-        let interner = &ChalkIr;
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
         Ok(chalk_ir::Binders::new(
-            VariableKinds::from_iter(interner, binders.iter().map(|v| v.kind.clone())),
+            VariableKinds::from_iter(self.interner(), binders.iter().map(|v| v.kind.clone())),
             op(&env)?,
         ))
     }
@@ -693,6 +692,9 @@ impl Lower for Program {
 
 trait LowerTypeKind {
     fn lower_type_kind(&self) -> LowerResult<TypeKind>;
+    fn interner(&self) -> &ChalkIr {
+        &ChalkIr
+    }
 }
 
 trait LowerParameterMap {
@@ -844,12 +846,11 @@ impl Lower for VariableKind {
 
 impl LowerTypeKind for AdtDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
         Ok(TypeKind {
             sort: TypeSort::Adt,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
+                VariableKinds::from_iter(self.interner(), self.all_parameters().anonymize()),
                 crate::Unit,
             ),
         })
@@ -858,12 +859,11 @@ impl LowerTypeKind for AdtDefn {
 
 impl LowerTypeKind for FnDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
         Ok(TypeKind {
             sort: TypeSort::FnDef,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
+                VariableKinds::from_iter(self.interner(), self.all_parameters().anonymize()),
                 crate::Unit,
             ),
         })
@@ -872,12 +872,11 @@ impl LowerTypeKind for FnDefn {
 
 impl LowerTypeKind for ClosureDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
         Ok(TypeKind {
             sort: TypeSort::Closure,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
+                VariableKinds::from_iter(self.interner(), self.all_parameters().anonymize()),
                 crate::Unit,
             ),
         })
@@ -886,14 +885,13 @@ impl LowerTypeKind for ClosureDefn {
 
 impl LowerTypeKind for TraitDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
         let binders: Vec<_> = self.variable_kinds.iter().map(|p| p.lower()).collect();
         Ok(TypeKind {
             sort: TypeSort::Trait,
             name: self.name.str.clone(),
             binders: chalk_ir::Binders::new(
                 // for the purposes of the *type*, ignore `Self`:
-                VariableKinds::from_iter(interner, binders.anonymize()),
+                VariableKinds::from_iter(self.interner(), binders.anonymize()),
                 crate::Unit,
             ),
         })
@@ -902,13 +900,12 @@ impl LowerTypeKind for TraitDefn {
 
 impl LowerTypeKind for OpaqueTyDefn {
     fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
         let binders: Vec<_> = self.variable_kinds.iter().map(|p| p.lower()).collect();
         Ok(TypeKind {
             sort: TypeSort::Opaque,
             name: self.identifier.str.clone(),
             binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, binders.anonymize()),
+                VariableKinds::from_iter(self.interner(), binders.anonymize()),
                 crate::Unit,
             ),
         })
@@ -1174,7 +1171,7 @@ impl Lower for FnSig {
     fn lower(&self) -> Self::Lowered {
         Ok(chalk_ir::FnSig {
             abi: self.abi.lower()?,
-            safety: ast_safety_to_chalk_safety(self.safety),
+            safety: self.safety.lower(),
             variadic: self.variadic,
         })
     }
@@ -1244,7 +1241,7 @@ impl LowerInEnv for TraitBound {
     type Lowered = rust_ir::TraitBound<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let interner = &ChalkIr;
+        let interner = env.interner();
         let trait_id = env.lookup_trait(&self.trait_name)?;
 
         let k = env.trait_kind(trait_id);
@@ -1600,7 +1597,7 @@ impl LowerInEnv for Ty {
             .intern(interner)),
 
             Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(*ty)),
+                name: chalk_ir::TypeName::Scalar(ty.lower()),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
@@ -1627,7 +1624,7 @@ impl LowerInEnv for Ty {
             .intern(interner)),
 
             Ty::Raw { mutability, ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Raw(ast_mutability_to_chalk_mutability(*mutability)),
+                name: chalk_ir::TypeName::Raw(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
                     std::iter::once(Ok(ty.lower(env)?)),
@@ -1640,7 +1637,7 @@ impl LowerInEnv for Ty {
                 lifetime,
                 ty,
             } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Ref(ast_mutability_to_chalk_mutability(*mutability)),
+                name: chalk_ir::TypeName::Ref(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
                     &[
@@ -1931,8 +1928,8 @@ impl LowerGoal<LoweredProgram> for Goal {
     }
 }
 
-impl<'k> LowerGoal<Env<'k>> for Goal {
-    fn lower(&self, env: &Env<'k>) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+impl LowerGoal<Env<'_>> for Goal {
+    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
         let interner = env.interner();
         match self {
             Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
@@ -1944,7 +1941,7 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
                 let where_clauses = hyp
                     .iter()
-                    .flat_map(|clause| clause.lower(env).apply_result())
+                    .flat_map(|clause| apply_result(clause.lower(env)))
                     .map(|result| result.map(|h| h.into_from_env_clause(interner)));
                 let where_clauses =
                     chalk_ir::ProgramClauses::from_fallible(interner, where_clauses);
@@ -1964,6 +1961,13 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 Ok(leaf.lower(env)?)
             }
         }
+    }
+}
+
+fn apply_result<T>(result: LowerResult<Vec<T>>) -> Vec<LowerResult<T>> {
+    match result {
+        Ok(v) => v.into_iter().map(Ok).collect(),
+        Err(e) => vec![Err(e)],
     }
 }
 
@@ -2011,22 +2015,6 @@ impl Lower for WellKnownTrait {
     }
 }
 
-/// Lowers LowerResult<Vec<T>> -> Vec<LowerResult<T>>.
-trait ApplyResult {
-    type Output;
-    fn apply_result(self) -> Self::Output;
-}
-
-impl<T> ApplyResult for LowerResult<Vec<T>> {
-    type Output = Vec<LowerResult<T>>;
-    fn apply_result(self) -> Self::Output {
-        match self {
-            Ok(v) => v.into_iter().map(Ok).collect(),
-            Err(e) => vec![Err(e)],
-        }
-    }
-}
-
 trait Kinded {
     fn kind(&self) -> Kind;
 }
@@ -2052,43 +2040,55 @@ impl Kinded for chalk_ir::GenericArg<ChalkIr> {
     }
 }
 
-fn ast_scalar_to_chalk_scalar(scalar: ScalarType) -> chalk_ir::Scalar {
-    match scalar {
-        ScalarType::Int(int) => chalk_ir::Scalar::Int(match int {
-            IntTy::I8 => chalk_ir::IntTy::I8,
-            IntTy::I16 => chalk_ir::IntTy::I16,
-            IntTy::I32 => chalk_ir::IntTy::I32,
-            IntTy::I64 => chalk_ir::IntTy::I64,
-            IntTy::I128 => chalk_ir::IntTy::I128,
-            IntTy::Isize => chalk_ir::IntTy::Isize,
-        }),
-        ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(match uint {
-            UintTy::U8 => chalk_ir::UintTy::U8,
-            UintTy::U16 => chalk_ir::UintTy::U16,
-            UintTy::U32 => chalk_ir::UintTy::U32,
-            UintTy::U64 => chalk_ir::UintTy::U64,
-            UintTy::U128 => chalk_ir::UintTy::U128,
-            UintTy::Usize => chalk_ir::UintTy::Usize,
-        }),
-        ScalarType::Float(float) => chalk_ir::Scalar::Float(match float {
-            FloatTy::F32 => chalk_ir::FloatTy::F32,
-            FloatTy::F64 => chalk_ir::FloatTy::F64,
-        }),
-        ScalarType::Bool => chalk_ir::Scalar::Bool,
-        ScalarType::Char => chalk_ir::Scalar::Char,
+impl Lower for ScalarType {
+    type Lowered = chalk_ir::Scalar;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            ScalarType::Int(int) => chalk_ir::Scalar::Int(match int {
+                IntTy::I8 => chalk_ir::IntTy::I8,
+                IntTy::I16 => chalk_ir::IntTy::I16,
+                IntTy::I32 => chalk_ir::IntTy::I32,
+                IntTy::I64 => chalk_ir::IntTy::I64,
+                IntTy::I128 => chalk_ir::IntTy::I128,
+                IntTy::Isize => chalk_ir::IntTy::Isize,
+            }),
+            ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(match uint {
+                UintTy::U8 => chalk_ir::UintTy::U8,
+                UintTy::U16 => chalk_ir::UintTy::U16,
+                UintTy::U32 => chalk_ir::UintTy::U32,
+                UintTy::U64 => chalk_ir::UintTy::U64,
+                UintTy::U128 => chalk_ir::UintTy::U128,
+                UintTy::Usize => chalk_ir::UintTy::Usize,
+            }),
+            ScalarType::Float(float) => chalk_ir::Scalar::Float(match float {
+                FloatTy::F32 => chalk_ir::FloatTy::F32,
+                FloatTy::F64 => chalk_ir::FloatTy::F64,
+            }),
+            ScalarType::Bool => chalk_ir::Scalar::Bool,
+            ScalarType::Char => chalk_ir::Scalar::Char,
+        }
     }
 }
 
-fn ast_mutability_to_chalk_mutability(mutability: Mutability) -> chalk_ir::Mutability {
-    match mutability {
-        Mutability::Mut => chalk_ir::Mutability::Mut,
-        Mutability::Not => chalk_ir::Mutability::Not,
+impl Lower for Mutability {
+    type Lowered = chalk_ir::Mutability;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            Mutability::Mut => chalk_ir::Mutability::Mut,
+            Mutability::Not => chalk_ir::Mutability::Not,
+        }
     }
 }
 
-fn ast_safety_to_chalk_safety(safety: Safety) -> chalk_ir::Safety {
-    match safety {
-        Safety::Safe => chalk_ir::Safety::Safe,
-        Safety::Unsafe => chalk_ir::Safety::Unsafe,
+impl Lower for Safety {
+    type Lowered = chalk_ir::Safety;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            Safety::Safe => chalk_ir::Safety::Safe,
+            Safety::Unsafe => chalk_ir::Safety::Unsafe,
+        }
     }
 }
