@@ -459,14 +459,14 @@ impl Lower for Program {
             match *item {
                 Item::AdtDefn(ref d) => {
                     let adt_id = AdtId(raw_id);
-                    adt_data.insert(adt_id, Arc::new(d.lower_adt(adt_id, &empty_env)?));
+                    adt_data.insert(adt_id, Arc::new(lower_adt(d, adt_id, &empty_env)?));
                     adt_reprs.insert(adt_id, d.repr.lower());
                 }
                 Item::FnDefn(ref defn) => {
                     let fn_def_id = FnDefId(raw_id);
                     fn_def_data.insert(
                         fn_def_id,
-                        Arc::new(defn.lower_fn_def(fn_def_id, &empty_env)?),
+                        Arc::new(lower_fn_def(defn, fn_def_id, &empty_env)?),
                     );
                 }
                 Item::ClosureDefn(ref defn) => {
@@ -491,7 +491,7 @@ impl Lower for Program {
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    let trait_datum = trait_defn.lower_trait(trait_id, &empty_env)?;
+                    let trait_datum = lower_trait(trait_defn, trait_id, &empty_env)?;
 
                     if let Some(well_known) = trait_datum.well_known {
                         well_known_traits.insert(well_known, trait_id);
@@ -546,7 +546,8 @@ impl Lower for Program {
                 }
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
-                    let impl_datum = Arc::new(impl_defn.lower_impl(
+                    let impl_datum = Arc::new(lower_impl(
+                        impl_defn,
                         &empty_env,
                         impl_id,
                         &associated_ty_value_ids,
@@ -1055,63 +1056,47 @@ impl LowerInEnv for LeafGoal {
     }
 }
 
-trait LowerAdtDefn {
-    fn lower_adt(
-        &self,
-        adt_id: chalk_ir::AdtId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>>;
-
-    fn lower_adt_variant(
-        &self,
-        variant: &Variant,
-        env: &Env,
-    ) -> LowerResult<rust_ir::AdtVariantDatum<ChalkIr>> {
-        let fields: LowerResult<_> = variant.fields.iter().map(|f| f.ty.lower(env)).collect();
-        Ok(rust_ir::AdtVariantDatum { fields: fields? })
+fn lower_adt(
+    adt_defn: &AdtDefn,
+    adt_id: chalk_ir::AdtId<ChalkIr>,
+    env: &Env,
+) -> LowerResult<rust_ir::AdtDatum<ChalkIr>> {
+    if adt_defn.flags.fundamental && adt_defn.all_parameters().len() != 1 {
+        Err(RustIrError::InvalidFundamentalTypesParameters(
+            adt_defn.name.clone(),
+        ))?;
     }
-}
 
-impl LowerAdtDefn for AdtDefn {
-    fn lower_adt(
-        &self,
-        adt_id: chalk_ir::AdtId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>> {
-        if self.flags.fundamental && self.all_parameters().len() != 1 {
-            Err(RustIrError::InvalidFundamentalTypesParameters(
-                self.name.clone(),
-            ))?;
-        }
-
-        let binders = env.in_binders(self.all_parameters(), |env| {
-            Ok(rust_ir::AdtDatumBound {
-                variants: self
-                    .variants
-                    .iter()
-                    .map(|v| self.lower_adt_variant(v, env))
-                    .collect::<LowerResult<_>>()?,
-                where_clauses: self.where_clauses.lower(env)?,
-            })
-        })?;
-
-        let flags = rust_ir::AdtFlags {
-            upstream: self.flags.upstream,
-            fundamental: self.flags.fundamental,
-            phantom_data: self.flags.phantom_data,
-        };
-
-        Ok(rust_ir::AdtDatum {
-            id: adt_id,
-            binders,
-            flags,
-            kind: match self.flags.kind {
-                AdtKind::Struct => rust_ir::AdtKind::Struct,
-                AdtKind::Enum => rust_ir::AdtKind::Enum,
-                AdtKind::Union => rust_ir::AdtKind::Union,
-            },
+    let binders = env.in_binders(adt_defn.all_parameters(), |env| {
+        Ok(rust_ir::AdtDatumBound {
+            variants: adt_defn
+                .variants
+                .iter()
+                .map(|v| {
+                    let fields: LowerResult<_> = v.fields.iter().map(|f| f.ty.lower(env)).collect();
+                    Ok(rust_ir::AdtVariantDatum { fields: fields? })
+                })
+                .collect::<LowerResult<_>>()?,
+            where_clauses: adt_defn.where_clauses.lower(env)?,
         })
-    }
+    })?;
+
+    let flags = rust_ir::AdtFlags {
+        upstream: adt_defn.flags.upstream,
+        fundamental: adt_defn.flags.fundamental,
+        phantom_data: adt_defn.flags.phantom_data,
+    };
+
+    Ok(rust_ir::AdtDatum {
+        id: adt_id,
+        binders,
+        flags,
+        kind: match adt_defn.flags.kind {
+            AdtKind::Struct => rust_ir::AdtKind::Struct,
+            AdtKind::Enum => rust_ir::AdtKind::Enum,
+            AdtKind::Union => rust_ir::AdtKind::Union,
+        },
+    })
 }
 
 impl Lower for AdtRepr {
@@ -1125,44 +1110,37 @@ impl Lower for AdtRepr {
     }
 }
 
-trait LowerFnDefn {
-    fn lower_fn_def(
-        &self,
-        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>>;
-}
+fn lower_fn_def(
+    fn_defn: &FnDefn,
+    fn_def_id: chalk_ir::FnDefId<ChalkIr>,
+    env: &Env,
+) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
+    let binders = env.in_binders(fn_defn.all_parameters(), |env| {
+        let where_clauses = fn_defn.where_clauses.lower(env)?;
 
-impl LowerFnDefn for FnDefn {
-    fn lower_fn_def(
-        &self,
-        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
-        let binders = env.in_binders(self.all_parameters(), |env| {
-            let where_clauses = self.where_clauses.lower(env)?;
-
-            let inputs_and_output = env.in_binders(vec![], |env| {
-                let args: LowerResult<_> =
-                    self.argument_types.iter().map(|t| t.lower(env)).collect();
-                let return_type = self.return_type.lower(env)?;
-                Ok(rust_ir::FnDefInputsAndOutputDatum {
-                    argument_types: args?,
-                    return_type,
-                })
-            })?;
-            Ok(rust_ir::FnDefDatumBound {
-                inputs_and_output,
-                where_clauses,
+        let inputs_and_output = env.in_binders(vec![], |env| {
+            let args: LowerResult<_> = fn_defn
+                .argument_types
+                .iter()
+                .map(|t| t.lower(env))
+                .collect();
+            let return_type = fn_defn.return_type.lower(env)?;
+            Ok(rust_ir::FnDefInputsAndOutputDatum {
+                argument_types: args?,
+                return_type,
             })
         })?;
-
-        Ok(rust_ir::FnDefDatum {
-            id: fn_def_id,
-            sig: self.sig.lower()?,
-            binders,
+        Ok(rust_ir::FnDefDatumBound {
+            inputs_and_output,
+            where_clauses,
         })
-    }
+    })?;
+
+    Ok(rust_ir::FnDefDatum {
+        id: fn_def_id,
+        sig: fn_defn.sig.lower()?,
+        binders,
+    })
 }
 
 impl Lower for FnSig {
@@ -1723,60 +1701,49 @@ impl LowerInEnv for Lifetime {
     }
 }
 
-trait LowerImpl {
-    fn lower_impl(
-        &self,
-        empty_env: &Env,
-        impl_id: ImplId<ChalkIr>,
-        associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>>;
-}
+#[instrument(level = "debug", skip(impl_, empty_env, associated_ty_value_ids))]
+fn lower_impl(
+    impl_: &Impl,
+    empty_env: &Env,
+    impl_id: ImplId<ChalkIr>,
+    associated_ty_value_ids: &AssociatedTyValueIds,
+) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
+    let polarity = impl_.polarity.lower();
+    let binders = empty_env.in_binders(impl_.all_parameters(), |env| {
+        let trait_ref = impl_.trait_ref.lower(env)?;
+        debug!(?trait_ref);
 
-impl LowerImpl for Impl {
-    #[instrument(level = "debug", skip(self, empty_env, associated_ty_value_ids))]
-    fn lower_impl(
-        &self,
-        empty_env: &Env,
-        impl_id: ImplId<ChalkIr>,
-        associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
-        let polarity = self.polarity.lower();
-        let binders = empty_env.in_binders(self.all_parameters(), |env| {
-            let trait_ref = self.trait_ref.lower(env)?;
-            debug!(?trait_ref);
+        if !polarity.is_positive() && !impl_.assoc_ty_values.is_empty() {
+            Err(RustIrError::NegativeImplAssociatedValues(
+                impl_.trait_ref.trait_name.clone(),
+            ))?;
+        }
 
-            if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
-                Err(RustIrError::NegativeImplAssociatedValues(
-                    self.trait_ref.trait_name.clone(),
-                ))?;
-            }
-
-            let where_clauses = self.where_clauses.lower(&env)?;
-            debug!(where_clauses = ?trait_ref);
-            Ok(rust_ir::ImplDatumBound {
-                trait_ref,
-                where_clauses,
-            })
-        })?;
-
-        // lookup the ids for each of the "associated type values"
-        // within the impl, which should have already assigned and
-        // stored in the map
-        let associated_ty_value_ids = self
-            .assoc_ty_values
-            .iter()
-            .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str.clone())])
-            .collect();
-
-        debug!(?associated_ty_value_ids);
-
-        Ok(rust_ir::ImplDatum {
-            polarity,
-            binders,
-            impl_type: self.impl_type.lower(),
-            associated_ty_value_ids,
+        let where_clauses = impl_.where_clauses.lower(&env)?;
+        debug!(where_clauses = ?trait_ref);
+        Ok(rust_ir::ImplDatumBound {
+            trait_ref,
+            where_clauses,
         })
-    }
+    })?;
+
+    // lookup the ids for each of the "associated type values"
+    // within the impl, which should have already assigned and
+    // stored in the map
+    let associated_ty_value_ids = impl_
+        .assoc_ty_values
+        .iter()
+        .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str.clone())])
+        .collect();
+
+    debug!(?associated_ty_value_ids);
+
+    Ok(rust_ir::ImplDatum {
+        polarity,
+        binders,
+        impl_type: impl_.impl_type.lower(),
+        associated_ty_value_ids,
+    })
 }
 
 impl LowerInEnv for Clause {
@@ -1819,55 +1786,45 @@ impl LowerInEnv for Clause {
     }
 }
 
-trait LowerTrait {
-    fn lower_trait(
-        &self,
-        trait_id: chalk_ir::TraitId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>>;
-}
-
-impl LowerTrait for TraitDefn {
-    fn lower_trait(
-        &self,
-        trait_id: chalk_ir::TraitId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>> {
-        let all_parameters = self.all_parameters();
-        let all_parameters_len = all_parameters.len();
-        let binders = env.in_binders(all_parameters, |env| {
-            if self.flags.auto {
-                if all_parameters_len > 1 {
-                    Err(RustIrError::AutoTraitParameters(self.name.clone()))?;
-                }
-                if !self.where_clauses.is_empty() {
-                    Err(RustIrError::AutoTraitWhereClauses(self.name.clone()))?;
-                }
+fn lower_trait(
+    trait_defn: &TraitDefn,
+    trait_id: chalk_ir::TraitId<ChalkIr>,
+    env: &Env,
+) -> LowerResult<rust_ir::TraitDatum<ChalkIr>> {
+    let all_parameters = trait_defn.all_parameters();
+    let all_parameters_len = all_parameters.len();
+    let binders = env.in_binders(all_parameters, |env| {
+        if trait_defn.flags.auto {
+            if all_parameters_len > 1 {
+                Err(RustIrError::AutoTraitParameters(trait_defn.name.clone()))?;
             }
+            if !trait_defn.where_clauses.is_empty() {
+                Err(RustIrError::AutoTraitWhereClauses(trait_defn.name.clone()))?;
+            }
+        }
 
-            Ok(rust_ir::TraitDatumBound {
-                where_clauses: self.where_clauses.lower(env)?,
-            })
-        })?;
+        Ok(rust_ir::TraitDatumBound {
+            where_clauses: trait_defn.where_clauses.lower(env)?,
+        })
+    })?;
 
-        let associated_ty_ids: Vec<_> = self
-            .assoc_ty_defns
-            .iter()
-            .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str.clone())].id)
-            .collect();
+    let associated_ty_ids: Vec<_> = trait_defn
+        .assoc_ty_defns
+        .iter()
+        .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str.clone())].id)
+        .collect();
 
-        let trait_datum = rust_ir::TraitDatum {
-            id: trait_id,
-            binders,
-            flags: self.flags.lower(),
-            associated_ty_ids,
-            well_known: self.well_known.map(|t| t.lower()),
-        };
+    let trait_datum = rust_ir::TraitDatum {
+        id: trait_id,
+        binders,
+        flags: trait_defn.flags.lower(),
+        associated_ty_ids,
+        well_known: trait_defn.well_known.map(|t| t.lower()),
+    };
 
-        debug!(?trait_datum);
+    debug!(?trait_datum);
 
-        Ok(trait_datum)
-    }
+    Ok(trait_datum)
 }
 
 pub trait LowerGoal<A> {
@@ -1932,8 +1889,8 @@ impl LowerGoal<Env<'_>> for Goal {
     fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
         let interner = env.interner();
         match self {
-            Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
-            Goal::Exists(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids),
+            Goal::ForAll(ids, g) => lower_quantified(g, env, chalk_ir::QuantifierKind::ForAll, ids),
+            Goal::Exists(ids, g) => lower_quantified(g, env, chalk_ir::QuantifierKind::Exists, ids),
             Goal::Implies(hyp, g) => {
                 // We "elaborate" implied bounds by lowering goals like `T: Trait` and
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
@@ -1964,37 +1921,26 @@ impl LowerGoal<Env<'_>> for Goal {
     }
 }
 
+fn lower_quantified(
+    goal: &Goal,
+    env: &Env,
+    quantifier_kind: chalk_ir::QuantifierKind,
+    variable_kinds: &[VariableKind],
+) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+    let interner = env.interner();
+    if variable_kinds.is_empty() {
+        return goal.lower(env);
+    }
+
+    let variable_kinds = variable_kinds.iter().map(|pk| pk.lower());
+    let subgoal = env.in_binders(variable_kinds, |env| goal.lower(env))?;
+    Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
+}
+
 fn apply_result<T>(result: LowerResult<Vec<T>>) -> Vec<LowerResult<T>> {
     match result {
         Ok(v) => v.into_iter().map(Ok).collect(),
         Err(e) => vec![Err(e)],
-    }
-}
-
-trait LowerQuantifiedGoal {
-    fn lower_quantified(
-        &self,
-        env: &Env,
-        quantifier_kind: chalk_ir::QuantifierKind,
-        variable_kinds: &[VariableKind],
-    ) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
-}
-
-impl LowerQuantifiedGoal for Goal {
-    fn lower_quantified(
-        &self,
-        env: &Env,
-        quantifier_kind: chalk_ir::QuantifierKind,
-        variable_kinds: &[VariableKind],
-    ) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
-        let interner = env.interner();
-        if variable_kinds.is_empty() {
-            return self.lower(env);
-        }
-
-        let variable_kinds = variable_kinds.iter().map(|pk| pk.lower());
-        let subgoal = env.in_binders(variable_kinds, |env| self.lower(env))?;
-        Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
     }
 }
 
