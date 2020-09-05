@@ -86,7 +86,8 @@ struct AssociatedTyLookup {
     addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 
-enum ApplyTypeLookup {
+enum ApplyTypeLookup<'k> {
+    Param(&'k chalk_ir::WithKind<ChalkIr, BoundVar>),
     Adt(AdtId<ChalkIr>),
     FnDef(FnDefId<ChalkIr>),
     Closure(ClosureId<ChalkIr>),
@@ -96,110 +97,80 @@ enum ApplyTypeLookup {
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
-impl<'k> Env<'k> {
+impl Env<'_> {
     fn lookup_generic_arg(&self, name: &Identifier) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
         let interner = self.interner();
 
-        if let Some(p) = self.parameter_map.get(&name.str) {
-            let b = p.skip_kind();
-            return match &p.kind {
-                chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
-                    .intern(interner)
-                    .cast(interner)),
-                chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
-                    .intern(interner)
-                    .cast(interner)),
-                chalk_ir::VariableKind::Const(ty) => {
-                    Ok(b.to_const(interner, ty.clone()).cast(interner))
+        let apply = |k: &TypeKind, type_name: chalk_ir::TypeName<ChalkIr>| {
+            if k.binders.len(interner) > 0 {
+                Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name.clone(),
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                })
+            } else {
+                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: type_name,
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner)
+                .cast(interner))
+            }
+        };
+
+        if let Ok(lookup) = self.lookup_apply_type(name) {
+            match lookup {
+                ApplyTypeLookup::Param(p) => {
+                    let b = p.skip_kind();
+                    match &p.kind {
+                        chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
+                            .intern(interner)
+                            .cast(interner)),
+                        chalk_ir::VariableKind::Lifetime => {
+                            Ok(chalk_ir::LifetimeData::BoundVar(*b)
+                                .intern(interner)
+                                .cast(interner))
+                        }
+                        chalk_ir::VariableKind::Const(ty) => {
+                            Ok(b.to_const(interner, ty.clone()).cast(interner))
+                        }
+                    }
                 }
-            };
-        }
-
-        if let Some(id) = self.adt_ids.get(&name.str) {
-            let k = self.adt_kind(*id);
-            if k.binders.len(interner) > 0 {
-                return Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                });
-            } else {
-                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Adt(*id),
+                ApplyTypeLookup::Adt(id) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
+                ApplyTypeLookup::FnDef(id) => {
+                    apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id))
+                }
+                ApplyTypeLookup::Closure(id) => {
+                    apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
+                }
+                ApplyTypeLookup::Opaque(id) => Ok(chalk_ir::TyData::Alias(
+                    chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+                        opaque_ty_id: id,
+                        substitution: chalk_ir::Substitution::empty(interner),
+                    }),
+                )
+                .intern(interner)
+                .cast(interner)),
+            }
+        } else {
+            if let Some(id) = self.foreign_ty_ids.get(&name.str) {
+                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: chalk_ir::TypeName::Foreign(*id),
                     substitution: chalk_ir::Substitution::empty(interner),
                 })
                 .intern(interner)
-                .cast(interner));
-            };
-        }
-
-        if let Some(id) = self.fn_def_ids.get(&name.str) {
-            let k = self.fn_def_kind(*id);
-            if k.binders.len(interner) > 0 {
-                return Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                });
+                .cast(interner))
+            } else if let Some(_) = self.trait_ids.get(&name.str) {
+                Err(RustIrError::NotStruct(name.clone()))
             } else {
-                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::FnDef(*id),
-                    substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner));
+                Err(RustIrError::InvalidParameterName(name.clone()))
             }
         }
-
-        if let Some(id) = self.closure_ids.get(&name.str) {
-            let k = self.closure_kind(*id);
-            if k.binders.len(interner) > 0 {
-                return Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                });
-            } else {
-                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Closure(*id),
-                    // See note in `program`. Unlike rustc, we store upvars separately.
-                    substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner));
-            }
-        }
-
-        if let Some(id) = self.opaque_ty_ids.get(&name.str) {
-            return Ok(
-                chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
-                    opaque_ty_id: *id,
-                    substitution: chalk_ir::Substitution::empty(interner),
-                }))
-                .intern(interner)
-                .cast(interner),
-            );
-        }
-
-        if let Some(id) = self.foreign_ty_ids.get(&name.str) {
-            return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Foreign(*id),
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
-            .intern(interner)
-            .cast(interner));
-        }
-
-        if let Some(_) = self.trait_ids.get(&name.str) {
-            return Err(RustIrError::NotStruct(name.clone()));
-        }
-
-        Err(RustIrError::InvalidParameterName(name.clone()))
     }
 
     fn lookup_apply_type(&self, name: &Identifier) -> LowerResult<ApplyTypeLookup> {
-        if let Some(_) = self.parameter_map.get(&name.str) {
-            return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
+        if let Some(id) = self.parameter_map.get(&name.str) {
+            return Ok(ApplyTypeLookup::Param(id));
         }
 
         if let Some(id) = self.adt_ids.get(&name.str) {
@@ -1367,6 +1338,10 @@ impl Lower for Ty {
 
             Ty::Apply { name, ref args } => {
                 let (apply_name, k) = match env.lookup_apply_type(&name)? {
+                    ApplyTypeLookup::Param(_) => {
+                        return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
+                    }
+
                     ApplyTypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
                     ApplyTypeLookup::FnDef(id) => {
                         (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id))
