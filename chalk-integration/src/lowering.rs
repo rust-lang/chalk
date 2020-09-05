@@ -679,9 +679,7 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
 }
 
 trait LowerParameterMap {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>>;
     fn declared_parameters(&self) -> &[VariableKind];
     fn all_parameters(&self) -> Vec<chalk_ir::WithKind<ChalkIr, Ident>> {
         self.synthetic_parameters()
@@ -710,60 +708,32 @@ trait LowerParameterMap {
     }
 }
 
-impl LowerParameterMap for AdtDefn {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
+macro_rules! lower_param_map {
+    ($type: ident, $synthetic: expr) => {
+        impl LowerParameterMap for $type {
+            fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
+                $synthetic
+            }
+            fn declared_parameters(&self) -> &[VariableKind] {
+                &self.variable_kinds
+            }
+        }
+    };
 }
-
-impl LowerParameterMap for FnDefn {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for ClosureDefn {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for Impl {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for AssocTyDefn {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for AssocTyValue {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for TraitDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        Some(chalk_ir::WithKind::new(
-            chalk_ir::VariableKind::Ty(TyKind::General),
-            Atom::from(SELF),
-        ))
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for Clause {
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
+lower_param_map!(AdtDefn, None);
+lower_param_map!(FnDefn, None);
+lower_param_map!(ClosureDefn, None);
+lower_param_map!(Impl, None);
+lower_param_map!(AssocTyDefn, None);
+lower_param_map!(AssocTyValue, None);
+lower_param_map!(Clause, None);
+lower_param_map!(
+    TraitDefn,
+    Some(chalk_ir::WithKind::new(
+        chalk_ir::VariableKind::Ty(TyKind::General),
+        Atom::from(SELF),
+    ))
+);
 
 fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
     chalk_ir::ApplicationTy {
