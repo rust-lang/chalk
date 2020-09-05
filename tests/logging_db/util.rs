@@ -5,7 +5,8 @@
 //! to `test/`. We can't compile without access to `test/`, so we can't be under
 //! of `test_util.rs`.
 use chalk_integration::{
-    db::ChalkDatabase, lowering::LowerGoal, program::Program, query::LoweringDatabase, SolverChoice,
+    db::ChalkDatabase, lowering::lower_goal, program::Program, query::LoweringDatabase,
+    SolverChoice,
 };
 use chalk_solve::ext::*;
 use chalk_solve::logging_db::LoggingRustIrDatabase;
@@ -47,10 +48,11 @@ pub fn logging_db_output_sufficient(
                 println!("goal {}", goal_text);
                 assert!(goal_text.starts_with("{"));
                 assert!(goal_text.ends_with("}"));
-                let goal = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1])
-                    .unwrap()
-                    .lower(&*program)
-                    .unwrap();
+                let goal = lower_goal(
+                    &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
+                    &*program,
+                )
+                .unwrap();
 
                 println!("using solver: {:?}", solver_choice);
                 let peeled_goal = goal.into_peeled_goal(db.interner());
@@ -88,10 +90,11 @@ pub fn logging_db_output_sufficient(
             println!("goal {}", goal_text);
             assert!(goal_text.starts_with("{"));
             assert!(goal_text.ends_with("}"));
-            let goal = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1])
-                .unwrap()
-                .lower(&*new_program)
-                .unwrap();
+            let goal = lower_goal(
+                &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
+                &*new_program,
+            )
+            .unwrap();
 
             println!("using solver: {:?}", solver_choice);
             let peeled_goal = goal.into_peeled_goal(db.interner());

@@ -1,7 +1,7 @@
 use crate::{
     error::ChalkError,
     interner::ChalkIr,
-    lowering::LowerGoal,
+    lowering::lower_goal,
     program::Program,
     query::{Lowering, LoweringDatabase},
     tls, SolverChoice,
@@ -43,7 +43,7 @@ impl ChalkDatabase {
 
     pub fn parse_and_lower_goal(&self, text: &str) -> Result<Goal<ChalkIr>, ChalkError> {
         let program = self.checked_program()?;
-        Ok(chalk_parse::parse_goal(text)?.lower(&*program)?)
+        Ok(lower_goal(&*chalk_parse::parse_goal(text)?, &*program)?)
     }
 
     pub fn solve(
