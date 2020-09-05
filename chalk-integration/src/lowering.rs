@@ -372,29 +372,47 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
     let mut opaque_ty_kinds = BTreeMap::new();
     let mut object_safe_traits = HashSet::new();
 
+    macro_rules! lower_type_kind {
+        ($self: ident, $sort: ident, $params: expr) => {
+            Ok(TypeKind {
+                sort: TypeSort::$sort,
+                name: $self.name.str.clone(),
+                binders: chalk_ir::Binders::new(
+                    VariableKinds::from_iter(&ChalkIr, $params.anonymize()),
+                    crate::Unit,
+                ),
+            })
+        };
+    }
+
     for (item, &raw_id) in program.items.iter().zip(&raw_ids) {
         match item {
             Item::AdtDefn(defn) => {
-                let type_kind = defn.lower_type_kind()?;
+                let type_kind = lower_type_kind!(defn, Adt, defn.all_parameters())?;
                 let id = AdtId(raw_id);
                 adt_ids.insert(type_kind.name.clone(), id);
                 adt_kinds.insert(id, type_kind);
             }
             Item::FnDefn(defn) => {
-                let type_kind = defn.lower_type_kind()?;
+                let type_kind = lower_type_kind!(defn, Adt, defn.all_parameters())?;
                 let id = FnDefId(raw_id);
                 fn_def_ids.insert(type_kind.name.clone(), id);
                 fn_def_kinds.insert(id, type_kind);
                 fn_def_abis.insert(id, lower_fn_abi(&defn.sig.abi)?);
             }
             Item::ClosureDefn(defn) => {
-                let type_kind = defn.lower_type_kind()?;
+                let type_kind = lower_type_kind!(defn, Adt, defn.all_parameters())?;
                 let id = ClosureId(raw_id);
                 closure_ids.insert(defn.name.str.clone(), id);
                 closure_kinds.insert(id, type_kind);
             }
             Item::TraitDefn(defn) => {
-                let type_kind = defn.lower_type_kind()?;
+                let variable_kinds = defn
+                    .variable_kinds
+                    .iter()
+                    .map(lower_variable_kind)
+                    .collect::<Vec<_>>();
+                let type_kind = lower_type_kind!(defn, Trait, variable_kinds)?;
                 let id = TraitId(raw_id);
                 trait_ids.insert(type_kind.name.clone(), id);
                 trait_kinds.insert(id, type_kind);
@@ -405,9 +423,14 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
                 }
             }
             Item::OpaqueTyDefn(defn) => {
-                let type_kind = defn.lower_type_kind()?;
+                let variable_kinds = defn
+                    .variable_kinds
+                    .iter()
+                    .map(lower_variable_kind)
+                    .collect::<Vec<_>>();
+                let type_kind = lower_type_kind!(defn, Opaque, variable_kinds)?;
                 let id = OpaqueTyId(raw_id);
-                opaque_ty_ids.insert(defn.identifier.str.clone(), id);
+                opaque_ty_ids.insert(defn.name.str.clone(), id);
                 opaque_ty_kinds.insert(id, type_kind);
             }
             Item::Impl(_) => continue,
@@ -582,7 +605,7 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
                 custom_clauses.extend(clause.lower(&empty_env)?);
             }
             Item::OpaqueTyDefn(ref opaque_ty) => {
-                if let Some(&opaque_ty_id) = opaque_ty_ids.get(&opaque_ty.identifier.str) {
+                if let Some(&opaque_ty_id) = opaque_ty_ids.get(&opaque_ty.name.str) {
                     let variable_kinds = opaque_ty
                         .variable_kinds
                         .iter()
@@ -682,13 +705,6 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
     };
 
     Ok(program)
-}
-
-trait LowerTypeKind {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind>;
-    fn interner(&self) -> &ChalkIr {
-        &ChalkIr
-    }
 }
 
 trait LowerParameterMap {
@@ -797,82 +813,6 @@ fn lower_variable_kind(variable_kind: &VariableKind) -> chalk_ir::WithKind<Chalk
     };
 
     chalk_ir::WithKind::new(kind, n.str.clone())
-}
-
-impl LowerTypeKind for AdtDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        Ok(TypeKind {
-            sort: TypeSort::Adt,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(self.interner(), self.all_parameters().anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerTypeKind for FnDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        Ok(TypeKind {
-            sort: TypeSort::FnDef,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(self.interner(), self.all_parameters().anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerTypeKind for ClosureDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        Ok(TypeKind {
-            sort: TypeSort::Closure,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(self.interner(), self.all_parameters().anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let binders: Vec<_> = self
-            .variable_kinds
-            .iter()
-            .map(lower_variable_kind)
-            .collect();
-        Ok(TypeKind {
-            sort: TypeSort::Trait,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                // for the purposes of the *type*, ignore `Self`:
-                VariableKinds::from_iter(self.interner(), binders.anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerTypeKind for OpaqueTyDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let binders: Vec<_> = self
-            .variable_kinds
-            .iter()
-            .map(lower_variable_kind)
-            .collect();
-        Ok(TypeKind {
-            sort: TypeSort::Opaque,
-            name: self.identifier.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(self.interner(), binders.anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
 }
 
 trait LowerInEnv {
