@@ -692,7 +692,9 @@ trait LowerTypeKind {
 }
 
 trait LowerParameterMap {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>>;
+    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
+        None
+    }
     fn declared_parameters(&self) -> &[VariableKind];
     fn all_parameters(&self) -> Vec<chalk_ir::WithKind<ChalkIr, Ident>> {
         self.synthetic_parameters()
@@ -722,60 +724,36 @@ trait LowerParameterMap {
 }
 
 impl LowerParameterMap for AdtDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
 }
 
 impl LowerParameterMap for FnDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
 }
 
 impl LowerParameterMap for ClosureDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
 }
 
 impl LowerParameterMap for Impl {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
 }
 
 impl LowerParameterMap for AssocTyDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
 }
 
 impl LowerParameterMap for AssocTyValue {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
@@ -795,10 +773,6 @@ impl LowerParameterMap for TraitDefn {
 }
 
 impl LowerParameterMap for Clause {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
     fn declared_parameters(&self) -> &[VariableKind] {
         &self.variable_kinds
     }
