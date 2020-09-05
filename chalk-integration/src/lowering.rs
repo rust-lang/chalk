@@ -3,8 +3,8 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId,
-    ForeignDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
-    TyKind, VariableKinds,
+    ForeignDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, TraitId, TyKind,
+    VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -722,30 +722,6 @@ trait LowerParameterMap {
         // trait is not object-safe, and hence not supposed to be used
         // as an object. Actually the handling of object types is
         // probably just kind of messed up right now. That's ok.
-    }
-
-    fn parameter_refs(&self) -> Vec<chalk_ir::GenericArg<ChalkIr>> {
-        self.all_parameters()
-            .anonymize()
-            .iter()
-            .enumerate()
-            .map(|p| p.to_generic_arg(self.interner()))
-            .collect()
-    }
-
-    fn parameter_map(&self) -> ParameterMap {
-        self.all_parameters()
-            .into_iter()
-            .zip((0..).map(|i| BoundVar::new(DebruijnIndex::INNERMOST, i)))
-            .map(|(k, v)| {
-                let (kind, name) = k.into();
-                (name, chalk_ir::WithKind::new(kind, v))
-            })
-            .collect()
-    }
-
-    fn interner(&self) -> &ChalkIr {
-        &ChalkIr
     }
 }
 
@@ -2055,18 +2031,6 @@ trait Kinded {
     fn kind(&self) -> Kind;
 }
 
-impl Kinded for VariableKind {
-    fn kind(&self) -> Kind {
-        match *self {
-            VariableKind::Ty(_) => Kind::Ty,
-            VariableKind::IntegerTy(_) => Kind::Ty,
-            VariableKind::FloatTy(_) => Kind::Ty,
-            VariableKind::Lifetime(_) => Kind::Lifetime,
-            VariableKind::Const(_) => Kind::Const,
-        }
-    }
-}
-
 impl Kinded for chalk_ir::VariableKind<ChalkIr> {
     fn kind(&self) -> Kind {
         match self {
@@ -2077,20 +2041,14 @@ impl Kinded for chalk_ir::VariableKind<ChalkIr> {
     }
 }
 
-impl Kinded for chalk_ir::GenericArgData<ChalkIr> {
+impl Kinded for chalk_ir::GenericArg<ChalkIr> {
     fn kind(&self) -> Kind {
-        match self {
+        let interner = &ChalkIr;
+        match self.data(interner) {
             chalk_ir::GenericArgData::Ty(_) => Kind::Ty,
             chalk_ir::GenericArgData::Lifetime(_) => Kind::Lifetime,
             chalk_ir::GenericArgData::Const(_) => Kind::Const,
         }
-    }
-}
-
-impl Kinded for chalk_ir::GenericArg<ChalkIr> {
-    fn kind(&self) -> Kind {
-        let interner = &ChalkIr;
-        self.data(interner).kind()
     }
 }
 
