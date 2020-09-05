@@ -365,14 +365,14 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
                 adt_kinds.insert(id, type_kind);
             }
             Item::FnDefn(defn) => {
-                let type_kind = lower_type_kind!(defn, Adt, defn.all_parameters())?;
+                let type_kind = lower_type_kind!(defn, FnDef, defn.all_parameters())?;
                 let id = FnDefId(raw_id);
                 fn_def_ids.insert(type_kind.name.clone(), id);
                 fn_def_kinds.insert(id, type_kind);
                 fn_def_abis.insert(id, lower_fn_abi(&defn.sig.abi)?);
             }
             Item::ClosureDefn(defn) => {
-                let type_kind = lower_type_kind!(defn, Adt, defn.all_parameters())?;
+                let type_kind = lower_type_kind!(defn, Closure, defn.all_parameters())?;
                 let id = ClosureId(raw_id);
                 closure_ids.insert(defn.name.str.clone(), id);
                 closure_kinds.insert(id, type_kind);
