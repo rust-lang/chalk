@@ -3,7 +3,7 @@
 
 use crate::error::ChalkError;
 use crate::interner::ChalkIr;
-use crate::lowering::lower_program;
+use crate::lowering::Lower;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::tls;
@@ -124,9 +124,7 @@ impl<T> Clone for ArcEq<T> {
 
 fn program_ir(db: &dyn LoweringDatabase) -> Result<Arc<Program>, ChalkError> {
     let text = db.program_text();
-    Ok(Arc::new(lower_program(&chalk_parse::parse_program(
-        &text,
-    )?)?))
+    Ok(Arc::new(chalk_parse::parse_program(&text)?.lower()?))
 }
 
 fn orphan_check(db: &dyn LoweringDatabase) -> Result<(), ChalkError> {
