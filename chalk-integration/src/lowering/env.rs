@@ -205,6 +205,16 @@ impl Env<'_> {
         &self.opaque_ty_kinds[&id]
     }
 
+    pub fn lookup_associated_ty(
+        &self,
+        trait_id: TraitId<ChalkIr>,
+        ident: &Identifier,
+    ) -> LowerResult<&AssociatedTyLookup> {
+        self.associated_ty_lookups
+            .get(&(trait_id, ident.str.clone()))
+            .ok_or(RustIrError::MissingAssociatedType(ident.clone()))
+    }
+
     /// Introduces new parameters, shifting the indices of existing
     /// parameters to accommodate them. The indices of the new binders
     /// will be assigned in order as they are iterated.

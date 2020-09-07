@@ -868,13 +868,7 @@ impl LowerWithEnv for AliasEqBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let trait_bound = self.trait_bound.lower(env)?;
-        let lookup = match env
-            .associated_ty_lookups
-            .get(&(trait_bound.trait_id, self.name.str.clone()))
-        {
-            Some(lookup) => lookup,
-            None => Err(RustIrError::MissingAssociatedType(self.name.clone()))?,
-        };
+        let lookup = env.lookup_associated_ty(trait_bound.trait_id, &self.name)?;
         let args: Vec<_> = self
             .args
             .iter()
@@ -1011,10 +1005,7 @@ impl LowerWithEnv for ProjectionTy {
             trait_id,
             substitution: trait_substitution,
         } = trait_ref.lower(env)?;
-        let lookup = match env.associated_ty_lookups.get(&(trait_id, name.str.clone())) {
-            Some(lookup) => lookup,
-            None => Err(RustIrError::MissingAssociatedType(self.name.clone()))?,
-        };
+        let lookup = env.lookup_associated_ty(trait_id, name)?;
         let mut args: Vec<_> = args
             .iter()
             .map(|a| a.lower(env))
@@ -1417,7 +1408,7 @@ fn lower_trait(
     let associated_ty_ids: Vec<_> = trait_defn
         .assoc_ty_defns
         .iter()
-        .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str.clone())].id)
+        .map(|defn| env.lookup_associated_ty(trait_id, &defn.name).unwrap().id)
         .collect();
 
     let trait_datum = rust_ir::TraitDatum {
