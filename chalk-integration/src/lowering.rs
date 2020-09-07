@@ -1,6 +1,6 @@
 use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::interner::HasInterner;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId,
     ForeignDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, TraitId, TyKind,
@@ -26,7 +26,6 @@ type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
-type FnDefAbis = BTreeMap<FnDefId<ChalkIr>, <ChalkIr as Interner>::FnAbi>;
 type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
@@ -46,7 +45,6 @@ struct Env<'k> {
     adt_kinds: &'k AdtKinds,
     fn_def_ids: &'k FnDefIds,
     fn_def_kinds: &'k FnDefKinds,
-    fn_def_abis: &'k FnDefAbis,
     closure_ids: &'k ClosureIds,
     closure_kinds: &'k ClosureKinds,
     trait_ids: &'k TraitIds,
@@ -334,7 +332,6 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
     let mut opaque_ty_ids = BTreeMap::new();
     let mut adt_kinds = BTreeMap::new();
     let mut fn_def_kinds = BTreeMap::new();
-    let mut fn_def_abis = BTreeMap::new();
     let mut closure_kinds = BTreeMap::new();
     let mut trait_kinds = BTreeMap::new();
     let mut opaque_ty_kinds = BTreeMap::new();
@@ -353,7 +350,6 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
                 let id = FnDefId(raw_id);
                 fn_def_ids.insert(type_kind.name.clone(), id);
                 fn_def_kinds.insert(id, type_kind);
-                fn_def_abis.insert(id, lower_fn_abi(&defn.sig.abi)?);
             }
             Item::ClosureDefn(defn) => {
                 let type_kind = defn.lower_type_kind()?;
@@ -406,7 +402,6 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
             adt_kinds: &adt_kinds,
             fn_def_ids: &fn_def_ids,
             fn_def_kinds: &fn_def_kinds,
-            fn_def_abis: &fn_def_abis,
             closure_ids: &closure_ids,
             closure_kinds: &closure_kinds,
             trait_ids: &trait_ids,
@@ -1681,12 +1676,6 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         .map(|(&trait_id, datum)| (trait_id, datum.flags.auto))
         .collect();
 
-    let fn_def_abis: BTreeMap<_, _> = program
-        .fn_def_data
-        .iter()
-        .map(|fn_def_data| (*fn_def_data.0, fn_def_data.1.sig.abi))
-        .collect();
-
     let env = Env {
         adt_ids: &program.adt_ids,
         fn_def_ids: &program.fn_def_ids,
@@ -1695,7 +1684,6 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         opaque_ty_ids: &program.opaque_ty_ids,
         adt_kinds: &program.adt_kinds,
         fn_def_kinds: &program.fn_def_kinds,
-        fn_def_abis: &fn_def_abis,
         closure_kinds: &program.closure_kinds,
         trait_kinds: &program.trait_kinds,
         opaque_ty_kinds: &program.opaque_ty_kinds,
