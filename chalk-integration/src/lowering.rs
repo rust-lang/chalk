@@ -118,52 +118,49 @@ impl Env<'_> {
             }
         };
 
-        if let Ok(lookup) = self.lookup_apply_type(name) {
-            match lookup {
-                ApplyTypeLookup::Param(p) => {
-                    let b = p.skip_kind();
-                    match &p.kind {
-                        chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
-                            .intern(interner)
-                            .cast(interner)),
-                        chalk_ir::VariableKind::Lifetime => {
-                            Ok(chalk_ir::LifetimeData::BoundVar(*b)
-                                .intern(interner)
-                                .cast(interner))
-                        }
-                        chalk_ir::VariableKind::Const(ty) => {
-                            Ok(b.to_const(interner, ty.clone()).cast(interner))
-                        }
+        match self.lookup_apply_type(name) {
+            Ok(ApplyTypeLookup::Param(p)) => {
+                let b = p.skip_kind();
+                match &p.kind {
+                    chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
+                        .intern(interner)
+                        .cast(interner)),
+                    chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
+                        .intern(interner)
+                        .cast(interner)),
+                    chalk_ir::VariableKind::Const(ty) => {
+                        Ok(b.to_const(interner, ty.clone()).cast(interner))
                     }
                 }
-                ApplyTypeLookup::Adt(id) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
-                ApplyTypeLookup::FnDef(id) => {
-                    apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id))
-                }
-                ApplyTypeLookup::Closure(id) => {
-                    apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
-                }
-                ApplyTypeLookup::Opaque(id) => Ok(chalk_ir::TyData::Alias(
-                    chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
-                        opaque_ty_id: id,
-                        substitution: chalk_ir::Substitution::empty(interner),
-                    }),
-                )
-                .intern(interner)
-                .cast(interner)),
             }
-        } else {
-            if let Some(id) = self.foreign_ty_ids.get(&name.str) {
-                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Foreign(*id),
+            Ok(ApplyTypeLookup::Adt(id)) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
+            Ok(ApplyTypeLookup::FnDef(id)) => {
+                apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id))
+            }
+            Ok(ApplyTypeLookup::Closure(id)) => {
+                apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
+            }
+            Ok(ApplyTypeLookup::Opaque(id)) => Ok(chalk_ir::TyData::Alias(
+                chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+                    opaque_ty_id: id,
                     substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner))
-            } else if let Some(_) = self.trait_ids.get(&name.str) {
-                Err(RustIrError::NotStruct(name.clone()))
-            } else {
-                Err(RustIrError::InvalidParameterName(name.clone()))
+                }),
+            )
+            .intern(interner)
+            .cast(interner)),
+            Err(_) => {
+                if let Some(id) = self.foreign_ty_ids.get(&name.str) {
+                    Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                        name: chalk_ir::TypeName::Foreign(*id),
+                        substitution: chalk_ir::Substitution::empty(interner),
+                    })
+                    .intern(interner)
+                    .cast(interner))
+                } else if let Some(_) = self.trait_ids.get(&name.str) {
+                    Err(RustIrError::NotStruct(name.clone()))
+                } else {
+                    Err(RustIrError::InvalidParameterName(name.clone()))
+                }
             }
         }
     }
@@ -343,47 +340,29 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
     let mut opaque_ty_kinds = BTreeMap::new();
     let mut object_safe_traits = HashSet::new();
 
-    macro_rules! lower_type_kind {
-        ($self: ident, $sort: ident, $params: expr) => {
-            Ok(TypeKind {
-                sort: TypeSort::$sort,
-                name: $self.name.str.clone(),
-                binders: chalk_ir::Binders::new(
-                    VariableKinds::from_iter(&ChalkIr, $params.anonymize()),
-                    crate::Unit,
-                ),
-            })
-        };
-    }
-
     for (item, &raw_id) in program.items.iter().zip(&raw_ids) {
         match item {
             Item::AdtDefn(defn) => {
-                let type_kind = lower_type_kind!(defn, Adt, defn.all_parameters())?;
+                let type_kind = defn.lower_type_kind()?;
                 let id = AdtId(raw_id);
                 adt_ids.insert(type_kind.name.clone(), id);
                 adt_kinds.insert(id, type_kind);
             }
             Item::FnDefn(defn) => {
-                let type_kind = lower_type_kind!(defn, FnDef, defn.all_parameters())?;
+                let type_kind = defn.lower_type_kind()?;
                 let id = FnDefId(raw_id);
                 fn_def_ids.insert(type_kind.name.clone(), id);
                 fn_def_kinds.insert(id, type_kind);
                 fn_def_abis.insert(id, lower_fn_abi(&defn.sig.abi)?);
             }
             Item::ClosureDefn(defn) => {
-                let type_kind = lower_type_kind!(defn, Closure, defn.all_parameters())?;
+                let type_kind = defn.lower_type_kind()?;
                 let id = ClosureId(raw_id);
                 closure_ids.insert(defn.name.str.clone(), id);
                 closure_kinds.insert(id, type_kind);
             }
             Item::TraitDefn(defn) => {
-                let variable_kinds = defn
-                    .variable_kinds
-                    .iter()
-                    .map(lower_variable_kind)
-                    .collect::<Vec<_>>();
-                let type_kind = lower_type_kind!(defn, Trait, variable_kinds)?;
+                let type_kind = defn.lower_type_kind()?;
                 let id = TraitId(raw_id);
                 trait_ids.insert(type_kind.name.clone(), id);
                 trait_kinds.insert(id, type_kind);
@@ -394,12 +373,7 @@ pub fn lower_program(program: &Program) -> LowerResult<LoweredProgram> {
                 }
             }
             Item::OpaqueTyDefn(defn) => {
-                let variable_kinds = defn
-                    .variable_kinds
-                    .iter()
-                    .map(lower_variable_kind)
-                    .collect::<Vec<_>>();
-                let type_kind = lower_type_kind!(defn, Opaque, variable_kinds)?;
+                let type_kind = defn.lower_type_kind()?;
                 let id = OpaqueTyId(raw_id);
                 opaque_ty_ids.insert(defn.name.str.clone(), id);
                 opaque_ty_kinds.insert(id, type_kind);
@@ -734,6 +708,42 @@ lower_param_map!(
         Atom::from(SELF),
     ))
 );
+
+trait LowerTypeKind {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind>;
+}
+
+macro_rules! lower_type_kind {
+    ($type: ident, $sort: ident, $params: expr) => {
+        impl LowerTypeKind for $type {
+            fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+                Ok(TypeKind {
+                    sort: TypeSort::$sort,
+                    name: self.name.str.clone(),
+                    binders: chalk_ir::Binders::new(
+                        VariableKinds::from_iter(&ChalkIr, $params(self).anonymize()),
+                        crate::Unit,
+                    ),
+                })
+            }
+        }
+    };
+}
+
+lower_type_kind!(AdtDefn, Adt, |defn: &AdtDefn| defn.all_parameters());
+lower_type_kind!(FnDefn, FnDef, |defn: &FnDefn| defn.all_parameters());
+lower_type_kind!(ClosureDefn, Closure, |defn: &ClosureDefn| defn
+    .all_parameters());
+lower_type_kind!(TraitDefn, Trait, |defn: &TraitDefn| defn
+    .variable_kinds
+    .iter()
+    .map(lower_variable_kind)
+    .collect::<Vec<_>>());
+lower_type_kind!(OpaqueTyDefn, Opaque, |defn: &OpaqueTyDefn| defn
+    .variable_kinds
+    .iter()
+    .map(lower_variable_kind)
+    .collect::<Vec<_>>());
 
 fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
     chalk_ir::ApplicationTy {
@@ -1713,7 +1723,10 @@ impl Lower for Goal {
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
                 let where_clauses = hyp
                     .iter()
-                    .flat_map(|clause| apply_result(clause.lower(env)))
+                    .flat_map(|clause| match clause.lower(env) {
+                        Ok(v) => v.into_iter().map(Ok).collect(),
+                        Err(e) => vec![Err(e)],
+                    })
                     .map(|result| result.map(|h| h.into_from_env_clause(interner)));
                 let where_clauses =
                     chalk_ir::ProgramClauses::from_fallible(interner, where_clauses);
@@ -1750,13 +1763,6 @@ fn lower_quantified(
     let variable_kinds = variable_kinds.iter().map(lower_variable_kind);
     let subgoal = env.in_binders(variable_kinds, |env| goal.lower(env))?;
     Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
-}
-
-fn apply_result<T>(result: LowerResult<Vec<T>>) -> Vec<LowerResult<T>> {
-    match result {
-        Ok(v) => v.into_iter().map(Ok).collect(),
-        Err(e) => vec![Err(e)],
-    }
 }
 
 fn lower_well_known_trait(well_known_trait: WellKnownTrait) -> rust_ir::WellKnownTrait {
