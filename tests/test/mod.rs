@@ -3,7 +3,7 @@
 use crate::test_util::assert_same;
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
-use chalk_integration::lowering::LowerGoal;
+use chalk_integration::lowering::lower_goal;
 use chalk_integration::query::LoweringDatabase;
 use chalk_integration::SolverChoice;
 use chalk_ir::Constraints;
@@ -254,10 +254,11 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                 println!("goal {}", goal_text);
                 assert!(goal_text.starts_with("{"));
                 assert!(goal_text.ends_with("}"));
-                let goal = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1])
-                    .unwrap()
-                    .lower(&*program)
-                    .unwrap();
+                let goal = lower_goal(
+                    &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
+                    &*program,
+                )
+                .unwrap();
 
                 println!("using solver: {:?}", solver_choice);
                 let peeled_goal = goal.into_peeled_goal(db.interner());

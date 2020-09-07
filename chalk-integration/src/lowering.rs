@@ -1,10 +1,10 @@
 use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
-use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::interner::HasInterner;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClausePriority, ClosureId, DebruijnIndex, FnDefId,
-    ForeignDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, ToGenericArg, TraitId,
-    TyKind, VariableKinds,
+    ForeignDefId, ImplId, OpaqueTyId, QuantifiedWhereClauses, Substitution, TraitId, TyKind,
+    VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -26,7 +26,6 @@ type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
 type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
-type FnDefAbis = BTreeMap<FnDefId<ChalkIr>, <ChalkIr as Interner>::FnAbi>;
 type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
@@ -46,7 +45,6 @@ struct Env<'k> {
     adt_kinds: &'k AdtKinds,
     fn_def_ids: &'k FnDefIds,
     fn_def_kinds: &'k FnDefKinds,
-    fn_def_abis: &'k FnDefAbis,
     closure_ids: &'k ClosureIds,
     closure_kinds: &'k ClosureKinds,
     trait_ids: &'k TraitIds,
@@ -86,7 +84,8 @@ struct AssociatedTyLookup {
     addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 
-enum ApplyTypeLookup {
+enum ApplyTypeLookup<'k> {
+    Parameter(&'k chalk_ir::WithKind<ChalkIr, BoundVar>),
     Adt(AdtId<ChalkIr>),
     FnDef(FnDefId<ChalkIr>),
     Closure(ClosureId<ChalkIr>),
@@ -96,110 +95,77 @@ enum ApplyTypeLookup {
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
-impl<'k> Env<'k> {
+impl Env<'_> {
     fn lookup_generic_arg(&self, name: &Identifier) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
         let interner = self.interner();
 
-        if let Some(p) = self.parameter_map.get(&name.str) {
-            let b = p.skip_kind();
-            return match &p.kind {
-                chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
-                    .intern(interner)
-                    .cast(interner)),
-                chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
-                    .intern(interner)
-                    .cast(interner)),
-                chalk_ir::VariableKind::Const(ty) => {
-                    Ok(b.to_const(interner, ty.clone()).cast(interner))
+        let apply = |k: &TypeKind, type_name: chalk_ir::TypeName<ChalkIr>| {
+            if k.binders.len(interner) > 0 {
+                Err(RustIrError::IncorrectNumberOfTypeParameters {
+                    identifier: name.clone(),
+                    expected: k.binders.len(interner),
+                    actual: 0,
+                })
+            } else {
+                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                    name: type_name,
+                    substitution: chalk_ir::Substitution::empty(interner),
+                })
+                .intern(interner)
+                .cast(interner))
+            }
+        };
+
+        match self.lookup_apply_type(name) {
+            Ok(ApplyTypeLookup::Parameter(p)) => {
+                let b = p.skip_kind();
+                match &p.kind {
+                    chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
+                        .intern(interner)
+                        .cast(interner)),
+                    chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
+                        .intern(interner)
+                        .cast(interner)),
+                    chalk_ir::VariableKind::Const(ty) => {
+                        Ok(b.to_const(interner, ty.clone()).cast(interner))
+                    }
                 }
-            };
-        }
-
-        if let Some(id) = self.adt_ids.get(&name.str) {
-            let k = self.adt_kind(*id);
-            if k.binders.len(interner) > 0 {
-                return Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                });
-            } else {
-                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Adt(*id),
-                    substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner));
-            };
-        }
-
-        if let Some(id) = self.fn_def_ids.get(&name.str) {
-            let k = self.fn_def_kind(*id);
-            if k.binders.len(interner) > 0 {
-                return Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                });
-            } else {
-                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::FnDef(*id),
-                    substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner));
             }
-        }
-
-        if let Some(id) = self.closure_ids.get(&name.str) {
-            let k = self.closure_kind(*id);
-            if k.binders.len(interner) > 0 {
-                return Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                });
-            } else {
-                return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                    name: chalk_ir::TypeName::Closure(*id),
-                    // See note in `program`. Unlike rustc, we store upvars separately.
-                    substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner));
+            Ok(ApplyTypeLookup::Adt(id)) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
+            Ok(ApplyTypeLookup::FnDef(id)) => {
+                apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id))
             }
-        }
-
-        if let Some(id) = self.opaque_ty_ids.get(&name.str) {
-            return Ok(
-                chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
-                    opaque_ty_id: *id,
+            Ok(ApplyTypeLookup::Closure(id)) => {
+                apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
+            }
+            Ok(ApplyTypeLookup::Opaque(id)) => Ok(chalk_ir::TyData::Alias(
+                chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+                    opaque_ty_id: id,
                     substitution: chalk_ir::Substitution::empty(interner),
-                }))
-                .intern(interner)
-                .cast(interner),
-            );
-        }
-
-        if let Some(id) = self.foreign_ty_ids.get(&name.str) {
-            return Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Foreign(*id),
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
+                }),
+            )
             .intern(interner)
-            .cast(interner));
+            .cast(interner)),
+            Err(_) => {
+                if let Some(id) = self.foreign_ty_ids.get(&name.str) {
+                    Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                        name: chalk_ir::TypeName::Foreign(*id),
+                        substitution: chalk_ir::Substitution::empty(interner),
+                    })
+                    .intern(interner)
+                    .cast(interner))
+                } else if let Some(_) = self.trait_ids.get(&name.str) {
+                    Err(RustIrError::NotStruct(name.clone()))
+                } else {
+                    Err(RustIrError::InvalidParameterName(name.clone()))
+                }
+            }
         }
-
-        if let Some(_) = self.trait_ids.get(&name.str) {
-            return Err(RustIrError::NotStruct(name.clone()));
-        }
-
-        Err(RustIrError::InvalidParameterName(name.clone()))
     }
 
     fn lookup_apply_type(&self, name: &Identifier) -> LowerResult<ApplyTypeLookup> {
-        if let Some(_) = self.parameter_map.get(&name.str) {
-            return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
+        if let Some(id) = self.parameter_map.get(&name.str) {
+            return Ok(ApplyTypeLookup::Parameter(id));
         }
 
         if let Some(id) = self.adt_ids.get(&name.str) {
@@ -307,23 +273,19 @@ impl<'k> Env<'k> {
         T: HasInterner<Interner = ChalkIr>,
         OP: FnOnce(&Self) -> LowerResult<T>,
     {
-        let interner = &ChalkIr;
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
         Ok(chalk_ir::Binders::new(
-            VariableKinds::from_iter(interner, binders.iter().map(|v| v.kind.clone())),
+            VariableKinds::from_iter(self.interner(), binders.iter().map(|v| v.kind.clone())),
             op(&env)?,
         ))
     }
 }
 
-pub(crate) trait LowerProgram {
-    /// Lowers from a Program AST to the internal IR for a program.
-    fn lower(&self) -> LowerResult<LoweredProgram>;
-}
+impl Lower for Program {
+    type Lowered = LowerResult<LoweredProgram>;
 
-impl LowerProgram for Program {
-    fn lower(&self) -> LowerResult<LoweredProgram> {
+    fn lower(&self) -> Self::Lowered {
         let mut index = 0;
         let mut next_item_id = || -> RawId {
             let i = index;
@@ -375,7 +337,6 @@ impl LowerProgram for Program {
         let mut opaque_ty_ids = BTreeMap::new();
         let mut adt_kinds = BTreeMap::new();
         let mut fn_def_kinds = BTreeMap::new();
-        let mut fn_def_abis = BTreeMap::new();
         let mut closure_kinds = BTreeMap::new();
         let mut trait_kinds = BTreeMap::new();
         let mut opaque_ty_kinds = BTreeMap::new();
@@ -394,7 +355,6 @@ impl LowerProgram for Program {
                     let id = FnDefId(raw_id);
                     fn_def_ids.insert(type_kind.name.clone(), id);
                     fn_def_kinds.insert(id, type_kind);
-                    fn_def_abis.insert(id, defn.sig.abi.lower()?);
                 }
                 Item::ClosureDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -416,7 +376,7 @@ impl LowerProgram for Program {
                 Item::OpaqueTyDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = OpaqueTyId(raw_id);
-                    opaque_ty_ids.insert(defn.identifier.str.clone(), id);
+                    opaque_ty_ids.insert(defn.name.str.clone(), id);
                     opaque_ty_kinds.insert(id, type_kind);
                 }
                 Item::Impl(_) => continue,
@@ -447,7 +407,6 @@ impl LowerProgram for Program {
                 adt_kinds: &adt_kinds,
                 fn_def_ids: &fn_def_ids,
                 fn_def_kinds: &fn_def_kinds,
-                fn_def_abis: &fn_def_abis,
                 closure_ids: &closure_ids,
                 closure_kinds: &closure_kinds,
                 trait_ids: &trait_ids,
@@ -463,19 +422,19 @@ impl LowerProgram for Program {
             match *item {
                 Item::AdtDefn(ref d) => {
                     let adt_id = AdtId(raw_id);
-                    adt_data.insert(adt_id, Arc::new(d.lower_adt(adt_id, &empty_env)?));
-                    adt_reprs.insert(adt_id, d.lower_adt_repr()?);
+                    adt_data.insert(adt_id, Arc::new(lower_adt(d, adt_id, &empty_env)?));
+                    adt_reprs.insert(adt_id, d.repr.lower());
                 }
                 Item::FnDefn(ref defn) => {
                     let fn_def_id = FnDefId(raw_id);
                     fn_def_data.insert(
                         fn_def_id,
-                        Arc::new(defn.lower_fn_def(fn_def_id, &empty_env)?),
+                        Arc::new(lower_fn_def(defn, fn_def_id, &empty_env)?),
                     );
                 }
                 Item::ClosureDefn(ref defn) => {
                     let closure_def_id = ClosureId(raw_id);
-                    let (kind, inputs_and_output) = defn.lower_closure(&empty_env)?;
+                    let (kind, inputs_and_output) = defn.lower(&empty_env)?;
                     closure_closure_kind.insert(closure_def_id, kind);
                     closure_inputs_and_output.insert(closure_def_id, inputs_and_output);
                     let upvars = empty_env.in_binders(defn.all_parameters(), |env| {
@@ -495,7 +454,7 @@ impl LowerProgram for Program {
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    let trait_datum = trait_defn.lower_trait(trait_id, &empty_env)?;
+                    let trait_datum = lower_trait(trait_defn, trait_id, &empty_env)?;
 
                     if let Some(well_known) = trait_datum.well_known {
                         well_known_traits.insert(well_known, trait_id);
@@ -550,7 +509,8 @@ impl LowerProgram for Program {
                 }
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
-                    let impl_datum = Arc::new(impl_defn.lower_impl(
+                    let impl_datum = Arc::new(lower_impl(
+                        impl_defn,
                         &empty_env,
                         impl_id,
                         &associated_ty_value_ids,
@@ -587,10 +547,10 @@ impl LowerProgram for Program {
                     }
                 }
                 Item::Clause(ref clause) => {
-                    custom_clauses.extend(clause.lower_clause(&empty_env)?);
+                    custom_clauses.extend(clause.lower(&empty_env)?);
                 }
                 Item::OpaqueTyDefn(ref opaque_ty) => {
-                    if let Some(&opaque_ty_id) = opaque_ty_ids.get(&opaque_ty.identifier.str) {
+                    if let Some(&opaque_ty_id) = opaque_ty_ids.get(&opaque_ty.name.str) {
                         let variable_kinds = opaque_ty
                             .variable_kinds
                             .iter()
@@ -694,10 +654,6 @@ impl LowerProgram for Program {
     }
 }
 
-trait LowerTypeKind {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind>;
-}
-
 trait LowerParameterMap {
     fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>>;
     fn declared_parameters(&self) -> &[VariableKind];
@@ -726,114 +682,70 @@ trait LowerParameterMap {
         // as an object. Actually the handling of object types is
         // probably just kind of messed up right now. That's ok.
     }
-
-    fn parameter_refs(&self) -> Vec<chalk_ir::GenericArg<ChalkIr>> {
-        self.all_parameters()
-            .anonymize()
-            .iter()
-            .enumerate()
-            .map(|p| p.to_generic_arg(self.interner()))
-            .collect()
-    }
-
-    fn parameter_map(&self) -> ParameterMap {
-        self.all_parameters()
-            .into_iter()
-            .zip((0..).map(|i| BoundVar::new(DebruijnIndex::INNERMOST, i)))
-            .map(|(k, v)| {
-                let (kind, name) = k.into();
-                (name, chalk_ir::WithKind::new(kind, v))
-            })
-            .collect()
-    }
-
-    fn interner(&self) -> &ChalkIr {
-        &ChalkIr
-    }
 }
 
-impl LowerParameterMap for AdtDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
+macro_rules! lower_param_map {
+    ($type: ident, $synthetic: expr) => {
+        impl LowerParameterMap for $type {
+            fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
+                $synthetic
+            }
+            fn declared_parameters(&self) -> &[VariableKind] {
+                &self.variable_kinds
+            }
+        }
+    };
+}
+lower_param_map!(AdtDefn, None);
+lower_param_map!(FnDefn, None);
+lower_param_map!(ClosureDefn, None);
+lower_param_map!(Impl, None);
+lower_param_map!(AssocTyDefn, None);
+lower_param_map!(AssocTyValue, None);
+lower_param_map!(Clause, None);
+lower_param_map!(
+    TraitDefn,
+    Some(chalk_ir::WithKind::new(
+        chalk_ir::VariableKind::Ty(TyKind::General),
+        Atom::from(SELF),
+    ))
+);
 
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
+trait LowerTypeKind {
+    fn lower_type_kind(&self) -> LowerResult<TypeKind>;
 }
 
-impl LowerParameterMap for FnDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
+macro_rules! lower_type_kind {
+    ($type: ident, $sort: ident, $params: expr) => {
+        impl LowerTypeKind for $type {
+            fn lower_type_kind(&self) -> LowerResult<TypeKind> {
+                Ok(TypeKind {
+                    sort: TypeSort::$sort,
+                    name: self.name.str.clone(),
+                    binders: chalk_ir::Binders::new(
+                        VariableKinds::from_iter(&ChalkIr, $params(self).anonymize()),
+                        crate::Unit,
+                    ),
+                })
+            }
+        }
+    };
 }
 
-impl LowerParameterMap for ClosureDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for Impl {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for AssocTyDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for AssocTyValue {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for TraitDefn {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        Some(chalk_ir::WithKind::new(
-            chalk_ir::VariableKind::Ty(TyKind::General),
-            Atom::from(SELF),
-        ))
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
-
-impl LowerParameterMap for Clause {
-    fn synthetic_parameters(&self) -> Option<chalk_ir::WithKind<ChalkIr, Ident>> {
-        None
-    }
-
-    fn declared_parameters(&self) -> &[VariableKind] {
-        &self.variable_kinds
-    }
-}
+lower_type_kind!(AdtDefn, Adt, |defn: &AdtDefn| defn.all_parameters());
+lower_type_kind!(FnDefn, FnDef, |defn: &FnDefn| defn.all_parameters());
+lower_type_kind!(ClosureDefn, Closure, |defn: &ClosureDefn| defn
+    .all_parameters());
+lower_type_kind!(TraitDefn, Trait, |defn: &TraitDefn| defn
+    .variable_kinds
+    .iter()
+    .map(|k| k.lower())
+    .collect::<Vec<_>>());
+lower_type_kind!(OpaqueTyDefn, Opaque, |defn: &OpaqueTyDefn| defn
+    .variable_kinds
+    .iter()
+    .map(|k| k.lower())
+    .collect::<Vec<_>>());
 
 fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
     chalk_ir::ApplicationTy {
@@ -844,150 +756,39 @@ fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
     .intern(&ChalkIr)
 }
 
-trait LowerVariableKind {
-    fn lower(&self) -> chalk_ir::WithKind<ChalkIr, Ident>;
-}
-
-impl LowerVariableKind for VariableKind {
-    fn lower(&self) -> chalk_ir::WithKind<ChalkIr, Ident> {
-        match self {
-            VariableKind::Ty(n) => chalk_ir::WithKind::new(
-                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::General),
-                n.str.clone(),
-            ),
-            VariableKind::IntegerTy(n) => chalk_ir::WithKind::new(
-                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Integer),
-                n.str.clone(),
-            ),
-            VariableKind::FloatTy(n) => chalk_ir::WithKind::new(
-                chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Float),
-                n.str.clone(),
-            ),
-            VariableKind::Lifetime(n) => {
-                chalk_ir::WithKind::new(chalk_ir::VariableKind::Lifetime, n.str.clone())
+impl Lower for VariableKind {
+    type Lowered = chalk_ir::WithKind<ChalkIr, Ident>;
+    fn lower(&self) -> Self::Lowered {
+        let (kind, n) = match self {
+            VariableKind::Ty(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::General), n),
+            VariableKind::IntegerTy(n) => {
+                (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Integer), n)
             }
-            VariableKind::Const(ref n) => chalk_ir::WithKind::new(
-                chalk_ir::VariableKind::Const(get_type_of_u32()),
-                n.str.clone(),
-            ),
-        }
+            VariableKind::FloatTy(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Float), n),
+            VariableKind::Lifetime(n) => (chalk_ir::VariableKind::Lifetime, n),
+            VariableKind::Const(ref n) => (chalk_ir::VariableKind::Const(get_type_of_u32()), n),
+        };
+
+        chalk_ir::WithKind::new(kind, n.str.clone())
     }
 }
 
-trait LowerWhereClauses {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause];
+pub trait Lower {
+    type Lowered;
 
-    fn lower_where_clauses(
-        &self,
-        env: &Env,
-    ) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
-        self.where_clauses().lower(env)
-    }
+    fn lower(&self) -> Self::Lowered;
 }
 
-impl LowerTypeKind for AdtDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
-        Ok(TypeKind {
-            sort: TypeSort::Adt,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
+trait LowerWithEnv {
+    type Lowered;
+
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered>;
 }
 
-impl LowerTypeKind for FnDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
-        Ok(TypeKind {
-            sort: TypeSort::FnDef,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
+impl LowerWithEnv for [QuantifiedWhereClause] {
+    type Lowered = Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
 
-impl LowerWhereClauses for FnDefn {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
-    }
-}
-
-impl LowerTypeKind for ClosureDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
-        Ok(TypeKind {
-            sort: TypeSort::Closure,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, self.all_parameters().anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerWhereClauses for AdtDefn {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
-    }
-}
-
-impl LowerTypeKind for TraitDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
-        let binders: Vec<_> = self.variable_kinds.iter().map(|p| p.lower()).collect();
-        Ok(TypeKind {
-            sort: TypeSort::Trait,
-            name: self.name.str.clone(),
-            binders: chalk_ir::Binders::new(
-                // for the purposes of the *type*, ignore `Self`:
-                VariableKinds::from_iter(interner, binders.anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerTypeKind for OpaqueTyDefn {
-    fn lower_type_kind(&self) -> LowerResult<TypeKind> {
-        let interner = &ChalkIr;
-        let binders: Vec<_> = self.variable_kinds.iter().map(|p| p.lower()).collect();
-        Ok(TypeKind {
-            sort: TypeSort::Opaque,
-            name: self.identifier.str.clone(),
-            binders: chalk_ir::Binders::new(
-                VariableKinds::from_iter(interner, binders.anonymize()),
-                crate::Unit,
-            ),
-        })
-    }
-}
-
-impl LowerWhereClauses for TraitDefn {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
-    }
-}
-
-impl LowerWhereClauses for Impl {
-    fn where_clauses(&self) -> &[QuantifiedWhereClause] {
-        &self.where_clauses
-    }
-}
-
-trait LowerWhereClauseVec {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>>;
-}
-
-impl LowerWhereClauseVec for [QuantifiedWhereClause] {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         self.iter()
             .flat_map(|wc| match wc.lower(env) {
                 Ok(v) => v.into_iter().map(Ok).collect(),
@@ -997,16 +798,14 @@ impl LowerWhereClauseVec for [QuantifiedWhereClause] {
     }
 }
 
-trait LowerWhereClause<T> {
+impl LowerWithEnv for WhereClause {
+    type Lowered = Vec<chalk_ir::WhereClause<ChalkIr>>;
+
     /// Lower from an AST `where` clause to an internal IR.
     /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
     /// As for now, this is the only the case for `where T: Foo<Item = U>` which lowers to
     /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
-    fn lower(&self, env: &Env) -> LowerResult<Vec<T>>;
-}
-
-impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::WhereClause<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let where_clauses = match self {
             WhereClause::Implemented { trait_ref } => {
                 vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
@@ -1038,20 +837,25 @@ impl LowerWhereClause<chalk_ir::WhereClause<ChalkIr>> for WhereClause {
         Ok(where_clauses)
     }
 }
-impl LowerWhereClause<chalk_ir::QuantifiedWhereClause<ChalkIr>> for QuantifiedWhereClause {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>> {
-        let variable_kinds = self.variable_kinds.iter().map(|pk| pk.lower());
+
+impl LowerWithEnv for QuantifiedWhereClause {
+    type Lowered = Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
+
+    /// Lower from an AST `where` clause to an internal IR.
+    /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
+    /// As for now, this is the only the case for `where T: Foo<Item = U>` which lowers to
+    /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
+        let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
         let binders = env.in_binders(variable_kinds, |env| Ok(self.where_clause.lower(env)?))?;
         Ok(binders.into_iter().collect())
     }
 }
 
-trait LowerDomainGoal {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::DomainGoal<ChalkIr>>>;
-}
+impl LowerWithEnv for DomainGoal {
+    type Lowered = Vec<chalk_ir::DomainGoal<ChalkIr>>;
 
-impl LowerDomainGoal for DomainGoal {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<chalk_ir::DomainGoal<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         let goals = match self {
             DomainGoal::Holds { where_clause } => where_clause
@@ -1100,12 +904,10 @@ impl LowerDomainGoal for DomainGoal {
     }
 }
 
-trait LowerLeafGoal {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
-}
+impl LowerWithEnv for LeafGoal {
+    type Lowered = chalk_ir::Goal<ChalkIr>;
 
-impl LowerLeafGoal for LeafGoal {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         Ok(match self {
             LeafGoal::DomainGoal { goal } => {
@@ -1120,141 +922,108 @@ impl LowerLeafGoal for LeafGoal {
     }
 }
 
-trait LowerAdtDefn {
-    fn lower_adt(
-        &self,
-        adt_id: chalk_ir::AdtId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>>;
-
-    fn lower_adt_variant(
-        &self,
-        variant: &Variant,
-        env: &Env,
-    ) -> LowerResult<rust_ir::AdtVariantDatum<ChalkIr>> {
-        let fields: LowerResult<_> = variant.fields.iter().map(|f| f.ty.lower(env)).collect();
-        Ok(rust_ir::AdtVariantDatum { fields: fields? })
+fn lower_adt(
+    adt_defn: &AdtDefn,
+    adt_id: chalk_ir::AdtId<ChalkIr>,
+    env: &Env,
+) -> LowerResult<rust_ir::AdtDatum<ChalkIr>> {
+    if adt_defn.flags.fundamental && adt_defn.all_parameters().len() != 1 {
+        Err(RustIrError::InvalidFundamentalTypesParameters(
+            adt_defn.name.clone(),
+        ))?;
     }
-}
 
-impl LowerAdtDefn for AdtDefn {
-    fn lower_adt(
-        &self,
-        adt_id: chalk_ir::AdtId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::AdtDatum<ChalkIr>> {
-        if self.flags.fundamental && self.all_parameters().len() != 1 {
-            Err(RustIrError::InvalidFundamentalTypesParameters(
-                self.name.clone(),
-            ))?;
-        }
-
-        let binders = env.in_binders(self.all_parameters(), |env| {
-            let variants: LowerResult<_> = self
+    let binders = env.in_binders(adt_defn.all_parameters(), |env| {
+        Ok(rust_ir::AdtDatumBound {
+            variants: adt_defn
                 .variants
                 .iter()
-                .map(|v| self.lower_adt_variant(v, env))
-                .collect();
-            let where_clauses = self.lower_where_clauses(env)?;
-
-            Ok(rust_ir::AdtDatumBound {
-                variants: variants?,
-                where_clauses,
-            })
-        })?;
-
-        let flags = rust_ir::AdtFlags {
-            upstream: self.flags.upstream,
-            fundamental: self.flags.fundamental,
-            phantom_data: self.flags.phantom_data,
-        };
-
-        Ok(rust_ir::AdtDatum {
-            id: adt_id,
-            binders,
-            flags,
-            kind: match self.flags.kind {
-                AdtKind::Struct => rust_ir::AdtKind::Struct,
-                AdtKind::Enum => rust_ir::AdtKind::Enum,
-                AdtKind::Union => rust_ir::AdtKind::Union,
-            },
-        })
-    }
-}
-
-trait LowerAdtRepr {
-    fn lower_adt_repr(&self) -> LowerResult<rust_ir::AdtRepr>;
-}
-
-impl LowerAdtRepr for AdtDefn {
-    fn lower_adt_repr(&self) -> LowerResult<rust_ir::AdtRepr> {
-        Ok(rust_ir::AdtRepr {
-            repr_c: self.repr.repr_c,
-            repr_packed: self.repr.repr_packed,
-        })
-    }
-}
-
-trait LowerFnDefn {
-    fn lower_fn_def(
-        &self,
-        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>>;
-}
-
-impl LowerFnDefn for FnDefn {
-    fn lower_fn_def(
-        &self,
-        fn_def_id: chalk_ir::FnDefId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
-        let binders = env.in_binders(self.all_parameters(), |env| {
-            let where_clauses = self.lower_where_clauses(env)?;
-
-            let inputs_and_output = env.in_binders(vec![], |env| {
-                let args: LowerResult<_> =
-                    self.argument_types.iter().map(|t| t.lower(env)).collect();
-                let return_type = self.return_type.lower(env)?;
-                Ok(rust_ir::FnDefInputsAndOutputDatum {
-                    argument_types: args?,
-                    return_type,
+                .map(|v| {
+                    let fields: LowerResult<_> = v.fields.iter().map(|f| f.ty.lower(env)).collect();
+                    Ok(rust_ir::AdtVariantDatum { fields: fields? })
                 })
-            })?;
-            Ok(rust_ir::FnDefDatumBound {
-                inputs_and_output,
-                where_clauses,
-            })
-        })?;
-
-        Ok(rust_ir::FnDefDatum {
-            id: fn_def_id,
-            sig: self.sig.lower()?,
-            binders,
+                .collect::<LowerResult<_>>()?,
+            where_clauses: adt_defn.where_clauses.lower(env)?,
         })
+    })?;
+
+    let flags = rust_ir::AdtFlags {
+        upstream: adt_defn.flags.upstream,
+        fundamental: adt_defn.flags.fundamental,
+        phantom_data: adt_defn.flags.phantom_data,
+    };
+
+    Ok(rust_ir::AdtDatum {
+        id: adt_id,
+        binders,
+        flags,
+        kind: match adt_defn.flags.kind {
+            AdtKind::Struct => rust_ir::AdtKind::Struct,
+            AdtKind::Enum => rust_ir::AdtKind::Enum,
+            AdtKind::Union => rust_ir::AdtKind::Union,
+        },
+    })
+}
+
+impl Lower for AdtRepr {
+    type Lowered = rust_ir::AdtRepr;
+
+    fn lower(&self) -> Self::Lowered {
+        rust_ir::AdtRepr {
+            repr_c: self.repr_c,
+            repr_packed: self.repr_packed,
+        }
     }
 }
 
-trait LowerFnSig {
-    fn lower(&self) -> LowerResult<chalk_ir::FnSig<ChalkIr>>;
+fn lower_fn_def(
+    fn_defn: &FnDefn,
+    fn_def_id: chalk_ir::FnDefId<ChalkIr>,
+    env: &Env,
+) -> LowerResult<rust_ir::FnDefDatum<ChalkIr>> {
+    let binders = env.in_binders(fn_defn.all_parameters(), |env| {
+        let where_clauses = fn_defn.where_clauses.lower(env)?;
+
+        let inputs_and_output = env.in_binders(vec![], |env| {
+            let args: LowerResult<_> = fn_defn
+                .argument_types
+                .iter()
+                .map(|t| t.lower(env))
+                .collect();
+            let return_type = fn_defn.return_type.lower(env)?;
+            Ok(rust_ir::FnDefInputsAndOutputDatum {
+                argument_types: args?,
+                return_type,
+            })
+        })?;
+        Ok(rust_ir::FnDefDatumBound {
+            inputs_and_output,
+            where_clauses,
+        })
+    })?;
+
+    Ok(rust_ir::FnDefDatum {
+        id: fn_def_id,
+        sig: fn_defn.sig.lower()?,
+        binders,
+    })
 }
 
-impl LowerFnSig for FnSig {
-    fn lower(&self) -> LowerResult<chalk_ir::FnSig<ChalkIr>> {
+impl Lower for FnSig {
+    type Lowered = LowerResult<chalk_ir::FnSig<ChalkIr>>;
+
+    fn lower(&self) -> Self::Lowered {
         Ok(chalk_ir::FnSig {
             abi: self.abi.lower()?,
-            safety: ast_safety_to_chalk_safety(self.safety),
+            safety: self.safety.lower(),
             variadic: self.variadic,
         })
     }
 }
 
-trait LowerFnAbi {
-    fn lower(&self) -> LowerResult<ChalkFnAbi>;
-}
-
-impl LowerFnAbi for FnAbi {
-    fn lower(&self) -> LowerResult<ChalkFnAbi> {
+impl Lower for FnAbi {
+    type Lowered = LowerResult<ChalkFnAbi>;
+    fn lower(&self) -> Self::Lowered {
         match self.0.as_ref() {
             "Rust" => Ok(ChalkFnAbi::Rust),
             "C" => Ok(ChalkFnAbi::C),
@@ -1263,24 +1032,13 @@ impl LowerFnAbi for FnAbi {
     }
 }
 
-trait LowerClosureDefn {
-    fn lower_closure(
-        &self,
-        env: &Env,
-    ) -> LowerResult<(
+impl LowerWithEnv for ClosureDefn {
+    type Lowered = (
         rust_ir::ClosureKind,
         chalk_ir::Binders<rust_ir::FnDefInputsAndOutputDatum<ChalkIr>>,
-    )>;
-}
+    );
 
-impl LowerClosureDefn for ClosureDefn {
-    fn lower_closure(
-        &self,
-        env: &Env,
-    ) -> LowerResult<(
-        rust_ir::ClosureKind,
-        chalk_ir::Binders<rust_ir::FnDefInputsAndOutputDatum<ChalkIr>>,
-    )> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let inputs_and_output = env.in_binders(self.all_parameters(), |env| {
             let args: LowerResult<_> = self.argument_types.iter().map(|t| t.lower(env)).collect();
             let return_type = self.return_type.lower(env)?;
@@ -1290,30 +1048,26 @@ impl LowerClosureDefn for ClosureDefn {
             })
         })?;
 
-        Ok((self.kind.lower_closure_kind()?, inputs_and_output))
+        Ok((self.kind.lower(), inputs_and_output))
     }
 }
 
-trait LowerClosureKind {
-    fn lower_closure_kind(&self) -> LowerResult<rust_ir::ClosureKind>;
-}
+impl Lower for ClosureKind {
+    type Lowered = rust_ir::ClosureKind;
 
-impl LowerClosureKind for ClosureKind {
-    fn lower_closure_kind(&self) -> LowerResult<rust_ir::ClosureKind> {
-        Ok(match self {
+    fn lower(&self) -> Self::Lowered {
+        match self {
             ClosureKind::Fn => rust_ir::ClosureKind::Fn,
             ClosureKind::FnMut => rust_ir::ClosureKind::FnMut,
             ClosureKind::FnOnce => rust_ir::ClosureKind::FnOnce,
-        })
+        }
     }
 }
 
-trait LowerTraitRef {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TraitRef<ChalkIr>>;
-}
+impl LowerWithEnv for TraitRef {
+    type Lowered = chalk_ir::TraitRef<ChalkIr>;
 
-impl LowerTraitRef for TraitRef {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::TraitRef<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         let without_self = TraitBound {
             trait_name: self.trait_name.clone(),
@@ -1326,13 +1080,11 @@ impl LowerTraitRef for TraitRef {
     }
 }
 
-trait LowerTraitBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound<ChalkIr>>;
-}
+impl LowerWithEnv for TraitBound {
+    type Lowered = rust_ir::TraitBound<ChalkIr>;
 
-impl LowerTraitBound for TraitBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::TraitBound<ChalkIr>> {
-        let interner = &ChalkIr;
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
+        let interner = env.interner();
         let trait_id = env.lookup_trait(&self.trait_name)?;
 
         let k = env.trait_kind(trait_id);
@@ -1371,12 +1123,10 @@ impl LowerTraitBound for TraitBound {
     }
 }
 
-trait LowerAliasEqBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::AliasEqBound<ChalkIr>>;
-}
+impl LowerWithEnv for AliasEqBound {
+    type Lowered = rust_ir::AliasEqBound<ChalkIr>;
 
-impl LowerAliasEqBound for AliasEqBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::AliasEqBound<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let trait_bound = self.trait_bound.lower(env)?;
         let lookup = match env
             .associated_ty_lookups
@@ -1418,12 +1168,10 @@ impl LowerAliasEqBound for AliasEqBound {
     }
 }
 
-trait LowerInlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound<ChalkIr>>;
-}
+impl LowerWithEnv for InlineBound {
+    type Lowered = rust_ir::InlineBound<ChalkIr>;
 
-impl LowerInlineBound for InlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::InlineBound<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let bound = match self {
             InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
             InlineBound::AliasEqBound(b) => rust_ir::InlineBound::AliasEqBound(b.lower(&env)?),
@@ -1432,24 +1180,20 @@ impl LowerInlineBound for InlineBound {
     }
 }
 
-trait LowerQuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound<ChalkIr>>;
-}
+impl LowerWithEnv for QuantifiedInlineBound {
+    type Lowered = rust_ir::QuantifiedInlineBound<ChalkIr>;
 
-impl LowerQuantifiedInlineBound for QuantifiedInlineBound {
-    fn lower(&self, env: &Env) -> LowerResult<rust_ir::QuantifiedInlineBound<ChalkIr>> {
-        let variable_kinds = self.variable_kinds.iter().map(|pk| pk.lower());
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
+        let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
         let binders = env.in_binders(variable_kinds, |env| Ok(self.bound.lower(env)?))?;
         Ok(binders)
     }
 }
 
-trait LowerQuantifiedInlineBoundVec {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>>;
-}
+impl LowerWithEnv for [QuantifiedInlineBound] {
+    type Lowered = Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>;
 
-impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
-    fn lower(&self, env: &Env) -> LowerResult<Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         fn trait_identifier(bound: &InlineBound) -> &Identifier {
             match bound {
                 InlineBound::TraitBound(tb) => &tb.trait_name,
@@ -1479,25 +1223,20 @@ impl LowerQuantifiedInlineBoundVec for [QuantifiedInlineBound] {
     }
 }
 
-trait LowerPolarity {
-    fn lower(&self) -> rust_ir::Polarity;
-}
+impl Lower for Polarity {
+    type Lowered = rust_ir::Polarity;
 
-impl LowerPolarity for Polarity {
-    fn lower(&self) -> rust_ir::Polarity {
-        match *self {
+    fn lower(&self) -> Self::Lowered {
+        match self {
             Polarity::Positive => rust_ir::Polarity::Positive,
             Polarity::Negative => rust_ir::Polarity::Negative,
         }
     }
 }
 
-trait LowerImplType {
-    fn lower(&self) -> rust_ir::ImplType;
-}
-
-impl LowerImplType for ImplType {
-    fn lower(&self) -> rust_ir::ImplType {
+impl Lower for ImplType {
+    type Lowered = rust_ir::ImplType;
+    fn lower(&self) -> Self::Lowered {
         match self {
             ImplType::Local => rust_ir::ImplType::Local,
             ImplType::External => rust_ir::ImplType::External,
@@ -1505,12 +1244,10 @@ impl LowerImplType for ImplType {
     }
 }
 
-trait LowerTraitFlags {
-    fn lower(&self) -> rust_ir::TraitFlags;
-}
+impl Lower for TraitFlags {
+    type Lowered = rust_ir::TraitFlags;
 
-impl LowerTraitFlags for TraitFlags {
-    fn lower(&self) -> rust_ir::TraitFlags {
+    fn lower(&self) -> Self::Lowered {
         rust_ir::TraitFlags {
             auto: self.auto,
             marker: self.marker,
@@ -1522,12 +1259,10 @@ impl LowerTraitFlags for TraitFlags {
     }
 }
 
-trait LowerProjectionTy {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>>;
-}
+impl LowerWithEnv for ProjectionTy {
+    type Lowered = chalk_ir::ProjectionTy<ChalkIr>;
 
-impl LowerProjectionTy for ProjectionTy {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let ProjectionTy {
             ref trait_ref,
             ref name,
@@ -1574,13 +1309,10 @@ impl LowerProjectionTy for ProjectionTy {
     }
 }
 
-trait LowerTy {
-    /// Lower from the AST to Chalk's Rust IR
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>>;
-}
+impl LowerWithEnv for Ty {
+    type Lowered = chalk_ir::Ty<ChalkIr>;
 
-impl LowerTy for Ty {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Ty<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
             Ty::Id { name } => {
@@ -1625,6 +1357,10 @@ impl LowerTy for Ty {
 
             Ty::Apply { name, ref args } => {
                 let (apply_name, k) = match env.lookup_apply_type(&name)? {
+                    ApplyTypeLookup::Parameter(_) => {
+                        return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
+                    }
+
                     ApplyTypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
                     ApplyTypeLookup::FnDef(id) => {
                         (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id))
@@ -1707,7 +1443,7 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Scalar(ast_scalar_to_chalk_scalar(*ty)),
+                name: chalk_ir::TypeName::Scalar(ty.lower()),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner)),
@@ -1734,7 +1470,7 @@ impl LowerTy for Ty {
             .intern(interner)),
 
             Ty::Raw { mutability, ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Raw(ast_mutability_to_chalk_mutability(*mutability)),
+                name: chalk_ir::TypeName::Raw(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
                     std::iter::once(Ok(ty.lower(env)?)),
@@ -1747,7 +1483,7 @@ impl LowerTy for Ty {
                 lifetime,
                 ty,
             } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Ref(ast_mutability_to_chalk_mutability(*mutability)),
+                name: chalk_ir::TypeName::Ref(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
                     &[
@@ -1773,12 +1509,10 @@ impl LowerTy for Ty {
     }
 }
 
-trait LowerConst {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>>;
-}
+impl LowerWithEnv for Const {
+    type Lowered = chalk_ir::Const<ChalkIr>;
 
-impl LowerConst for Const {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Const<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
             Const::Id(name) => {
@@ -1801,12 +1535,10 @@ impl LowerConst for Const {
     }
 }
 
-trait LowerGenericArg {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::GenericArg<ChalkIr>>;
-}
+impl LowerWithEnv for GenericArg {
+    type Lowered = chalk_ir::GenericArg<ChalkIr>;
 
-impl LowerGenericArg for GenericArg {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
             GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
@@ -1817,12 +1549,10 @@ impl LowerGenericArg for GenericArg {
     }
 }
 
-trait LowerLifetime {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>>;
-}
+impl LowerWithEnv for Lifetime {
+    type Lowered = chalk_ir::Lifetime<ChalkIr>;
 
-impl LowerLifetime for Lifetime {
-    fn lower(&self, env: &Env) -> LowerResult<chalk_ir::Lifetime<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
             Lifetime::Id { name } => {
@@ -1839,68 +1569,55 @@ impl LowerLifetime for Lifetime {
     }
 }
 
-trait LowerImpl {
-    fn lower_impl(
-        &self,
-        empty_env: &Env,
-        impl_id: ImplId<ChalkIr>,
-        associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>>;
-}
+#[instrument(level = "debug", skip(impl_, empty_env, associated_ty_value_ids))]
+fn lower_impl(
+    impl_: &Impl,
+    empty_env: &Env,
+    impl_id: ImplId<ChalkIr>,
+    associated_ty_value_ids: &AssociatedTyValueIds,
+) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
+    let polarity = impl_.polarity.lower();
+    let binders = empty_env.in_binders(impl_.all_parameters(), |env| {
+        let trait_ref = impl_.trait_ref.lower(env)?;
+        debug!(?trait_ref);
 
-impl LowerImpl for Impl {
-    #[instrument(level = "debug", skip(self, empty_env, associated_ty_value_ids))]
-    fn lower_impl(
-        &self,
-        empty_env: &Env,
-        impl_id: ImplId<ChalkIr>,
-        associated_ty_value_ids: &AssociatedTyValueIds,
-    ) -> LowerResult<rust_ir::ImplDatum<ChalkIr>> {
-        let polarity = self.polarity.lower();
-        let binders = empty_env.in_binders(self.all_parameters(), |env| {
-            let trait_ref = self.trait_ref.lower(env)?;
-            debug!(?trait_ref);
+        if !polarity.is_positive() && !impl_.assoc_ty_values.is_empty() {
+            Err(RustIrError::NegativeImplAssociatedValues(
+                impl_.trait_ref.trait_name.clone(),
+            ))?;
+        }
 
-            if !polarity.is_positive() && !self.assoc_ty_values.is_empty() {
-                Err(RustIrError::NegativeImplAssociatedValues(
-                    self.trait_ref.trait_name.clone(),
-                ))?;
-            }
-
-            let where_clauses = self.lower_where_clauses(&env)?;
-            debug!(where_clauses = ?trait_ref);
-            Ok(rust_ir::ImplDatumBound {
-                trait_ref,
-                where_clauses,
-            })
-        })?;
-
-        // lookup the ids for each of the "associated type values"
-        // within the impl, which should have already assigned and
-        // stored in the map
-        let associated_ty_value_ids = self
-            .assoc_ty_values
-            .iter()
-            .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str.clone())])
-            .collect();
-
-        debug!(?associated_ty_value_ids);
-
-        Ok(rust_ir::ImplDatum {
-            polarity,
-            binders,
-            impl_type: self.impl_type.lower(),
-            associated_ty_value_ids,
+        let where_clauses = impl_.where_clauses.lower(&env)?;
+        debug!(where_clauses = ?trait_ref);
+        Ok(rust_ir::ImplDatumBound {
+            trait_ref,
+            where_clauses,
         })
-    }
+    })?;
+
+    // lookup the ids for each of the "associated type values"
+    // within the impl, which should have already assigned and
+    // stored in the map
+    let associated_ty_value_ids = impl_
+        .assoc_ty_values
+        .iter()
+        .map(|atv| associated_ty_value_ids[&(impl_id, atv.name.str.clone())])
+        .collect();
+
+    debug!(?associated_ty_value_ids);
+
+    Ok(rust_ir::ImplDatum {
+        polarity,
+        binders,
+        impl_type: impl_.impl_type.lower(),
+        associated_ty_value_ids,
+    })
 }
 
-trait LowerClause {
-    fn lower_clause(&self, env: &Env) -> LowerResult<Vec<chalk_ir::ProgramClause<ChalkIr>>>;
-}
+impl LowerWithEnv for Clause {
+    type Lowered = Vec<chalk_ir::ProgramClause<ChalkIr>>;
 
-impl LowerClause for Clause {
-    fn lower_clause(&self, env: &Env) -> LowerResult<Vec<chalk_ir::ProgramClause<ChalkIr>>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         let implications = env.in_binders(self.all_parameters(), |env| {
             let consequences: Vec<chalk_ir::DomainGoal<ChalkIr>> = self.consequence.lower(env)?;
@@ -1937,121 +1654,100 @@ impl LowerClause for Clause {
     }
 }
 
-trait LowerTrait {
-    fn lower_trait(
-        &self,
-        trait_id: chalk_ir::TraitId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>>;
-}
-
-impl LowerTrait for TraitDefn {
-    fn lower_trait(
-        &self,
-        trait_id: chalk_ir::TraitId<ChalkIr>,
-        env: &Env,
-    ) -> LowerResult<rust_ir::TraitDatum<ChalkIr>> {
-        let all_parameters = self.all_parameters();
-        let all_parameters_len = all_parameters.len();
-        let binders = env.in_binders(all_parameters, |env| {
-            if self.flags.auto {
-                if all_parameters_len > 1 {
-                    Err(RustIrError::AutoTraitParameters(self.name.clone()))?;
-                }
-                if !self.where_clauses.is_empty() {
-                    Err(RustIrError::AutoTraitWhereClauses(self.name.clone()))?;
-                }
+fn lower_trait(
+    trait_defn: &TraitDefn,
+    trait_id: chalk_ir::TraitId<ChalkIr>,
+    env: &Env,
+) -> LowerResult<rust_ir::TraitDatum<ChalkIr>> {
+    let all_parameters = trait_defn.all_parameters();
+    let all_parameters_len = all_parameters.len();
+    let binders = env.in_binders(all_parameters, |env| {
+        if trait_defn.flags.auto {
+            if all_parameters_len > 1 {
+                Err(RustIrError::AutoTraitParameters(trait_defn.name.clone()))?;
             }
+            if !trait_defn.where_clauses.is_empty() {
+                Err(RustIrError::AutoTraitWhereClauses(trait_defn.name.clone()))?;
+            }
+        }
 
-            Ok(rust_ir::TraitDatumBound {
-                where_clauses: self.lower_where_clauses(env)?,
-            })
-        })?;
+        Ok(rust_ir::TraitDatumBound {
+            where_clauses: trait_defn.where_clauses.lower(env)?,
+        })
+    })?;
 
-        let associated_ty_ids: Vec<_> = self
-            .assoc_ty_defns
-            .iter()
-            .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str.clone())].id)
-            .collect();
+    let associated_ty_ids: Vec<_> = trait_defn
+        .assoc_ty_defns
+        .iter()
+        .map(|defn| env.associated_ty_lookups[&(trait_id, defn.name.str.clone())].id)
+        .collect();
 
-        let trait_datum = rust_ir::TraitDatum {
-            id: trait_id,
-            binders,
-            flags: self.flags.lower(),
-            associated_ty_ids,
-            well_known: self.well_known.map(|t| t.lower()),
-        };
+    let trait_datum = rust_ir::TraitDatum {
+        id: trait_id,
+        binders,
+        flags: trait_defn.flags.lower(),
+        associated_ty_ids,
+        well_known: trait_defn.well_known.map(|def| def.lower()),
+    };
 
-        debug!(?trait_datum);
+    debug!(?trait_datum);
 
-        Ok(trait_datum)
-    }
+    Ok(trait_datum)
 }
 
-pub trait LowerGoal<A> {
-    fn lower(&self, arg: &A) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
+pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+    let interner = &ChalkIr;
+    let associated_ty_lookups: BTreeMap<_, _> = program
+        .associated_ty_data
+        .iter()
+        .map(|(&associated_ty_id, datum)| {
+            let trait_datum = &program.trait_data[&datum.trait_id];
+            let num_trait_params = trait_datum.binders.len(interner);
+            let num_addl_params = datum.binders.len(interner) - num_trait_params;
+            let addl_variable_kinds =
+                datum.binders.binders.as_slice(interner)[..num_addl_params].to_owned();
+            let lookup = AssociatedTyLookup {
+                id: associated_ty_id,
+                addl_variable_kinds,
+            };
+            ((datum.trait_id, datum.name.clone()), lookup)
+        })
+        .collect();
+
+    let auto_traits = program
+        .trait_data
+        .iter()
+        .map(|(&trait_id, datum)| (trait_id, datum.flags.auto))
+        .collect();
+
+    let env = Env {
+        adt_ids: &program.adt_ids,
+        fn_def_ids: &program.fn_def_ids,
+        closure_ids: &program.closure_ids,
+        trait_ids: &program.trait_ids,
+        opaque_ty_ids: &program.opaque_ty_ids,
+        adt_kinds: &program.adt_kinds,
+        fn_def_kinds: &program.fn_def_kinds,
+        closure_kinds: &program.closure_kinds,
+        trait_kinds: &program.trait_kinds,
+        opaque_ty_kinds: &program.opaque_ty_kinds,
+        associated_ty_lookups: &associated_ty_lookups,
+        foreign_ty_ids: &program.foreign_ty_ids,
+        parameter_map: BTreeMap::new(),
+        auto_traits: &auto_traits,
+    };
+
+    goal.lower(&env)
 }
 
-impl LowerGoal<LoweredProgram> for Goal {
-    fn lower(&self, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
-        let interner = &ChalkIr;
-        let associated_ty_lookups: BTreeMap<_, _> = program
-            .associated_ty_data
-            .iter()
-            .map(|(&associated_ty_id, datum)| {
-                let trait_datum = &program.trait_data[&datum.trait_id];
-                let num_trait_params = trait_datum.binders.len(interner);
-                let num_addl_params = datum.binders.len(interner) - num_trait_params;
-                let addl_variable_kinds =
-                    datum.binders.binders.as_slice(interner)[..num_addl_params].to_owned();
-                let lookup = AssociatedTyLookup {
-                    id: associated_ty_id,
-                    addl_variable_kinds,
-                };
-                ((datum.trait_id, datum.name.clone()), lookup)
-            })
-            .collect();
+impl LowerWithEnv for Goal {
+    type Lowered = chalk_ir::Goal<ChalkIr>;
 
-        let auto_traits = program
-            .trait_data
-            .iter()
-            .map(|(&trait_id, datum)| (trait_id, datum.flags.auto))
-            .collect();
-
-        let fn_def_abis: BTreeMap<_, _> = program
-            .fn_def_data
-            .iter()
-            .map(|fn_def_data| (*fn_def_data.0, fn_def_data.1.sig.abi))
-            .collect();
-
-        let env = Env {
-            adt_ids: &program.adt_ids,
-            fn_def_ids: &program.fn_def_ids,
-            closure_ids: &program.closure_ids,
-            trait_ids: &program.trait_ids,
-            opaque_ty_ids: &program.opaque_ty_ids,
-            adt_kinds: &program.adt_kinds,
-            fn_def_kinds: &program.fn_def_kinds,
-            fn_def_abis: &fn_def_abis,
-            closure_kinds: &program.closure_kinds,
-            trait_kinds: &program.trait_kinds,
-            opaque_ty_kinds: &program.opaque_ty_kinds,
-            associated_ty_lookups: &associated_ty_lookups,
-            foreign_ty_ids: &program.foreign_ty_ids,
-            parameter_map: BTreeMap::new(),
-            auto_traits: &auto_traits,
-        };
-
-        self.lower(&env)
-    }
-}
-
-impl<'k> LowerGoal<Env<'k>> for Goal {
-    fn lower(&self, env: &Env<'k>) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
-            Goal::ForAll(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::ForAll, ids),
-            Goal::Exists(ids, g) => g.lower_quantified(env, chalk_ir::QuantifierKind::Exists, ids),
+            Goal::ForAll(ids, g) => lower_quantified(g, env, chalk_ir::QuantifierKind::ForAll, ids),
+            Goal::Exists(ids, g) => lower_quantified(g, env, chalk_ir::QuantifierKind::Exists, ids),
             Goal::Implies(hyp, g) => {
                 // We "elaborate" implied bounds by lowering goals like `T: Trait` and
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`
@@ -2059,7 +1755,10 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
                 // `if (FromEnv(T: Trait)) { ... /* this part is untouched */ ... }`.
                 let where_clauses = hyp
                     .iter()
-                    .flat_map(|h| h.lower_clause(env).apply_result())
+                    .flat_map(|clause| match clause.lower(env) {
+                        Ok(v) => v.into_iter().map(Ok).collect(),
+                        Err(e) => vec![Err(e)],
+                    })
                     .map(|result| result.map(|h| h.into_from_env_clause(interner)));
                 let where_clauses =
                     chalk_ir::ProgramClauses::from_fallible(interner, where_clauses);
@@ -2082,82 +1781,41 @@ impl<'k> LowerGoal<Env<'k>> for Goal {
     }
 }
 
-trait LowerQuantifiedGoal {
-    fn lower_quantified(
-        &self,
-        env: &Env,
-        quantifier_kind: chalk_ir::QuantifierKind,
-        variable_kinds: &[VariableKind],
-    ) -> LowerResult<chalk_ir::Goal<ChalkIr>>;
-}
-
-impl LowerQuantifiedGoal for Goal {
-    fn lower_quantified(
-        &self,
-        env: &Env,
-        quantifier_kind: chalk_ir::QuantifierKind,
-        variable_kinds: &[VariableKind],
-    ) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
-        let interner = env.interner();
-        if variable_kinds.is_empty() {
-            return self.lower(env);
-        }
-
-        let variable_kinds = variable_kinds.iter().map(|pk| pk.lower());
-        let subgoal = env.in_binders(variable_kinds, |env| self.lower(env))?;
-        Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
+fn lower_quantified(
+    goal: &Goal,
+    env: &Env,
+    quantifier_kind: chalk_ir::QuantifierKind,
+    variable_kinds: &[VariableKind],
+) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
+    let interner = env.interner();
+    if variable_kinds.is_empty() {
+        return goal.lower(env);
     }
+
+    let variable_kinds = variable_kinds.iter().map(|k| k.lower());
+    let subgoal = env.in_binders(variable_kinds, |env| goal.lower(env))?;
+    Ok(chalk_ir::GoalData::Quantified(quantifier_kind, subgoal).intern(interner))
 }
 
-trait LowerWellKnownTrait {
-    fn lower(&self) -> rust_ir::WellKnownTrait;
-}
+impl Lower for WellKnownTrait {
+    type Lowered = rust_ir::WellKnownTrait;
 
-impl LowerWellKnownTrait for WellKnownTrait {
-    fn lower(&self) -> rust_ir::WellKnownTrait {
+    fn lower(&self) -> Self::Lowered {
         match self {
-            Self::Sized => rust_ir::WellKnownTrait::Sized,
-            Self::Copy => rust_ir::WellKnownTrait::Copy,
-            Self::Clone => rust_ir::WellKnownTrait::Clone,
-            Self::Drop => rust_ir::WellKnownTrait::Drop,
-            Self::FnOnce => rust_ir::WellKnownTrait::FnOnce,
-            Self::FnMut => rust_ir::WellKnownTrait::FnMut,
-            Self::Fn => rust_ir::WellKnownTrait::Fn,
-            Self::Unsize => rust_ir::WellKnownTrait::Unsize,
-        }
-    }
-}
-
-/// Lowers LowerResult<Vec<T>> -> Vec<LowerResult<T>>.
-trait ApplyResult {
-    type Output;
-    fn apply_result(self) -> Self::Output;
-}
-
-impl<T> ApplyResult for LowerResult<Vec<T>> {
-    type Output = Vec<LowerResult<T>>;
-    fn apply_result(self) -> Self::Output {
-        match self {
-            Ok(v) => v.into_iter().map(Ok).collect(),
-            Err(e) => vec![Err(e)],
+            WellKnownTrait::Sized => rust_ir::WellKnownTrait::Sized,
+            WellKnownTrait::Copy => rust_ir::WellKnownTrait::Copy,
+            WellKnownTrait::Clone => rust_ir::WellKnownTrait::Clone,
+            WellKnownTrait::Drop => rust_ir::WellKnownTrait::Drop,
+            WellKnownTrait::FnOnce => rust_ir::WellKnownTrait::FnOnce,
+            WellKnownTrait::FnMut => rust_ir::WellKnownTrait::FnMut,
+            WellKnownTrait::Fn => rust_ir::WellKnownTrait::Fn,
+            WellKnownTrait::Unsize => rust_ir::WellKnownTrait::Unsize,
         }
     }
 }
 
 trait Kinded {
     fn kind(&self) -> Kind;
-}
-
-impl Kinded for VariableKind {
-    fn kind(&self) -> Kind {
-        match *self {
-            VariableKind::Ty(_) => Kind::Ty,
-            VariableKind::IntegerTy(_) => Kind::Ty,
-            VariableKind::FloatTy(_) => Kind::Ty,
-            VariableKind::Lifetime(_) => Kind::Lifetime,
-            VariableKind::Const(_) => Kind::Const,
-        }
-    }
 }
 
 impl Kinded for chalk_ir::VariableKind<ChalkIr> {
@@ -2170,9 +1828,10 @@ impl Kinded for chalk_ir::VariableKind<ChalkIr> {
     }
 }
 
-impl Kinded for chalk_ir::GenericArgData<ChalkIr> {
+impl Kinded for chalk_ir::GenericArg<ChalkIr> {
     fn kind(&self) -> Kind {
-        match self {
+        let interner = &ChalkIr;
+        match self.data(interner) {
             chalk_ir::GenericArgData::Ty(_) => Kind::Ty,
             chalk_ir::GenericArgData::Lifetime(_) => Kind::Lifetime,
             chalk_ir::GenericArgData::Const(_) => Kind::Const,
@@ -2180,50 +1839,53 @@ impl Kinded for chalk_ir::GenericArgData<ChalkIr> {
     }
 }
 
-impl Kinded for chalk_ir::GenericArg<ChalkIr> {
-    fn kind(&self) -> Kind {
-        let interner = &ChalkIr;
-        self.data(interner).kind()
+impl Lower for ScalarType {
+    type Lowered = chalk_ir::Scalar;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            ScalarType::Int(int) => chalk_ir::Scalar::Int(match int {
+                IntTy::I8 => chalk_ir::IntTy::I8,
+                IntTy::I16 => chalk_ir::IntTy::I16,
+                IntTy::I32 => chalk_ir::IntTy::I32,
+                IntTy::I64 => chalk_ir::IntTy::I64,
+                IntTy::I128 => chalk_ir::IntTy::I128,
+                IntTy::Isize => chalk_ir::IntTy::Isize,
+            }),
+            ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(match uint {
+                UintTy::U8 => chalk_ir::UintTy::U8,
+                UintTy::U16 => chalk_ir::UintTy::U16,
+                UintTy::U32 => chalk_ir::UintTy::U32,
+                UintTy::U64 => chalk_ir::UintTy::U64,
+                UintTy::U128 => chalk_ir::UintTy::U128,
+                UintTy::Usize => chalk_ir::UintTy::Usize,
+            }),
+            ScalarType::Float(float) => chalk_ir::Scalar::Float(match float {
+                FloatTy::F32 => chalk_ir::FloatTy::F32,
+                FloatTy::F64 => chalk_ir::FloatTy::F64,
+            }),
+            ScalarType::Bool => chalk_ir::Scalar::Bool,
+            ScalarType::Char => chalk_ir::Scalar::Char,
+        }
     }
 }
 
-fn ast_scalar_to_chalk_scalar(scalar: ScalarType) -> chalk_ir::Scalar {
-    match scalar {
-        ScalarType::Int(int) => chalk_ir::Scalar::Int(match int {
-            IntTy::I8 => chalk_ir::IntTy::I8,
-            IntTy::I16 => chalk_ir::IntTy::I16,
-            IntTy::I32 => chalk_ir::IntTy::I32,
-            IntTy::I64 => chalk_ir::IntTy::I64,
-            IntTy::I128 => chalk_ir::IntTy::I128,
-            IntTy::Isize => chalk_ir::IntTy::Isize,
-        }),
-        ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(match uint {
-            UintTy::U8 => chalk_ir::UintTy::U8,
-            UintTy::U16 => chalk_ir::UintTy::U16,
-            UintTy::U32 => chalk_ir::UintTy::U32,
-            UintTy::U64 => chalk_ir::UintTy::U64,
-            UintTy::U128 => chalk_ir::UintTy::U128,
-            UintTy::Usize => chalk_ir::UintTy::Usize,
-        }),
-        ScalarType::Float(float) => chalk_ir::Scalar::Float(match float {
-            FloatTy::F32 => chalk_ir::FloatTy::F32,
-            FloatTy::F64 => chalk_ir::FloatTy::F64,
-        }),
-        ScalarType::Bool => chalk_ir::Scalar::Bool,
-        ScalarType::Char => chalk_ir::Scalar::Char,
+impl Lower for Mutability {
+    type Lowered = chalk_ir::Mutability;
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            Mutability::Mut => chalk_ir::Mutability::Mut,
+            Mutability::Not => chalk_ir::Mutability::Not,
+        }
     }
 }
 
-fn ast_mutability_to_chalk_mutability(mutability: Mutability) -> chalk_ir::Mutability {
-    match mutability {
-        Mutability::Mut => chalk_ir::Mutability::Mut,
-        Mutability::Not => chalk_ir::Mutability::Not,
-    }
-}
-
-fn ast_safety_to_chalk_safety(safety: Safety) -> chalk_ir::Safety {
-    match safety {
-        Safety::Safe => chalk_ir::Safety::Safe,
-        Safety::Unsafe => chalk_ir::Safety::Unsafe,
+impl Lower for Safety {
+    type Lowered = chalk_ir::Safety;
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            Safety::Safe => chalk_ir::Safety::Safe,
+            Safety::Unsafe => chalk_ir::Safety::Unsafe,
+        }
     }
 }
