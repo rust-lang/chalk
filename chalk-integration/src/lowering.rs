@@ -85,7 +85,7 @@ struct AssociatedTyLookup {
 }
 
 enum ApplyTypeLookup<'k> {
-    Param(&'k chalk_ir::WithKind<ChalkIr, BoundVar>),
+    Parameter(&'k chalk_ir::WithKind<ChalkIr, BoundVar>),
     Adt(AdtId<ChalkIr>),
     FnDef(FnDefId<ChalkIr>),
     Closure(ClosureId<ChalkIr>),
@@ -117,7 +117,7 @@ impl Env<'_> {
         };
 
         match self.lookup_apply_type(name) {
-            Ok(ApplyTypeLookup::Param(p)) => {
+            Ok(ApplyTypeLookup::Parameter(p)) => {
                 let b = p.skip_kind();
                 match &p.kind {
                     chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
@@ -165,7 +165,7 @@ impl Env<'_> {
 
     fn lookup_apply_type(&self, name: &Identifier) -> LowerResult<ApplyTypeLookup> {
         if let Some(id) = self.parameter_map.get(&name.str) {
-            return Ok(ApplyTypeLookup::Param(id));
+            return Ok(ApplyTypeLookup::Parameter(id));
         }
 
         if let Some(id) = self.adt_ids.get(&name.str) {
@@ -1357,7 +1357,7 @@ impl LowerWithEnv for Ty {
 
             Ty::Apply { name, ref args } => {
                 let (apply_name, k) = match env.lookup_apply_type(&name)? {
-                    ApplyTypeLookup::Param(_) => {
+                    ApplyTypeLookup::Parameter(_) => {
                         return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
                     }
 
