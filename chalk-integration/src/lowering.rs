@@ -119,17 +119,17 @@ impl Env<'_> {
         match self.lookup_apply_type(name) {
             Ok(ApplyTypeLookup::Parameter(p)) => {
                 let b = p.skip_kind();
-                match &p.kind {
-                    chalk_ir::VariableKind::Ty(_) => Ok(chalk_ir::TyData::BoundVar(*b)
+                Ok(match &p.kind {
+                    chalk_ir::VariableKind::Ty(_) => chalk_ir::TyData::BoundVar(*b)
                         .intern(interner)
-                        .cast(interner)),
-                    chalk_ir::VariableKind::Lifetime => Ok(chalk_ir::LifetimeData::BoundVar(*b)
+                        .cast(interner),
+                    chalk_ir::VariableKind::Lifetime => chalk_ir::LifetimeData::BoundVar(*b)
                         .intern(interner)
-                        .cast(interner)),
+                        .cast(interner),
                     chalk_ir::VariableKind::Const(ty) => {
-                        Ok(b.to_const(interner, ty.clone()).cast(interner))
+                        b.to_const(interner, ty.clone()).cast(interner)
                     }
-                }
+                })
             }
             Ok(ApplyTypeLookup::Adt(id)) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
             Ok(ApplyTypeLookup::FnDef(id)) => {
@@ -165,26 +165,18 @@ impl Env<'_> {
 
     fn lookup_apply_type(&self, name: &Identifier) -> LowerResult<ApplyTypeLookup> {
         if let Some(id) = self.parameter_map.get(&name.str) {
-            return Ok(ApplyTypeLookup::Parameter(id));
+            Ok(ApplyTypeLookup::Parameter(id))
+        } else if let Some(id) = self.adt_ids.get(&name.str) {
+            Ok(ApplyTypeLookup::Adt(*id))
+        } else if let Some(id) = self.fn_def_ids.get(&name.str) {
+            Ok(ApplyTypeLookup::FnDef(*id))
+        } else if let Some(id) = self.closure_ids.get(&name.str) {
+            Ok(ApplyTypeLookup::Closure(*id))
+        } else if let Some(id) = self.opaque_ty_ids.get(&name.str) {
+            Ok(ApplyTypeLookup::Opaque(*id))
+        } else {
+            Err(RustIrError::NotStruct(name.clone()))
         }
-
-        if let Some(id) = self.adt_ids.get(&name.str) {
-            return Ok(ApplyTypeLookup::Adt(*id));
-        }
-
-        if let Some(id) = self.fn_def_ids.get(&name.str) {
-            return Ok(ApplyTypeLookup::FnDef(*id));
-        }
-
-        if let Some(id) = self.closure_ids.get(&name.str) {
-            return Ok(ApplyTypeLookup::Closure(*id));
-        }
-
-        if let Some(id) = self.opaque_ty_ids.get(&name.str) {
-            return Ok(ApplyTypeLookup::Opaque(*id));
-        }
-
-        Err(RustIrError::NotStruct(name.clone()))
     }
 
     fn auto_trait(&self, id: chalk_ir::TraitId<ChalkIr>) -> bool {
@@ -193,18 +185,14 @@ impl Env<'_> {
 
     fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
         if let Some(_) = self.parameter_map.get(&name.str) {
-            return Err(RustIrError::NotTrait(name.clone()));
+            Err(RustIrError::NotTrait(name.clone()))
+        } else if let Some(_) = self.adt_ids.get(&name.str) {
+            Err(RustIrError::NotTrait(name.clone()))
+        } else if let Some(id) = self.trait_ids.get(&name.str) {
+            Ok(*id)
+        } else {
+            Err(RustIrError::InvalidTraitName(name.clone()))
         }
-
-        if let Some(_) = self.adt_ids.get(&name.str) {
-            return Err(RustIrError::NotTrait(name.clone()));
-        }
-
-        if let Some(id) = self.trait_ids.get(&name.str) {
-            return Ok(*id);
-        }
-
-        Err(RustIrError::InvalidTraitName(name.clone()))
     }
 
     fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
@@ -806,7 +794,7 @@ impl LowerWithEnv for WhereClause {
     /// As for now, this is the only the case for `where T: Foo<Item = U>` which lowers to
     /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let where_clauses = match self {
+        Ok(match self {
             WhereClause::Implemented { trait_ref } => {
                 vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
             }
@@ -833,8 +821,7 @@ impl LowerWithEnv for WhereClause {
                     },
                 )]
             }
-        };
-        Ok(where_clauses)
+        })
     }
 }
 
@@ -857,7 +844,7 @@ impl LowerWithEnv for DomainGoal {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
-        let goals = match self {
+        Ok(match self {
             DomainGoal::Holds { where_clause } => where_clause
                 .lower(env)?
                 .into_iter()
@@ -899,8 +886,7 @@ impl LowerWithEnv for DomainGoal {
             DomainGoal::ObjectSafe { id } => {
                 vec![chalk_ir::DomainGoal::ObjectSafe(env.lookup_trait(id)?)]
             }
-        };
-        Ok(goals)
+        })
     }
 }
 
@@ -1095,7 +1081,7 @@ impl LowerWithEnv for TraitBound {
         let parameters = self
             .args_no_self
             .iter()
-            .map(|a| Ok(a.lower(env)?))
+            .map(|a| a.lower(env))
             .collect::<LowerResult<Vec<_>>>()?;
 
         if parameters.len() != k.binders.len(interner) {
@@ -1172,11 +1158,10 @@ impl LowerWithEnv for InlineBound {
     type Lowered = rust_ir::InlineBound<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let bound = match self {
+        Ok(match self {
             InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
             InlineBound::AliasEqBound(b) => rust_ir::InlineBound::AliasEqBound(b.lower(&env)?),
-        };
-        Ok(bound)
+        })
     }
 }
 
@@ -1185,8 +1170,7 @@ impl LowerWithEnv for QuantifiedInlineBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
-        let binders = env.in_binders(variable_kinds, |env| Ok(self.bound.lower(env)?))?;
-        Ok(binders)
+        env.in_binders(variable_kinds, |env| Ok(self.bound.lower(env)?))
     }
 }
 
@@ -1314,7 +1298,7 @@ impl LowerWithEnv for Ty {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
-        match self {
+        Ok(match self {
             Ty::Id { name } => {
                 let parameter = env.lookup_generic_arg(&name)?;
                 parameter.ty(interner).map(|ty| ty.clone()).ok_or_else(|| {
@@ -1323,12 +1307,12 @@ impl LowerWithEnv for Ty {
                         expected: Kind::Ty,
                         actual: parameter.kind(),
                     }
-                })
+                })?
             }
             Ty::Dyn {
                 ref bounds,
                 ref lifetime,
-            } => Ok(chalk_ir::TyData::Dyn(chalk_ir::DynTy {
+            } => chalk_ir::TyData::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::WithKind::new(
@@ -1353,7 +1337,7 @@ impl LowerWithEnv for Ty {
                 )?,
                 lifetime: lifetime.lower(env)?,
             })
-            .intern(interner)),
+            .intern(interner),
 
             Ty::Apply { name, ref args } => {
                 let (apply_name, k) = match env.lookup_apply_type(&name)? {
@@ -1400,17 +1384,17 @@ impl LowerWithEnv for Ty {
                         })?;
                     }
                 }
-                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                     name: apply_name,
                     substitution,
                 })
-                .intern(interner))
+                .intern(interner)
             }
 
-            Ty::Projection { ref proj } => Ok(chalk_ir::TyData::Alias(
-                chalk_ir::AliasTy::Projection(proj.lower(env)?),
-            )
-            .intern(interner)),
+            Ty::Projection { ref proj } => {
+                chalk_ir::TyData::Alias(chalk_ir::AliasTy::Projection(proj.lower(env)?))
+                    .intern(interner)
+            }
 
             Ty::ForAll {
                 lifetime_names,
@@ -1431,24 +1415,24 @@ impl LowerWithEnv for Ty {
                     substitution: Substitution::from_iter(interner, lowered_tys),
                     sig: sig.lower()?,
                 };
-                Ok(chalk_ir::TyData::Function(function).intern(interner))
+                chalk_ir::TyData::Function(function).intern(interner)
             }
-            Ty::Tuple { ref types } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Tuple { ref types } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Tuple(types.len()),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
                     types.iter().map(|t| Ok(t.lower(env)?)),
                 )?,
             })
-            .intern(interner)),
+            .intern(interner),
 
-            Ty::Scalar { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Scalar { ty } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Scalar(ty.lower()),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
-            .intern(interner)),
+            .intern(interner),
 
-            Ty::Array { ty, len } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Array { ty, len } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Array,
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
@@ -1458,31 +1442,31 @@ impl LowerWithEnv for Ty {
                     ],
                 ),
             })
-            .intern(interner)),
+            .intern(interner),
 
-            Ty::Slice { ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Slice { ty } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Slice,
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
                     std::iter::once(ty.lower(env)),
                 )?,
             })
-            .intern(interner)),
+            .intern(interner),
 
-            Ty::Raw { mutability, ty } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Raw { mutability, ty } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Raw(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
                     std::iter::once(Ok(ty.lower(env)?)),
                 )?,
             })
-            .intern(interner)),
+            .intern(interner),
 
             Ty::Ref {
                 mutability,
                 lifetime,
                 ty,
-            } => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Ref(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
@@ -1492,20 +1476,20 @@ impl LowerWithEnv for Ty {
                     ],
                 ),
             })
-            .intern(interner)),
+            .intern(interner),
 
-            Ty::Str => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Str => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Str,
                 substitution: chalk_ir::Substitution::empty(interner),
             })
-            .intern(interner)),
+            .intern(interner),
 
-            Ty::Never => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Never => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Never,
                 substitution: chalk_ir::Substitution::empty(interner),
             })
-            .intern(interner)),
-        }
+            .intern(interner),
+        })
     }
 }
 
