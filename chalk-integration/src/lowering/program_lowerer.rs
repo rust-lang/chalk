@@ -1,7 +1,4 @@
-use super::{
-    env::*, lower_adt, lower_fn_def, lower_impl, lower_trait, Lower, LowerParameterMap,
-    LowerWithEnv, FIXME_SELF,
-};
+use super::{env::*, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
 
 use crate::{interner::ChalkIr, TypeKind, TypeSort};
 use chalk_ir::cast::Cast;
@@ -173,15 +170,12 @@ impl ProgramLowerer {
             match *item {
                 Item::AdtDefn(ref d) => {
                     let adt_id = AdtId(raw_id);
-                    adt_data.insert(adt_id, Arc::new(lower_adt(d, adt_id, &empty_env)?));
+                    adt_data.insert(adt_id, Arc::new((d, adt_id).lower(&empty_env)?));
                     adt_reprs.insert(adt_id, d.repr.lower());
                 }
                 Item::FnDefn(ref defn) => {
                     let fn_def_id = FnDefId(raw_id);
-                    fn_def_data.insert(
-                        fn_def_id,
-                        Arc::new(lower_fn_def(defn, fn_def_id, &empty_env)?),
-                    );
+                    fn_def_data.insert(fn_def_id, Arc::new((defn, fn_def_id).lower(&empty_env)?));
                 }
                 Item::ClosureDefn(ref defn) => {
                     let closure_def_id = ClosureId(raw_id);
@@ -205,7 +199,7 @@ impl ProgramLowerer {
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    let trait_datum = lower_trait(trait_defn, trait_id, &empty_env)?;
+                    let trait_datum = (trait_defn, trait_id).lower(&empty_env)?;
 
                     if let Some(well_known) = trait_datum.well_known {
                         well_known_traits.insert(well_known, trait_id);
@@ -260,12 +254,9 @@ impl ProgramLowerer {
                 }
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
-                    let impl_datum = Arc::new(lower_impl(
-                        impl_defn,
-                        &empty_env,
-                        impl_id,
-                        &self.associated_ty_value_ids,
-                    )?);
+                    let impl_datum = Arc::new(
+                        (impl_defn, impl_id, &self.associated_ty_value_ids).lower(&empty_env)?,
+                    );
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
 
