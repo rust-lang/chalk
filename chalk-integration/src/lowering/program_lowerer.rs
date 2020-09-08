@@ -1,6 +1,3 @@
-use super::{env::*, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
-
-use crate::{interner::ChalkIr, TypeKind, TypeSort};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId, ImplId,
@@ -15,9 +12,11 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
 
+use super::{env::*, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
 use crate::RawId;
+use crate::{interner::ChalkIr, TypeKind, TypeSort};
 
 #[derive(Default)]
 pub(super) struct ProgramLowerer {

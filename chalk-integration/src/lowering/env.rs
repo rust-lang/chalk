@@ -1,4 +1,3 @@
-use crate::interner::ChalkIr;
 use chalk_ir::cast::Cast;
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
@@ -9,6 +8,7 @@ use chalk_solve::rust_ir::AssociatedTyValueId;
 use std::collections::BTreeMap;
 
 use crate::error::RustIrError;
+use crate::interner::ChalkIr;
 use crate::{Identifier as Ident, TypeKind};
 
 pub type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;

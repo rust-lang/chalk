@@ -1,7 +1,6 @@
 mod env;
 mod program_lowerer;
 
-use crate::interner::{ChalkFnAbi, ChalkIr};
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{
     self, BoundVar, ClausePriority, DebruijnIndex, ImplId, QuantifiedWhereClauses, Substitution,
@@ -9,15 +8,16 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{self, IntoWhereClauses};
-use env::*;
 use program_lowerer::ProgramLowerer;
 use std::collections::BTreeMap;
 use string_cache::DefaultAtom as Atom;
 use tracing::debug;
 
 use crate::error::RustIrError;
+use crate::interner::{ChalkFnAbi, ChalkIr};
 use crate::program::Program as LoweredProgram;
 use crate::{Identifier as Ident, TypeSort};
+use env::*;
 
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
