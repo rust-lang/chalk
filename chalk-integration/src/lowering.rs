@@ -24,25 +24,41 @@ use crate::{Identifier as Ident, RawId, TypeKind, TypeSort};
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
-impl Lower for Program {
-    type Lowered = LowerResult<LoweredProgram>;
+#[derive(Default)]
+struct ProgramLowerer {
+    next_item_index: u32,
 
-    fn lower(&self) -> Self::Lowered {
-        let mut index = 0;
-        let mut next_item_id = || -> RawId {
-            let i = index;
-            index += 1;
-            RawId { index: i }
-        };
+    associated_ty_lookups: AssociatedTyLookups,
+    associated_ty_value_ids: AssociatedTyValueIds,
+    adt_ids: AdtIds,
+    fn_def_ids: FnDefIds,
+    closure_ids: ClosureIds,
+    trait_ids: TraitIds,
+    auto_traits: AutoTraits,
+    opaque_ty_ids: OpaqueTyIds,
+    adt_kinds: AdtKinds,
+    fn_def_kinds: FnDefKinds,
+    closure_kinds: ClosureKinds,
+    trait_kinds: TraitKinds,
+    opaque_ty_kinds: OpaqueTyKinds,
+    object_safe_traits: HashSet<TraitId<ChalkIr>>,
+    foreign_ty_ids: ForeignIds,
+}
 
-        // Make a vector mapping each thing in `items` to an id,
-        // based just on its position:
-        let raw_ids: Vec<_> = self.items.iter().map(|_| next_item_id()).collect();
+impl ProgramLowerer {
+    fn next_item_id(&mut self) -> RawId {
+        let index = self.next_item_index;
+        self.next_item_index += 1;
+        RawId { index }
+    }
 
-        // Create ids for associated type declarations and values
-        let mut associated_ty_lookups = BTreeMap::new();
-        let mut associated_ty_value_ids = BTreeMap::new();
-        for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
+    /// Create ids for associated type declarations and values
+    fn find_associated_types(
+        &mut self,
+        program: &Program,
+        raw_ids: &Vec<RawId>,
+    ) -> LowerResult<()> {
+        for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::TraitDefn(d) => {
                     if d.flags.auto && !d.assoc_ty_defns.is_empty() {
@@ -51,18 +67,18 @@ impl Lower for Program {
                     for defn in &d.assoc_ty_defns {
                         let addl_variable_kinds = defn.all_parameters();
                         let lookup = AssociatedTyLookup {
-                            id: AssocTypeId(next_item_id()),
+                            id: AssocTypeId(self.next_item_id()),
                             addl_variable_kinds: addl_variable_kinds.anonymize(),
                         };
-                        associated_ty_lookups
+                        self.associated_ty_lookups
                             .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                     }
                 }
 
                 Item::Impl(d) => {
                     for atv in &d.assoc_ty_values {
-                        let atv_id = AssociatedTyValueId(next_item_id());
-                        associated_ty_value_ids
+                        let atv_id = AssociatedTyValueId(self.next_item_id());
+                        self.associated_ty_value_ids
                             .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
                     }
                 }
@@ -70,63 +86,56 @@ impl Lower for Program {
                 _ => {}
             }
         }
+        Ok(())
+    }
 
-        let mut adt_ids = BTreeMap::new();
-        let mut fn_def_ids = BTreeMap::new();
-        let mut closure_ids = BTreeMap::new();
-        let mut trait_ids = BTreeMap::new();
-        let mut auto_traits = BTreeMap::new();
-        let mut opaque_ty_ids = BTreeMap::new();
-        let mut adt_kinds = BTreeMap::new();
-        let mut fn_def_kinds = BTreeMap::new();
-        let mut closure_kinds = BTreeMap::new();
-        let mut trait_kinds = BTreeMap::new();
-        let mut opaque_ty_kinds = BTreeMap::new();
-        let mut object_safe_traits = HashSet::new();
-
-        for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
+    fn lookup_ids(&mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<()> {
+        for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::AdtDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = AdtId(raw_id);
-                    adt_ids.insert(type_kind.name.clone(), id);
-                    adt_kinds.insert(id, type_kind);
+                    self.adt_ids.insert(type_kind.name.clone(), id);
+                    self.adt_kinds.insert(id, type_kind);
                 }
                 Item::FnDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = FnDefId(raw_id);
-                    fn_def_ids.insert(type_kind.name.clone(), id);
-                    fn_def_kinds.insert(id, type_kind);
+                    self.fn_def_ids.insert(type_kind.name.clone(), id);
+                    self.fn_def_kinds.insert(id, type_kind);
                 }
                 Item::ClosureDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = ClosureId(raw_id);
-                    closure_ids.insert(defn.name.str.clone(), id);
-                    closure_kinds.insert(id, type_kind);
+                    self.closure_ids.insert(defn.name.str.clone(), id);
+                    self.closure_kinds.insert(id, type_kind);
                 }
                 Item::TraitDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = TraitId(raw_id);
-                    trait_ids.insert(type_kind.name.clone(), id);
-                    trait_kinds.insert(id, type_kind);
-                    auto_traits.insert(id, defn.flags.auto);
+                    self.trait_ids.insert(type_kind.name.clone(), id);
+                    self.trait_kinds.insert(id, type_kind);
+                    self.auto_traits.insert(id, defn.flags.auto);
 
                     if defn.flags.object_safe {
-                        object_safe_traits.insert(id);
+                        self.object_safe_traits.insert(id);
                     }
                 }
                 Item::OpaqueTyDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
                     let id = OpaqueTyId(raw_id);
-                    opaque_ty_ids.insert(defn.name.str.clone(), id);
-                    opaque_ty_kinds.insert(id, type_kind);
+                    self.opaque_ty_ids.insert(defn.name.str.clone(), id);
+                    self.opaque_ty_kinds.insert(id, type_kind);
                 }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
                 Item::Foreign(_) => continue,
             };
         }
+        Ok(())
+    }
 
+    fn lower(mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
         let mut adt_data = BTreeMap::new();
         let mut adt_reprs = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
@@ -141,24 +150,23 @@ impl Lower for Program {
         let mut opaque_ty_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
-        let mut foreign_ty_ids = BTreeMap::new();
 
-        for (item, &raw_id) in self.items.iter().zip(&raw_ids) {
+        for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             let empty_env = Env {
-                adt_ids: &adt_ids,
-                adt_kinds: &adt_kinds,
-                fn_def_ids: &fn_def_ids,
-                fn_def_kinds: &fn_def_kinds,
-                closure_ids: &closure_ids,
-                closure_kinds: &closure_kinds,
-                trait_ids: &trait_ids,
-                trait_kinds: &trait_kinds,
-                opaque_ty_ids: &opaque_ty_ids,
-                opaque_ty_kinds: &opaque_ty_kinds,
-                associated_ty_lookups: &associated_ty_lookups,
+                adt_ids: &self.adt_ids,
+                adt_kinds: &self.adt_kinds,
+                fn_def_ids: &self.fn_def_ids,
+                fn_def_kinds: &self.fn_def_kinds,
+                closure_ids: &self.closure_ids,
+                closure_kinds: &self.closure_kinds,
+                trait_ids: &self.trait_ids,
+                trait_kinds: &self.trait_kinds,
+                opaque_ty_ids: &self.opaque_ty_ids,
+                opaque_ty_kinds: &self.opaque_ty_kinds,
+                associated_ty_lookups: &self.associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
-                auto_traits: &auto_traits,
-                foreign_ty_ids: &foreign_ty_ids,
+                auto_traits: &self.auto_traits,
+                foreign_ty_ids: &self.foreign_ty_ids,
             };
 
             match *item {
@@ -205,8 +213,8 @@ impl Lower for Program {
                     trait_data.insert(trait_id, Arc::new(trait_datum));
 
                     for assoc_ty_defn in &trait_defn.assoc_ty_defns {
-                        let lookup =
-                            &associated_ty_lookups[&(trait_id, assoc_ty_defn.name.str.clone())];
+                        let lookup = &self.associated_ty_lookups
+                            [&(trait_id, assoc_ty_defn.name.str.clone())];
 
                         // The parameters in scope for the associated
                         // type definitions are *both* those from the
@@ -255,14 +263,14 @@ impl Lower for Program {
                         impl_defn,
                         &empty_env,
                         impl_id,
-                        &associated_ty_value_ids,
+                        &self.associated_ty_value_ids,
                     )?);
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
 
                     for atv in &impl_defn.assoc_ty_values {
-                        let atv_id = associated_ty_value_ids[&(impl_id, atv.name.str.clone())];
-                        let lookup = &associated_ty_lookups[&(trait_id, atv.name.str.clone())];
+                        let atv_id = self.associated_ty_value_ids[&(impl_id, atv.name.str.clone())];
+                        let lookup = &self.associated_ty_lookups[&(trait_id, atv.name.str.clone())];
 
                         // The parameters in scope for the associated
                         // type definitions are *both* those from the
@@ -292,7 +300,7 @@ impl Lower for Program {
                     custom_clauses.extend(clause.lower(&empty_env)?);
                 }
                 Item::OpaqueTyDefn(ref opaque_ty) => {
-                    if let Some(&opaque_ty_id) = opaque_ty_ids.get(&opaque_ty.name.str) {
+                    if let Some(&opaque_ty_id) = self.opaque_ty_ids.get(&opaque_ty.name.str) {
                         let variable_kinds = opaque_ty
                             .variable_kinds
                             .iter()
@@ -358,21 +366,22 @@ impl Lower for Program {
                     }
                 }
                 Item::Foreign(ForeignDefn(ref ident)) => {
-                    foreign_ty_ids.insert(ident.str.clone(), ForeignDefId(raw_id));
+                    self.foreign_ty_ids
+                        .insert(ident.str.clone(), ForeignDefId(raw_id));
                 }
             }
         }
 
-        let program = LoweredProgram {
-            adt_ids,
-            fn_def_ids,
-            closure_ids,
+        Ok(LoweredProgram {
+            adt_ids: self.adt_ids,
+            fn_def_ids: self.fn_def_ids,
+            closure_ids: self.closure_ids,
             closure_upvars,
-            closure_kinds,
-            trait_ids,
-            adt_kinds,
-            fn_def_kinds,
-            trait_kinds,
+            closure_kinds: self.closure_kinds,
+            trait_ids: self.trait_ids,
+            adt_kinds: self.adt_kinds,
+            fn_def_kinds: self.fn_def_kinds,
+            trait_kinds: self.trait_kinds,
             adt_data,
             adt_reprs,
             fn_def_data,
@@ -383,16 +392,30 @@ impl Lower for Program {
             impl_data,
             associated_ty_values,
             associated_ty_data,
-            opaque_ty_ids,
-            opaque_ty_kinds,
+            opaque_ty_ids: self.opaque_ty_ids,
+            opaque_ty_kinds: self.opaque_ty_kinds,
             opaque_ty_data,
             hidden_opaque_types,
             custom_clauses,
-            object_safe_traits,
-            foreign_ty_ids,
-        };
+            object_safe_traits: self.object_safe_traits,
+            foreign_ty_ids: self.foreign_ty_ids,
+        })
+    }
+}
 
-        Ok(program)
+impl Lower for Program {
+    type Lowered = LowerResult<LoweredProgram>;
+
+    fn lower(&self) -> Self::Lowered {
+        let mut lowerer = ProgramLowerer::default();
+
+        // Make a vector mapping each thing in `items` to an id,
+        // based just on its position:
+        let raw_ids = self.items.iter().map(|_| lowerer.next_item_id()).collect();
+
+        lowerer.find_associated_types(self, &raw_ids)?;
+        lowerer.lookup_ids(self, &raw_ids)?;
+        lowerer.lower(self, &raw_ids)
     }
 }
 
