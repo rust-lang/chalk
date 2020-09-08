@@ -127,15 +127,18 @@ impl ProgramLowerer {
                     self.opaque_ty_ids.insert(defn.name.str.clone(), id);
                     self.opaque_ty_kinds.insert(id, type_kind);
                 }
+                Item::Foreign(ForeignDefn(ref ident)) => {
+                    self.foreign_ty_ids
+                        .insert(ident.str.clone(), ForeignDefId(raw_id));
+                }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
-                Item::Foreign(_) => continue,
             };
         }
         Ok(())
     }
 
-    fn lower(mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
+    fn lower(self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
         let mut adt_data = BTreeMap::new();
         let mut adt_reprs = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
@@ -365,10 +368,7 @@ impl ProgramLowerer {
                         );
                     }
                 }
-                Item::Foreign(ForeignDefn(ref ident)) => {
-                    self.foreign_ty_ids
-                        .insert(ident.str.clone(), ForeignDefId(raw_id));
-                }
+                Item::Foreign(_) => {}
             }
         }
 
