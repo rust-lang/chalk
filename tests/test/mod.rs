@@ -346,5 +346,6 @@ mod slices;
 mod string;
 mod tuples;
 mod unify;
+mod unpin;
 mod unsize;
 mod wf_goals;

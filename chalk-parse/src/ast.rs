@@ -126,6 +126,7 @@ pub enum WellKnownTrait {
     FnMut,
     Fn,
     Unsize,
+    Unpin,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

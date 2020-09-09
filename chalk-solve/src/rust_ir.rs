@@ -269,6 +269,7 @@ pub enum WellKnownTrait {
     FnMut,
     Fn,
     Unsize,
+    Unpin,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);
