@@ -203,4 +203,17 @@ where
         goal: &UCanonical<InEnvironment<Goal<I>>>,
         f: &mut dyn FnMut(SubstitutionResult<Canonical<ConstrainedSubst<I>>>, bool) -> bool,
     ) -> bool;
+
+    /// A convenience method for when one doesn't need the actual solution,
+    /// only whether or not one exists.
+    fn has_unique_solution(
+        &mut self,
+        program: &dyn RustIrDatabase<I>,
+        goal: &UCanonical<InEnvironment<Goal<I>>>,
+    ) -> bool {
+        match self.solve(program, goal) {
+            Some(sol) => sol.is_unique(),
+            None => false,
+        }
+    }
 }

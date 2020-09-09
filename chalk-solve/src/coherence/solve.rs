@@ -251,10 +251,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
 
         let canonical_goal = &goal.into_closed_goal(interner);
         let mut fresh_solver = (self.solver_builder)();
-        let result = match fresh_solver.solve(self.db, canonical_goal) {
-            Some(sol) => sol.is_unique(),
-            None => false,
-        };
+        let result = fresh_solver.has_unique_solution(self.db, canonical_goal);
 
         debug!("specializes: result = {:?}", result);
 

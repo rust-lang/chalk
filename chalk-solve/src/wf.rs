@@ -226,10 +226,7 @@ where
 
         let wg_goal = wg_goal.into_closed_goal(interner);
         let mut fresh_solver = (self.solver_builder)();
-        let is_legal = match fresh_solver.solve(self.db, &wg_goal) {
-            Some(sol) => sol.is_unique(),
-            None => false,
-        };
+        let is_legal = fresh_solver.has_unique_solution(self.db, &wg_goal);
 
         if !is_legal {
             Err(WfError::IllFormedTypeDecl(adt_id))
@@ -257,10 +254,8 @@ where
         debug!("WF trait goal: {:?}", impl_goal);
 
         let mut fresh_solver = (self.solver_builder)();
-        let is_legal = match fresh_solver.solve(self.db, &impl_goal.into_closed_goal(interner)) {
-            Some(sol) => sol.is_unique(),
-            None => false,
-        };
+        let is_legal =
+            fresh_solver.has_unique_solution(self.db, &impl_goal.into_closed_goal(interner));
 
         if is_legal {
             Ok(())
@@ -314,10 +309,7 @@ where
         debug!("WF opaque type goal: {:#?}", goal);
 
         let mut new_solver = (self.solver_builder)();
-        let is_legal = match new_solver.solve(self.db, &goal.into_closed_goal(interner)) {
-            Some(sol) => sol.is_unique(),
-            None => false,
-        };
+        let is_legal = new_solver.has_unique_solution(self.db, &goal.into_closed_goal(interner));
 
         if is_legal {
             Ok(())
