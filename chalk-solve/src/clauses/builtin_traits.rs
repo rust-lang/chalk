@@ -41,8 +41,12 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Unsize => {
                 unsize::add_unsize_program_clauses(db, builder, &trait_ref, ty)
             }
+
             // Drop impls are provided explicitly
             WellKnownTrait::Drop => (),
+
+            // There are no special rules for Unpin
+            WellKnownTrait::Unpin => (),
         }
         Ok(())
     })

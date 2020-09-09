@@ -562,7 +562,8 @@ impl WfWellKnownGoals {
             | WellKnownTrait::FnOnce
             | WellKnownTrait::FnMut
             | WellKnownTrait::Fn
-            | WellKnownTrait::Unsize => None,
+            | WellKnownTrait::Unsize
+            | WellKnownTrait::Unpin => None,
         }
     }
 
@@ -577,7 +578,7 @@ impl WfWellKnownGoals {
 
         match db.trait_datum(impl_datum.trait_id()).well_known? {
             WellKnownTrait::Drop => Self::drop_impl_constraint(db, impl_datum),
-            WellKnownTrait::Copy | WellKnownTrait::Clone => None,
+            WellKnownTrait::Copy | WellKnownTrait::Clone | WellKnownTrait::Unpin => None,
             // You can't add a manual implementation for following traits:
             WellKnownTrait::Sized
             | WellKnownTrait::FnOnce
