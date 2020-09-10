@@ -338,7 +338,7 @@ where
             WellKnownTrait::Drop => {
                 WfWellKnownConstraints::drop_impl_constraint(&mut *solver, self.db, &impl_datum)
             }
-            WellKnownTrait::Clone | WellKnownTrait::Unpin => true,
+            WellKnownTrait::Clone | WellKnownTrait::Unpin | WellKnownTrait::CoerceUnsized => true,
             // You can't add a manual implementation for the following traits:
             WellKnownTrait::Fn
             | WellKnownTrait::FnOnce

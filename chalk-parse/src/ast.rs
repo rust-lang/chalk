@@ -127,6 +127,7 @@ pub enum WellKnownTrait {
     Fn,
     Unsize,
     Unpin,
+    CoerceUnsized,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
