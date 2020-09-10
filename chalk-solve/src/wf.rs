@@ -199,7 +199,7 @@ where
                                 // each variant are sized. For `structs`, we relax this requirement to
                                 // all but the last field.
                                 let sized_constraint_goal =
-                                    WfWellKnownGoals::struct_sized_constraint(
+                                    WfWellKnownConstraints::struct_sized_constraint(
                                         gb.db(),
                                         fields,
                                         is_enum,
@@ -250,6 +250,10 @@ where
                     .filter_map(|&id| compute_assoc_ty_goal(self.db, id)),
             ),
         );
+
+        if let Some(well_known) = self.db.trait_datum(trait_id).well_known {
+            self.verify_well_known_impl(impl_id, well_known)?
+        }
 
         debug!("WF trait goal: {:?}", impl_goal);
 
@@ -317,6 +321,38 @@ where
             Err(WfError::IllFormedOpaqueTypeDecl(opaque_ty_id))
         }
     }
+
+    /// Verify builtin rules for well-known traits
+    pub fn verify_well_known_impl(
+        &self,
+        impl_id: ImplId<I>,
+        well_known: WellKnownTrait,
+    ) -> Result<(), WfError<I>> {
+        let mut solver = (self.solver_builder)();
+        let impl_datum = self.db.impl_datum(impl_id);
+
+        let is_legal = match well_known {
+            WellKnownTrait::Copy => {
+                WfWellKnownConstraints::copy_impl_constraint(&mut *solver, self.db, &impl_datum)
+            }
+            WellKnownTrait::Drop => {
+                WfWellKnownConstraints::drop_impl_constraint(&mut *solver, self.db, &impl_datum)
+            }
+            WellKnownTrait::Clone | WellKnownTrait::Unpin => true,
+            // You can't add a manual implementation for the following traits:
+            WellKnownTrait::Fn
+            | WellKnownTrait::FnOnce
+            | WellKnownTrait::FnMut
+            | WellKnownTrait::Unsize
+            | WellKnownTrait::Sized => false,
+        };
+
+        if is_legal {
+            Ok(())
+        } else {
+            Err(WfError::IllFormedTraitImpl(impl_datum.trait_id()))
+        }
+    }
 }
 
 fn impl_header_wf_goal<I: Interner>(
@@ -338,8 +374,6 @@ fn impl_header_wf_goal<I: Interner>(
     let well_formed_goal = gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
         let interner = gb.interner();
 
-        let trait_constraint_goal = WfWellKnownGoals::inside_impl(gb.db(), &trait_ref);
-
         // if (WC && input types are well formed) { ... }
         gb.implies(
             impl_wf_environment(interner, &where_clauses, &trait_ref),
@@ -360,20 +394,14 @@ fn impl_header_wf_goal<I: Interner>(
                 let goals = types
                     .into_iter()
                     .map(|ty| ty.well_formed().cast(interner))
-                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)))
-                    .chain(trait_constraint_goal.into_iter());
+                    .chain(Some((*trait_ref).clone().well_formed().cast(interner)));
 
                 gb.all::<_, Goal<I>>(goals)
             },
         )
     });
 
-    Some(
-        gb.all(
-            iter::once(well_formed_goal)
-                .chain(WfWellKnownGoals::outside_impl(db, &impl_datum).into_iter()),
-        ),
-    )
+    Some(well_formed_goal)
 }
 
 /// Creates the conditions that an impl (and its contents of an impl)
@@ -537,49 +565,9 @@ fn compute_assoc_ty_goal<I: Interner>(
 
 /// Defines methods to compute well-formedness goals for well-known
 /// traits (e.g. a goal for all fields of struct in a Copy impl to be Copy)
-struct WfWellKnownGoals {}
+struct WfWellKnownConstraints {}
 
-impl WfWellKnownGoals {
-    /// A convenience method to compute the goal assuming `trait_ref`
-    /// well-formedness requirements are in the environment.
-    pub fn inside_impl<I: Interner>(
-        db: &dyn RustIrDatabase<I>,
-        trait_ref: &TraitRef<I>,
-    ) -> Option<Goal<I>> {
-        match db.trait_datum(trait_ref.trait_id).well_known? {
-            WellKnownTrait::Copy => Self::copy_impl_constraint(db, trait_ref),
-            WellKnownTrait::Drop
-            | WellKnownTrait::Clone
-            | WellKnownTrait::Sized
-            | WellKnownTrait::FnOnce
-            | WellKnownTrait::FnMut
-            | WellKnownTrait::Fn
-            | WellKnownTrait::Unsize
-            | WellKnownTrait::Unpin => None,
-        }
-    }
-
-    /// Computes well-formedness goals without any assumptions about the environment.
-    /// Note that `outside_impl` does not call `inside_impl`, one needs to call both
-    /// in order to get the full set of goals to be proven.
-    pub fn outside_impl<I: Interner>(
-        db: &dyn RustIrDatabase<I>,
-        impl_datum: &ImplDatum<I>,
-    ) -> Option<Goal<I>> {
-        let interner = db.interner();
-
-        match db.trait_datum(impl_datum.trait_id()).well_known? {
-            WellKnownTrait::Drop => Self::drop_impl_constraint(db, impl_datum),
-            WellKnownTrait::Copy | WellKnownTrait::Clone | WellKnownTrait::Unpin => None,
-            // You can't add a manual implementation for following traits:
-            WellKnownTrait::Sized
-            | WellKnownTrait::FnOnce
-            | WellKnownTrait::FnMut
-            | WellKnownTrait::Fn
-            | WellKnownTrait::Unsize => Some(GoalData::CannotProve.intern(interner)),
-        }
-    }
-
+impl WfWellKnownConstraints {
     /// Computes a goal to prove Sized constraints on a struct definition.
     /// Struct is considered well-formed (in terms of Sized) when it either
     /// has no fields or all of it's fields except the last are proven to be Sized.
@@ -610,71 +598,108 @@ impl WfWellKnownGoals {
         ))
     }
 
-    /// Computes a goal to prove constraints on a Copy implementation.
+    /// Verify constraints on a Copy implementation.
     /// Copy impl is considered well-formed for
     ///    a) certain builtin types (scalar values, shared ref, etc..)
     ///    b) adts which
     ///        1) have all Copy fields
     ///        2) don't have a Drop impl
     fn copy_impl_constraint<I: Interner>(
+        solver: &mut dyn Solver<I>,
         db: &dyn RustIrDatabase<I>,
-        trait_ref: &TraitRef<I>,
-    ) -> Option<Goal<I>> {
+        impl_datum: &ImplDatum<I>,
+    ) -> bool {
         let interner = db.interner();
 
-        let ty = trait_ref.self_type_parameter(interner);
-        let ty_data = ty.data(interner);
+        let mut gb = GoalBuilder::new(db);
+
+        let impl_fields = impl_datum
+            .binders
+            .map_ref(|v| (&v.trait_ref, &v.where_clauses));
 
         // Implementations for scalars, pointer types and never type are provided by libcore.
         // User implementations on types other than ADTs are forbidden.
-        let (adt_id, substitution) = match ty_data {
-            TyData::Apply(ApplicationTy { name, substitution }) => match name {
+        match impl_datum
+            .binders
+            .skip_binders()
+            .trait_ref
+            .self_type_parameter(interner)
+            .data(interner)
+        {
+            TyData::Apply(ApplicationTy { name, .. }) => match name {
                 TypeName::Scalar(_)
                 | TypeName::Raw(_)
                 | TypeName::Ref(Mutability::Not)
-                | TypeName::Never => return None,
-                TypeName::Adt(adt_id) => (*adt_id, substitution),
-                _ => return Some(GoalData::CannotProve.intern(interner)),
+                | TypeName::Never => return true,
+                TypeName::Adt(_) => (),
+                _ => return false,
             },
 
-            _ => return Some(GoalData::CannotProve.intern(interner)),
+            _ => return false,
         };
 
-        // not { Implemented(ImplSelfTy: Drop) }
-        let neg_drop_goal = db
-            .well_known_trait_id(WellKnownTrait::Drop)
-            .map(|drop_trait_id| {
-                TraitRef {
-                    trait_id: drop_trait_id,
-                    substitution: Substitution::from1(interner, ty.clone()),
-                }
-                .cast::<Goal<I>>(interner)
-                .negate(interner)
+        // Well fomedness goal for ADTs
+        let well_formed_goal =
+            gb.forall(&impl_fields, (), |gb, _, (trait_ref, where_clauses), ()| {
+                let interner = gb.interner();
+
+                let ty = trait_ref.self_type_parameter(interner);
+                let ty_data = ty.data(interner);
+
+                let (adt_id, substitution) = match ty_data {
+                    TyData::Apply(ApplicationTy { name, substitution }) => match name {
+                        TypeName::Adt(adt_id) => (*adt_id, substitution),
+                        _ => unreachable!(),
+                    },
+
+                    _ => unreachable!(),
+                };
+
+                // if (WC) { ... }
+                gb.implies(
+                    impl_wf_environment(interner, &where_clauses, &trait_ref),
+                    |gb| -> Goal<I> {
+                        let db = gb.db();
+
+                        // not { Implemented(ImplSelfTy: Drop) }
+                        let neg_drop_goal =
+                            db.well_known_trait_id(WellKnownTrait::Drop)
+                                .map(|drop_trait_id| {
+                                    TraitRef {
+                                        trait_id: drop_trait_id,
+                                        substitution: Substitution::from1(interner, ty.clone()),
+                                    }
+                                    .cast::<Goal<I>>(interner)
+                                    .negate(interner)
+                                });
+
+                        let adt_datum = db.adt_datum(adt_id);
+
+                        let goals = adt_datum
+                            .binders
+                            .map_ref(|b| &b.variants)
+                            .substitute(interner, substitution)
+                            .into_iter()
+                            .flat_map(|v| {
+                                v.fields.into_iter().map(|f| {
+                                    // Implemented(FieldTy: Copy)
+                                    TraitRef {
+                                        trait_id: trait_ref.trait_id,
+                                        substitution: Substitution::from1(interner, f),
+                                    }
+                                    .cast(interner)
+                                })
+                            })
+                            .chain(neg_drop_goal.into_iter());
+                        gb.all(goals)
+                    },
+                )
             });
 
-        let adt_datum = db.adt_datum(adt_id);
-
-        let goals = adt_datum
-            .binders
-            .map_ref(|b| &b.variants)
-            .substitute(interner, substitution)
-            .into_iter()
-            .flat_map(|v| {
-                v.fields.into_iter().map(|f| {
-                    // Implemented(FieldTy: Copy)
-                    TraitRef {
-                        trait_id: trait_ref.trait_id,
-                        substitution: Substitution::from1(interner, f),
-                    }
-                    .cast(interner)
-                })
-            })
-            .chain(neg_drop_goal.into_iter());
-
-        Some(Goal::all(interner, goals))
+        solver.has_unique_solution(db, &well_formed_goal.into_closed_goal(interner))
     }
 
-    /// Computes goal to prove constraints on a Drop implementation
+    /// Verifies constraints on a Drop implementation
     /// Drop implementation is considered well-formed if:
     ///     a) it's implemented on an ADT
     ///     b) The generic parameters of the impl's type must all be parameters
@@ -709,15 +734,16 @@ impl WfWellKnownGoals {
     /// }
     /// ```
     fn drop_impl_constraint<I: Interner>(
+        solver: &mut dyn Solver<I>,
         db: &dyn RustIrDatabase<I>,
         impl_datum: &ImplDatum<I>,
-    ) -> Option<Goal<I>> {
+    ) -> bool {
         let interner = db.interner();
 
         let adt_id = match impl_datum.self_type_adt_id(interner) {
             Some(id) => id,
             // Drop can only be implemented on a nominal type
-            None => return Some(GoalData::CannotProve.intern(interner)),
+            None => return false,
         };
 
         let mut gb = GoalBuilder::new(db);
@@ -783,6 +809,8 @@ impl WfWellKnownGoals {
             },
         );
 
-        Some(gb.all([implied_by_adt_def_goal, eq_goal].iter()))
+        let well_formed_goal = gb.all([implied_by_adt_def_goal, eq_goal].iter());
+
+        solver.has_unique_solution(db, &well_formed_goal.into_closed_goal(interner))
     }
 }
