@@ -44,8 +44,8 @@ impl Lower for Program {
         // based just on its position:
         let raw_ids = self.items.iter().map(|_| lowerer.next_item_id()).collect();
 
-        lowerer.find_associated_types(self, &raw_ids)?;
-        lowerer.lookup_ids(self, &raw_ids)?;
+        lowerer.extract_associated_types(self, &raw_ids)?;
+        lowerer.extract_ids(self, &raw_ids)?;
         lowerer.lower(self, &raw_ids)
     }
 }
@@ -529,7 +529,7 @@ impl LowerWithEnv for QuantifiedInlineBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
-        env.in_binders(variable_kinds, |env| Ok(self.bound.lower(env)?))
+        env.in_binders(variable_kinds, |env| self.bound.lower(env))
     }
 }
 

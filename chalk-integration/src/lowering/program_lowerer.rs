@@ -47,7 +47,7 @@ impl ProgramLowerer {
     }
 
     /// Create ids for associated type declarations and values
-    pub fn find_associated_types(
+    pub fn extract_associated_types(
         &mut self,
         program: &Program,
         raw_ids: &Vec<RawId>,
@@ -83,7 +83,7 @@ impl ProgramLowerer {
         Ok(())
     }
 
-    pub fn lookup_ids(&mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<()> {
+    pub fn extract_ids(&mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<()> {
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::AdtDefn(defn) => {
