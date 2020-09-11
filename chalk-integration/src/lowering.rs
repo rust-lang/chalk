@@ -696,20 +696,22 @@ impl LowerWithEnv for Ty {
             .intern(interner),
 
             Ty::Apply { name, ref args } => {
-                let (apply_name, k) = match env.lookup_apply_type(&name)? {
-                    ApplyTypeLookup::Parameter(_) => {
+                let (apply_name, k) = match env.lookup_type(&name)? {
+                    TypeLookup::Parameter(_) => {
                         return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
                     }
 
-                    ApplyTypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
-                    ApplyTypeLookup::FnDef(id) => {
-                        (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id))
-                    }
-                    ApplyTypeLookup::Closure(id) => {
+                    TypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
+                    TypeLookup::FnDef(id) => (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id)),
+                    TypeLookup::Closure(id) => {
                         (chalk_ir::TypeName::Closure(id), env.closure_kind(id))
                     }
-                    ApplyTypeLookup::Opaque(id) => {
+                    TypeLookup::Opaque(id) => {
                         (chalk_ir::TypeName::OpaqueType(id), env.opaque_kind(id))
+                    }
+
+                    TypeLookup::Foreign(_) | TypeLookup::Trait(_) => {
+                        panic!("Unexpected apply type")
                     }
                 };
 

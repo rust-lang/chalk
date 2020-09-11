@@ -1,8 +1,8 @@
-use chalk_ir::cast::Cast;
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
     self, AdtId, BoundVar, ClosureId, DebruijnIndex, FnDefId, OpaqueTyId, TraitId, VariableKinds,
 };
+use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::AssociatedTyValueId;
 use std::collections::BTreeMap;
@@ -70,12 +70,14 @@ pub struct AssociatedTyLookup {
     pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 
-pub enum ApplyTypeLookup<'k> {
-    Parameter(&'k chalk_ir::WithKind<ChalkIr, BoundVar>),
+pub enum TypeLookup<'k> {
+    Parameter(&'k WithKind<ChalkIr, BoundVar>),
     Adt(AdtId<ChalkIr>),
     FnDef(FnDefId<ChalkIr>),
     Closure(ClosureId<ChalkIr>),
     Opaque(OpaqueTyId<ChalkIr>),
+    Foreign(ForeignDefId<ChalkIr>),
+    Trait(TraitId<ChalkIr>),
 }
 
 impl Env<'_> {
@@ -106,8 +108,8 @@ impl Env<'_> {
             }
         };
 
-        match self.lookup_apply_type(name) {
-            Ok(ApplyTypeLookup::Parameter(p)) => {
+        match self.lookup_type(name) {
+            Ok(TypeLookup::Parameter(p)) => {
                 let b = p.skip_kind();
                 Ok(match &p.kind {
                     chalk_ir::VariableKind::Ty(_) => chalk_ir::TyData::BoundVar(*b)
@@ -121,49 +123,45 @@ impl Env<'_> {
                     }
                 })
             }
-            Ok(ApplyTypeLookup::Adt(id)) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
-            Ok(ApplyTypeLookup::FnDef(id)) => {
-                apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id))
-            }
-            Ok(ApplyTypeLookup::Closure(id)) => {
+            Ok(TypeLookup::Adt(id)) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
+            Ok(TypeLookup::FnDef(id)) => apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id)),
+            Ok(TypeLookup::Closure(id)) => {
                 apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
             }
-            Ok(ApplyTypeLookup::Opaque(id)) => Ok(chalk_ir::TyData::Alias(
-                chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+            Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(
+                chalk_ir::OpaqueTy {
                     opaque_ty_id: id,
                     substitution: chalk_ir::Substitution::empty(interner),
-                }),
-            )
+                },
+            ))
             .intern(interner)
             .cast(interner)),
-            Err(_) => {
-                if let Some(id) = self.foreign_ty_ids.get(&name.str) {
-                    Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
-                        name: chalk_ir::TypeName::Foreign(*id),
-                        substitution: chalk_ir::Substitution::empty(interner),
-                    })
-                    .intern(interner)
-                    .cast(interner))
-                } else if let Some(_) = self.trait_ids.get(&name.str) {
-                    Err(RustIrError::NotStruct(name.clone()))
-                } else {
-                    Err(RustIrError::InvalidParameterName(name.clone()))
-                }
-            }
+            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                name: chalk_ir::TypeName::Foreign(id),
+                substitution: chalk_ir::Substitution::empty(interner),
+            })
+            .intern(interner)
+            .cast(interner)),
+            Ok(TypeLookup::Trait(_)) => Err(RustIrError::NotStruct(name.clone())),
+            Err(_) => Err(RustIrError::InvalidParameterName(name.clone())),
         }
     }
 
-    pub fn lookup_apply_type(&self, name: &Identifier) -> LowerResult<ApplyTypeLookup> {
+    pub fn lookup_type(&self, name: &Identifier) -> LowerResult<TypeLookup> {
         if let Some(id) = self.parameter_map.get(&name.str) {
-            Ok(ApplyTypeLookup::Parameter(id))
+            Ok(TypeLookup::Parameter(id))
         } else if let Some(id) = self.adt_ids.get(&name.str) {
-            Ok(ApplyTypeLookup::Adt(*id))
+            Ok(TypeLookup::Adt(*id))
         } else if let Some(id) = self.fn_def_ids.get(&name.str) {
-            Ok(ApplyTypeLookup::FnDef(*id))
+            Ok(TypeLookup::FnDef(*id))
         } else if let Some(id) = self.closure_ids.get(&name.str) {
-            Ok(ApplyTypeLookup::Closure(*id))
+            Ok(TypeLookup::Closure(*id))
         } else if let Some(id) = self.opaque_ty_ids.get(&name.str) {
-            Ok(ApplyTypeLookup::Opaque(*id))
+            Ok(TypeLookup::Opaque(*id))
+        } else if let Some(id) = self.foreign_ty_ids.get(&name.str) {
+            Ok(TypeLookup::Foreign(*id))
+        } else if let Some(id) = self.trait_ids.get(&name.str) {
+            Ok(TypeLookup::Trait(*id))
         } else {
             Err(RustIrError::NotStruct(name.clone()))
         }
