@@ -477,6 +477,17 @@ impl<I: Interner> Ty<I> {
         }
     }
 
+    /// Returns `Some(adt_id)` if this is an ADT, `None` otherwise
+    pub fn adt_id(&self, interner: &I) -> Option<AdtId<I>> {
+        match self.data(interner) {
+            TyData::Apply(ApplicationTy {
+                name: TypeName::Adt(adt_id),
+                ..
+            }) => Some(*adt_id),
+            _ => None,
+        }
+    }
+
     /// True if this type contains "bound" types/lifetimes, and hence
     /// needs to be shifted across binders. This is a very inefficient
     /// check, intended only for debug assertions, because I am lazy.

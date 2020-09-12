@@ -872,13 +872,31 @@ impl WfWellKnownConstraints {
             .at(interner, 1)
             .assert_ty_ref(interner)
             .clone();
+
+        let mut place_in_environment = |goal| -> Goal<I> {
+            gb.forall(
+                &Binders::new(
+                    binders.clone(),
+                    (goal, trait_ref, &impl_datum.where_clauses),
+                ),
+                (),
+                |gb, _, (goal, trait_ref, where_clauses), ()| {
+                    let interner = gb.interner();
+                    gb.implies(
+                        impl_wf_environment(interner, &where_clauses, &trait_ref),
+                        |_| goal,
+                    )
+                },
+            )
+        };
+
         match (source.data(interner), target.data(interner)) {
             (TyData::Apply(source_app), TyData::Apply(target_app)) => {
                 match (&source_app.name, &target_app.name) {
                     (TypeName::Ref(s_m), TypeName::Ref(t_m))
                     | (TypeName::Ref(s_m), TypeName::Raw(t_m))
                     | (TypeName::Raw(s_m), TypeName::Raw(t_m)) => {
-                        if matches!((*s_m, *t_m), (Mutability::Not, Mutability::Mut)) {
+                        if (*s_m, *t_m) == (Mutability::Not, Mutability::Mut) {
                             return false;
                         }
 
@@ -892,6 +910,7 @@ impl WfWellKnownConstraints {
                                 return false;
                             };
 
+                        // Source: Unsize<Target>
                         let unsize_goal: Goal<I> = TraitRef {
                             trait_id: unsize_trait_id,
                             substitution: Substitution::from_iter(
@@ -901,22 +920,79 @@ impl WfWellKnownConstraints {
                         }
                         .cast(interner);
 
-                        let unsize_goal = gb.forall(
-                            &Binders::new(
-                                binders,
-                                (unsize_goal, trait_ref, &impl_datum.where_clauses),
-                            ),
-                            (),
-                            |gb, _, (unsize_goal, trait_ref, where_clauses), ()| {
-                                let interner = gb.interner();
-                                gb.implies(
-                                    impl_wf_environment(interner, &where_clauses, &trait_ref),
-                                    |_| unsize_goal,
-                                )
-                            },
-                        );
+                        // ImplEnv -> Source: Unsize<Target>
+                        let unsize_goal = place_in_environment(unsize_goal);
 
                         solver.has_unique_solution(db, &unsize_goal.into_closed_goal(interner))
+                    }
+                    (TypeName::Adt(source_id), TypeName::Adt(target_id)) => {
+                        let adt_datum = db.adt_datum(*source_id);
+
+                        if source_id != target_id || adt_datum.kind != AdtKind::Struct {
+                            return false;
+                        }
+
+                        let fields = adt_datum
+                            .binders
+                            .map_ref(|bound| &bound.variants.last().unwrap().fields);
+
+                        let (source_fields, target_fields) = (
+                            fields.substitute(interner, &source_app.substitution),
+                            fields.substitute(interner, &target_app.substitution),
+                        );
+
+                        // collect fields with unequal ids
+                        let uneq_field_ids: Vec<usize> = (0..source_fields.len())
+                            .filter(|&i| {
+                                // ignore phantom data fields
+                                if let Some(adt_id) = source_fields[i].adt_id(interner) {
+                                    if db.adt_datum(adt_id).flags.phantom_data {
+                                        return false;
+                                    }
+                                }
+
+                                let eq_goal: Goal<I> = EqGoal {
+                                    a: source_fields[i].clone().cast(interner),
+                                    b: target_fields[i].clone().cast(interner),
+                                }
+                                .cast(interner);
+
+                                // ImplEnv -> Source.fields[i] = Target.fields[i]
+                                let eq_goal = place_in_environment(eq_goal);
+
+                                // We are interested in !UNEQUAL! fields
+                                !solver.has_unique_solution(db, &eq_goal.into_closed_goal(interner))
+                            })
+                            .collect();
+
+                        if uneq_field_ids.len() != 1 {
+                            return false;
+                        }
+
+                        let field_id = uneq_field_ids[0];
+
+                        // Source.fields[i]: CoerceUnsized<TargetFields[i]>
+                        let coerce_unsized_goal: Goal<I> = TraitRef {
+                            trait_id: trait_ref.trait_id,
+                            substitution: Substitution::from_iter(
+                                interner,
+                                [
+                                    source_fields[field_id].clone(),
+                                    target_fields[field_id].clone(),
+                                ]
+                                .iter()
+                                .cloned(),
+                            ),
+                        }
+                        .cast(interner);
+
+                        // ImplEnv -> Source.fields[i]: CoerceUnsized<TargetFields[i]>
+                        let coerce_unsized_goal = place_in_environment(coerce_unsized_goal);
+
+                        solver.has_unique_solution(
+                            db,
+                            &coerce_unsized_goal.into_closed_goal(interner),
+                        )
                     }
                     _ => false,
                 }
