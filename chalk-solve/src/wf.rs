@@ -1,16 +1,15 @@
 use std::{fmt, iter};
 
-use crate::ext::*;
-use crate::goal_builder::GoalBuilder;
-use crate::rust_ir::*;
-use crate::solve::Solver;
-use crate::split::Split;
-use crate::RustIrDatabase;
-use chalk_ir::cast::*;
-use chalk_ir::fold::shift::Shift;
-use chalk_ir::interner::Interner;
-use chalk_ir::visit::{Visit, Visitor};
-use chalk_ir::*;
+use crate::{
+    ext::*, goal_builder::GoalBuilder, rust_ir::*, solve::Solver, split::Split, RustIrDatabase,
+};
+use chalk_ir::{
+    cast::*,
+    fold::shift::Shift,
+    interner::Interner,
+    visit::{Visit, Visitor},
+    *,
+};
 use tracing::debug;
 
 #[derive(Debug)]
@@ -338,7 +337,14 @@ where
             WellKnownTrait::Drop => {
                 WfWellKnownConstraints::drop_impl_constraint(&mut *solver, self.db, &impl_datum)
             }
-            WellKnownTrait::Clone | WellKnownTrait::Unpin | WellKnownTrait::CoerceUnsized => true,
+            WellKnownTrait::CoerceUnsized => {
+                WfWellKnownConstraints::coerce_unsized_impl_constraint(
+                    &mut *solver,
+                    self.db,
+                    &impl_datum,
+                )
+            }
+            WellKnownTrait::Clone | WellKnownTrait::Unpin => true,
             // You can't add a manual implementation for the following traits:
             WellKnownTrait::Fn
             | WellKnownTrait::FnOnce
@@ -812,5 +818,110 @@ impl WfWellKnownConstraints {
         let well_formed_goal = gb.all([implied_by_adt_def_goal, eq_goal].iter());
 
         solver.has_unique_solution(db, &well_formed_goal.into_closed_goal(interner))
+    }
+
+    /// Verify constraints a CoerceUnsized impl.
+    /// Rules for CoerceUnsized impl to be considered well-formed:
+    /// a) pointer conversions: &[mut] T -> &[mut] U, &[mut] T -> *[mut] U,
+    ///    *[mut] T -> *[mut] U are considered valid if
+    ///    1) T: Unsize<U>
+    ///    2) mutability is respected, i.e. immutable -> immutable, mutable -> immutable,
+    ///       mutable -> mutable conversions are allowed, immutable -> mutable is not.
+    /// b) struct conversions of structures with the same definition, `S<P0...Pn>` -> `S<Q0...Qn>`.
+    ///    To check if this impl is legal, we would walk down the fields of `S`
+    ///    and consider their types with both substitutes. We are looking to find
+    ///    exactly one (non-phantom) field that has changed its type (from T to U), and
+    ///    expect T to be unsizeable to U, i.e. T: CoerceUnsized<U>.
+    ///        
+    ///    As an example, consider a struct
+    ///    ```rust
+    ///    struct Foo<T, U> {
+    ///        extra: T,
+    ///        ptr: *mut U,
+    ///    }
+    ///    ```
+    ///
+    ///    We might have an impl that allows (e.g.) `Foo<T, [i32; 3]>` to be unsized
+    ///    to `Foo<T, [i32]>`. That impl would look like:
+    ///    ```rust,ignore
+    ///    impl<T, U: Unsize<V>, V> CoerceUnsized<Foo<T, V>> for Foo<T, U> {}
+    ///    ```
+    ///    In this case:
+    ///   
+    ///    - `extra` has type `T` before and type `T` after
+    ///    - `ptr` has type `*mut U` before and type `*mut V` after
+    ///   
+    ///    Since just one field changed, we would then check that `*mut U: CoerceUnsized<*mut V>`
+    ///    is implemented. This will work out because `U: Unsize<V>`, and we have a libcore rule
+    ///    that `*mut U` can be coerced to `*mut V` if `U: Unsize<V>`.
+    fn coerce_unsized_impl_constraint<I: Interner>(
+        solver: &mut dyn Solver<I>,
+        db: &dyn RustIrDatabase<I>,
+        impl_datum: &ImplDatum<I>,
+    ) -> bool {
+        let interner = db.interner();
+        let mut gb = GoalBuilder::new(db);
+
+        let (binders, impl_datum) = impl_datum.binders.as_ref().into();
+
+        let trait_ref: &TraitRef<I> = &impl_datum.trait_ref;
+
+        let source = trait_ref.self_type_parameter(interner);
+        let target = trait_ref
+            .substitution
+            .at(interner, 1)
+            .assert_ty_ref(interner)
+            .clone();
+        match (source.data(interner), target.data(interner)) {
+            (TyData::Apply(source_app), TyData::Apply(target_app)) => {
+                match (&source_app.name, &target_app.name) {
+                    (TypeName::Ref(s_m), TypeName::Ref(t_m))
+                    | (TypeName::Ref(s_m), TypeName::Raw(t_m))
+                    | (TypeName::Raw(s_m), TypeName::Raw(t_m)) => {
+                        if matches!((*s_m, *t_m), (Mutability::Not, Mutability::Mut)) {
+                            return false;
+                        }
+
+                        let source = source_app.first_type_parameter(interner).unwrap();
+                        let target = target_app.first_type_parameter(interner).unwrap();
+
+                        let unsize_trait_id =
+                            if let Some(id) = db.well_known_trait_id(WellKnownTrait::Unsize) {
+                                id
+                            } else {
+                                return false;
+                            };
+
+                        let unsize_goal: Goal<I> = TraitRef {
+                            trait_id: unsize_trait_id,
+                            substitution: Substitution::from_iter(
+                                interner,
+                                [source, target].iter().cloned(),
+                            ),
+                        }
+                        .cast(interner);
+
+                        let unsize_goal = gb.forall(
+                            &Binders::new(
+                                binders,
+                                (unsize_goal, trait_ref, &impl_datum.where_clauses),
+                            ),
+                            (),
+                            |gb, _, (unsize_goal, trait_ref, where_clauses), ()| {
+                                let interner = gb.interner();
+                                gb.implies(
+                                    impl_wf_environment(interner, &where_clauses, &trait_ref),
+                                    |_| unsize_goal,
+                                )
+                            },
+                        );
+
+                        solver.has_unique_solution(db, &unsize_goal.into_closed_goal(interner))
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
     }
 }

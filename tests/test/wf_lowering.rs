@@ -1129,3 +1129,152 @@ fn ill_formed_opaque_ty() {
         }
     }
 }
+
+#[test]
+fn coerce_unsized_pointer() {
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<*mut U> for &'a mut T where T: Unsize<U> {}
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<*mut U> for &'a mut T {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            #[object_safe]
+            trait Foo {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto {}
+
+            impl<'a> CoerceUnsized<&'a (dyn Foo + 'a)> for &'a (dyn Foo + Auto + 'a) {}
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            #[object_safe]
+            trait Foo {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto {}
+
+            impl<'a> CoerceUnsized<&'a (dyn Foo + Auto + 'a)> for &'a (dyn Foo + 'a) {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a> CoerceUnsized<&'a [f32]> for &'a [f32; 3] {}
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<*mut U> for &'a T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<&'a mut U> for &'a T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<T, U> CoerceUnsized<*mut U> for *const T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<&'a U> for *const T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+        }
+    }
+}

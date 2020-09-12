@@ -726,6 +726,16 @@ where
     type Interner = I;
 }
 
+impl<A, B, C, I> HasInterner for (A, B, C)
+where
+    A: HasInterner<Interner = I>,
+    B: HasInterner<Interner = I>,
+    C: HasInterner<Interner = I>,
+    I: Interner,
+{
+    type Interner = I;
+}
+
 impl<'a, T: HasInterner> HasInterner for std::slice::Iter<'a, T> {
     type Interner = T::Interner;
 }
