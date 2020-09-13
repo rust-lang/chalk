@@ -165,7 +165,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     // Integer inference variables can only unify with integer types
                     | (TyVariableKind::Integer, true, _)
                     // Float inference variables can only unify with float types
-                    | (TyVariableKind::Float, _, true) => self.unify_var_ty(var, &ty),
+                    | (TyVariableKind::Float, _, true) => self.relate_var_ty(variance, var, &ty),
                     _ => Err(NoSolution),
                 }
             }
@@ -444,14 +444,36 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
+    fn generalize_substitution(
+        &mut self,
+        substitution: &Substitution<I>,
+        universe_index: UniverseIndex,
+    ) -> Substitution<I> {
+        let interner = self.interner;
+        let vars = substitution.iter(interner).map(|sub_var| {
+            let ena_var = self.table.new_variable(universe_index);
+            match sub_var.data(interner) {
+                GenericArgData::Ty(_) => GenericArgData::Ty(ena_var.to_ty(interner)),
+                GenericArgData::Lifetime(_) => {
+                    GenericArgData::Lifetime(ena_var.to_lifetime(interner))
+                }
+                GenericArgData::Const(const_value) => GenericArgData::Const(
+                    ena_var.to_const(interner, const_value.data(interner).ty.clone()),
+                ),
+            }
+            .intern(interner)
+        });
+        Substitution::from_iter(interner, vars)
+    }
+
     /// Unify an inference variable `var` with some non-inference
     /// variable `ty`, just bind `var` to `ty`. But we must enforce two conditions:
     ///
     /// - `var` does not appear inside of `ty` (the standard `OccursCheck`)
     /// - `ty` does not reference anything in a lifetime that could not be named in `var`
     ///   (the extended `OccursCheck` created to handle universes)
-    fn unify_var_ty(&mut self, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
-        debug_span!("unify_var_ty", ?var, ?ty);
+    fn relate_var_ty(&mut self, variance: Variance, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
+        debug_span!("relate_var_ty", ?var, ?ty);
 
         let interner = self.interner;
         let var = EnaVariable::from(var);
@@ -468,11 +490,148 @@ impl<'t, I: Interner> Unifier<'t, I> {
             DebruijnIndex::INNERMOST,
         )?;
 
+        // "Generalize" types. This ensures that we aren't accidentally forcing
+        // too much onto `var`. Instead of directly setting `var` equal to `ty`,
+        // we just take the outermost structure we _know_ `var` holds, and then
+        // apply that to `ty`. This involves creating new inference vars for
+        // everything inside `var`, then recursing down to unify those new
+        // inference variables with
+
+        // TODO: the justification for why we need to generalize here is a bit
+        // weak. Could we include a concrete example of what this fixes? Or,
+        // alternatively, link to a test case which requires this & say "it's
+        // complicated why exactly we need this".
+
+        // Example operation: consider `ty` as `&'x SomeType`. To generalize
+        // this, we create two new vars `'0` and `1`. Then we relate `var` with
+        // `&'0 1` and `&'0 1` with `&'x SomeType`. The second relation will
+        // recurse, and we'll end up relating `'0` with `'x` and `1` with `SomeType`.
+        let generalized_val = match ty1.kind(interner) {
+            TyKind::Apply(aty_data) => {
+                let ApplicationTy { substitution, name } = aty_data;
+                let substitution = self.generalize_substitution(substitution, universe_index);
+                let name = name.clone();
+                TyKind::Apply(ApplicationTy { substitution, name }).intern(interner)
+            }
+            TyKind::Dyn(dyn_ty) => {
+                let DynTy {
+                    bounds,
+                    lifetime: _,
+                } = dyn_ty;
+                let lifetime_var = self.table.new_variable(universe_index);
+                let lifetime = lifetime_var.to_lifetime(interner);
+
+                let bounds = bounds.map_ref(|value| {
+                    let universe_index = universe_index.next();
+                    let iter = value.iter(interner).map(|sub_var| {
+                        sub_var.map_ref(|clause| {
+                            let universe_index = universe_index.next();
+                            match clause {
+                                WhereClause::Implemented(trait_ref) => {
+                                    let TraitRef {
+                                        ref substitution,
+                                        trait_id,
+                                    } = *trait_ref;
+                                    let substitution =
+                                        self.generalize_substitution(substitution, universe_index);
+                                    WhereClause::Implemented(TraitRef {
+                                        substitution,
+                                        trait_id,
+                                    })
+                                }
+                                WhereClause::AliasEq(alias_eq) => {
+                                    let AliasEq { alias, ty: _ } = alias_eq;
+                                    let alias = match alias {
+                                        AliasTy::Opaque(opaque_ty) => {
+                                            let OpaqueTy {
+                                                ref substitution,
+                                                opaque_ty_id,
+                                            } = *opaque_ty;
+                                            let substitution = self.generalize_substitution(
+                                                substitution,
+                                                universe_index,
+                                            );
+                                            AliasTy::Opaque(OpaqueTy {
+                                                substitution,
+                                                opaque_ty_id,
+                                            })
+                                        }
+                                        AliasTy::Projection(projection_ty) => {
+                                            let ProjectionTy {
+                                                ref substitution,
+                                                associated_ty_id,
+                                            } = *projection_ty;
+                                            let substitution = self.generalize_substitution(
+                                                substitution,
+                                                universe_index,
+                                            );
+                                            AliasTy::Projection(ProjectionTy {
+                                                substitution,
+                                                associated_ty_id,
+                                            })
+                                        }
+                                    };
+                                    let ty =
+                                        self.table.new_variable(universe_index).to_ty(interner);
+                                    WhereClause::AliasEq(AliasEq { alias, ty })
+                                }
+                                WhereClause::TypeOutlives(_) => {
+                                    let lifetime_var = self.table.new_variable(universe_index);
+                                    let lifetime = lifetime_var.to_lifetime(interner);
+                                    let ty_var = self.table.new_variable(universe_index);
+                                    let ty = ty_var.to_ty(interner);
+                                    WhereClause::TypeOutlives(TypeOutlives {
+                                        ty: ty,
+                                        lifetime: lifetime,
+                                    })
+                                }
+                                WhereClause::LifetimeOutlives(_) => {
+                                    unreachable!("dyn Trait never contains LifetimeOutlive bounds")
+                                }
+                            }
+                        })
+                    });
+                    QuantifiedWhereClauses::from_iter(interner, iter)
+                });
+                TyKind::Dyn(DynTy { bounds, lifetime }).intern(interner)
+            }
+            TyKind::Function(fn_ptr) => {
+                let FnPointer {
+                    num_binders,
+                    sig,
+                    ref substitution,
+                } = *fn_ptr;
+
+                let substitution =
+                    FnSubst(self.generalize_substitution(&substitution.0, universe_index));
+
+                TyKind::Function(FnPointer {
+                    num_binders,
+                    sig,
+                    substitution,
+                })
+                .intern(interner)
+            }
+            TyKind::Placeholder(_) | TyKind::BoundVar(_) => {
+                // BoundVar and PlaceHolder have no internal values to be
+                // generic over, so we just relate directly to it
+                ty1.clone()
+            }
+            TyKind::Alias(_) | TyKind::InferenceVar(_, _) => {
+                unreachable!("relate_var_ty is not be called with ty = Alias or InferenceVar");
+            }
+        };
+
         self.table
             .unify
-            .unify_var_value(var, InferenceValue::from_ty(interner, ty1.clone()))
+            .unify_var_value(
+                var,
+                InferenceValue::from_ty(interner, generalized_val.clone()),
+            )
             .unwrap();
-        debug!("var {:?} set to {:?}", var, ty1);
+        debug!("var {:?} set to {:?}", var, generalized_val);
+
+        self.relate_ty_ty(variance, &generalized_val, &ty1)?;
 
         Ok(())
     }
