@@ -186,8 +186,22 @@ impl<I: Interner> Debug for TypeName<I> {
             TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
             TypeName::Slice => write!(fmt, "{{slice}}"),
             TypeName::FnDef(fn_def) => write!(fmt, "{:?}", fn_def),
-            TypeName::Raw(mutability) => write!(fmt, "{:?}", mutability),
-            TypeName::Ref(mutability) => write!(fmt, "{:?}", mutability),
+            TypeName::Ref(mutability) => write!(
+                fmt,
+                "{}",
+                match mutability {
+                    Mutability::Mut => "{{&mut}}",
+                    Mutability::Not => "{{&}}",
+                }
+            ),
+            TypeName::Raw(mutability) => write!(
+                fmt,
+                "{}",
+                match mutability {
+                    Mutability::Mut => "{{*mut}}",
+                    Mutability::Not => "{{*const}}",
+                }
+            ),
             TypeName::Never => write!(fmt, "Never"),
             TypeName::Array => write!(fmt, "{{array}}"),
             TypeName::Closure(id) => write!(fmt, "{{closure:{:?}}}", id),
