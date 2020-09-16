@@ -571,7 +571,7 @@ fn compute_assoc_ty_goal<I: Interner>(
 
 /// Defines methods to compute well-formedness goals for well-known
 /// traits (e.g. a goal for all fields of struct in a Copy impl to be Copy)
-struct WfWellKnownConstraints {}
+struct WfWellKnownConstraints;
 
 impl WfWellKnownConstraints {
     /// Computes a goal to prove Sized constraints on a struct definition.
