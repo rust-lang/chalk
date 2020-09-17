@@ -1,20 +1,21 @@
-use crate::context::{Context, ContextOps, InferenceTable};
 use crate::forest::Forest;
+use crate::slg::{SlgContextOps, TruncatingInferenceTable, UnificationOps};
 use crate::{ExClause, Literal, TimeStamp};
 
+use chalk_ir::cast::Cast;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     Environment, Fallible, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
 };
 use tracing::debug;
 
-impl<I: Interner, C: Context<I>> Forest<I, C> {
+impl<I: Interner> Forest<I> {
     /// Simplifies a goal into a series of positive domain goals
     /// and negative goals. This operation may fail if the goal
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_goal(
-        context: &impl ContextOps<I, C>,
-        infer: &mut dyn InferenceTable<I, C>,
+        context: &SlgContextOps<I>,
+        infer: &mut TruncatingInferenceTable<I>,
         subst: Substitution<I>,
         initial_environment: Environment<I>,
         initial_goal: Goal<I>,
@@ -33,23 +34,26 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
         let mut pending_goals = vec![(initial_environment, initial_goal)];
 
         while let Some((environment, goal)) = pending_goals.pop() {
-            match goal.data(context.interner()) {
+            match goal.data(context.program().interner()) {
                 GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
-                    let subgoal =
-                        infer.instantiate_binders_universally(context.interner(), &subgoal);
+                    let subgoal = infer
+                        .instantiate_binders_universally(context.program().interner(), &subgoal);
                     pending_goals.push((environment, subgoal.clone()));
                 }
                 GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
-                    let subgoal =
-                        infer.instantiate_binders_existentially(context.interner(), &subgoal);
+                    let subgoal = infer
+                        .instantiate_binders_existentially(context.program().interner(), &subgoal);
                     pending_goals.push((environment, subgoal.clone()));
                 }
                 GoalData::Implies(wc, subgoal) => {
-                    let new_environment = context.add_clauses(&environment, wc.clone());
+                    let new_environment = environment.add_clauses(
+                        context.program().interner(),
+                        wc.iter(context.program().interner()).cloned(),
+                    );
                     pending_goals.push((new_environment, subgoal.clone()));
                 }
                 GoalData::All(subgoals) => {
-                    for subgoal in subgoals.iter(context.interner()) {
+                    for subgoal in subgoals.iter(context.program().interner()) {
                         pending_goals.push((environment.clone(), subgoal.clone()));
                     }
                 }
@@ -62,7 +66,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                         )));
                 }
                 GoalData::EqGoal(goal) => infer.unify_generic_args_into_ex_clause(
-                    context.interner(),
+                    context.program().interner(),
                     &environment,
                     &goal.a,
                     &goal.b,
@@ -73,7 +77,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
                         .subgoals
                         .push(Literal::Positive(InEnvironment::new(
                             &environment,
-                            context.into_goal(domain_goal.clone()),
+                            domain_goal.clone().cast(context.program().interner()),
                         )));
                 }
                 GoalData::CannotProve => {

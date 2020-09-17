@@ -1,5 +1,6 @@
-use crate::context::{AnswerResult, AnswerStream, Context, ContextOps};
+use crate::context::{AnswerResult, AnswerStream};
 use crate::logic::RootSearchFail;
+use crate::slg::SlgContextOps;
 use crate::table::AnswerIndex;
 use crate::tables::Tables;
 use crate::{TableIndex, TimeStamp};
@@ -8,7 +9,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{Goal, InEnvironment, Substitution, UCanonical};
 use tracing::debug;
 
-pub(crate) struct Forest<I: Interner, C: Context<I>> {
+pub(crate) struct Forest<I: Interner> {
     pub(crate) tables: Tables<I>,
 
     /// This is a clock which always increases. It is
@@ -16,15 +17,13 @@ pub(crate) struct Forest<I: Interner, C: Context<I>> {
     /// This effectively gives us way to track what depth
     /// and loop a table or strand was last followed.
     pub(crate) clock: TimeStamp,
-    _context: std::marker::PhantomData<C>,
 }
 
-impl<I: Interner, C: Context<I>> Forest<I, C> {
+impl<I: Interner> Forest<I> {
     pub fn new() -> Self {
         Forest {
             tables: Tables::new(),
             clock: TimeStamp::default(),
-            _context: std::marker::PhantomData,
         }
     }
 
@@ -40,7 +39,7 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
     /// invocations. Invoking `next` fewer times is preferable =)
     pub fn iter_answers<'f>(
         &'f mut self,
-        context: &'f impl ContextOps<I, C>,
+        context: &'f SlgContextOps<'f, I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> impl AnswerStream<I> + 'f {
         let table = self.get_or_create_table_for_ucanonical_goal(context, goal.clone());
@@ -50,22 +49,18 @@ impl<I: Interner, C: Context<I>> Forest<I, C> {
             context,
             table,
             answer,
-            _context: std::marker::PhantomData::<C>,
         }
     }
 }
 
-struct ForestSolver<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> {
-    forest: &'me mut Forest<I, C>,
-    context: &'me CO,
+struct ForestSolver<'me, I: Interner> {
+    forest: &'me mut Forest<I>,
+    context: &'me SlgContextOps<'me, I>,
     table: TableIndex,
     answer: AnswerIndex,
-    _context: std::marker::PhantomData<C>,
 }
 
-impl<'me, I: Interner, C: Context<I>, CO: ContextOps<I, C>> AnswerStream<I>
-    for ForestSolver<'me, I, C, CO>
-{
+impl<'me, I: Interner> AnswerStream<I> for ForestSolver<'me, I> {
     /// # Panics
     ///
     /// Panics if a negative cycle was detected.

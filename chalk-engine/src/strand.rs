@@ -1,4 +1,4 @@
-use crate::context::Context;
+use crate::slg::TruncatingInferenceTable;
 use crate::table::AnswerIndex;
 use crate::{ExClause, TableIndex, TimeStamp};
 use std::fmt::{Debug, Error, Formatter};
@@ -16,8 +16,8 @@ pub(crate) struct CanonicalStrand<I: Interner> {
     pub(crate) last_pursued_time: TimeStamp,
 }
 
-pub(crate) struct Strand<I: Interner, C: Context<I>> {
-    pub(super) infer: C::InferenceTable,
+pub(crate) struct Strand<I: Interner> {
+    pub(super) infer: TruncatingInferenceTable<I>,
 
     pub(super) ex_clause: ExClause<I>,
 
@@ -43,7 +43,7 @@ pub(crate) struct SelectedSubgoal {
     pub(crate) universe_map: UniverseMap,
 }
 
-impl<I: Interner, C: Context<I>> Debug for Strand<I, C> {
+impl<I: Interner> Debug for Strand<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         fmt.debug_struct("Strand")
             .field("ex_clause", &self.ex_clause)
