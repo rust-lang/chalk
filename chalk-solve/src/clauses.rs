@@ -53,9 +53,8 @@ pub mod program_clauses;
 pub fn push_auto_trait_impls<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
-    adt_id: AdtId<I>,
+    app_ty: &ApplicationTy<I>,
 ) {
-    let adt_datum = &builder.db.adt_datum(adt_id);
     let interner = builder.interner();
 
     // Must be an auto trait.
@@ -70,41 +69,147 @@ pub fn push_auto_trait_impls<I: Interner>(
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the adt we're looking at, then
     // we don't generate our own rules.
-    if builder.db.impl_provided_for(auto_trait_id, adt_id) {
+    if builder.db.impl_provided_for(auto_trait_id, app_ty) {
         debug!("impl provided");
         return;
     }
 
-    let binders = adt_datum.binders.map_ref(|b| &b.variants);
-    builder.push_binders(&binders, |builder, variants| {
-        let self_ty: Ty<_> = ApplicationTy {
-            name: adt_id.cast(interner),
-            substitution: builder.substitution_in_scope(),
-        }
-        .intern(interner);
+    // we assume that the builder has no binders so far.
+    assert!(builder.placeholders_in_scope().is_empty());
 
-        // trait_ref = `MyStruct<...>: MyAutoTrait`
-        let auto_trait_ref = TraitRef {
-            trait_id: auto_trait_id,
-            substitution: Substitution::from1(interner, self_ty),
-        };
+    match app_ty.name {
+        TypeName::Adt(adt_id) => {
+            let adt_datum = &builder.db.adt_datum(adt_id);
 
-        // forall<P0..Pn> { // generic parameters from struct
-        //   MyStruct<...>: MyAutoTrait :-
-        //      Field0: MyAutoTrait,
-        //      ...
-        //      FieldN: MyAutoTrait
-        // }
-        builder.push_clause(
-            auto_trait_ref,
-            variants.iter().flat_map(|variant| {
-                variant.fields.iter().map(|field_ty| TraitRef {
+            let binders = adt_datum.binders.map_ref(|b| &b.variants);
+            builder.push_binders(&binders, |builder, variants| {
+                let self_ty: Ty<_> = ApplicationTy {
+                    name: adt_id.cast(interner),
+                    substitution: builder.substitution_in_scope(),
+                }
+                .intern(interner);
+
+                // trait_ref = `MyStruct<...>: MyAutoTrait`
+                let auto_trait_ref = TraitRef {
                     trait_id: auto_trait_id,
-                    substitution: Substitution::from1(interner, field_ty.clone()),
-                })
-            }),
-        );
-    });
+                    substitution: Substitution::from1(interner, self_ty),
+                };
+
+                // forall<P0..Pn> { // generic parameters from struct
+                //   MyStruct<...>: MyAutoTrait :-
+                //      Field0: MyAutoTrait,
+                //      ...
+                //      FieldN: MyAutoTrait
+                // }
+                builder.push_clause(
+                    auto_trait_ref,
+                    variants.iter().flat_map(|variant| {
+                        variant.fields.iter().map(|field_ty| TraitRef {
+                            trait_id: auto_trait_id,
+                            substitution: Substitution::from1(interner, field_ty.clone()),
+                        })
+                    }),
+                );
+            });
+        }
+        TypeName::Array => {
+            let len_type: Ty<_> = ApplicationTy {
+                name: TypeName::Scalar(Scalar::Uint(UintTy::U32)),
+                substitution: Substitution::empty(interner),
+            }
+            .intern(interner);
+            let varkinds_iter = iter::once(VariableKind::Ty(TyKind::General))
+                .chain(iter::once(VariableKind::Const(len_type)));
+            let binders = Binders::new(
+                VariableKinds::from_iter(interner, varkinds_iter),
+                std::marker::PhantomData::<I>,
+            );
+
+            builder.push_binders(&binders, |builder, _| {
+                let sub = builder.substitution_in_scope();
+                let arg: GenericArg<_> = sub.at(interner, 0).clone();
+
+                // self_ty = [P; n]
+                let self_ty: GenericArg<_> = ApplicationTy {
+                    name: TypeName::Array,
+                    substitution: sub,
+                }
+                .intern(interner)
+                .cast(interner);
+
+                // consequence = `[P; n]: MyAutoTrait`
+                let consequence = TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from1(interner, self_ty),
+                };
+
+                // condition = `P: MyAutoTrait`
+                let condition = TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from1(interner, arg),
+                };
+
+                // forall<P, n> {
+                //    [P; n]: MyAutoTrait :- P: MyAutoTrait
+                // }
+                builder.push_clause(consequence, iter::once(condition));
+            });
+        }
+        // non-atomic TypeName-variants which implement AutoTrait if and only if all types from `app_ty.substitution` implement AutoTrait
+        tn @ TypeName::Tuple(_) | tn @ TypeName::Slice | tn @ TypeName::Raw(_) => {
+            let n = app_ty.substitution.len(interner);
+            let binders = Binders::new(
+                VariableKinds::from_iter(
+                    interner,
+                    iter::repeat(VariableKind::Ty(TyKind::General)).take(n),
+                ),
+                std::marker::PhantomData::<I>,
+            );
+            builder.push_binders(&binders, |builder, _| {
+                let sub = builder.substitution_in_scope();
+
+                let self_ty: GenericArg<_> = ApplicationTy {
+                    name: tn,
+                    substitution: sub.clone(),
+                }
+                .intern(interner)
+                .cast(interner);
+
+                let consequence = TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from1(interner, self_ty),
+                };
+
+                let conditions = sub.iter(interner).map(|x| TraitRef {
+                    trait_id: auto_trait_id,
+                    substitution: Substitution::from1(interner, x.clone()),
+                });
+
+                // forall<P0, ..., Pn> { (P0, ..., Pn): MyAutoTrait :- P0: MyAutoTrait, ..., Pn: MyAutoTrait }
+                // forall<P> { [P]: MyAutoTrait :- P: MyAutoTrait }
+                // forall<P> { *const P: MyAutoTrait :- P: MyAutoTrait }
+                builder.push_clause(consequence, conditions);
+            });
+        }
+        // atomic TypeName-variants
+        TypeName::Scalar(_) | TypeName::Str | TypeName::Never | TypeName::FnDef(_) => {
+            let self_ty: GenericArg<_> = app_ty.clone().intern(interner).cast(interner);
+            let auto_trait_ref = TraitRef {
+                trait_id: auto_trait_id,
+                substitution: Substitution::from1(interner, self_ty),
+            };
+
+            builder.push_fact(auto_trait_ref);
+        }
+        TypeName::Ref(_) => {
+            unimplemented!();
+        }
+        TypeName::AssociatedType(_) => unimplemented!(),
+        TypeName::Closure(_) => unimplemented!(),
+        TypeName::OpaqueType(_) => unimplemented!(),
+        TypeName::Foreign(_) => unimplemented!(),
+        TypeName::Error => {}
+    }
 }
 
 /// Leak auto traits for opaque types, just like `push_auto_trait_impls` does for structs.
@@ -254,12 +359,9 @@ fn program_clauses_that_could_match<I: Interner>(
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
                 match trait_ref.self_type_parameter(interner).data(interner) {
-                    TyData::Apply(apply) => match &apply.name {
-                        TypeName::Adt(adt_id) => {
-                            push_auto_trait_impls(builder, trait_id, *adt_id);
-                        }
-                        _ => {}
-                    },
+                    TyData::Apply(apply) => {
+                        push_auto_trait_impls(builder, trait_id, apply);
+                    }
                     TyData::InferenceVar(_, _) | TyData::BoundVar(_) => {
                         return Err(Floundered);
                     }

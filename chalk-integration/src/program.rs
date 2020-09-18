@@ -6,7 +6,7 @@ use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders,
     CanonicalVarKinds, ClosureId, FnDefId, ForeignDefId, GenericArg, Goal, Goals, ImplId, Lifetime,
     OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
-    Substitution, TraitId, Ty,
+    Substitution, TraitId, Ty, TyData,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -422,14 +422,36 @@ impl RustIrDatabase<ChalkIr> for Program {
             .collect()
     }
 
-    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, adt_id: AdtId<ChalkIr>) -> bool {
+    fn impl_provided_for(
+        &self,
+        auto_trait_id: TraitId<ChalkIr>,
+        app_ty: &ApplicationTy<ChalkIr>,
+    ) -> bool {
         let interner = self.interner();
-        // Look for an impl like `impl Send for Foo` where `Foo` is
-        // the ADT.  See `push_auto_trait_impls` for more.
-        self.impl_data.values().any(|impl_datum| {
-            impl_datum.trait_id() == auto_trait_id
-                && impl_datum.self_type_adt_id(interner) == Some(adt_id)
-        })
+
+        // an iterator containing the `ApplicationTy`s which have an impl for the trait `auto_trait_id`.
+        let mut impl_app_tys = self.impl_data.values().filter_map(|impl_datum| {
+            if impl_datum.trait_id() != auto_trait_id {
+                return None;
+            }
+
+            let ty = impl_datum
+                .binders
+                .skip_binders()
+                .trait_ref
+                .self_type_parameter(interner);
+            match ty.data(interner) {
+                TyData::Apply(app) => Some(app.clone()),
+                _ => None,
+            }
+        });
+
+        // we only compare the `TypeName`s as
+        // - given a `struct S<T>`; an implementation for `S<A>` should suppress an auto impl for `S<B>`, and
+        // - an implementation for `[A]` should suppress an auto impl for `[B]`, and
+        // - an implementation for `(A, B, C)` should suppress an auto impl for `(D, E, F)`
+        // this may change later
+        impl_app_tys.any(|x| x.name == app_ty.name)
     }
 
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {

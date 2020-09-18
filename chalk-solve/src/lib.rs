@@ -101,12 +101,11 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn local_impls_to_coherence_check(&self, trait_id: TraitId<I>) -> Vec<ImplId<I>>;
 
     /// Returns true if there is an explicit impl of the auto trait
-    /// `auto_trait_id` for the ADT `adt_id`. This is part of
+    /// `auto_trait_id` for the type `app_ty`. This is part of
     /// the auto trait handling -- if there is no explicit impl given
-    /// by the user for the struct, then we provide default impls
-    /// based on the field types (otherwise, we rely on the impls the
-    /// user gave).
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool;
+    /// by the user for `app_ty`, then we provide default impls
+    /// (otherwise, we rely on the impls the user gave).
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, app_ty: &ApplicationTy<I>) -> bool;
 
     /// Returns id of a trait lang item, if found
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<I>>;
