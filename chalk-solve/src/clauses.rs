@@ -31,8 +31,7 @@ fn consistuent_types<I: Interner>(
             adt_datum_bound
                 .variants
                 .into_iter()
-                .map(|variant| variant.fields.into_iter())
-                .flatten()
+                .flat_map(|variant| variant.fields.into_iter())
                 .collect()
         }
         TypeName::Array
