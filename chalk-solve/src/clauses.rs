@@ -19,7 +19,7 @@ mod generalize;
 pub mod program_clauses;
 
 // yields the types "contained" in `app_ty`
-fn consistuent_types<I: Interner>(
+fn constituent_types<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     app_ty: &ApplicationTy<I>,
 ) -> Vec<Ty<I>> {
@@ -121,7 +121,7 @@ pub fn push_auto_trait_impls<I: Interner>(
     };
     let consequence = mk_ref(app_ty.clone().intern(interner));
 
-    let conditions = consistuent_types(builder.db, app_ty)
+    let conditions = constituent_types(builder.db, app_ty)
         .into_iter()
         .map(mk_ref);
 
