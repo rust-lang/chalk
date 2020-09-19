@@ -237,40 +237,63 @@ fn builtin_auto_trait() {
             enum ExtEnum { GoodVariant, BadVariant(Ext) }
         }
 
-        goal {
-            (Struct, Marker): AutoTrait
-        }
-        yields {
-            "No possible solution"
-        }
+        // The following types only contain AutoTrait-types, and thus implement AutoTrait themselves.
+        goal { (i32, f32): AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
 
-        goal {
-            forall<'a> { (fn(), [(); 1], [()], u32, *const (), str, !, Struct, Enum, func, good_closure, &'a ()): AutoTrait }
-        }
-        yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
+        goal { [(); 1]: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
 
-        goal {
-            good_closure: AutoTrait
-        }
-        yields {
-            "Unique; substitution [], lifetime constraints []"
-        }
+        goal { [()]: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
 
-        goal {
-            bad_closure: AutoTrait
-        }
-        yields {
-            "No possible solution"
-        }
+        goal { u32: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
 
-        goal {
-            ExtEnum: AutoTrait
-        }
-        yields {
-            "No possible solution"
-        }
+        goal { *const (): AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { *mut (): AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { forall<'a> { &'a (): AutoTrait } }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { forall<'a> { &'a mut (): AutoTrait } }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { str: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { !: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { Enum: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { func: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { good_closure: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { fn(Marker) -> Marker: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+
+        // foreign types do not implement AutoTraits automatically
+        goal { Ext: AutoTrait }
+        yields { "No possible solution" }
+
+        // The following types do contain non-AutoTrait types, and thus do not implement AutoTrait.
+        goal { bad_closure: AutoTrait }
+        yields { "No possible solution" }
+
+        goal { ExtEnum: AutoTrait }
+        yields { "No possible solution" }
+
+        goal { (Struct, Marker): AutoTrait }
+        yields { "No possible solution" }
     }
 }
 
