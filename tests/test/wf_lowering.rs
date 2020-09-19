@@ -1129,3 +1129,312 @@ fn ill_formed_opaque_ty() {
         }
     }
 }
+
+#[test]
+fn coerce_unsized_pointer() {
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<*mut U> for &'a mut T where T: Unsize<U> {}
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+        }
+    }
+
+    // T: Unsize<U> is not in the environment
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<*mut U> for &'a mut T {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Test with builtin Unsize impl
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            #[object_safe]
+            trait Foo {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto {}
+
+            impl<'a> CoerceUnsized<&'a (dyn Foo + 'a)> for &'a (dyn Foo + Auto + 'a) {}
+        }
+    }
+
+    // Test with builtin Unsize impl
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            #[object_safe]
+            trait Foo {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto {}
+
+            impl<'a> CoerceUnsized<&'a (dyn Foo + Auto + 'a)> for &'a (dyn Foo + 'a) {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Test with builtin Unsize impl
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a> CoerceUnsized<&'a [f32]> for &'a [f32; 3] {}
+        }
+    }
+
+    // Coercing from shared to mut
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<*mut U> for &'a T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Coercing from shared to mut
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<&'a mut U> for &'a T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Coercing from shared to mut
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<T, U> CoerceUnsized<*mut U> for *const T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Coercing from raw pointer to ref
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            impl<'a, T, U> CoerceUnsized<&'a U> for *const T where T: Unsize<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+}
+
+#[test]
+fn coerce_unsized_struct() {
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            struct Foo<'a, T> {
+                t: &'a T
+            }
+
+            struct Bar<T, U> {
+                extra: T,
+                ptr: *mut U,
+            }
+
+            impl<'a, T, U> CoerceUnsized<&'a U> for &'a T where T: Unsize<U> {}
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+            impl<'a> CoerceUnsized<Foo<'a, [u32]>> for Foo<'a, [u32; 3]> {}
+            impl<T, U, V> CoerceUnsized<Bar<T, V>> for Bar<T, U> where U: Unsize<V> {}
+        }
+    }
+
+    // Unsizing different structs
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            struct S1<T> {
+                t: T,
+            }
+
+            struct S2<T> {
+                t: T,
+            }
+
+            impl<T, U> CoerceUnsized<S2<U>> for S1<T> where T: CoerceUnsized<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Unsizing enums
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            enum Foo<T> {
+                A {
+                    t: T
+                }
+            }
+
+            impl<T, U> CoerceUnsized<Foo<U>> for Foo<T> where T: CoerceUnsized<U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Unsizing two fields
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            struct Bar<T, U> {
+                ptr1: *mut T,
+                ptr2: *mut U,
+            }
+
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+            impl<T, S, U, V> CoerceUnsized<Bar<T, V>> for Bar<S, U> where U: Unsize<V>, T: Unsize<S> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Unsizing no fields
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            struct Bar<T, U> {
+                ptr1: *mut T,
+                ptr2: *mut U,
+            }
+
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+            impl<T> CoerceUnsized<Bar<T, T>> for Bar<T, T> where T: Unsize<T> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // No unsize in the environment
+    lowering_error! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            struct Bar<T, U> {
+                extra: T,
+                ptr: *mut U,
+            }
+
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+            impl<T, U, V> CoerceUnsized<Bar<T, V>> for Bar<T, U> {}
+        } error_msg {
+            "trait impl for `CoerceUnsized` does not meet well-formedness requirements"
+        }
+    }
+
+    // Phantom data test & CoerceUnsized in the environment test
+    lowering_success! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[lang(coerce_unsized)]
+            trait CoerceUnsized<T> {}
+
+            #[phantom_data]
+            struct PhantomData<T> {}
+
+            struct Foo<T, V> {
+                coerce: T,
+                phantom: PhantomData<V>,
+            }
+
+            struct Bar<T, U, V> {
+                extra: T,
+                phantom: PhantomData<V>,
+                ptr: *mut U,
+            }
+
+            impl<T, U> CoerceUnsized<*mut U> for *mut T where T: Unsize<U> {}
+            impl<T, U, V, N, M> CoerceUnsized<Bar<T, V, N>> for Bar<T, U, M> where U: Unsize<V> {}
+            impl<T, U, V> CoerceUnsized<Foo<U, V>> for Foo<T, V> where T: CoerceUnsized<U> {}
+        }
+    }
+}

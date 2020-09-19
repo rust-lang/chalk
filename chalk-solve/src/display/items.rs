@@ -194,6 +194,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Fn => "fn",
                 WellKnownTrait::Unsize => "unsize",
                 WellKnownTrait::Unpin => "unpin",
+                WellKnownTrait::CoerceUnsized => "coerce_unsized",
             };
             writeln!(f, "#[lang({})]", name)?;
         }
