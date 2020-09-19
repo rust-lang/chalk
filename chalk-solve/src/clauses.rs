@@ -26,7 +26,8 @@ fn constituent_types<I: Interner>(
     let interner = db.interner();
 
     match app_ty.name {
-        TypeName::Adt(adt_id) => {
+        // For non-phantom_data adts we collect its variants/fields
+        TypeName::Adt(adt_id) if !db.adt_datum(adt_id).flags.phantom_data => {
             let adt_datum = &db.adt_datum(adt_id);
             let adt_datum_bound = adt_datum.binders.substitute(interner, &app_ty.substitution);
             adt_datum_bound
@@ -35,7 +36,9 @@ fn constituent_types<I: Interner>(
                 .flat_map(|variant| variant.fields.into_iter())
                 .collect()
         }
-        TypeName::Array
+        // And for `PhantomData<T>`, we pass `T`.
+        TypeName::Adt(_)
+        | TypeName::Array
         | TypeName::Tuple(_)
         | TypeName::Slice
         | TypeName::Raw(_)
@@ -49,6 +52,7 @@ fn constituent_types<I: Interner>(
             .filter_map(|x| x.ty(interner))
             .cloned()
             .collect(),
+
         TypeName::Closure(_) => panic!("this function should not be called for closures"),
         TypeName::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TypeName::Error => Vec::new(),

@@ -326,3 +326,22 @@ fn adt_auto_trait() {
         }
     }
 }
+
+#[test]
+fn phantom_auto_trait() {
+    test! {
+        program {
+            #[auto] trait AutoTrait {}
+            #[phantom_data] struct PhantomData<T> {}
+            struct Bad {}
+            impl !AutoTrait for Bad {}
+        }
+
+        goal {
+            PhantomData<Bad>: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+    }
+}
