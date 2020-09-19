@@ -112,11 +112,6 @@ pub fn push_auto_trait_impls<I: Interner>(
     // we assume that the builder has no binders so far.
     assert!(builder.placeholders_in_scope().is_empty());
 
-    // auto traits are not implemented for foreign types
-    if let TypeName::Foreign(_) = app_ty.name {
-        return;
-    }
-
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the adt we're looking at, then
     // we don't generate our own rules.
@@ -132,21 +127,29 @@ pub fn push_auto_trait_impls<I: Interner>(
 
     let consequence = mk_ref(app_ty.clone().intern(interner));
 
-    // closures require binders, while the other types do not
-    if let TypeName::Closure(closure_id) = app_ty.name {
-        let binders = builder
-            .db
-            .closure_upvars(closure_id, &Substitution::empty(interner));
-        builder.push_binders(&binders, |builder, upvar_ty| {
-            let conditions = iter::once(mk_ref(upvar_ty));
-            builder.push_clause(consequence, conditions);
-        });
-    } else {
-        let conditions = constituent_types(builder.db, app_ty)
-            .into_iter()
-            .map(mk_ref);
+    match app_ty.name {
+        // auto traits are not implemented for foreign types
+        TypeName::Foreign(_) => return,
 
-        builder.push_clause(consequence, conditions);
+        // closures require binders, while the other types do not
+        TypeName::Closure(closure_id) => {
+            let binders = builder
+                .db
+                .closure_upvars(closure_id, &Substitution::empty(interner));
+            builder.push_binders(&binders, |builder, upvar_ty| {
+                let conditions = iter::once(mk_ref(upvar_ty));
+                builder.push_clause(consequence, conditions);
+            });
+        }
+
+        // app_ty implements AutoTrait if all constituents of app_ty implement AutoTrait
+        _ => {
+            let conditions = constituent_types(builder.db, app_ty)
+                .into_iter()
+                .map(mk_ref);
+
+            builder.push_clause(consequence, conditions);
+        }
     }
 }
 
