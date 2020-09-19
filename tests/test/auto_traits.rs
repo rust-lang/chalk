@@ -217,3 +217,112 @@ fn enum_auto_trait() {
         }
     }
 }
+
+#[test]
+fn builtin_auto_trait() {
+    test! {
+        program {
+            #[auto] trait AutoTrait {}
+            struct Struct {}
+            enum Enum { Var1, Var2 }
+            fn func();
+
+            struct Marker {}
+            impl !AutoTrait for Marker {}
+
+            closure good_closure(self, arg: Marker) -> Marker { i32 }
+            closure bad_closure(self, arg: i32) -> i32  { Marker }
+
+            extern type Ext;
+            enum ExtEnum { GoodVariant, BadVariant(Ext) }
+        }
+
+        goal {
+            (Struct, Marker): AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<'a> { (fn(), [(); 1], [()], u32, *const (), str, !, Struct, Enum, func, good_closure, &'a ()): AutoTrait }
+        }
+        yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            good_closure: AutoTrait
+        }
+        yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            bad_closure: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+
+        goal {
+            ExtEnum: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn adt_auto_trait() {
+    test! {
+        program {
+            #[auto] trait AutoTrait {}
+            struct Yes {}
+            struct No {}
+            impl !AutoTrait for No {}
+
+            struct WrapperNo<T> { t: T }
+            struct WrapperYes<T> { t: T }
+
+            struct X {}
+            impl !AutoTrait for WrapperNo<X> {}
+        }
+
+        goal {
+            Yes: AutoTrait
+        }
+        yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            No: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+
+        goal {
+            X: AutoTrait
+        }
+        yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WrapperNo<Yes>: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+
+        goal {
+            WrapperYes<No>: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+    }
+}
