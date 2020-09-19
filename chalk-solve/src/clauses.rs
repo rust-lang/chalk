@@ -24,6 +24,7 @@ fn constituent_types<I: Interner>(
     app_ty: &ApplicationTy<I>,
 ) -> Vec<Ty<I>> {
     let interner = db.interner();
+
     match app_ty.name {
         TypeName::Adt(adt_id) => {
             let adt_datum = &db.adt_datum(adt_id);
@@ -48,7 +49,7 @@ fn constituent_types<I: Interner>(
             .filter_map(|x| x.ty(interner))
             .cloned()
             .collect(),
-        TypeName::Closure(_) => unimplemented!(),
+        TypeName::Closure(_) => panic!("this function should not be called for closures"),
         TypeName::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TypeName::Error => Vec::new(),
         TypeName::OpaqueType(_) => unimplemented!(),
@@ -124,13 +125,25 @@ pub fn push_auto_trait_impls<I: Interner>(
         trait_id: auto_trait_id,
         substitution: Substitution::from1(interner, ty.cast(interner)),
     };
+
     let consequence = mk_ref(app_ty.clone().intern(interner));
 
-    let conditions = constituent_types(builder.db, app_ty)
-        .into_iter()
-        .map(mk_ref);
+    // closures require binders, while the other types do not
+    if let TypeName::Closure(closure_id) = app_ty.name {
+        let binders = builder
+            .db
+            .closure_upvars(closure_id, &Substitution::empty(interner));
+        builder.push_binders(&binders, |builder, upvar_ty| {
+            let conditions = iter::once(mk_ref(upvar_ty));
+            builder.push_clause(consequence, conditions);
+        });
+    } else {
+        let conditions = constituent_types(builder.db, app_ty)
+            .into_iter()
+            .map(mk_ref);
 
-    builder.push_clause(consequence, conditions);
+        builder.push_clause(consequence, conditions);
+    }
 }
 
 /// Leak auto traits for opaque types, just like `push_auto_trait_impls` does for structs.
