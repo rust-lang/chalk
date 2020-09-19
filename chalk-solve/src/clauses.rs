@@ -48,11 +48,11 @@ fn constituent_types<I: Interner>(
             .filter_map(|x| x.ty(interner))
             .cloned()
             .collect(),
-        TypeName::AssociatedType(_) => unimplemented!(),
         TypeName::Closure(_) => unimplemented!(),
-        TypeName::OpaqueType(_) => unimplemented!(),
-        TypeName::Foreign(_) => unimplemented!(),
+        TypeName::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TypeName::Error => Vec::new(),
+        TypeName::OpaqueType(_) => unimplemented!(),
+        TypeName::AssociatedType(_) => unimplemented!(),
     }
 }
 
@@ -104,6 +104,14 @@ pub fn push_auto_trait_impls<I: Interner>(
         1
     );
 
+    // we assume that the builder has no binders so far.
+    assert!(builder.placeholders_in_scope().is_empty());
+
+    // auto traits are not implemented for foreign types
+    if let TypeName::Foreign(_) = app_ty.name {
+        return;
+    }
+
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the adt we're looking at, then
     // we don't generate our own rules.
@@ -111,9 +119,6 @@ pub fn push_auto_trait_impls<I: Interner>(
         debug!("impl provided");
         return;
     }
-
-    // we assume that the builder has no binders so far.
-    assert!(builder.placeholders_in_scope().is_empty());
 
     let mk_ref = |ty: Ty<I>| TraitRef {
         trait_id: auto_trait_id,
