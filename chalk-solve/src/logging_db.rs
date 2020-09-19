@@ -168,7 +168,9 @@ where
 
     fn impl_provided_for(&self, auto_trait_id: TraitId<I>, app_ty: &ApplicationTy<I>) -> bool {
         self.record(auto_trait_id);
-        // TODO record app_ty
+        if let TypeName::Adt(adt_id) = app_ty.name {
+            self.record(adt_id);
+        }
         self.ws.db().impl_provided_for(auto_trait_id, app_ty)
     }
 
