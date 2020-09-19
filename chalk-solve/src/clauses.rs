@@ -279,9 +279,19 @@ fn program_clauses_that_could_match<I: Interner>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                match trait_ref.self_type_parameter(interner).data(interner) {
+                let ty = trait_ref.self_type_parameter(interner);
+                match ty.data(interner) {
                     TyData::Apply(apply) => {
                         push_auto_trait_impls(builder, trait_id, apply);
+                    }
+                    // function-types implement auto traits unconditionally
+                    TyData::Function(_) => {
+                        let auto_trait_ref = TraitRef {
+                            trait_id,
+                            substitution: Substitution::from1(interner, ty.cast(interner)),
+                        };
+
+                        builder.push_fact(auto_trait_ref);
                     }
                     TyData::InferenceVar(_, _) | TyData::BoundVar(_) => {
                         return Err(Floundered);
