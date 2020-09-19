@@ -217,3 +217,154 @@ fn enum_auto_trait() {
         }
     }
 }
+
+#[test]
+fn builtin_auto_trait() {
+    test! {
+        program {
+            #[auto] trait AutoTrait {}
+            struct Struct {}
+            enum Enum { Var1, Var2 }
+            fn func();
+
+            struct Marker {}
+            impl !AutoTrait for Marker {}
+
+            closure good_closure(self, arg: Marker) -> Marker { i32 }
+            closure bad_closure(self, arg: i32) -> i32  { Marker }
+
+            extern type Ext;
+            enum ExtEnum { GoodVariant, BadVariant(Ext) }
+        }
+
+        // The following types only contain AutoTrait-types, and thus implement AutoTrait themselves.
+        goal { (i32, f32): AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { [(); 1]: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { [()]: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { u32: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { *const (): AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { *mut (): AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { forall<'a> { &'a (): AutoTrait } }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { forall<'a> { &'a mut (): AutoTrait } }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { str: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { !: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { Enum: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { func: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { good_closure: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+        goal { fn(Marker) -> Marker: AutoTrait }
+        yields { "Unique; substitution [], lifetime constraints []" }
+
+
+        // foreign types do not implement AutoTraits automatically
+        goal { Ext: AutoTrait }
+        yields { "No possible solution" }
+
+        // The following types do contain non-AutoTrait types, and thus do not implement AutoTrait.
+        goal { bad_closure: AutoTrait }
+        yields { "No possible solution" }
+
+        goal { ExtEnum: AutoTrait }
+        yields { "No possible solution" }
+
+        goal { (Struct, Marker): AutoTrait }
+        yields { "No possible solution" }
+    }
+}
+
+#[test]
+fn adt_auto_trait() {
+    test! {
+        program {
+            #[auto] trait AutoTrait {}
+            struct Yes {}
+            struct No {}
+            impl !AutoTrait for No {}
+
+            struct WrapperNo<T> { t: T }
+            struct WrapperYes<T> { t: T }
+
+            struct X {}
+            impl !AutoTrait for WrapperNo<X> {}
+        }
+
+        goal {
+            Yes: AutoTrait
+        }
+        yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            No: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+
+        goal {
+            X: AutoTrait
+        }
+        yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WrapperNo<Yes>: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+
+        goal {
+            WrapperYes<No>: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn phantom_auto_trait() {
+    test! {
+        program {
+            #[auto] trait AutoTrait {}
+            #[phantom_data] struct PhantomData<T> {}
+            struct Bad {}
+            impl !AutoTrait for Bad {}
+        }
+
+        goal {
+            PhantomData<Bad>: AutoTrait
+        }
+        yields {
+            "No possible solution"
+        }
+    }
+}

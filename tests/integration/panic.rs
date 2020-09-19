@@ -176,7 +176,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn impl_provided_for(
         &self,
         auto_trait_id: TraitId<ChalkIr>,
-        struct_id: AdtId<ChalkIr>,
+        app_ty: &ApplicationTy<ChalkIr>,
     ) -> bool {
         unimplemented!()
     }

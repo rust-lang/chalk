@@ -156,7 +156,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
     fn impl_provided_for(
         &self,
         _auto_trait_id: chalk_ir::TraitId<I>,
-        _adt_id: chalk_ir::AdtId<I>,
+        _app_ty: &chalk_ir::ApplicationTy<I>,
     ) -> bool {
         // We panic here because the returned ids may not be collected,
         // resulting in unresolvable names.

@@ -7,9 +7,9 @@ use crate::{
     tls, SolverChoice,
 };
 use chalk_ir::{
-    AdtId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,
-    Environment, FnDefId, GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId, ProgramClause,
-    ProgramClauses, Substitution, TraitId, Ty, UCanonical,
+    AdtId, ApplicationTy, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId,
+    ConstrainedSubst, Environment, FnDefId, GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId,
+    ProgramClause, ProgramClauses, Substitution, TraitId, Ty, UCanonical,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -131,10 +131,14 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
             .local_impls_to_coherence_check(trait_id)
     }
 
-    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, adt_id: AdtId<ChalkIr>) -> bool {
+    fn impl_provided_for(
+        &self,
+        auto_trait_id: TraitId<ChalkIr>,
+        app_ty: &ApplicationTy<ChalkIr>,
+    ) -> bool {
         self.program_ir()
             .unwrap()
-            .impl_provided_for(auto_trait_id, adt_id)
+            .impl_provided_for(auto_trait_id, app_ty)
     }
 
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {

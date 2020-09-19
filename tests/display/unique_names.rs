@@ -122,9 +122,9 @@ where
     fn impl_provided_for(
         &self,
         auto_trait_id: chalk_ir::TraitId<I>,
-        adt_id: chalk_ir::AdtId<I>,
+        app_ty: &chalk_ir::ApplicationTy<I>,
     ) -> bool {
-        self.db.impl_provided_for(auto_trait_id, adt_id)
+        self.db.impl_provided_for(auto_trait_id, app_ty)
     }
     fn well_known_trait_id(
         &self,

@@ -8,7 +8,7 @@ use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::tls;
 use crate::SolverChoice;
-use chalk_ir::TraitId;
+use chalk_ir::{ApplicationTy, Substitution, TraitId, TypeName};
 use chalk_solve::clauses::builder::ClauseBuilder;
 use chalk_solve::clauses::program_clauses::ToProgramClauses;
 use chalk_solve::coherence::orphan;
@@ -225,7 +225,11 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
         .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
     {
         for &adt_id in program.adt_data.keys() {
-            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, adt_id);
+            let app_ty = ApplicationTy {
+                name: TypeName::Adt(adt_id),
+                substitution: Substitution::empty(builder.interner()),
+            };
+            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, &app_ty);
         }
     }
 

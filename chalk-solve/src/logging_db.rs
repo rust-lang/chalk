@@ -166,10 +166,12 @@ where
         self.ws.db().local_impls_to_coherence_check(trait_id)
     }
 
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, app_ty: &ApplicationTy<I>) -> bool {
         self.record(auto_trait_id);
-        self.record(adt_id);
-        self.ws.db().impl_provided_for(auto_trait_id, adt_id)
+        if let TypeName::Adt(adt_id) = app_ty.name {
+            self.record(adt_id);
+        }
+        self.ws.db().impl_provided_for(auto_trait_id, app_ty)
     }
 
     fn well_known_trait_id(
@@ -379,8 +381,8 @@ where
         self.db.local_impls_to_coherence_check(trait_id)
     }
 
-    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, adt_id: AdtId<I>) -> bool {
-        self.db.impl_provided_for(auto_trait_id, adt_id)
+    fn impl_provided_for(&self, auto_trait_id: TraitId<I>, app_ty: &ApplicationTy<I>) -> bool {
+        self.db.impl_provided_for(auto_trait_id, app_ty)
     }
 
     fn well_known_trait_id(
