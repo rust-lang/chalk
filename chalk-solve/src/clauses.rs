@@ -109,9 +109,6 @@ pub fn push_auto_trait_impls<I: Interner>(
         1
     );
 
-    // we assume that the builder has no binders so far.
-    assert!(builder.placeholders_in_scope().is_empty());
-
     // If there is a `impl AutoTrait for Foo<..>` or `impl !AutoTrait
     // for Foo<..>`, where `Foo` is the adt we're looking at, then
     // we don't generate our own rules.
@@ -299,25 +296,28 @@ fn program_clauses_that_could_match<I: Interner>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                let ty = trait_ref.self_type_parameter(interner);
-                match ty.data(interner) {
-                    TyData::Apply(apply) => {
-                        push_auto_trait_impls(builder, trait_id, apply);
-                    }
-                    // function-types implement auto traits unconditionally
-                    TyData::Function(_) => {
-                        let auto_trait_ref = TraitRef {
-                            trait_id,
-                            substitution: Substitution::from1(interner, ty.cast(interner)),
-                        };
+                let generalized = generalize::Generalize::apply(db.interner(), trait_ref);
+                builder.push_binders(&generalized, |builder, trait_ref| {
+                    let ty = trait_ref.self_type_parameter(interner);
+                    match ty.data(interner) {
+                        TyData::Apply(apply) => {
+                            push_auto_trait_impls(builder, trait_id, apply);
+                            Ok(())
+                        }
+                        // function-types implement auto traits unconditionally
+                        TyData::Function(_) => {
+                            let auto_trait_ref = TraitRef {
+                                trait_id,
+                                substitution: Substitution::from1(interner, ty.cast(interner)),
+                            };
 
-                        builder.push_fact(auto_trait_ref);
+                            builder.push_fact(auto_trait_ref);
+                            Ok(())
+                        }
+                        TyData::InferenceVar(_, _) | TyData::BoundVar(_) => Err(Floundered),
+                        _ => Ok(()),
                     }
-                    TyData::InferenceVar(_, _) | TyData::BoundVar(_) => {
-                        return Err(Floundered);
-                    }
-                    _ => {}
-                }
+                })?;
             }
 
             // If the self type is a `dyn trait` type, generate program-clauses
