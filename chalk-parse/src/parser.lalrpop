@@ -168,7 +168,7 @@ GeneratorDefn: GeneratorDefn = {
     "generator" <n:Id> <p:Angle<VariableKind>> "[" "resume" "=" <resume:Ty> "," "yield" "=" <yield_ty:Ty> "]" <ret_ty:FnReturn?>
     "{"
        "upvars" "[" <upvars:SemiColon<Ty>> "]"
-       "witnesses" <l:ForLifetimes?> "[" <witnesses:SemiColon<Ty>> "]"
+       "witnesses" <l:ExistsLifetimes?> "[" <witnesses:SemiColon<Ty>> "]"
     "}" => GeneratorDefn {
        name: n,
        variable_kinds: p,
@@ -391,6 +391,7 @@ TyWithoutId: Ty = {
     "[" <t:Ty> ";" <len:Const> "]" => Ty::Array { ty: Box::new(t), len },
 };
 
+ExistsLifetimes: Vec<Identifier> = "exists" "<" <Comma<LifetimeId>> ">" => <>;
 ForLifetimes: Vec<Identifier> = "for" "<" <Comma<LifetimeId>> ">" => <>;
 
 ScalarType: ScalarType = {

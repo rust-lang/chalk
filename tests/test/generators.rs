@@ -24,12 +24,12 @@ fn generator_test() {
 
             generator upvar_lifetime_restrict<T>[resume = (), yield = ()] {
                 upvars [T; StructOne]
-                witnesses for<'a, 'b> [SendSameLifetime<'a, 'b, T>]
+                witnesses exists<'a, 'b> [SendSameLifetime<'a, 'b, T>]
             }
 
             generator send_any_lifetime<T>[resume = (), yield = ()] {
                 upvars []
-                witnesses for<'a, 'b> [SendAnyLifetime<'a, 'b, T>; u8]
+                witnesses exists<'a, 'b> [SendAnyLifetime<'a, 'b, T>; u8]
             }
 
 
