@@ -154,6 +154,17 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
+    fn generator_datum(&self, generator_id: GeneratorId<ChalkIr>) -> Arc<GeneratorDatum<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn generator_witness_datum(
+        &self,
+        generator_id: GeneratorId<ChalkIr>,
+    ) -> Arc<GeneratorWitnessDatum<ChalkIr>> {
+        unimplemented!()
+    }
+
     // All `Bar` impls
     fn impls_for_trait(
         &self,

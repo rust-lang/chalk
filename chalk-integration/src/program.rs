@@ -4,14 +4,14 @@ use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders,
-    CanonicalVarKinds, ClosureId, FnDefId, ForeignDefId, GenericArg, Goal, Goals, ImplId, Lifetime,
-    OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
-    Substitution, TraitId, Ty, TyData,
+    CanonicalVarKinds, ClosureId, FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals,
+    ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty, TyData,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
-    FnDefDatum, FnDefInputsAndOutputDatum, ImplDatum, ImplType, OpaqueTyDatum, TraitDatum,
-    WellKnownTrait,
+    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
+    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -36,6 +36,15 @@ pub struct Program {
     pub closure_upvars: BTreeMap<ClosureId<ChalkIr>, Binders<Ty<ChalkIr>>>,
 
     pub closure_kinds: BTreeMap<ClosureId<ChalkIr>, TypeKind>,
+
+    /// For each generator
+    pub generator_ids: BTreeMap<Identifier, GeneratorId<ChalkIr>>,
+
+    pub generator_kinds: BTreeMap<GeneratorId<ChalkIr>, TypeKind>,
+
+    pub generator_data: BTreeMap<GeneratorId<ChalkIr>, Arc<GeneratorDatum<ChalkIr>>>,
+
+    pub generator_witness_data: BTreeMap<GeneratorId<ChalkIr>, Arc<GeneratorWitnessDatum<ChalkIr>>>,
 
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
@@ -378,6 +387,17 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         self.adt_data[&id].clone()
+    }
+
+    fn generator_datum(&self, id: GeneratorId<ChalkIr>) -> Arc<GeneratorDatum<ChalkIr>> {
+        self.generator_data[&id].clone()
+    }
+
+    fn generator_witness_datum(
+        &self,
+        id: GeneratorId<ChalkIr>,
+    ) -> Arc<GeneratorWitnessDatum<ChalkIr>> {
+        self.generator_witness_data[&id].clone()
     }
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {

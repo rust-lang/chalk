@@ -1,6 +1,7 @@
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
-    self, AdtId, BoundVar, ClosureId, DebruijnIndex, FnDefId, OpaqueTyId, TraitId, VariableKinds,
+    self, AdtId, BoundVar, ClosureId, DebruijnIndex, FnDefId, GeneratorId, OpaqueTyId, TraitId,
+    VariableKinds,
 };
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
@@ -15,6 +16,7 @@ pub type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
 pub type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
 pub type ClosureIds = BTreeMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
 pub type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
+pub type GeneratorIds = BTreeMap<Ident, chalk_ir::GeneratorId<ChalkIr>>;
 pub type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 pub type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 pub type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
@@ -22,6 +24,7 @@ pub type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 pub type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
 pub type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
+pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
@@ -46,6 +49,8 @@ pub struct Env<'k> {
     pub associated_ty_lookups: &'k AssociatedTyLookups,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,
+    pub generator_ids: &'k GeneratorIds,
+    pub generator_kinds: &'k GeneratorKinds,
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     pub parameter_map: ParameterMap,
@@ -78,6 +83,7 @@ pub enum TypeLookup<'k> {
     Opaque(OpaqueTyId<ChalkIr>),
     Foreign(ForeignDefId<ChalkIr>),
     Trait(TraitId<ChalkIr>),
+    Generator(GeneratorId<ChalkIr>),
 }
 
 impl Env<'_> {
@@ -128,6 +134,9 @@ impl Env<'_> {
             Ok(TypeLookup::Closure(id)) => {
                 apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
             }
+            Ok(TypeLookup::Generator(id)) => {
+                apply(self.generator_kind(id), chalk_ir::TypeName::Generator(id))
+            }
             Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(
                 chalk_ir::OpaqueTy {
                     opaque_ty_id: id,
@@ -162,6 +171,8 @@ impl Env<'_> {
             Ok(TypeLookup::Foreign(*id))
         } else if let Some(id) = self.trait_ids.get(&name.str) {
             Ok(TypeLookup::Trait(*id))
+        } else if let Some(id) = self.generator_ids.get(&name.str) {
+            Ok(TypeLookup::Generator(*id))
         } else {
             Err(RustIrError::NotStruct(name.clone()))
         }
@@ -201,6 +212,10 @@ impl Env<'_> {
 
     pub fn opaque_kind(&self, id: chalk_ir::OpaqueTyId<ChalkIr>) -> &TypeKind {
         &self.opaque_ty_kinds[&id]
+    }
+
+    pub fn generator_kind(&self, id: chalk_ir::GeneratorId<ChalkIr>) -> &TypeKind {
+        &self.generator_kinds[&id]
     }
 
     pub fn lookup_associated_ty(

@@ -18,6 +18,7 @@ Item: Option<Item> = {
     ClosureDefn => Some(Item::ClosureDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
     OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
+    GeneratorDefn => Some(Item::GeneratorDefn(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
     ForeignType => Some(Item::Foreign(<>)),
@@ -162,6 +163,23 @@ FnDefn: FnDefn = {
         return_type: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
     }
 };
+
+GeneratorDefn: GeneratorDefn = {
+    "generator" <n:Id> <p:Angle<VariableKind>> "[" "resume" "=" <resume:Ty> "," "yield" "=" <yield_ty:Ty> "]" <ret_ty:FnReturn?>
+    "{"
+       "upvars" "[" <upvars:SemiColon<Ty>> "]"
+       "witnesses" <l:ExistsLifetimes?> "[" <witnesses:SemiColon<Ty>> "]"
+    "}" => GeneratorDefn {
+       name: n,
+       variable_kinds: p,
+       upvars: upvars,
+       witness_lifetimes: l.unwrap_or_default(),
+       resume_ty: resume,
+       yield_ty: yield_ty,
+       return_ty: ret_ty.unwrap_or_else(|| Ty::Tuple { types: Vec::new() }),
+       witness_types: witnesses
+   }
+}
 
 FnAbi: FnAbi = "extern" "\"" <id:Id> "\"" => FnAbi(id.str);
 
@@ -373,6 +391,7 @@ TyWithoutId: Ty = {
     "[" <t:Ty> ";" <len:Const> "]" => Ty::Array { ty: Box::new(t), len },
 };
 
+ExistsLifetimes: Vec<Identifier> = "exists" "<" <Comma<LifetimeId>> ">" => <>;
 ForLifetimes: Vec<Identifier> = "for" "<" <Comma<LifetimeId>> ">" => <>;
 
 ScalarType: ScalarType = {

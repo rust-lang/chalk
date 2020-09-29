@@ -120,6 +120,19 @@ where
         self.ws.db().adt_datum(adt_id)
     }
 
+    fn generator_datum(&self, generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>> {
+        self.record(generator_id);
+        self.ws.db().borrow().generator_datum(generator_id)
+    }
+
+    fn generator_witness_datum(
+        &self,
+        generator_id: GeneratorId<I>,
+    ) -> Arc<GeneratorWitnessDatum<I>> {
+        self.record(generator_id);
+        self.ws.db().borrow().generator_witness_datum(generator_id)
+    }
+
     fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
         self.record(id);
         self.ws.db().adt_repr(id)
@@ -345,6 +358,18 @@ where
         self.db.adt_datum(adt_id)
     }
 
+    fn generator_datum(&self, generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>> {
+        self.db.borrow().generator_datum(generator_id)
+    }
+
+    /// Returns the generator witness datum for the generator with the given id.
+    fn generator_witness_datum(
+        &self,
+        generator_id: GeneratorId<I>,
+    ) -> Arc<GeneratorWitnessDatum<I>> {
+        self.db.borrow().generator_witness_datum(generator_id)
+    }
+
     fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
         self.db.adt_repr(id)
     }
@@ -464,6 +489,7 @@ pub enum RecordedItemId<I: Interner> {
     Impl(ImplId<I>),
     OpaqueTy(OpaqueTyId<I>),
     FnDef(FnDefId<I>),
+    Generator(GeneratorId<I>),
 }
 
 impl<I: Interner> From<AdtId<I>> for RecordedItemId<I> {
@@ -496,6 +522,12 @@ impl<I: Interner> From<FnDefId<I>> for RecordedItemId<I> {
     }
 }
 
+impl<I: Interner> From<GeneratorId<I>> for RecordedItemId<I> {
+    fn from(v: GeneratorId<I>) -> Self {
+        RecordedItemId::Generator(v)
+    }
+}
+
 /// Utility for implementing Ord for RecordedItemId.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 enum OrderedItemId<'a, DefId, AdtId> {
@@ -512,6 +544,7 @@ impl<I: Interner> RecordedItemId<I> {
             RecordedItemId::Trait(TraitId(x))
             | RecordedItemId::Impl(ImplId(x))
             | RecordedItemId::OpaqueTy(OpaqueTyId(x))
+            | RecordedItemId::Generator(GeneratorId(x))
             | RecordedItemId::FnDef(FnDefId(x)) => OrderedItemId::DefId(x),
             RecordedItemId::Adt(AdtId(x)) => OrderedItemId::AdtId(x),
         }

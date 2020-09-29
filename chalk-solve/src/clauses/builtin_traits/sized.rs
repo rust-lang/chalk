@@ -87,6 +87,8 @@ pub fn add_sized_program_clauses<I: Interner>(
             | TypeName::FnDef(_)
             | TypeName::Scalar(_)
             | TypeName::Raw(_)
+            | TypeName::Generator(_)
+            | TypeName::GeneratorWitness(_)
             | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),
 
             TypeName::AssociatedType(_)

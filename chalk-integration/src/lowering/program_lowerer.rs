@@ -1,11 +1,12 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId, ImplId,
-    OpaqueTyId, TraitId, TyKind, VariableKinds,
+    self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
+    GeneratorId, ImplId, OpaqueTyId, TraitId, TyKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
-    self, Anonymize, AssociatedTyValueId, OpaqueTyDatum, OpaqueTyDatumBound,
+    self, Anonymize, AssociatedTyValueId, GeneratorDatum, GeneratorInputOutputDatum,
+    GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
 };
 use rust_ir::IntoWhereClauses;
 use std::collections::{BTreeMap, HashSet};
@@ -32,6 +33,8 @@ pub(super) struct ProgramLowerer {
     opaque_ty_ids: OpaqueTyIds,
     adt_kinds: AdtKinds,
     fn_def_kinds: FnDefKinds,
+    generator_ids: GeneratorIds,
+    generator_kinds: GeneratorKinds,
     closure_kinds: ClosureKinds,
     trait_kinds: TraitKinds,
     opaque_ty_kinds: OpaqueTyKinds,
@@ -125,6 +128,11 @@ impl ProgramLowerer {
                     self.foreign_ty_ids
                         .insert(ident.str.clone(), ForeignDefId(raw_id));
                 }
+                Item::GeneratorDefn(defn) => {
+                    let id = GeneratorId(raw_id);
+                    self.generator_ids.insert(defn.name.str.clone(), id);
+                    self.generator_kinds.insert(id, defn.lower_type_kind()?);
+                }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
             };
@@ -145,6 +153,8 @@ impl ProgramLowerer {
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
+        let mut generator_data = BTreeMap::new();
+        let mut generator_witness_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
 
@@ -160,6 +170,8 @@ impl ProgramLowerer {
                 trait_kinds: &self.trait_kinds,
                 opaque_ty_ids: &self.opaque_ty_ids,
                 opaque_ty_kinds: &self.opaque_ty_kinds,
+                generator_ids: &self.generator_ids,
+                generator_kinds: &self.generator_kinds,
                 associated_ty_lookups: &self.associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
                 auto_traits: &self.auto_traits,
@@ -356,6 +368,51 @@ impl ProgramLowerer {
                         );
                     }
                 }
+                Item::GeneratorDefn(ref defn) => {
+                    let variable_kinds = defn
+                        .variable_kinds
+                        .iter()
+                        .map(|k| k.lower())
+                        .collect::<Vec<_>>();
+
+                    let witness_lifetimes = defn
+                        .witness_lifetimes
+                        .iter()
+                        .map(|i| VariableKind::Lifetime(i.clone()).lower())
+                        .collect::<Vec<_>>();
+
+                    let input_output = empty_env.in_binders(variable_kinds.clone(), |env| {
+                        let yield_type = defn.yield_ty.lower(&env)?;
+                        let resume_type = defn.resume_ty.lower(&env)?;
+                        let return_type = defn.return_ty.lower(&env)?;
+                        let upvars: Result<Vec<_>, _> =
+                            defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
+
+                        Ok(GeneratorInputOutputDatum {
+                            resume_type,
+                            yield_type,
+                            return_type,
+                            upvars: upvars?,
+                        })
+                    })?;
+
+                    let inner_types = empty_env.in_binders(variable_kinds, |env| {
+                        let witnesses = env.in_binders(witness_lifetimes, |env| {
+                            let witnesses: Result<Vec<_>, _> =
+                                defn.witness_types.iter().map(|ty| ty.lower(&env)).collect();
+                            witnesses
+                        })?;
+
+                        Ok(GeneratorWitnessExistential { types: witnesses })
+                    })?;
+
+                    let generator_datum = GeneratorDatum { input_output };
+                    let generator_witness = GeneratorWitnessDatum { inner_types };
+
+                    let id = self.generator_ids[&defn.name.str];
+                    generator_data.insert(id, Arc::new(generator_datum));
+                    generator_witness_data.insert(id, Arc::new(generator_witness));
+                }
                 Item::Foreign(_) => {}
             }
         }
@@ -375,6 +432,10 @@ impl ProgramLowerer {
             fn_def_data,
             closure_inputs_and_output,
             closure_closure_kind,
+            generator_ids: self.generator_ids,
+            generator_kinds: self.generator_kinds,
+            generator_data,
+            generator_witness_data,
             trait_data,
             well_known_traits,
             impl_data,
@@ -416,6 +477,11 @@ lower_type_kind!(AdtDefn, Adt, |defn: &AdtDefn| defn.all_parameters());
 lower_type_kind!(FnDefn, FnDef, |defn: &FnDefn| defn.all_parameters());
 lower_type_kind!(ClosureDefn, Closure, |defn: &ClosureDefn| defn
     .all_parameters());
+lower_type_kind!(GeneratorDefn, Generator, |defn: &GeneratorDefn| defn
+    .variable_kinds
+    .iter()
+    .map(|k| k.lower())
+    .collect::<Vec<_>>());
 lower_type_kind!(TraitDefn, Trait, |defn: &TraitDefn| defn
     .variable_kinds
     .iter()

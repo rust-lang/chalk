@@ -63,6 +63,12 @@ macro_rules! write_flags {
     };
 }
 
+impl<'a, I: Interner> RenderAsRust<I> for (&'a GeneratorDatum<I>, &'a GeneratorWitnessDatum<I>) {
+    fn fmt(&self, _s: &InternalWriterState<'_, I>, _f: &'_ mut Formatter<'_>) -> Result {
+        unimplemented!()
+    }
+}
+
 impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // When support for Self in structs is added, self_binding should be

@@ -254,6 +254,12 @@ pub enum TypeName<I: Interner> {
     /// A closure.
     Closure(ClosureId<I>),
 
+    /// A generator.
+    Generator(GeneratorId<I>),
+
+    /// A generator witness.
+    GeneratorWitness(GeneratorId<I>),
+
     /// foreign types
     Foreign(ForeignDefId<I>),
 
@@ -365,6 +371,10 @@ pub struct FnDefId<I: Interner>(pub I::DefId);
 /// Id for Rust closures.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClosureId<I: Interner>(pub I::DefId);
+
+/// Id for Rust generators.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct GeneratorId<I: Interner>(pub I::DefId);
 
 /// Id for foreign types.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

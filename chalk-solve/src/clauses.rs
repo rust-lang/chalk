@@ -1,6 +1,7 @@
 use self::builder::ClauseBuilder;
 use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
+use crate::goal_builder::GoalBuilder;
 use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
@@ -53,7 +54,27 @@ fn constituent_types<I: Interner>(
             .cloned()
             .collect(),
 
+        TypeName::Generator(generator_id) => {
+            let generator_datum = &db.generator_datum(generator_id);
+            let generator_datum_bound = generator_datum
+                .input_output
+                .substitute(interner, &app_ty.substitution);
+
+            let mut tys = generator_datum_bound.upvars;
+            tys.push(
+                ApplicationTy {
+                    name: TypeName::GeneratorWitness(generator_id),
+                    substitution: app_ty.substitution.clone(),
+                }
+                .intern(interner),
+            );
+            tys
+        }
+
         TypeName::Closure(_) => panic!("this function should not be called for closures"),
+        TypeName::GeneratorWitness(_) => {
+            panic!("this function should not be called for generator witnesses")
+        }
         TypeName::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TypeName::Error => Vec::new(),
         TypeName::OpaqueType(_) => unimplemented!(),
@@ -139,6 +160,10 @@ pub fn push_auto_trait_impls<I: Interner>(
             });
         }
 
+        TypeName::GeneratorWitness(generator_id) => {
+            push_auto_trait_impls_generator_witness(builder, auto_trait_id, generator_id);
+        }
+
         // app_ty implements AutoTrait if all constituents of app_ty implement AutoTrait
         _ => {
             let conditions = constituent_types(builder.db, app_ty)
@@ -207,6 +232,89 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
             }),
         );
     });
+}
+
+#[instrument(level = "debug", skip(builder))]
+pub fn push_auto_trait_impls_generator_witness<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    auto_trait_id: TraitId<I>,
+    generator_id: GeneratorId<I>,
+) {
+    let witness_datum = builder.db.generator_witness_datum(generator_id);
+    let interner = builder.interner();
+
+    // Must be an auto trait.
+    assert!(builder.db.trait_datum(auto_trait_id).is_auto_trait());
+
+    // Auto traits never have generic parameters of their own (apart from `Self`).
+    assert_eq!(
+        builder.db.trait_datum(auto_trait_id).binders.len(interner),
+        1
+    );
+
+    // Push binders for the generator generic parameters. These can be used by
+    // both upvars and witness types
+    builder.push_binders(&witness_datum.inner_types, |builder, inner_types| {
+        let witness_ty = ApplicationTy {
+            name: TypeName::GeneratorWitness(generator_id),
+            substitution: builder.substitution_in_scope(),
+        }
+        .intern(interner);
+
+        // trait_ref = `GeneratorWitness<...>: MyAutoTrait`
+        let auto_trait_ref = TraitRef {
+            trait_id: auto_trait_id,
+            substitution: Substitution::from1(interner, witness_ty),
+        };
+
+        // Create a goal of the form:
+        // forall<L0, L1, ..., LN> {
+        //     WitnessType1<L0, L1, ... LN, P0, P1, ..., PN>: MyAutoTrait,
+        //     ...
+        //     WitnessTypeN<L0, L1, ... LN, P0, P1, ..., PN>: MyAutoTrait,
+        //
+        // }
+        //
+        // where `L0, L1, ...LN` are our existentially bound witness lifetimes,
+        // and `P0, P1, ..., PN` are the normal generator generics.
+        //
+        // We create a 'forall' goal due to the fact that our witness lifetimes
+        // are *existentially* quantified - the precise reigon is erased during
+        // type checking, so we just know that the type takes *some* region
+        // as a parameter. Therefore, we require that the auto trait bound
+        // hold for *all* regions, which guarantees that the bound will
+        // hold for the original lifetime (before it was erased).
+        //
+        // This does not take into account well-formed information from
+        // the witness types. For example, if we have the type
+        // `struct Foo<'a, 'b> { val: &'a &'b u8 }`
+        // then `'b: 'a` must hold for `Foo<'a, 'b>` to be well-formed.
+        // If we have `Foo<'a, 'b>` stored as a witness type, we will
+        // not currently use this information to determine a more precise
+        // relationship between 'a and 'b. In the future, we will likely
+        // do this to avoid incorrectly rejecting correct code.
+        let gb = &mut GoalBuilder::new(builder.db);
+        let witness_goal = gb.forall(
+            &inner_types.types,
+            auto_trait_id,
+            |gb, _subst, types, auto_trait_id| {
+                Goal::new(
+                    gb.interner(),
+                    GoalData::All(Goals::from_iter(
+                        gb.interner(),
+                        types.iter().map(|witness_ty| TraitRef {
+                            trait_id: auto_trait_id,
+                            substitution: Substitution::from1(gb.interner(), witness_ty.clone()),
+                        }),
+                    )),
+                )
+            },
+        );
+
+        // GeneratorWitnessType: AutoTrait :- forall<...> ...
+        // where 'forall<...> ...' is the goal described above.
+        builder.push_clause(auto_trait_ref, std::iter::once(witness_goal));
+    })
 }
 
 /// Given some goal `goal` that must be proven, along with
@@ -689,7 +797,9 @@ fn match_type_name<I: Interner>(
         | TypeName::Array
         | TypeName::Never
         | TypeName::Closure(_)
-        | TypeName::Foreign(_) => {
+        | TypeName::Foreign(_)
+        | TypeName::Generator(_)
+        | TypeName::GeneratorWitness(_) => {
             builder.push_fact(WellFormed::Ty(application.clone().intern(interner)))
         }
     }

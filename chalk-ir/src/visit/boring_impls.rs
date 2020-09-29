@@ -6,7 +6,7 @@
 
 use crate::{
     AdtId, AssocTypeId, ClausePriority, ClosureId, Constraints, DebruijnIndex, FloatTy, FnDefId,
-    ForeignDefId, GenericArg, Goals, ImplId, IntTy, Interner, Mutability, OpaqueTyId,
+    ForeignDefId, GeneratorId, GenericArg, Goals, ImplId, IntTy, Interner, Mutability, OpaqueTyId,
     PlaceholderIndex, ProgramClause, ProgramClauses, QuantifiedWhereClauses, QuantifierKind,
     Safety, Scalar, Substitution, SuperVisit, TraitId, UintTy, UniverseIndex, Visit, VisitResult,
     Visitor,
@@ -240,6 +240,7 @@ id_visit!(OpaqueTyId);
 id_visit!(AssocTypeId);
 id_visit!(FnDefId);
 id_visit!(ClosureId);
+id_visit!(GeneratorId);
 id_visit!(ForeignDefId);
 
 impl<I: Interner> SuperVisit<I> for ProgramClause<I> {

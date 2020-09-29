@@ -27,6 +27,7 @@ pub enum TypeSort {
     Closure,
     Trait,
     Opaque,
+    Generator,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

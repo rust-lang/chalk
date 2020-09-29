@@ -315,6 +315,15 @@ where
     }
 }
 
+impl<I> CastTo<TypeName<I>> for GeneratorId<I>
+where
+    I: Interner,
+{
+    fn cast_to(self, _interner: &I) -> TypeName<I> {
+        TypeName::Generator(self)
+    }
+}
+
 impl<I> CastTo<TypeName<I>> for FnDefId<I>
 where
     I: Interner,

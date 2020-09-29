@@ -25,6 +25,7 @@ pub enum Item {
     ClosureDefn(ClosureDefn),
     TraitDefn(TraitDefn),
     OpaqueTyDefn(OpaqueTyDefn),
+    GeneratorDefn(GeneratorDefn),
     Impl(Impl),
     Clause(Clause),
     Foreign(ForeignDefn),
@@ -47,6 +48,18 @@ pub struct AdtDefn {
 pub struct Variant {
     pub name: Identifier,
     pub fields: Vec<Field>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct GeneratorDefn {
+    pub name: Identifier,
+    pub variable_kinds: Vec<VariableKind>,
+    pub upvars: Vec<Ty>,
+    pub resume_ty: Ty,
+    pub yield_ty: Ty,
+    pub return_ty: Ty,
+    pub witness_types: Vec<Ty>,
+    pub witness_lifetimes: Vec<Identifier>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
