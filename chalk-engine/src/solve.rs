@@ -1,7 +1,7 @@
-use crate::context::{AnswerResult, AnswerStream, ContextOps};
+use crate::context::{AnswerResult, AnswerStream};
 use crate::forest::Forest;
 use crate::slg::aggregate::AggregateOps;
-use crate::slg::{SlgContext, SlgContextOps};
+use crate::slg::SlgContextOps;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
@@ -9,7 +9,7 @@ use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};
 use std::fmt;
 
 pub struct SLGSolver<I: Interner> {
-    pub(crate) forest: Forest<I, SlgContext<I>>,
+    pub(crate) forest: Forest<I>,
     pub(crate) max_size: usize,
     pub(crate) expected_answers: Option<usize>,
 }
@@ -63,7 +63,12 @@ impl<I: Interner> Solver<I> for SLGSolver<I> {
                 AnswerResult::Answer(answer) => {
                     if !answer.ambiguous {
                         SubstitutionResult::Definite(answer.subst)
-                    } else if ops.is_trivial_constrained_substitution(&answer.subst) {
+                    } else if answer
+                        .subst
+                        .value
+                        .subst
+                        .is_identity_subst(ops.program().interner())
+                    {
                         SubstitutionResult::Floundered
                     } else {
                         SubstitutionResult::Ambiguous(answer.subst)

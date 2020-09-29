@@ -1,4 +1,4 @@
-use crate::context::{self, AnswerResult, ContextOps};
+use crate::context::{self, AnswerResult};
 use crate::slg::SlgContextOps;
 use crate::slg::SubstitutionExt;
 use crate::CompleteAnswer;

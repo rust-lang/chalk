@@ -1,6 +1,5 @@
-use crate::context;
 use crate::normalize_deep::DeepNormalizer;
-use crate::slg::{self, SlgContext, TruncatingInferenceTable};
+use crate::slg::{self, ResolventOps, TruncatingInferenceTable};
 use crate::{ExClause, Literal, TimeStamp};
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
@@ -46,7 +45,7 @@ use tracing::{debug, instrument};
 //
 // is the SLG resolvent of G with C.
 
-impl<I: Interner> context::ResolventOps<I, SlgContext<I>> for TruncatingInferenceTable<I> {
+impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.

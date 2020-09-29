@@ -1,4 +1,3 @@
-use crate::context::Context;
 use crate::index_struct;
 use crate::strand::Strand;
 use crate::tables::Tables;
@@ -10,15 +9,15 @@ use chalk_ir::interner::Interner;
 
 /// See `Forest`.
 #[derive(Debug)]
-pub(crate) struct Stack<I: Interner, C: Context<I>> {
+pub(crate) struct Stack<I: Interner> {
     /// Stack: as described above, stores the in-progress goals.
-    stack: Vec<StackEntry<I, C>>,
+    stack: Vec<StackEntry<I>>,
 }
 
-impl<I: Interner, C: Context<I>> Stack<I, C> {
+impl<I: Interner> Stack<I> {
     // This isn't actually used, but it can be helpful when debugging stack issues
     #[allow(dead_code)]
-    pub(crate) fn debug_with<'a>(&'a self, tables: &'a Tables<I>) -> StackDebug<'_, I, C> {
+    pub(crate) fn debug_with<'a>(&'a self, tables: &'a Tables<I>) -> StackDebug<'_, I> {
         StackDebug {
             stack: self,
             tables,
@@ -26,12 +25,12 @@ impl<I: Interner, C: Context<I>> Stack<I, C> {
     }
 }
 
-pub(crate) struct StackDebug<'a, I: Interner, C: Context<I>> {
-    stack: &'a Stack<I, C>,
+pub(crate) struct StackDebug<'a, I: Interner> {
+    stack: &'a Stack<I>,
     tables: &'a Tables<I>,
 }
 
-impl<I: Interner, C: Context<I>> fmt::Debug for StackDebug<'_, I, C> {
+impl<I: Interner> fmt::Debug for StackDebug<'_, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "---- Stack ----")?;
         for entry in self.stack.stack.iter() {
@@ -53,7 +52,7 @@ impl<I: Interner, C: Context<I>> fmt::Debug for StackDebug<'_, I, C> {
     }
 }
 
-impl<I: Interner, C: Context<I>> Default for Stack<I, C> {
+impl<I: Interner> Default for Stack<I> {
     fn default() -> Self {
         Stack { stack: vec![] }
     }
@@ -70,7 +69,7 @@ index_struct! {
 }
 
 #[derive(Debug)]
-pub(crate) struct StackEntry<I: Interner, C: Context<I>> {
+pub(crate) struct StackEntry<I: Interner> {
     /// The goal G from the stack entry `A :- G` represented here.
     pub(super) table: TableIndex,
 
@@ -82,10 +81,10 @@ pub(crate) struct StackEntry<I: Interner, C: Context<I>> {
     // FIXME: should store this as an index.
     // This would mean that if we unwind,
     // we don't need to worry about losing a strand
-    pub(super) active_strand: Option<Strand<I, C>>,
+    pub(super) active_strand: Option<Strand<I>>,
 }
 
-impl<I: Interner, C: Context<I>> Stack<I, C> {
+impl<I: Interner> Stack<I> {
     pub(super) fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
@@ -137,7 +136,7 @@ impl<I: Interner, C: Context<I>> Stack<I, C> {
     /// Pops the top-most entry from the stack, which should have the depth `*depth`:
     /// * If the stack is now empty, returns None.
     /// * Otherwise, `take`s the active strand from the new top and returns it.
-    pub(super) fn pop_and_take_caller_strand(&mut self) -> Option<Strand<I, C>> {
+    pub(super) fn pop_and_take_caller_strand(&mut self) -> Option<Strand<I>> {
         if self.pop_and_adjust_depth() {
             Some(self.top().active_strand.take().unwrap())
         } else {
@@ -148,7 +147,7 @@ impl<I: Interner, C: Context<I>> Stack<I, C> {
     /// Pops the top-most entry from the stack, which should have the depth `*depth`:
     /// * If the stack is now empty, returns None.
     /// * Otherwise, borrows the active strand (mutably) from the new top and returns it.
-    pub(super) fn pop_and_borrow_caller_strand(&mut self) -> Option<&mut Strand<I, C>> {
+    pub(super) fn pop_and_borrow_caller_strand(&mut self) -> Option<&mut Strand<I>> {
         if self.pop_and_adjust_depth() {
             Some(self.top().active_strand.as_mut().unwrap())
         } else {
@@ -156,21 +155,21 @@ impl<I: Interner, C: Context<I>> Stack<I, C> {
         }
     }
 
-    pub(super) fn top(&mut self) -> &mut StackEntry<I, C> {
+    pub(super) fn top(&mut self) -> &mut StackEntry<I> {
         self.stack.last_mut().unwrap()
     }
 }
 
-impl<I: Interner, C: Context<I>> Index<StackIndex> for Stack<I, C> {
-    type Output = StackEntry<I, C>;
+impl<I: Interner> Index<StackIndex> for Stack<I> {
+    type Output = StackEntry<I>;
 
-    fn index(&self, index: StackIndex) -> &StackEntry<I, C> {
+    fn index(&self, index: StackIndex) -> &StackEntry<I> {
         &self.stack[index.value]
     }
 }
 
-impl<I: Interner, C: Context<I>> IndexMut<StackIndex> for Stack<I, C> {
-    fn index_mut(&mut self, index: StackIndex) -> &mut StackEntry<I, C> {
+impl<I: Interner> IndexMut<StackIndex> for Stack<I> {
+    fn index_mut(&mut self, index: StackIndex) -> &mut StackEntry<I> {
         &mut self.stack[index.value]
     }
 }
