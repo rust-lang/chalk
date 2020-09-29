@@ -48,7 +48,10 @@ the generator with id `GeneratorId`.
 
 The generator witness contains multiple witness types,
 which represent the types that may be part of a generator
-state. Unlike other types, witnesses include bound, existential
+state - that is, the types of all variables that may be live across
+a `yield` point.
+
+Unlike other types, witnesses include bound, existential
 lifetimes, which refer to lifetimes within the suspended stack frame.
 You can think of it as a type like `exists<'a> { (T...) }`.
 
