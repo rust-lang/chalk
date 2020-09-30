@@ -361,18 +361,20 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
     /// ```notrust
     /// #[upstream]
     /// #[fundamental]
-    /// struct Box<T> {}
+    /// struct Box<T, U> {}
     /// ```
     ///
     /// We generate the following clauses:
     ///
     /// ```notrust
-    /// forall<T> { IsLocal(Box<T>) :- IsLocal(T). }
+    /// forall<T, U> { IsLocal(Box<T, U>) :- IsLocal(T). }
+    /// forall<T, U> { IsLocal(Box<T, U>) :- IsLocal(U). }
     ///
-    /// forall<T> { IsUpstream(Box<T>) :- IsUpstream(T). }
+    /// forall<T, U> { IsUpstream(Box<T, U>) :- IsUpstream(T), IsUpstream(U). }
     ///
     /// // Generated for both upstream and local fundamental types
-    /// forall<T> { DownstreamType(Box<T>) :- DownstreamType(T). }
+    /// forall<T, U> { DownstreamType(Box<T, U>) :- DownstreamType(T). }
+    /// forall<T, U> { DownstreamType(Box<T, U>) :- DownstreamType(U). }
     /// ```
     ///
     #[instrument(level = "debug", skip(builder))]
@@ -395,27 +397,6 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
             let self_appl_ty = application_ty(builder, id);
             let self_ty = self_appl_ty.clone().intern(interner);
 
-            // Fundamental types often have rules in the form of:
-            //     Goal(FundamentalType<T>) :- Goal(T)
-            // This macro makes creating that kind of clause easy
-            macro_rules! fundamental_rule {
-                ($goal:ident) => {
-                    // Fundamental types must always have at least one
-                    // type parameter for this rule to make any
-                    // sense.
-                    assert!(
-                        self_appl_ty.len_type_parameters(interner) >= 1,
-                        "Only fundamental types with type parameter are supported"
-                    );
-                    for type_param in self_appl_ty.type_parameters(interner) {
-                        builder.push_clause(
-                            DomainGoal::$goal(self_ty.clone()),
-                            Some(DomainGoal::$goal(type_param)),
-                        );
-                    }
-                };
-            }
-
             // Types that are not marked `#[upstream]` satisfy IsLocal(TypeName)
             if !self.flags.upstream {
                 // `IsLocalTy(Ty)` depends *only* on whether the type
@@ -425,7 +406,12 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
                 // If a type is `#[upstream]`, but is also
                 // `#[fundamental]`, it satisfies IsLocal if and only
                 // if its parameters satisfy IsLocal
-                fundamental_rule!(IsLocal);
+                for type_param in self_appl_ty.type_parameters(interner) {
+                    builder.push_clause(
+                        DomainGoal::IsLocal(self_ty.clone()),
+                        Some(DomainGoal::IsLocal(type_param)),
+                    );
+                }
                 builder.push_clause(
                     DomainGoal::IsUpstream(self_ty.clone()),
                     self_appl_ty
@@ -438,7 +424,16 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
             }
 
             if self.flags.fundamental {
-                fundamental_rule!(DownstreamType);
+                assert!(
+                    self_appl_ty.len_type_parameters(interner) >= 1,
+                    "Only fundamental types with type parameters are supported"
+                );
+                for type_param in self_appl_ty.type_parameters(interner) {
+                    builder.push_clause(
+                        DomainGoal::DownstreamType(self_ty.clone()),
+                        Some(DomainGoal::DownstreamType(type_param)),
+                    );
+                }
             }
         });
     }
