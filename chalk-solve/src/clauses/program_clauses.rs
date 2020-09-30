@@ -402,28 +402,17 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
                 ($goal:ident) => {
                     // Fundamental types must always have at least one
                     // type parameter for this rule to make any
-                    // sense. We currently do not have have any
-                    // fundamental types with more than one type
-                    // parameter, nor do we know what the behaviour
-                    // for that should be. Thus, we are asserting here
-                    // that there is only a single type parameter
-                    // until the day when someone makes a decision
-                    // about how that should behave.
-                    assert_eq!(
-                        self_appl_ty.len_type_parameters(interner),
-                        1,
-                        "Only fundamental types with a single parameter are supported"
+                    // sense.
+                    assert!(
+                        self_appl_ty.len_type_parameters(interner) >= 1,
+                        "Only fundamental types with type parameter are supported"
                     );
-
-                    builder.push_clause(
-                        DomainGoal::$goal(self_ty.clone()),
-                        Some(DomainGoal::$goal(
-                            // This unwrap is safe because we asserted
-                            // above for the presence of a type
-                            // parameter
-                            self_appl_ty.first_type_parameter(interner).unwrap(),
-                        )),
-                    );
+                    for type_param in self_appl_ty.type_parameters(interner) {
+                        builder.push_clause(
+                            DomainGoal::$goal(self_ty.clone()),
+                            Some(DomainGoal::$goal(type_param)),
+                        );
+                    }
                 };
             }
 
@@ -437,7 +426,12 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
                 // `#[fundamental]`, it satisfies IsLocal if and only
                 // if its parameters satisfy IsLocal
                 fundamental_rule!(IsLocal);
-                fundamental_rule!(IsUpstream);
+                builder.push_clause(
+                    DomainGoal::IsUpstream(self_ty.clone()),
+                    self_appl_ty
+                        .type_parameters(interner)
+                        .map(|type_param| DomainGoal::IsUpstream(type_param)),
+                );
             } else {
                 // The type is just upstream and not fundamental
                 builder.push_fact(DomainGoal::IsUpstream(self_ty.clone()));

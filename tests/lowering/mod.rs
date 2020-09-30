@@ -455,20 +455,6 @@ fn upstream_items() {
 }
 
 #[test]
-fn fundamental_multiple_type_parameters() {
-    lowering_error! {
-        program {
-            #[fundamental]
-            struct Boxes<T, U> { }
-        }
-
-        error_msg {
-            "only a single parameter supported for fundamental type `Boxes`"
-        }
-    }
-}
-
-#[test]
 fn tuples() {
     lowering_success! {
         program {

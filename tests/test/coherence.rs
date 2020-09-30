@@ -516,3 +516,74 @@ fn orphan_check() {
         }
     }
 }
+
+#[test]
+fn fundamental_type_multiple_parameters() {
+    // Test that implementing a local trait on a fundamental
+    // type with multiple parameters is allowed
+    lowering_success! {
+        program {
+            #[upstream]
+            #[fundamental]
+            struct Box<T, U> { }
+
+            trait Local { }
+
+            impl<T, U> Local for Box<T, U> { }
+        }
+    }
+
+    // Test that implementing a remote trait on a fundamental
+    // type with multiple parameters is rejected
+    lowering_error! {
+        program {
+            #[upstream]
+            #[fundamental]
+            struct Box<T, U> { }
+
+            #[upstream]
+            trait Remote { }
+
+            impl<T, U> Remote for Box<T, U> { }
+        } error_msg {
+            "impl for trait `Remote` violates the orphan rules"
+        }
+    }
+
+    // Test that implementing a remote trait on a fundamental type
+    // with one local type parameter is allowed
+    lowering_success! {
+        program {
+            #[upstream]
+            #[fundamental]
+            struct Box<T, U> { }
+
+            struct Local { }
+
+            #[upstream]
+            trait Remote { }
+
+            impl<T> Remote for Box<T, Local> { }
+        }
+    }
+
+    // Test that implementing a remote trait on a fundamental type
+    // with one concrete remote type parameter is rejected
+    lowering_error! {
+        program {
+            #[upstream]
+            #[fundamental]
+            struct Box<T, U> { }
+
+            #[upstream]
+            struct Up { }
+
+            #[upstream]
+            trait Remote { }
+
+            impl<T> Remote for Box<T, Up> { }
+        } error_msg {
+            "impl for trait `Remote` violates the orphan rules"
+        }
+    }
+}

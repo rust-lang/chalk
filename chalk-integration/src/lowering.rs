@@ -274,7 +274,7 @@ impl LowerWithEnv for (&AdtDefn, chalk_ir::AdtId<ChalkIr>) {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let (adt_defn, adt_id) = self;
 
-        if adt_defn.flags.fundamental && adt_defn.all_parameters().len() != 1 {
+        if adt_defn.flags.fundamental && adt_defn.all_parameters().len() < 1 {
             Err(RustIrError::InvalidFundamentalTypesParameters(
                 adt_defn.name.clone(),
             ))?;
