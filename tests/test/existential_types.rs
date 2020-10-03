@@ -10,8 +10,8 @@ fn dyn_Clone_is_Clone() {
         }
 
         goal {
-            forall<'static> {
-                dyn Clone + 'static: Clone
+            forall<'s> {
+                dyn Clone + 's: Clone
             }
         } yields {
             "Unique; substitution []"
@@ -28,8 +28,8 @@ fn dyn_Clone_is_not_Send() {
         }
 
         goal {
-            forall<'static> {
-                dyn Clone + 'static: Send
+            forall<'s> {
+                dyn Clone + 's: Send
             }
         } yields {
             "No possible solution"
@@ -46,8 +46,8 @@ fn dyn_Clone_Send_is_Send() {
         }
 
         goal {
-            forall<'static> {
-                (dyn Clone + Send + 'static): Send
+            forall<'s> {
+                (dyn Clone + Send + 's): Send
             }
         } yields {
             "Unique; substitution []"
@@ -66,17 +66,17 @@ fn dyn_Foo_Bar() {
         }
 
         goal {
-            forall<'static> {
-                dyn Foo<Bar> + 'static: Foo<Baz>
+            forall<'s> {
+                dyn Foo<Bar> + 's: Foo<Baz>
             }
         } yields {
             "No possible solution"
         }
 
         goal {
-            forall<'static> {
+            forall<'s> {
                 exists<T> {
-                    dyn Foo<T> + 'static: Foo<Bar>
+                    dyn Foo<T> + 's: Foo<Bar>
                 }
             }
         } yields {
@@ -97,33 +97,33 @@ fn dyn_super_trait_simple() {
         }
 
         goal {
-            forall<'static> {
-                dyn Bar<A> + 'static: Bar<A>
+            forall<'s> {
+                dyn Bar<A> + 's: Bar<A>
             }
         } yields {
             "Unique"
         }
 
         goal {
-            forall<'static> {
-                dyn Bar<A> + 'static: Foo<A>
+            forall<'s> {
+                dyn Bar<A> + 's: Foo<A>
             }
         } yields {
             "Unique"
         }
 
         goal {
-            forall<'static> {
-                dyn Bar<A> + 'static: Foo<B>
+            forall<'s> {
+                dyn Bar<A> + 's: Foo<B>
             }
         } yields {
             "No possible solution"
         }
 
         goal {
-            forall<'static> {
+            forall<'s> {
                 exists<T> {
-                    dyn Bar<T> + 'static: Foo<B>
+                    dyn Bar<T> + 's: Foo<B>
                 }
             }
         } yields {
@@ -146,8 +146,8 @@ fn dyn_super_trait_cycle() {
         // We currently can't prove this because of the cyclic where clauses.
         // But importantly, we don't crash or get into an infinite loop.
         goal {
-            forall<'static> {
-                dyn Bar<A> + 'static: Bar<A>
+            forall<'s> {
+                dyn Bar<A> + 's: Bar<A>
             }
         } yields {
             "No possible solution"
@@ -168,24 +168,24 @@ fn dyn_super_trait_not_a_cycle() {
         }
 
         goal {
-            forall<'static> {
-                dyn Bar + 'static: Foo
+            forall<'s> {
+                dyn Bar + 's: Foo
             }
         } yields {
             "Unique"
         }
 
         goal {
-            forall<'static> {
-                dyn Bar + 'static: Thing<A>
+            forall<'s> {
+                dyn Bar + 's: Thing<A>
             }
         } yields {
             "Unique"
         }
 
         goal {
-            forall<'static> {
-                dyn Bar + 'static: Thing<B>
+            forall<'s> {
+                dyn Bar + 's: Thing<B>
             }
         } yields {
             "Unique"
@@ -206,9 +206,9 @@ fn dyn_super_trait_higher_ranked() {
         }
 
         goal {
-            forall<'static> {
+            forall<'s> {
                 forall<'x> {
-                    dyn Baz + 'static: Bar<'x>
+                    dyn Baz + 's: Bar<'x>
                 }
             }
         } yields {
@@ -216,9 +216,9 @@ fn dyn_super_trait_higher_ranked() {
         }
 
         goal {
-            forall<'static> {
+            forall<'s> {
                 forall<'x> {
-                    dyn Baz + 'static: Foo<'x>
+                    dyn Baz + 's: Foo<'x>
                 }
             }
         } yields {
@@ -226,8 +226,8 @@ fn dyn_super_trait_higher_ranked() {
         }
 
         goal {
-            forall<'x, 'y, 'static> {
-                dyn Bar<'y> + 'static: Foo<'x>
+            forall<'x, 'y, 's> {
+                dyn Bar<'y> + 's: Foo<'x>
             }
         } yields {
             "Unique"
@@ -247,16 +247,16 @@ fn dyn_super_trait_non_super_trait_clause() {
         }
 
         goal {
-            forall<'static> {
-                dyn Foo + 'static: Foo
+            forall<'s> {
+                dyn Foo + 's: Foo
             }
         } yields {
             "Unique"
         }
 
         goal {
-            forall<'static> {
-                dyn Foo + 'static: Bar
+            forall<'s> {
+                dyn Foo + 's: Bar
             }
         } yields {
             "No possible solution"
@@ -275,37 +275,37 @@ fn dyn_higher_ranked_type_arguments() {
         }
 
         goal {
-            forall<'static> {
-                dyn forall<'a> Foo<Ref<'a>> + 'static: Foo<Ref<'static>>
+            forall<'s> {
+                dyn forall<'a> Foo<Ref<'a>> + 's: Foo<Ref<'s>>
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
 
         goal {
-            forall<'static> {
-                dyn forall<'a> Foo<Ref<'a>> + Bar + 'static: Foo<Ref<'static>>
+            forall<'s> {
+                dyn forall<'a> Foo<Ref<'a>> + Bar + 's: Foo<Ref<'s>>
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
 
         goal {
-            forall<'static> {
-                dyn forall<'a> Foo<Ref<'a>> + Bar + 'static: Bar
+            forall<'s> {
+                dyn forall<'a> Foo<Ref<'a>> + Bar + 's: Bar
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }
 
         goal {
-            forall<'static> {
+            forall<'s> {
                 forall<'a> {
-                    dyn Foo<Ref<'static>> + 'static: Foo<Ref<'a>>
+                    dyn Foo<Ref<'s>> + 's: Foo<Ref<'a>>
                 }
             }
         } yields {
-            // Note that this requires 'a == 'static, so it would be resolveable later on.
+            // Note that this requires 'a == 's, so it would be resolveable later on.
             "Unique; substitution [], lifetime constraints [\
             InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, \
             InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }\
@@ -330,9 +330,9 @@ fn dyn_binders_reverse() {
         // Note: these constraints are ultimately unresolveable (we
         // have to show that 'a == 'b, basically)
         goal {
-            forall<'static> {
-                dyn forall<'a, 'b> Fn<Refs<'a, 'b>> + 'static: Eq<
-                    dyn forall<'c> Fn<Refs<'c, 'c>> + 'static
+            forall<'s> {
+                dyn forall<'a, 'b> Fn<Refs<'a, 'b>> + 's: Eq<
+                    dyn forall<'c> Fn<Refs<'c, 'c>> + 's
                 >
             }
         } yields {
@@ -347,9 +347,9 @@ fn dyn_binders_reverse() {
         // Note: these constraints are ultimately unresolveable (we
         // have to show that 'a == 'b, basically)
         goal {
-            forall<'static> {
-                dyn forall<'c> Fn<Refs<'c, 'c>> + 'static: Eq<
-                    dyn forall<'a, 'b> Fn<Refs<'a, 'b>> + 'static
+            forall<'s> {
+                dyn forall<'c> Fn<Refs<'c, 'c>> + 's: Eq<
+                    dyn forall<'a, 'b> Fn<Refs<'a, 'b>> + 's
                 >
             }
         } yields {
@@ -363,9 +363,9 @@ fn dyn_binders_reverse() {
 
         // Note: ordering of parameters is reversed here, but that's no problem
         goal {
-            forall<'static> {
-                dyn forall<'c, 'd> Fn<Refs<'d, 'c>> + 'static: Eq<
-                    dyn forall<'a, 'b> Fn<Refs<'a, 'b>> + 'static
+            forall<'s> {
+                dyn forall<'c, 'd> Fn<Refs<'d, 'c>> + 's: Eq<
+                    dyn forall<'a, 'b> Fn<Refs<'a, 'b>> + 's
                 >
             }
         } yields {
@@ -409,8 +409,8 @@ fn dyn_associated_type_binding() {
 
         goal {
             exists<T> {
-                forall<'static> {
-                    <dyn FnOnce<(), Output = i32> + 'static as FnOnce<()>>::Output = T
+                forall<'s> {
+                    <dyn FnOnce<(), Output = i32> + 's as FnOnce<()>>::Output = T
                 }
             }
         } yields[SolverChoice::recursive()] {

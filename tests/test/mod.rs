@@ -344,6 +344,7 @@ mod projection;
 mod refs;
 mod scalars;
 mod slices;
+mod statics;
 mod string;
 mod tuples;
 mod unify;

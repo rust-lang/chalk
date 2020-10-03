@@ -325,6 +325,7 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
             LifetimeData::Placeholder(universe) => {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
+            LifetimeData::Static => R::new(),
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }

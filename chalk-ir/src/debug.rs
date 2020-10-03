@@ -285,6 +285,7 @@ impl<I: Interner> Debug for LifetimeData<I> {
             LifetimeData::BoundVar(db) => write!(fmt, "'{:?}", db),
             LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
             LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
+            LifetimeData::Static => write!(fmt, "'static"),
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }
