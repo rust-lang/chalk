@@ -489,6 +489,7 @@ where
             LifetimeData::Placeholder(universe) => {
                 folder.fold_free_placeholder_lifetime(*universe, outer_binder)
             }
+            LifetimeData::Static => Ok(LifetimeData::<TI>::Static.intern(folder.target_interner())),
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }

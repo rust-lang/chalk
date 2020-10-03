@@ -431,6 +431,7 @@ RawMutability: Mutability = {
 
 Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
+    "'static" => Lifetime::Static,
 };
 
 ConstWithoutId: Const = {

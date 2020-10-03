@@ -422,23 +422,14 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     fn aggregate_lifetimes(&mut self, l1: &Lifetime<I>, l2: &Lifetime<I>) -> Lifetime<I> {
         let interner = self.interner;
         match (l1.data(interner), l2.data(interner)) {
-            (LifetimeData::InferenceVar(_), _) | (_, LifetimeData::InferenceVar(_)) => {
-                self.new_lifetime_variable()
-            }
-
-            (LifetimeData::BoundVar(_), _) | (_, LifetimeData::BoundVar(_)) => {
-                self.new_lifetime_variable()
-            }
-
-            (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
+            (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
+            _ => {
                 if l1 == l2 {
                     l1.clone()
                 } else {
                     self.new_lifetime_variable()
                 }
             }
-
-            (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
         }
     }
 

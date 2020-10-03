@@ -445,7 +445,8 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
+            (LifetimeData::Static, LifetimeData::Static)
+            | (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_)) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
@@ -455,7 +456,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 answer, pending,
             ),
 
-            (LifetimeData::BoundVar(_), _) | (LifetimeData::Placeholder(_), _) => panic!(
+            (LifetimeData::Static, _)
+            | (LifetimeData::BoundVar(_), _)
+            | (LifetimeData::Placeholder(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

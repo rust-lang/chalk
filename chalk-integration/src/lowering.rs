@@ -910,6 +910,10 @@ impl LowerWithEnv for Lifetime {
                     }
                 })
             }
+            Lifetime::Static => Ok(chalk_ir::Lifetime::new(
+                interner,
+                chalk_ir::LifetimeData::Static,
+            )),
         }
     }
 }

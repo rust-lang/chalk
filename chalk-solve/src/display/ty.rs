@@ -274,6 +274,7 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
             LifetimeData::Placeholder(ix) => {
                 write!(f, "'_placeholder_{}_{}", ix.ui.counter, ix.idx)
             }
+            LifetimeData::Static => write!(f, "'static"),
             // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},
