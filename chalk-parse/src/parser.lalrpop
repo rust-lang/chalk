@@ -251,13 +251,13 @@ AssocTyDefn: AssocTyDefn = {
 };
 
 OpaqueTyDefn: OpaqueTyDefn = {
-    "opaque" "type" <name:Id> <p:Angle<VariableKind>> ":" <b:Plus<QuantifiedInlineBound>>
+    "opaque" "type" <name:Id> <p:Angle<VariableKind>> <b:(":" <Plus<QuantifiedInlineBound>>)?>
         <w:QuantifiedWhereClauses> "=" <ty:Ty> ";" => {
         OpaqueTyDefn {
             ty,
             variable_kinds: p,
             name,
-            bounds: b,
+            bounds: b.unwrap_or(vec![]),
             where_clauses: w,
         }
     }
