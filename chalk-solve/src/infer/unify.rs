@@ -448,6 +448,74 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
+    fn generalize_generic_var(
+        &mut self,
+        variance: Variance,
+        sub_var: &GenericArg<I>,
+        universe_index: UniverseIndex,
+    ) -> Fallible<GenericArg<I>> {
+        // TODO: this is probably relating variance wrong, since we use outer
+        // variance without considering anything from the structs.
+        let interner = self.interner;
+        let ena_var = self.table.new_variable(universe_index);
+        let var = (match sub_var.data(interner) {
+            GenericArgData::Ty(old_ty) => {
+                let new_var = ena_var.to_ty(interner);
+                self.relate_ty_ty(variance, old_ty, &new_var).map_err(|e| {
+                    debug!("relate_ty_ty failed (no solution)");
+                    e
+                })?;
+
+                GenericArgData::Ty(new_var)
+            }
+            GenericArgData::Lifetime(old_lifetime) => {
+                let new_var = ena_var.to_lifetime(interner);
+                self.relate_lifetime_lifetime(variance, old_lifetime, &new_var)
+                    .map_err(|e| {
+                        debug!("relate_ty_ty failed (no solution)");
+                        e
+                    })?;
+                GenericArgData::Lifetime(new_var)
+            }
+            GenericArgData::Const(const_value) => {
+                let new_var = ena_var.to_const(interner, const_value.data(interner).ty.clone());
+                self.relate_const_const(variance, const_value, &new_var)
+                    .map_err(|e| {
+                        debug!("relate_ty_ty failed (no solution)");
+                        e
+                    })?;
+
+                GenericArgData::Const(new_var)
+            }
+        })
+        .intern(interner);
+
+        Ok(var)
+    }
+
+    /// Generalizes all but the first
+    fn generalize_substitution_skip_self(
+        &mut self,
+        variance: Variance,
+        substitution: &Substitution<I>,
+        universe_index: UniverseIndex,
+    ) -> Fallible<Substitution<I>> {
+        debug_span!(
+            "generalize_substitution_skip_self",
+            ?substitution,
+            ?universe_index
+        );
+        let interner = self.interner;
+        let vars = substitution.iter(interner).take(1).cloned().chain(
+            substitution
+                .iter(interner)
+                .skip(1)
+                .map(|sub_var| self.generalize_generic_var(variance, sub_var, universe_index))
+                .collect::<Result<Vec<_>, _>>()?,
+        );
+        Ok(Substitution::from_iter(interner, vars))
+    }
+
     fn generalize_substitution(
         &mut self,
         variance: Variance,
@@ -458,43 +526,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let interner = self.interner;
         let vars = substitution
             .iter(interner)
-            .map(|sub_var| {
-                let ena_var = self.table.new_variable(universe_index);
-                let var = (match sub_var.data(interner) {
-                    GenericArgData::Ty(old_ty) => {
-                        let new_var = ena_var.to_ty(interner);
-                        self.relate_ty_ty(variance, old_ty, &new_var).map_err(|e| {
-                            debug!("relate_ty_ty failed (no solution)");
-                            e
-                        })?;
-
-                        GenericArgData::Ty(new_var)
-                    }
-                    GenericArgData::Lifetime(old_lifetime) => {
-                        let new_var = ena_var.to_lifetime(interner);
-                        self.relate_lifetime_lifetime(variance, old_lifetime, &new_var)
-                            .map_err(|e| {
-                                debug!("relate_ty_ty failed (no solution)");
-                                e
-                            })?;
-                        GenericArgData::Lifetime(new_var)
-                    }
-                    GenericArgData::Const(const_value) => {
-                        let new_var =
-                            ena_var.to_const(interner, const_value.data(interner).ty.clone());
-                        self.relate_const_const(variance, const_value, &new_var)
-                            .map_err(|e| {
-                                debug!("relate_ty_ty failed (no solution)");
-                                e
-                            })?;
-
-                        GenericArgData::Const(new_var)
-                    }
-                })
-                .intern(interner);
-
-                Ok(var)
-            })
+            .map(|sub_var| self.generalize_generic_var(variance, sub_var, universe_index))
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Substitution::from_iter(interner, vars))
@@ -614,7 +646,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                         trait_id,
                                     } = *trait_ref;
                                     let old_sub = substitution;
-                                    let substitution = self.generalize_substitution(
+                                    let substitution = self.generalize_substitution_skip_self(
                                         variance,
                                         substitution,
                                         universe_index,
@@ -661,6 +693,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                                 ref substitution,
                                                 associated_ty_id,
                                             } = *projection_ty;
+                                            // TODO: We should be skipping "self", which
+                                            // would be the first element of
+                                            // "trait_params" if we had a
+                                            // `RustIrDatabase` to call
+                                            // `split_projection` on...
+                                            // let (assoc_ty_datum, trait_params, assoc_type_params) = s.db().split_projection(&self);
                                             let substitution = self.generalize_substitution(
                                                 variance,
                                                 substitution,
@@ -749,13 +787,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
             )
             .unwrap();
         debug!("var {:?} set to {:?}", var, generalized_val);
-
-        self.relate_ty_ty(variance, &generalized_val, &ty1)
-            .map_err(|e| {
-                debug!("relate_ty_ty failed (no solution)");
-                e
-            })?;
-        debug!("generalized var {:?} related to {:?}", generalized_val, ty1);
 
         Ok(())
     }
