@@ -3,7 +3,7 @@
 ## Overview
 
 `chalk-engine` solves a `Goal` using a hybrid search strategy with elements of depth- and breadth-first search. When asked to solve a
-particular `Goal` it hasn't seen before, it will first ask the [`Context`] to
+particular `Goal` it hasn't seen before, it will first try to
 generate a set of program clauses, that get turned into [`Strand`]s, that could
 solve that goal. Otherwise, if asked to solve a `Goal` it has seen before, it
 will select the existing table.
@@ -37,7 +37,7 @@ created to store current and future answers. First, the [`Goal`] is converted in
 an `HhGoal`. If it can be simplified, then a `Strand` with one or more
 subgoals will be generated and can be followed as above. Otherwise, if it is a
 `DomainGoal` (see above), then
-[`program_clauses`](https://rust-lang.github.io/chalk/chalk_engine/context/trait.ContextOps.html#tymethod.program_clauses)
+[`program_clauses_for_goal`](https://rust-lang.github.io/chalk/chalk_solve/clauses/fn.program_clauses_for_goal.html)
 is called and each clause is converted into a `Strand` and can be followed.
 
 ## `root_answer` and `ensure_root_answer`
@@ -58,7 +58,7 @@ into separate functions that branch out from `ensure_root_answer`.
 Once a given `Strand` for a table has been selected, a subgoal has to be
 selected. If there are no subgoals left, then there is nothing to do. Otherwise,
 if there are subgoals left, then a subgoal will attempt to be selected (from
-[`next_subgoal_index`](https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html#tymethod.next_subgoal_index)).
+[`next_subgoal_index`](https://rust-lang.github.io/chalk/chalk_engine/slg/struct.SlgContext.html#method.next_subgoal_index)).
 If the table for that subgoal had previously floundered (see next section), then
 we mark that subgoal as floundered and try the next subgoal. If all subgoals are
 marked as floundered, then this entire `Strand` is marked as floundered. If a
@@ -126,6 +126,6 @@ For much more in-depth
 [`Stack`]: https://rust-lang.github.io/chalk/chalk_engine/stack/struct.Stack.html
 [`StackEntry`]: https://rust-lang.github.io/chalk/chalk_engine/stack/struct.StackEntry.html
 [`Table`]: https://rust-lang.github.io/chalk/chalk_engine/table/struct.Table.html
-[`Goal`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html#associatedtype.Goal
+[`Goal`]: https://rust-lang.github.io/chalk/chalk_ir/struct.Goal.html
 [`Answer`]: https://rust-lang.github.io/chalk/chalk_engine/struct.Answer.html
 [`CompleteAnswer`]: https://rust-lang.github.io/chalk/chalk_engine/struct.CompleteAnswer.html
