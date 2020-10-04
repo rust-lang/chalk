@@ -487,7 +487,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // `forall` binders that had been introduced at the point
         // this variable was created -- though it may change over time
         // as the variable is unified.
-        let universe_index = self.table.universe_of_unbound_var(var);
+        // let universe_index = self.table.universe_of_unbound_var(var);
+        let universe_index = self.table.max_universe();
 
         debug!("relate_var_ty: universe index of var: {:?}", universe_index);
 
@@ -513,6 +514,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // weak. Could we include a concrete example of what this fixes? Or,
         // alternatively, link to a test case which requires this & say "it's
         // complicated why exactly we need this".
+
+        let universe_index = self.table.max_universe;
 
         // Example operation: consider `ty` as `&'x SomeType`. To generalize
         // this, we create two new vars `'0` and `1`. Then we relate `var` with
@@ -567,10 +570,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 let lifetime = lifetime_var.to_lifetime(interner);
 
                 let bounds = bounds.map_ref(|value| {
-                    let universe_index = universe_index.next();
+                    // let universe_index = universe_index.next();
                     let iter = value.iter(interner).map(|sub_var| {
                         sub_var.map_ref(|clause| {
-                            let universe_index = universe_index.next();
+                            // let universe_index = universe_index.next();
+                            // let universe_index = self.table.new_universe();
                             match clause {
                                 WhereClause::Implemented(trait_ref) => {
                                     let TraitRef {
