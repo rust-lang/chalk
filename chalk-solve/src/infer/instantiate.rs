@@ -66,6 +66,7 @@ impl<I: Interner> InferenceTable<I> {
     where
         T: Fold<I>,
     {
+        tracing::debug_span!("instantiate_binders_existentially",);
         let (binders, value) = arg.into_binders_and_value(interner);
         let max_universe = self.max_universe;
         self.instantiate_in(interner, max_universe, binders, &value)
@@ -79,6 +80,7 @@ impl<I: Interner> InferenceTable<I> {
     where
         T: Fold<I>,
     {
+        tracing::debug_span!("instantiate_binders_universally",);
         let (binders, value) = arg.into_binders_and_value(interner);
         let ui = self.new_universe();
         let parameters: Vec<_> = binders
