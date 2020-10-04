@@ -40,7 +40,7 @@ fn test_basic_const_values_in_opaque_ty_values() {
     reparse_test!(
         program {
             struct Foo<const N> { }
-            opaque type Zed: = Foo<0>;
+            opaque type Zed = Foo<0>;
         }
     );
 }

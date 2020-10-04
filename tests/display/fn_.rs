@@ -41,7 +41,7 @@ fn test_opaque_ty_with_fn_def() {
     // Test printing opaque types in function definitions
     reparse_test!(
         program {
-            opaque type Bar: = ();
+            opaque type Bar = ();
             fn gives_bar() -> Bar;
             fn receives_bar(param: Bar) -> ();
         }

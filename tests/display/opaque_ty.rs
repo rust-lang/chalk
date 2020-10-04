@@ -23,7 +23,7 @@ fn opaque_ty_no_bounds() {
     // Test printing opaque types without any bounds
     reparse_test!(
         program {
-            opaque type Foo: = ();
+            opaque type Foo = ();
         }
     );
 }
