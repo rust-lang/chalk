@@ -21,6 +21,7 @@
     - [Opaque types (impl Trait)](./clauses/opaque_types.md)
     - [Well known traits](./clauses/well_known_traits.md)
     - [Well-formedness checking](./clauses/wf.md)
+    - [Coherence](./coherence.md)
 - [Canonical queries](./canonical_queries.md)
     - [Canonicalization](./canonical_queries/canonicalization.md)
 - [Chalk engine](./engine.md)
