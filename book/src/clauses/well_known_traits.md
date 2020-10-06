@@ -43,9 +43,11 @@ Some common examples of auto traits are `Send` and `Sync`.
 | mutable refs    | ⚬    |  ⚬   |   ✅   |  ⚬    |   ⚬            | ⚬    |  ⚬  |   ⚬    |   ⚬      |      ✅      |
 | slices          | ⚬     | ⚬    | ⚬     |   ✅    | ⚬            | ⚬    | ⚬   | ⚬      |  ⚬       |    ✅       |
 | arrays          | ✅     | ✅    | ✅     |   ❌    | ⚬            | ⚬    | ⚬   | ⚬      |  ⚬       |    ✅        |
-| closures❌       | ❌     | ❌    | ❌     | ⚬      | ⚬            | ⚬    | ❌   | ⚬      |  ⚬       |    ✅        |
-| generators❌     |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬            | ⚬     | ⚬  | ❌      |   ❌       |    ❌       |
-| gen. witness❌   |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
+| closures        | ✅     | ✅    | ✅     | ⚬      | ⚬            | ⚬    | ✅   | ⚬      |  ⚬       |    ✅        |
+| generators      |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬            | ⚬     | ⚬  | ❌      |   ❌       |    ❌       |
+| gen. witness    |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
+| opaque          |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
+| foreign         |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
 | -----------     |       |      |       |        |             |       |     |        |           |             |
 | well-formedness |  ✅   |  ⚬   | ✅     | ⚬     | ✅            | ✅     |  ⚬  | ⚬      |  ⚬       |   ⚬         |
 
