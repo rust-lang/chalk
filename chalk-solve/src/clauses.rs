@@ -164,6 +164,10 @@ pub fn push_auto_trait_impls<I: Interner>(
             push_auto_trait_impls_generator_witness(builder, auto_trait_id, generator_id);
         }
 
+        // Unimplemented
+        TypeName::OpaqueType(_) => {}
+        TypeName::AssociatedType(_) => {}
+
         // app_ty implements AutoTrait if all constituents of app_ty implement AutoTrait
         _ => {
             let conditions = constituent_types(builder.db, app_ty)
