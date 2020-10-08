@@ -27,9 +27,13 @@ pub struct Program {
     /// For each ADT:
     pub adt_kinds: BTreeMap<AdtId<ChalkIr>, TypeKind>,
 
+    pub adt_variances: BTreeMap<AdtId<ChalkIr>, Vec<Variance>>,
+
     pub fn_def_ids: BTreeMap<Identifier, FnDefId<ChalkIr>>,
 
     pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
+
+    pub fn_def_variances: BTreeMap<FnDefId<ChalkIr>, Vec<Variance>>,
 
     pub closure_ids: BTreeMap<Identifier, ClosureId<ChalkIr>>,
 
@@ -348,23 +352,12 @@ impl UnificationDatabase<ChalkIr> for Program {
     fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
         Variances::from(
             self.interner(),
-            self.fn_def_data[&fn_def_id]
-                .binders
-                .binders
-                .iter(self.interner())
-                .map(|_| Variance::Invariant),
+            self.fn_def_variances[&fn_def_id].iter().copied(),
         )
     }
 
     fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
-        Variances::from(
-            self.interner(),
-            self.adt_data[&adt_id]
-                .binders
-                .binders
-                .iter(self.interner())
-                .map(|_| Variance::Invariant),
-        )
+        Variances::from(self.interner(), self.adt_variances[&adt_id].iter().copied())
     }
 }
 

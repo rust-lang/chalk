@@ -143,7 +143,9 @@ impl ProgramLowerer {
     pub fn lower(self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
         let mut adt_data = BTreeMap::new();
         let mut adt_reprs = BTreeMap::new();
+        let mut adt_variances = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
+        let mut fn_def_variances = BTreeMap::new();
         let mut closure_inputs_and_output = BTreeMap::new();
         let mut closure_closure_kind = BTreeMap::new();
         let mut closure_upvars = BTreeMap::new();
@@ -180,13 +182,61 @@ impl ProgramLowerer {
 
             match *item {
                 Item::AdtDefn(ref d) => {
+                    let identifier = d.name.clone();
                     let adt_id = AdtId(raw_id);
                     adt_data.insert(adt_id, Arc::new((d, adt_id).lower(&empty_env)?));
                     adt_reprs.insert(adt_id, d.repr.lower());
+                    let n_params = d.all_parameters().len();
+                    let variances = match d.variances.clone() {
+                        Some(v) => {
+                            if v.len() != n_params {
+                                return Err(RustIrError::IncorrectNumberOfVarianceParameters {
+                                    identifier,
+                                    expected: n_params,
+                                    actual: v.len(),
+                                });
+                            }
+                            v.into_iter()
+                                .map(|v| match v {
+                                    Variance::Invariant => chalk_ir::Variance::Invariant,
+                                    Variance::Covariant => chalk_ir::Variance::Covariant,
+                                    Variance::Contravariant => chalk_ir::Variance::Contravariant,
+                                })
+                                .collect()
+                        }
+                        None => (0..n_params)
+                            .map(|_| chalk_ir::Variance::Invariant)
+                            .collect(),
+                    };
+                    adt_variances.insert(adt_id, variances);
                 }
                 Item::FnDefn(ref defn) => {
+                    let identifier = defn.name.clone();
                     let fn_def_id = FnDefId(raw_id);
                     fn_def_data.insert(fn_def_id, Arc::new((defn, fn_def_id).lower(&empty_env)?));
+                    let n_params = defn.all_parameters().len();
+                    let variances = match defn.variances.clone() {
+                        Some(v) => {
+                            if v.len() != n_params {
+                                return Err(RustIrError::IncorrectNumberOfVarianceParameters {
+                                    identifier,
+                                    expected: n_params,
+                                    actual: v.len(),
+                                });
+                            }
+                            v.into_iter()
+                                .map(|v| match v {
+                                    Variance::Invariant => chalk_ir::Variance::Invariant,
+                                    Variance::Covariant => chalk_ir::Variance::Covariant,
+                                    Variance::Contravariant => chalk_ir::Variance::Contravariant,
+                                })
+                                .collect()
+                        }
+                        None => (0..n_params)
+                            .map(|_| chalk_ir::Variance::Invariant)
+                            .collect(),
+                    };
+                    fn_def_variances.insert(fn_def_id, variances);
                 }
                 Item::ClosureDefn(ref defn) => {
                     let closure_def_id = ClosureId(raw_id);
@@ -426,7 +476,9 @@ impl ProgramLowerer {
             trait_kinds: self.trait_kinds,
             adt_data,
             adt_reprs,
+            adt_variances,
             fn_def_data,
+            fn_def_variances,
             closure_inputs_and_output,
             closure_closure_kind,
             generator_ids: self.generator_ids,

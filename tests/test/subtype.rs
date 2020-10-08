@@ -1,6 +1,20 @@
 use super::*;
 
 #[test]
+fn variance_lowering() {
+    lowering_success! {
+        program {
+            #[variance(Invariant, Covariant)]
+            struct Foo<T, U> {}
+            struct Bar<T, U> {}
+            #[variance(Invariant, Contravariant)]
+            fn foo<T, U>(t: T, u: U);
+            fn bar<T, U>(t: T, u: U);
+        }
+    }
+}
+
+#[test]
 fn subtype_simple() {
     test! {
         program {
