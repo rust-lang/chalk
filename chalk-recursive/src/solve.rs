@@ -205,12 +205,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
     ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        program_clauses_for_goal(
-            self.db(),
-            &canonical_goal.canonical.value.environment,
-            &canonical_goal.canonical.value.goal,
-            &canonical_goal.canonical.binders,
-        )
+        program_clauses_for_goal(self.db(), &canonical_goal)
     }
 }
 

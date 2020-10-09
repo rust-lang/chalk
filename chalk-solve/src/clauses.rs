@@ -344,24 +344,28 @@ pub fn push_auto_trait_impls_generator_witness<I: Interner>(
 #[instrument(level = "debug", skip(db))]
 pub fn program_clauses_for_goal<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
-    environment: &Environment<I>,
-    goal: &DomainGoal<I>,
-    binders: &CanonicalVarKinds<I>,
+    goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
 ) -> Result<Vec<ProgramClause<I>>, Floundered> {
     let interner = db.interner();
 
     let custom_clauses = db.custom_clauses().into_iter();
-    let clauses_that_could_match = program_clauses_that_could_match(db, environment, goal, binders)
-        .map(|cl| cl.into_iter())?;
+    let clauses_that_could_match =
+        program_clauses_that_could_match(db, goal).map(|cl| cl.into_iter())?;
 
     let clauses: Vec<ProgramClause<I>> = custom_clauses
         .chain(clauses_that_could_match)
         .chain(
-            db.program_clauses_for_env(environment)
+            db.program_clauses_for_env(&goal.canonical.value.environment)
                 .iter(interner)
                 .cloned(),
         )
-        .filter(|c| c.could_match(interner, db.unification_database(), goal))
+        .filter(|c| {
+            c.could_match(
+                interner,
+                db.unification_database(),
+                &goal.canonical.value.goal,
+            )
+        })
         .collect();
 
     debug!(?clauses);
@@ -373,20 +377,23 @@ pub fn program_clauses_for_goal<'db, I: Interner>(
 /// `goal`. This can be any superset of the correct set, but the
 /// more precise you can make it, the more efficient solving will
 /// be.
-#[instrument(level = "debug", skip(db, environment))]
+#[instrument(level = "debug", skip(db))]
 fn program_clauses_that_could_match<I: Interner>(
     db: &dyn RustIrDatabase<I>,
-    environment: &Environment<I>,
-    goal: &DomainGoal<I>,
-    // FIXME: These are the binders for `goal`. We're passing them separately
-    // because `goal` is not necessarily canonicalized: The recursive solver
-    // passes the canonical goal; the SLG solver instantiates the goal first.
-    // (See #568.)
-    binders: &CanonicalVarKinds<I>,
+    goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
 ) -> Result<Vec<ProgramClause<I>>, Floundered> {
     let interner = db.interner();
     let mut clauses: Vec<ProgramClause<I>> = vec![];
     let builder = &mut ClauseBuilder::new(db, &mut clauses);
+
+    let UCanonical {
+        canonical:
+            Canonical {
+                value: InEnvironment { environment, goal },
+                binders,
+            },
+        universes: _,
+    } = goal;
 
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {

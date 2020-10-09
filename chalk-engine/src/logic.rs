@@ -269,12 +269,7 @@ impl<I: Interner> Forest<I> {
                     },
                     universes: goal.universes,
                 };
-                let clauses = program_clauses_for_goal(
-                    program,
-                    &canon_domain_goal.canonical.value.environment,
-                    &canon_domain_goal.canonical.value.goal,
-                    &canon_domain_goal.canonical.binders,
-                );
+                let clauses = program_clauses_for_goal(program, &canon_domain_goal);
                 let (infer, subst, InEnvironment { environment, goal }) =
                     chalk_solve::infer::InferenceTable::from_canonical(
                         context.program().interner(),
