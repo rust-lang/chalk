@@ -549,8 +549,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // `forall` binders that had been introduced at the point
         // this variable was created -- though it may change over time
         // as the variable is unified.
-        // let universe_index = self.table.universe_of_unbound_var(var);
-        let universe_index = self.table.max_universe();
+        let universe_index = self.table.universe_of_unbound_var(var);
+        // let universe_index = self.table.max_universe();
 
         debug!("relate_var_ty: universe index of var: {:?}", universe_index);
 
