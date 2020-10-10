@@ -461,29 +461,29 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let var = (match sub_var.data(interner) {
             GenericArgData::Ty(old_ty) => {
                 let new_var = ena_var.to_ty(interner);
-                self.relate_ty_ty(variance, old_ty, &new_var).map_err(|e| {
-                    debug!("relate_ty_ty failed (no solution)");
-                    e
-                })?;
+                // self.relate_ty_ty(variance, old_ty, &new_var).map_err(|e| {
+                //     debug!("relate_ty_ty failed (no solution)");
+                //     e
+                // })?;
 
                 GenericArgData::Ty(new_var)
             }
             GenericArgData::Lifetime(old_lifetime) => {
                 let new_var = ena_var.to_lifetime(interner);
-                self.relate_lifetime_lifetime(variance, old_lifetime, &new_var)
-                    .map_err(|e| {
-                        debug!("relate_ty_ty failed (no solution)");
-                        e
-                    })?;
+                // self.relate_lifetime_lifetime(variance, old_lifetime, &new_var)
+                //     .map_err(|e| {
+                //         debug!("relate_ty_ty failed (no solution)");
+                //         e
+                //     })?;
                 GenericArgData::Lifetime(new_var)
             }
             GenericArgData::Const(const_value) => {
                 let new_var = ena_var.to_const(interner, const_value.data(interner).ty.clone());
-                self.relate_const_const(variance, const_value, &new_var)
-                    .map_err(|e| {
-                        debug!("relate_ty_ty failed (no solution)");
-                        e
-                    })?;
+                // self.relate_const_const(variance, const_value, &new_var)
+                //     .map_err(|e| {
+                //         debug!("relate_ty_ty failed (no solution)");
+                //         e
+                //     })?;
 
                 GenericArgData::Const(new_var)
             }
@@ -778,6 +778,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
         };
 
         debug!("var {:?} generalized to {:?}", var, generalized_val);
+        self.relate_ty_ty(variance, &ty1, &generalized_val)?;
+
+        debug!(
+            "generalized version {:?} related to original {:?}",
+            generalized_val, ty1
+        );
 
         self.table
             .unify
