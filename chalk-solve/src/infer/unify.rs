@@ -634,10 +634,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 let mut error = None;
 
                 let bounds = bounds.map_ref(|value| {
-                    // let universe_index = universe_index.next();
+                    let universe_index = universe_index.next();
                     let iter = value.iter(interner).map(|sub_var| {
                         sub_var.map_ref(|clause| {
-                            // let universe_index = universe_index.next();
+                            let universe_index = universe_index.next();
                             // let universe_index = self.table.new_universe();
                             match clause {
                                 WhereClause::Implemented(trait_ref) => {
