@@ -450,56 +450,27 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
     fn generalize_generic_var(
         &mut self,
-        variance: Variance,
         sub_var: &GenericArg<I>,
         universe_index: UniverseIndex,
-    ) -> Fallible<GenericArg<I>> {
-        // TODO: this is probably relating variance wrong, since we use outer
-        // variance without considering anything from the structs.
+    ) -> GenericArg<I> {
         let interner = self.interner;
         let ena_var = self.table.new_variable(universe_index);
-        let var = (match sub_var.data(interner) {
-            GenericArgData::Ty(old_ty) => {
-                let new_var = ena_var.to_ty(interner);
-                // self.relate_ty_ty(variance, old_ty, &new_var).map_err(|e| {
-                //     debug!("relate_ty_ty failed (no solution)");
-                //     e
-                // })?;
-
-                GenericArgData::Ty(new_var)
-            }
-            GenericArgData::Lifetime(old_lifetime) => {
-                let new_var = ena_var.to_lifetime(interner);
-                // self.relate_lifetime_lifetime(variance, old_lifetime, &new_var)
-                //     .map_err(|e| {
-                //         debug!("relate_ty_ty failed (no solution)");
-                //         e
-                //     })?;
-                GenericArgData::Lifetime(new_var)
-            }
-            GenericArgData::Const(const_value) => {
-                let new_var = ena_var.to_const(interner, const_value.data(interner).ty.clone());
-                // self.relate_const_const(variance, const_value, &new_var)
-                //     .map_err(|e| {
-                //         debug!("relate_ty_ty failed (no solution)");
-                //         e
-                //     })?;
-
-                GenericArgData::Const(new_var)
-            }
+        (match sub_var.data(interner) {
+            GenericArgData::Ty(_) => GenericArgData::Ty(ena_var.to_ty(interner)),
+            GenericArgData::Lifetime(_) => GenericArgData::Lifetime(ena_var.to_lifetime(interner)),
+            GenericArgData::Const(const_value) => GenericArgData::Const(
+                ena_var.to_const(interner, const_value.data(interner).ty.clone()),
+            ),
         })
-        .intern(interner);
-
-        Ok(var)
+        .intern(interner)
     }
 
     /// Generalizes all but the first
     fn generalize_substitution_skip_self(
         &mut self,
-        variance: Variance,
         substitution: &Substitution<I>,
         universe_index: UniverseIndex,
-    ) -> Fallible<Substitution<I>> {
+    ) -> Substitution<I> {
         debug_span!(
             "generalize_substitution_skip_self",
             ?substitution,
@@ -510,26 +481,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
             substitution
                 .iter(interner)
                 .skip(1)
-                .map(|sub_var| self.generalize_generic_var(variance, sub_var, universe_index))
-                .collect::<Result<Vec<_>, _>>()?,
+                .map(|sub_var| self.generalize_generic_var(sub_var, universe_index)),
         );
-        Ok(Substitution::from_iter(interner, vars))
+        Substitution::from_iter(interner, vars)
     }
 
     fn generalize_substitution(
         &mut self,
-        variance: Variance,
         substitution: &Substitution<I>,
         universe_index: UniverseIndex,
-    ) -> Fallible<Substitution<I>> {
+    ) -> Substitution<I> {
         debug_span!("generalize_substitution", ?substitution, ?universe_index);
         let interner = self.interner;
         let vars = substitution
             .iter(interner)
-            .map(|sub_var| self.generalize_generic_var(variance, sub_var, universe_index))
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|sub_var| self.generalize_generic_var(sub_var, universe_index));
 
-        Ok(Substitution::from_iter(interner, vars))
+        Substitution::from_iter(interner, vars)
     }
 
     /// Unify an inference variable `var` with some non-inference
@@ -631,8 +599,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 let lifetime_var = self.table.new_variable(universe_index);
                 let lifetime = lifetime_var.to_lifetime(interner);
 
-                let mut error = None;
-
                 let bounds = bounds.map_ref(|value| {
                     let universe_index = universe_index.next();
                     let iter = value.iter(interner).map(|sub_var| {
@@ -645,19 +611,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                         ref substitution,
                                         trait_id,
                                     } = *trait_ref;
-                                    let old_sub = substitution;
                                     let substitution = self.generalize_substitution_skip_self(
-                                        variance,
                                         substitution,
                                         universe_index,
                                     );
-                                    let substitution = match substitution {
-                                        Ok(v) => v,
-                                        Err(e) => {
-                                            error = Some(e);
-                                            return clause.clone();
-                                        }
-                                    };
                                     WhereClause::Implemented(TraitRef {
                                         substitution,
                                         trait_id,
@@ -672,17 +629,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                                 opaque_ty_id,
                                             } = *opaque_ty;
                                             let substitution = self.generalize_substitution(
-                                                variance,
                                                 substitution,
                                                 universe_index,
                                             );
-                                            let substitution = match substitution {
-                                                Ok(v) => v,
-                                                Err(e) => {
-                                                    error = Some(e);
-                                                    return clause.clone();
-                                                }
-                                            };
                                             AliasTy::Opaque(OpaqueTy {
                                                 substitution,
                                                 opaque_ty_id,
@@ -700,17 +649,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                             // `split_projection` on...
                                             // let (assoc_ty_datum, trait_params, assoc_type_params) = s.db().split_projection(&self);
                                             let substitution = self.generalize_substitution(
-                                                variance,
                                                 substitution,
                                                 universe_index,
                                             );
-                                            let substitution = match substitution {
-                                                Ok(v) => v,
-                                                Err(e) => {
-                                                    error = Some(e);
-                                                    return clause.clone();
-                                                }
-                                            };
                                             AliasTy::Projection(ProjectionTy {
                                                 substitution,
                                                 associated_ty_id,
@@ -740,10 +681,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     QuantifiedWhereClauses::from_iter(interner, iter)
                 });
 
-                if let Some(error) = error {
-                    return Err(error);
-                }
-
                 TyKind::Dyn(DynTy { bounds, lifetime }).intern(interner)
             }
             TyKind::Function(fn_ptr) => {
@@ -753,12 +690,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     ref substitution,
                 } = *fn_ptr;
 
-                let substitution = FnSubst(self.generalize_substitution(
-                    variance,
-                    &substitution.0,
-                    universe_index,
-                )?);
-
+                let substitution =
+                    FnSubst(self.generalize_substitution(&substitution.0, universe_index));
                 TyKind::Function(FnPointer {
                     num_binders,
                     sig,
