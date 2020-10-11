@@ -40,6 +40,60 @@ fn region_equality() {
     }
 }
 
+/// Temporary test extracted from the first goal in forall_equality for the sake of independent investigation.
+#[test]
+fn forall_equality_solveable_simple() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            // A valid equality; we get back a series of solvable
+            // region constraints, since each region variable must
+            // refer to exactly one placeholder region, and they are
+            // all in a valid universe to do so (universe 4).
+            for<'a> fn(Ref<'a, Unit>): Eq<for<'c> fn(Ref<'c, Unit>)>
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+/// Temporary test extracted from the second goal in forall_equality for the sake of independent investigation.
+#[test]
+fn forall_equality_unsolveable_simple() {
+    test! {
+        program {
+            trait Eq<T> { }
+            impl<T> Eq<T> for T { }
+
+            struct Unit { }
+            struct Ref<'a, T> { }
+        }
+
+        goal {
+            // Note: this equality is false, but we get back successful;
+            // this is because the region constraints are unsolvable.
+            //
+            // Note that `?0` (in universe 2) must be equal to both
+            // `!1_0` and `!1_1`, which of course it cannot be.
+            for<'a, 'b> fn(Ref<'a, Ref<'b, Ref<'a, Unit>>>): Eq<
+                for<'c, 'd> fn(Ref<'c, Ref<'d, Ref<'d, Unit>>>)>
+        } yields {
+            "Unique; substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
+            InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
+        }
+    }
+}
+
 /// Tests of region equality and "foralls" -- we generate contraints that are sometimes
 /// not solvable.
 #[test]
