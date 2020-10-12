@@ -117,14 +117,19 @@ impl<I: Interner> Forest<I> {
     pub(super) fn any_future_answer(
         &self,
         table: TableIndex,
-        answer: AnswerIndex,
+        mut answer_index: AnswerIndex,
         mut test: impl FnMut(&Substitution<I>) -> bool,
     ) -> bool {
-        if let Some(answer) = self.tables[table].answer(answer) {
+        // Check any cached answers, starting at `answer_index`.
+        while let Some(answer) = self.tables[table].answer(answer_index) {
             info!("answer cached = {:?}", answer);
-            return test(&answer.subst.value.subst);
+            if test(&answer.subst.value.subst) {
+                return true;
+            }
+            answer_index.increment();
         }
 
+        // Check any unsolved strands, which may give further answers.
         self.tables[table]
             .strands()
             .any(|strand| test(&strand.canonical_ex_clause.value.subst))
