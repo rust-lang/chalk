@@ -8,10 +8,9 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::UnificationDatabase;
 use std::fmt::Debug;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 impl<I: Interner> InferenceTable<I> {
-    #[instrument(level = "debug", skip(self, interner, db, environment))]
     pub fn relate<T>(
         &mut self,
         interner: &I,
@@ -330,7 +329,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// Unify two inference variables
     #[instrument(level = "debug", skip(self))]
     fn unify_var_var(&mut self, a: InferenceVar, b: InferenceVar) -> Fallible<()> {
-        debug_span!("unify_var_var", ?a, ?b);
         let var1 = EnaVariable::from(a);
         let var2 = EnaVariable::from(b);
         Ok(self
@@ -351,7 +349,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
         general_var: InferenceVar,
         specific_ty: Ty<I>,
     ) -> Fallible<()> {
-        debug_span!("unify_general_var_specific_ty", ?general_var, ?specific_ty);
         self.table
             .unify
             .unify_var_value(
@@ -375,7 +372,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
         R: Zip<I> + Fold<I, Result = R>,
         't: 'a,
     {
-        debug_span!("relate_binders", ?variance, ?a, ?b);
         // for<'a...> T == for<'b...> U
         //
         // if:
@@ -383,19 +379,27 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // for<'a...> exists<'b...> T == U &&
         // for<'b...> exists<'a...> T == U
 
+        // for<'a...> T <: for<'b...> U
+        //
+        // if
+        //
+        // for<'b...> exists<'a...> T <: U
+
         let interner = self.interner;
 
-        {
+        if let Variance::Invariant | Variance::Contravariant = variance {
             let a_universal = self.table.instantiate_binders_universally(interner, a);
             let b_existential = self.table.instantiate_binders_existentially(interner, b);
             Zip::zip_with(self, variance, &a_universal, &b_existential)?;
         }
 
-        {
+        if let Variance::Invariant | Variance::Covariant = variance {
             let b_universal = self.table.instantiate_binders_universally(interner, b);
             let a_existential = self.table.instantiate_binders_existentially(interner, a);
-            Zip::zip_with(self, variance, &a_existential, &b_universal)
+            Zip::zip_with(self, variance, &a_existential, &b_universal)?;
         }
+
+        Ok(())
     }
 
     /// Relate an alias like `<T as Trait>::Item` or `impl Trait` with some other
@@ -410,13 +414,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// AliasEq(Alias = ?X)
     /// ```
     /// and relates `?X` and `ty`.
+    #[instrument(level = "debug", skip(self))]
     fn relate_alias_ty(
         &mut self,
         variance: Variance,
         alias: &AliasTy<I>,
         ty: &Ty<I>,
     ) -> Fallible<()> {
-        debug_span!("relate_alias_ty", ?variance, ?alias, ?ty);
         let interner = self.interner;
         match variance {
             Variance::Invariant => {
@@ -448,148 +452,71 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    fn generalize_generic_var(
-        &mut self,
-        sub_var: &GenericArg<I>,
-        universe_index: UniverseIndex,
-    ) -> GenericArg<I> {
+    #[instrument(level = "debug", skip(self))]
+    fn generalize_ty(&mut self, ty: &Ty<I>, universe_index: UniverseIndex) -> Ty<I> {
         let interner = self.interner;
-        let ena_var = self.table.new_variable(universe_index);
-        (match sub_var.data(interner) {
-            GenericArgData::Ty(_) => GenericArgData::Ty(ena_var.to_ty(interner)),
-            GenericArgData::Lifetime(_) => GenericArgData::Lifetime(ena_var.to_lifetime(interner)),
-            GenericArgData::Const(const_value) => GenericArgData::Const(
-                ena_var.to_const(interner, const_value.data(interner).ty.clone()),
-            ),
-        })
-        .intern(interner)
-    }
-
-    /// Generalizes all but the first
-    fn generalize_substitution_skip_self(
-        &mut self,
-        substitution: &Substitution<I>,
-        universe_index: UniverseIndex,
-    ) -> Substitution<I> {
-        debug_span!(
-            "generalize_substitution_skip_self",
-            ?substitution,
-            ?universe_index
-        );
-        let interner = self.interner;
-        let vars = substitution.iter(interner).take(1).cloned().chain(
-            substitution
-                .iter(interner)
-                .skip(1)
-                .map(|sub_var| self.generalize_generic_var(sub_var, universe_index)),
-        );
-        Substitution::from_iter(interner, vars)
-    }
-
-    fn generalize_substitution(
-        &mut self,
-        substitution: &Substitution<I>,
-        universe_index: UniverseIndex,
-    ) -> Substitution<I> {
-        debug_span!("generalize_substitution", ?substitution, ?universe_index);
-        let interner = self.interner;
-        let vars = substitution
-            .iter(interner)
-            .map(|sub_var| self.generalize_generic_var(sub_var, universe_index));
-
-        Substitution::from_iter(interner, vars)
-    }
-
-    /// Unify an inference variable `var` with some non-inference
-    /// variable `ty`, just bind `var` to `ty`. But we must enforce two conditions:
-    ///
-    /// - `var` does not appear inside of `ty` (the standard `OccursCheck`)
-    /// - `ty` does not reference anything in a lifetime that could not be named in `var`
-    ///   (the extended `OccursCheck` created to handle universes)
-    fn relate_var_ty(&mut self, variance: Variance, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
-        debug_span!("relate_var_ty", ?var, ?ty);
-
-        let interner = self.interner;
-        let var = EnaVariable::from(var);
-
-        // Determine the universe index associated with this
-        // variable. This is basically a count of the number of
-        // `forall` binders that had been introduced at the point
-        // this variable was created -- though it may change over time
-        // as the variable is unified.
-        let universe_index = self.table.universe_of_unbound_var(var);
-        // let universe_index = self.table.max_universe();
-
-        debug!("relate_var_ty: universe index of var: {:?}", universe_index);
-
-        debug!("trying fold_with on {:?}", ty);
-        let ty1 = ty
-            .fold_with(
-                &mut OccursCheck::new(self, var, universe_index),
-                DebruijnIndex::INNERMOST,
+        match ty.kind(interner) {
+            TyKind::Adt(id, substitution) => TyKind::Adt(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
             )
-            .map_err(|e| {
-                debug!("failed to fold {:?}", ty);
-                e
-            })?;
-
-        // "Generalize" types. This ensures that we aren't accidentally forcing
-        // too much onto `var`. Instead of directly setting `var` equal to `ty`,
-        // we just take the outermost structure we _know_ `var` holds, and then
-        // apply that to `ty`. This involves creating new inference vars for
-        // everything inside `var`, then recursing down to unify those new
-        // inference variables with
-
-        // TODO: the justification for why we need to generalize here is a bit
-        // weak. Could we include a concrete example of what this fixes? Or,
-        // alternatively, link to a test case which requires this & say "it's
-        // complicated why exactly we need this".
-
-        let universe_index = self.table.max_universe;
-
-        // Example operation: consider `ty` as `&'x SomeType`. To generalize
-        // this, we create two new vars `'0` and `1`. Then we relate `var` with
-        // `&'0 1` and `&'0 1` with `&'x SomeType`. The second relation will
-        // recurse, and we'll end up relating `'0` with `'x` and `1` with `SomeType`.
-        let generalized_val = match ty1.kind(interner) {
-            TyKind::Adt(id, substitution) => {
-                TyKind::Adt(*id, self.generalize_substitution(substitution, universe_index)).intern(interner)
-            }
-            TyKind::AssociatedType(id, substitution) => {
-                TyKind::AssociatedType(*id, self.generalize_substitution(substitution, universe_index)).intern(interner)
-            }
+            .intern(interner),
+            TyKind::AssociatedType(id, substitution) => TyKind::AssociatedType(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
             TyKind::Scalar(scalar) => TyKind::Scalar(*scalar).intern(interner),
             TyKind::Str => TyKind::Str.intern(interner),
-            TyKind::Tuple(arity, substitution) => TyKind::Tuple(arity, self.generalize_substitution(substitution, universe_index)).intern(interner),
-            TyKind::OpaqueType(id, substitution) => {
-                TyKind::OpaqueType(id, self.generalize_substitution(substitution, universe_index)).intern(interner)
+            TyKind::Tuple(arity, substitution) => TyKind::Tuple(
+                *arity,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
+            TyKind::OpaqueType(id, substitution) => TyKind::OpaqueType(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
+            TyKind::Slice(ty) => {
+                TyKind::Slice(self.generalize_ty(ty, universe_index)).intern(interner)
             }
-            TyKind::Slice(ty) => TyKind::Slice(self.generalize_ty(interner)).intern(interner),
-            TyKind::FnDef(id, substitution) => {
-                TyKind::FnDef(id, self.generalize_substitution(substitution, universe_index)).intern(interner)
-            }
-            TyKind::Ref(mutability, lifetime, ty) => {
-                TyKind::Ref(*mutability, self.generalize_lifetime(lifetime, universe_index), self.generalize_ty(ty, universe_index)).intern(interner)
-            }
+            TyKind::FnDef(id, substitution) => TyKind::FnDef(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
+            TyKind::Ref(mutability, lifetime, ty) => TyKind::Ref(
+                *mutability,
+                self.generalize_lifetime(lifetime, universe_index),
+                self.generalize_ty(ty, universe_index),
+            )
+            .intern(interner),
             TyKind::Raw(mutability, ty) => {
                 TyKind::Raw(*mutability, self.generalize_ty(ty, universe_index)).intern(interner)
             }
             TyKind::Never => TyKind::Never.intern(interner),
-            TyKind::Array(ty, const_) => {
-                TyKind::Array(self.generalize_ty(ty, universe_index), self.generalize_const(const_, universe_index)).intern(interner)
-            }
-            TyKind::Closure(id, substitution) => {
-                TyKind::Closure(*id, self.generalize_substitution(substitution, universe_index)).intern(interner)
-            }
-            TyKind::Generator(id, substitution) => {
-                TyKind::Generator(*id, self.generalize_substitution(substitution, universe_index)).intern(interner)
-            }
-            TyKind::GeneratorWitness(id, substitution) => {
-                TyKind::GeneratorWitness(*id, self.generalize_substitution(substitution, universe_index)).intern(interner)
-            }
-            TyKind::Foreign(id) => {
-                TyKind::Foreign(*id).intern(interner)
-            }
+            TyKind::Array(ty, const_) => TyKind::Array(
+                self.generalize_ty(ty, universe_index),
+                self.generalize_const(const_, universe_index),
+            )
+            .intern(interner),
+            TyKind::Closure(id, substitution) => TyKind::Closure(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
+            TyKind::Generator(id, substitution) => TyKind::Generator(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
+            TyKind::GeneratorWitness(id, substitution) => TyKind::GeneratorWitness(
+                *id,
+                self.generalize_substitution(substitution, universe_index),
+            )
+            .intern(interner),
+            TyKind::Foreign(id) => TyKind::Foreign(*id).intern(interner),
             TyKind::Error => TyKind::Error.intern(interner),
             TyKind::Dyn(dyn_ty) => {
                 let DynTy {
@@ -600,10 +527,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 let lifetime = lifetime_var.to_lifetime(interner);
 
                 let bounds = bounds.map_ref(|value| {
-                    let universe_index = universe_index.next();
+                    //let universe_index = universe_index.next();
                     let iter = value.iter(interner).map(|sub_var| {
                         sub_var.map_ref(|clause| {
-                            let universe_index = universe_index.next();
+                            //let universe_index = universe_index.next();
                             // let universe_index = self.table.new_universe();
                             match clause {
                                 WhereClause::Implemented(trait_ref) => {
@@ -700,23 +627,161 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 .intern(interner)
             }
             TyKind::Placeholder(_) | TyKind::BoundVar(_) => {
-                debug!("just generalizing to the ty itself: {:?}", ty1);
+                debug!("just generalizing to the ty itself: {:?}", ty);
                 // BoundVar and PlaceHolder have no internal values to be
                 // generic over, so we just relate directly to it
-                ty1.clone()
+                ty.clone()
             }
-            TyKind::Alias(_) | TyKind::InferenceVar(_, _) => {
-                unreachable!("relate_var_ty is not be called with ty = Alias or InferenceVar");
+            TyKind::Alias(_) => {
+                let ena_var = self.table.new_variable(universe_index);
+                ena_var.to_ty(interner)
             }
-        };
+            TyKind::InferenceVar(var, kind) => {
+                if matches!(kind, TyVariableKind::Integer | TyVariableKind::Float) {
+                    ty.clone()
+                } else if let Some(ty) = self.table.normalize_ty_shallow(interner, ty) {
+                    self.generalize_ty(&ty, universe_index)
+                } else {
+                    let ena_var = self.table.new_variable(universe_index);
+                    ena_var.to_ty(interner)
+                }
+            }
+        }
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn generalize_lifetime(
+        &mut self,
+        lifetime: &Lifetime<I>,
+        universe_index: UniverseIndex,
+    ) -> Lifetime<I> {
+        let interner = self.interner;
+        match lifetime.data(&interner) {
+            LifetimeData::BoundVar(_) => {
+                return lifetime.clone();
+            }
+            _ => {
+                let ena_var = self.table.new_variable(universe_index);
+                ena_var.to_lifetime(interner)
+            }
+        }
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn generalize_const(&mut self, const_: &Const<I>, universe_index: UniverseIndex) -> Const<I> {
+        let interner = self.interner;
+        let data = const_.data(&interner);
+        match data.value {
+            ConstValue::BoundVar(_) => {
+                return const_.clone();
+            }
+            _ => {
+                let ena_var = self.table.new_variable(universe_index);
+                ena_var.to_const(interner, data.ty.clone())
+            }
+        }
+    }
+
+    fn generalize_generic_var(
+        &mut self,
+        sub_var: &GenericArg<I>,
+        universe_index: UniverseIndex,
+    ) -> GenericArg<I> {
+        let interner = self.interner;
+        (match sub_var.data(interner) {
+            GenericArgData::Ty(ty) => GenericArgData::Ty(self.generalize_ty(ty, universe_index)),
+            GenericArgData::Lifetime(lifetime) => {
+                GenericArgData::Lifetime(self.generalize_lifetime(lifetime, universe_index))
+            }
+            GenericArgData::Const(const_value) => {
+                GenericArgData::Const(self.generalize_const(const_value, universe_index))
+            }
+        })
+        .intern(interner)
+    }
+
+    /// Generalizes all but the first
+    #[instrument(level = "debug", skip(self))]
+    fn generalize_substitution_skip_self(
+        &mut self,
+        substitution: &Substitution<I>,
+        universe_index: UniverseIndex,
+    ) -> Substitution<I> {
+        let interner = self.interner;
+        let vars = substitution.iter(interner).take(1).cloned().chain(
+            substitution
+                .iter(interner)
+                .skip(1)
+                .map(|sub_var| self.generalize_generic_var(sub_var, universe_index)),
+        );
+        Substitution::from_iter(interner, vars)
+    }
+
+    #[instrument(level = "debug", skip(self))]
+    fn generalize_substitution(
+        &mut self,
+        substitution: &Substitution<I>,
+        universe_index: UniverseIndex,
+    ) -> Substitution<I> {
+        let interner = self.interner;
+        let vars = substitution
+            .iter(interner)
+            .map(|sub_var| self.generalize_generic_var(sub_var, universe_index));
+
+        Substitution::from_iter(interner, vars)
+    }
+
+    /// Unify an inference variable `var` with some non-inference
+    /// variable `ty`, just bind `var` to `ty`. But we must enforce two conditions:
+    ///
+    /// - `var` does not appear inside of `ty` (the standard `OccursCheck`)
+    /// - `ty` does not reference anything in a lifetime that could not be named in `var`
+    ///   (the extended `OccursCheck` created to handle universes)
+    #[instrument(level = "debug", skip(self))]
+    fn relate_var_ty(&mut self, variance: Variance, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
+        let interner = self.interner;
+        let var = EnaVariable::from(var);
+
+        // Determine the universe index associated with this
+        // variable. This is basically a count of the number of
+        // `forall` binders that had been introduced at the point
+        // this variable was created -- though it may change over time
+        // as the variable is unified.
+        let universe_index = self.table.universe_of_unbound_var(var);
+        // let universe_index = self.table.max_universe();
+
+        debug!("relate_var_ty: universe index of var: {:?}", universe_index);
+
+        debug!("trying fold_with on {:?}", ty);
+        let ty1 = ty
+            .fold_with(
+                &mut OccursCheck::new(self, var, universe_index),
+                DebruijnIndex::INNERMOST,
+            )
+            .map_err(|e| {
+                debug!("failed to fold {:?}", ty);
+                e
+            })?;
+
+        // "Generalize" types. This ensures that we aren't accidentally forcing
+        // too much onto `var`. Instead of directly setting `var` equal to `ty`,
+        // we just take the outermost structure we _know_ `var` holds, and then
+        // apply that to `ty`. This involves creating new inference vars for
+        // everything inside `var`, then recursing down to unify those new
+        // inference variables with
+
+        // TODO: the justification for why we need to generalize here is a bit
+        // weak. Could we include a concrete example of what this fixes? Or,
+        // alternatively, link to a test case which requires this & say "it's
+        // complicated why exactly we need this".
+
+        // Example operation: consider `ty` as `&'x SomeType`. To generalize
+        // this, we create two new vars `'0` and `1`. Then we relate `var` with
+        // `&'0 1` and `&'0 1` with `&'x SomeType`. The second relation will
+        // recurse, and we'll end up relating `'0` with `'x` and `1` with `SomeType`.
+        let generalized_val = self.generalize_ty(&ty1, universe_index);
 
         debug!("var {:?} generalized to {:?}", var, generalized_val);
-        self.relate_ty_ty(variance, &ty1, &generalized_val)?;
-
-        debug!(
-            "generalized version {:?} related to original {:?}",
-            generalized_val, ty1
-        );
 
         self.table
             .unify
@@ -726,6 +791,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
             )
             .unwrap();
         debug!("var {:?} set to {:?}", var, generalized_val);
+
+        self.relate_ty_ty(variance, &ty1, &generalized_val)?;
+
+        debug!(
+            "generalized version {:?} related to original {:?}",
+            generalized_val, ty1
+        );
 
         Ok(())
     }
@@ -813,7 +885,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
-    #[instrument(level = "debug", skip(self, a, b))]
+    #[instrument(level = "debug", skip(self))]
     fn unify_lifetime_var(
         &mut self,
         variance: Variance,
@@ -823,15 +895,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
         value: &Lifetime<I>,
         value_ui: UniverseIndex,
     ) -> Fallible<()> {
-        debug_span!(
-            "unify_lifetime_var",
-            ?variance,
-            ?a,
-            ?b,
-            ?var,
-            ?value,
-            ?value_ui
-        );
         let var = EnaVariable::from(var);
         let var_ui = self.table.universe_of_unbound_var(var);
         if var_ui.can_see(value_ui) {
@@ -930,7 +993,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
     #[instrument(level = "debug", skip(self))]
     fn unify_var_const(&mut self, var: InferenceVar, c: &Const<I>) -> Fallible<()> {
-        debug_span!("unify_var_const", ?var, ?c);
         let interner = self.interner;
         let var = EnaVariable::from(var);
 
@@ -956,6 +1018,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     fn push_lifetime_eq_goals(&mut self, variance: Variance, a: Lifetime<I>, b: Lifetime<I>) {
+        debug!(
+            "pushing lifetime eq goals for a={:?} b={:?} with variance {:?}",
+            a, b, variance
+        );
         if matches!(variance, Variance::Invariant | Variance::Covariant) {
             self.goals.push(InEnvironment::new(
                 self.environment,
@@ -1092,7 +1158,6 @@ where
         ui: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
-        debug_span!("fold_free_placeholder_lifetime", ?ui, ?_outer_binder);
         let interner = self.interner();
         if self.universe_index < ui.ui {
             // Scenario is like:

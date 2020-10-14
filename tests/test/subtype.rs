@@ -81,10 +81,7 @@ fn fn_lifetime_variance() {
         goal {
             Subtype(for<'a, 'b> fn(&'a u32, &'b u32), for<'a> fn(&'a u32, &'a u32))
         } yields {
-            // This output is curious :)
-            "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }\
-            ]"
+            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
