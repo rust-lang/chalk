@@ -225,3 +225,26 @@ fn integers_are_sized() {
         }
     }
 }
+
+/// Simplified version of a goal that needs to be solved for type checking
+/// `1 + 2`.
+#[test]
+fn ambiguous_add() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Add<Rhs> { type Output; }
+
+            impl<'a> Add<&'a u32> for u32 { type Output = <u32 as Add<u32>>::Output; }
+            impl Add<u32> for u32 { type Output = u32; }
+        }
+
+        goal {
+            exists<int T, U, V> {
+                <T as Add<U>>::Output = V
+            }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+    }
+}
