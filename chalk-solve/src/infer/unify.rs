@@ -88,6 +88,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         debug_span!("relate_ty_ty", ?variance, ?a, ?b);
 
+        if a.kind(interner) == b.kind(interner) {
+            return Ok(());
+        }
+
         match (a.kind(interner), b.kind(interner)) {
             // Relating two inference variables:
             // If `Invariant`, unify them in the underlying ena table.

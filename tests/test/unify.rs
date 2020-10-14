@@ -86,10 +86,10 @@ fn forall_equality_unsolveable_simple() {
                 for<'c, 'd> fn(Ref<'c, Ref<'d, Ref<'d, Unit>>>)>
         } yields {
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!3_0: '!3_1 }, \
-            InEnvironment { environment: Env([]), goal: '!3_1: '!3_0 }, \
-            InEnvironment { environment: Env([]), goal: '!4_0: '!4_1 }, \
-            InEnvironment { environment: Env([]), goal: '!4_1: '!4_0 }]"
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
+            InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
         }
     }
 }
@@ -127,10 +127,10 @@ fn forall_equality() {
                 for<'c, 'd> fn(Ref<'c, Ref<'d, Ref<'d, Unit>>>)>
         } yields {
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!3_0: '!3_1 }, \
-            InEnvironment { environment: Env([]), goal: '!3_1: '!3_0 }, \
-            InEnvironment { environment: Env([]), goal: '!4_0: '!4_1 }, \
-            InEnvironment { environment: Env([]), goal: '!4_1: '!4_0 }]"
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
+            InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
         }
 
         goal {
