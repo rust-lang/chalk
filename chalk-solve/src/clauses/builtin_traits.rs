@@ -41,6 +41,8 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Unsize => {
                 unsize::add_unsize_program_clauses(db, builder, trait_ref, ty)
             }
+            // DiscriminantKind is automatically implemented for all types
+            WellKnownTrait::DiscriminantKind => builder.push_fact(trait_ref),
             // There are no builtin impls provided for the following traits:
             WellKnownTrait::Unpin | WellKnownTrait::Drop | WellKnownTrait::CoerceUnsized => (),
         }

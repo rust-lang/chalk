@@ -1131,6 +1131,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::Unsize => rust_ir::WellKnownTrait::Unsize,
             WellKnownTrait::Unpin => rust_ir::WellKnownTrait::Unpin,
             WellKnownTrait::CoerceUnsized => rust_ir::WellKnownTrait::CoerceUnsized,
+            WellKnownTrait::DiscriminantKind => rust_ir::WellKnownTrait::DiscriminantKind,
         }
     }
 }

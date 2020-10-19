@@ -65,6 +65,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
      "#" "[" "lang" "(" "unpin" ")" "]" => WellKnownTrait::Unpin,
      "#" "[" "lang" "(" "coerce_unsized" ")" "]" => WellKnownTrait::CoerceUnsized,
+     "#" "[" "lang" "(" "discriminant_kind" ")" "]" => WellKnownTrait::DiscriminantKind,
 };
 
 AdtRepr: Atom = "#" "[" "repr" "(" <name:Id> ")" "]" => name.str;

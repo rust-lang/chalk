@@ -425,7 +425,8 @@ where
             | WellKnownTrait::FnOnce
             | WellKnownTrait::FnMut
             | WellKnownTrait::Unsize
-            | WellKnownTrait::Sized => false,
+            | WellKnownTrait::Sized
+            | WellKnownTrait::DiscriminantKind => false,
         };
 
         if is_legal {

@@ -260,6 +260,7 @@ pub enum WellKnownTrait {
     Unsize,
     Unpin,
     CoerceUnsized,
+    DiscriminantKind,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);
