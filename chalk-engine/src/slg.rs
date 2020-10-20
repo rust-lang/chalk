@@ -372,7 +372,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
     fn aggregate_tys(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
         let interner = self.interner;
         match (new.data(interner), current.data(interner)) {
-            (_, TyData::BoundVar(_)) => {
+            (_, TyKind::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,
                 // the aggregate cannot get 'more generalized' than it
@@ -384,7 +384,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 false
             }
 
-            (TyData::BoundVar(_), _) => {
+            (TyKind::BoundVar(_), _) => {
                 // If we see a type variable in the potential future
                 // solution, we have to be conservative. We don't know
                 // what type variable will wind up being! Remember
@@ -398,37 +398,37 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 true
             }
 
-            (TyData::InferenceVar(_, _), _) | (_, TyData::InferenceVar(_, _)) => {
+            (TyKind::InferenceVar(_, _), _) | (_, TyKind::InferenceVar(_, _)) => {
                 panic!(
                     "unexpected free inference variable in may-invalidate: {:?} vs {:?}",
                     new, current,
                 );
             }
 
-            (TyData::Apply(apply1), TyData::Apply(apply2)) => {
+            (TyKind::Apply(apply1), TyKind::Apply(apply2)) => {
                 self.aggregate_application_tys(apply1, apply2)
             }
 
-            (TyData::Placeholder(p1), TyData::Placeholder(p2)) => {
+            (TyKind::Placeholder(p1), TyKind::Placeholder(p2)) => {
                 self.aggregate_placeholders(p1, p2)
             }
 
             (
-                TyData::Alias(AliasTy::Projection(proj1)),
-                TyData::Alias(AliasTy::Projection(proj2)),
+                TyKind::Alias(AliasTy::Projection(proj1)),
+                TyKind::Alias(AliasTy::Projection(proj2)),
             ) => self.aggregate_projection_tys(proj1, proj2),
 
             (
-                TyData::Alias(AliasTy::Opaque(opaque_ty1)),
-                TyData::Alias(AliasTy::Opaque(opaque_ty2)),
+                TyKind::Alias(AliasTy::Opaque(opaque_ty1)),
+                TyKind::Alias(AliasTy::Opaque(opaque_ty2)),
             ) => self.aggregate_opaque_ty_tys(opaque_ty1, opaque_ty2),
 
             // For everything else, be conservative here and just say we may invalidate.
-            (TyData::Function(_), _)
-            | (TyData::Dyn(_), _)
-            | (TyData::Apply(_), _)
-            | (TyData::Placeholder(_), _)
-            | (TyData::Alias(_), _) => true,
+            (TyKind::Function(_), _)
+            | (TyKind::Dyn(_), _)
+            | (TyKind::Apply(_), _)
+            | (TyKind::Placeholder(_), _)
+            | (TyKind::Alias(_), _) => true,
         }
     }
 

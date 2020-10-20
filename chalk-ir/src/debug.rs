@@ -220,18 +220,18 @@ impl<I: Interner> Debug for TypeName<I> {
     }
 }
 
-impl<I: Interner> Debug for TyData<I> {
+impl<I: Interner> Debug for TyKind<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            TyData::BoundVar(db) => write!(fmt, "{:?}", db),
-            TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
-            TyData::InferenceVar(var, TyVariableKind::General) => write!(fmt, "{:?}", var),
-            TyData::InferenceVar(var, TyVariableKind::Integer) => write!(fmt, "{:?}i", var),
-            TyData::InferenceVar(var, TyVariableKind::Float) => write!(fmt, "{:?}f", var),
-            TyData::Apply(apply) => write!(fmt, "{:?}", apply),
-            TyData::Alias(alias) => write!(fmt, "{:?}", alias),
-            TyData::Placeholder(index) => write!(fmt, "{:?}", index),
-            TyData::Function(function) => write!(fmt, "{:?}", function),
+            TyKind::BoundVar(db) => write!(fmt, "{:?}", db),
+            TyKind::Dyn(clauses) => write!(fmt, "{:?}", clauses),
+            TyKind::InferenceVar(var, TyVariableKind::General) => write!(fmt, "{:?}", var),
+            TyKind::InferenceVar(var, TyVariableKind::Integer) => write!(fmt, "{:?}i", var),
+            TyKind::InferenceVar(var, TyVariableKind::Float) => write!(fmt, "{:?}f", var),
+            TyKind::Apply(apply) => write!(fmt, "{:?}", apply),
+            TyKind::Alias(alias) => write!(fmt, "{:?}", alias),
+            TyKind::Placeholder(index) => write!(fmt, "{:?}", index),
+            TyKind::Function(function) => write!(fmt, "{:?}", function),
         }
     }
 }

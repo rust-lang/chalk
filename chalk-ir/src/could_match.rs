@@ -27,7 +27,7 @@ where
             fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
                 let interner = self.interner;
                 let could_match = match (a.data(interner), b.data(interner)) {
-                    (&TyData::Apply(ref a), &TyData::Apply(ref b)) => {
+                    (&TyKind::Apply(ref a), &TyKind::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
 
                         names_could_match

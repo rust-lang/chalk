@@ -81,7 +81,7 @@ impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
-        Ok(TyData::<I>::BoundVar(self.adjust(bound_var, outer_binder)).intern(self.interner()))
+        Ok(TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder)).intern(self.interner()))
     }
 
     fn fold_free_var_lifetime(
@@ -153,7 +153,7 @@ impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
-        Ok(TyData::<I>::BoundVar(self.adjust(bound_var, outer_binder)?).intern(self.interner()))
+        Ok(TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder)?).intern(self.interner()))
     }
 
     fn fold_free_var_lifetime(

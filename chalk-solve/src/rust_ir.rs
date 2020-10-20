@@ -10,7 +10,7 @@ use chalk_ir::{
     visit::{Visit, VisitResult},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
     OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
-    Ty, TyData, TypeName, VariableKind, WhereClause, WithKind,
+    Ty, TyKind, TypeName, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -46,7 +46,7 @@ impl<I: Interner> ImplDatum<I> {
             .self_type_parameter(interner)
             .data(interner)
         {
-            TyData::Apply(apply) => match apply.name {
+            TyKind::Apply(apply) => match apply.name {
                 TypeName::Adt(id) => Some(id),
                 _ => None,
             },
@@ -556,7 +556,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = TyData::Alias(AliasTy::Projection(ProjectionTy {
+        let self_ty = TyKind::Alias(AliasTy::Projection(ProjectionTy {
             associated_ty_id: self.id,
             substitution,
         }))

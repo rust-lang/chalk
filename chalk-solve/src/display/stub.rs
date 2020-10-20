@@ -127,7 +127,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
     fn hidden_opaque_type(&self, _id: chalk_ir::OpaqueTyId<I>) -> chalk_ir::Ty<I> {
         // Return a unit since the particular hidden type doesn't matter (If it
         // did matter, it would have been recorded)
-        chalk_ir::TyData::Apply(ApplicationTy {
+        chalk_ir::TyKind::Apply(ApplicationTy {
             name: TypeName::Tuple(0),
             substitution: chalk_ir::Substitution::from_iter(
                 self.db.interner(),

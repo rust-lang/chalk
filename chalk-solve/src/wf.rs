@@ -102,41 +102,41 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 .push(ty.shifted_out_to(interner, outer_binder).unwrap())
         };
         match ty.data(interner) {
-            TyData::Apply(apply) => {
+            TyKind::Apply(apply) => {
                 push_ty();
                 apply.visit_with(self, outer_binder);
             }
 
-            TyData::Dyn(clauses) => {
+            TyKind::Dyn(clauses) => {
                 push_ty();
                 clauses.visit_with(self, outer_binder);
             }
 
-            TyData::Alias(AliasTy::Projection(proj)) => {
+            TyKind::Alias(AliasTy::Projection(proj)) => {
                 push_ty();
                 proj.visit_with(self, outer_binder);
             }
 
-            TyData::Alias(AliasTy::Opaque(opaque_ty)) => {
+            TyKind::Alias(AliasTy::Opaque(opaque_ty)) => {
                 push_ty();
                 opaque_ty.visit_with(self, outer_binder);
             }
 
-            TyData::Placeholder(_) => {
+            TyKind::Placeholder(_) => {
                 push_ty();
             }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
             // always WF).
-            TyData::BoundVar(..) => (),
+            TyKind::BoundVar(..) => (),
 
             // Higher-kinded types such as `for<'a> fn(&'a u32)` introduce their own implied
             // bounds, and these bounds will be enforced upon calling such a function. In some
             // sense, well-formedness requirements for the input types of an HKT will be enforced
             // lazily, so no need to include them here.
-            TyData::Function(..) => (),
+            TyKind::Function(..) => (),
 
-            TyData::InferenceVar(..) => {
+            TyKind::InferenceVar(..) => {
                 panic!("unexpected inference variable in wf rules: {:?}", ty)
             }
         }
@@ -632,7 +632,7 @@ impl WfWellKnownConstraints {
             .self_type_parameter(interner)
             .data(interner)
         {
-            TyData::Apply(ApplicationTy { name, .. }) => match name {
+            TyKind::Apply(ApplicationTy { name, .. }) => match name {
                 TypeName::Scalar(_)
                 | TypeName::Raw(_)
                 | TypeName::Ref(Mutability::Not)
@@ -653,7 +653,7 @@ impl WfWellKnownConstraints {
                 let ty_data = ty.data(interner);
 
                 let (adt_id, substitution) = match ty_data {
-                    TyData::Apply(ApplicationTy { name, substitution }) => match name {
+                    TyKind::Apply(ApplicationTy { name, substitution }) => match name {
                         TypeName::Adt(adt_id) => (*adt_id, substitution),
                         _ => unreachable!(),
                     },
@@ -891,7 +891,7 @@ impl WfWellKnownConstraints {
         };
 
         match (source.data(interner), target.data(interner)) {
-            (TyData::Apply(source_app), TyData::Apply(target_app)) => {
+            (TyKind::Apply(source_app), TyKind::Apply(target_app)) => {
                 match (&source_app.name, &target_app.name) {
                     (TypeName::Ref(s_m), TypeName::Ref(t_m))
                     | (TypeName::Ref(s_m), TypeName::Raw(t_m))

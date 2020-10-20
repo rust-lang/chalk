@@ -6,7 +6,7 @@ use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders,
     CanonicalVarKinds, ClosureId, FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals,
     ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty, TyData,
+    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty, TyKind,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -461,7 +461,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                 .trait_ref
                 .self_type_parameter(interner);
             match ty.data(interner) {
-                TyData::Apply(app) => Some(app.clone()),
+                TyKind::Apply(app) => Some(app.clone()),
                 _ => None,
             }
         });

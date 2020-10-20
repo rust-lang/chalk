@@ -176,7 +176,7 @@ where
 
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!(position=?bound_var, "not yet unified");
-                Ok(TyData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
+                Ok(TyKind::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
             }
         }
     }

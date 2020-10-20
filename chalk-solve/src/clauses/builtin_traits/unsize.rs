@@ -9,7 +9,7 @@ use chalk_ir::{
     interner::HasInterner,
     visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
     ApplicationTy, Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal,
-    LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyData, TypeName,
+    LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeName,
     TypeOutlives, WhereClause,
 };
 
@@ -30,7 +30,7 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
         let interner = self.interner;
 
         match ty.data(interner) {
-            TyData::BoundVar(bound_var) => {
+            TyKind::BoundVar(bound_var) => {
                 // check if bound var refers to the outermost binder
                 if bound_var.debruijn.shifted_in() == outer_binder {
                     self.parameters.insert(bound_var.index);
@@ -85,7 +85,7 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
         let interner = self.interner;
 
         match ty.data(interner) {
-            TyData::BoundVar(bound_var) => {
+            TyKind::BoundVar(bound_var) => {
                 if bound_var.debruijn.shifted_in() == outer_binder
                     && self.parameters.contains(&bound_var.index)
                 {
@@ -162,7 +162,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: &TraitRef<I>,
-    _ty: &TyData<I>,
+    _ty: &TyKind<I>,
 ) {
     let interner = db.interner();
 
@@ -187,11 +187,11 @@ pub fn add_unsize_program_clauses<I: Interner>(
     match (source_ty.data(interner), target_ty.data(interner)) {
         // dyn Trait + AutoX + 'a -> dyn Trait + AutoY + 'b
         (
-            TyData::Dyn(DynTy {
+            TyKind::Dyn(DynTy {
                 bounds: bounds_a,
                 lifetime: lifetime_a,
             }),
-            TyData::Dyn(DynTy {
+            TyKind::Dyn(DynTy {
                 bounds: bounds_b,
                 lifetime: lifetime_b,
             }),
@@ -234,7 +234,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             //
             // In order for the coercion to be valid, this new type
             // should be equal to target type.
-            let new_source_ty = TyData::Dyn(DynTy {
+            let new_source_ty = TyKind::Dyn(DynTy {
                 bounds: bounds_a.map_ref(|bounds| {
                     QuantifiedWhereClauses::from_iter(
                         interner,
@@ -273,7 +273,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
         }
 
         // T -> dyn Trait + 'a
-        (_, TyData::Dyn(DynTy { bounds, lifetime })) => {
+        (_, TyKind::Dyn(DynTy { bounds, lifetime })) => {
             // Check if all traits in trait object are object safe
             let object_safe_goals = bounds
                 .skip_binders()
@@ -314,11 +314,11 @@ pub fn add_unsize_program_clauses<I: Interner>(
         }
 
         (
-            TyData::Apply(ApplicationTy {
+            TyKind::Apply(ApplicationTy {
                 name: TypeName::Array,
                 substitution: array_subst,
             }),
-            TyData::Apply(ApplicationTy {
+            TyKind::Apply(ApplicationTy {
                 name: TypeName::Slice,
                 substitution: slice_subst,
             }),
@@ -336,11 +336,11 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
         // Adt<T> -> Adt<U>
         (
-            TyData::Apply(ApplicationTy {
+            TyKind::Apply(ApplicationTy {
                 name: TypeName::Adt(adt_id_a),
                 substitution: substitution_a,
             }),
-            TyData::Apply(ApplicationTy {
+            TyKind::Apply(ApplicationTy {
                 name: TypeName::Adt(adt_id_b),
                 substitution: substitution_b,
             }),
@@ -420,7 +420,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             );
 
             let eq_goal = EqGoal {
-                a: TyData::Apply(ApplicationTy {
+                a: TyKind::Apply(ApplicationTy {
                     name: TypeName::Adt(adt_id),
                     substitution,
                 })
@@ -452,11 +452,11 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
         // (.., T) -> (.., U)
         (
-            TyData::Apply(ApplicationTy {
+            TyKind::Apply(ApplicationTy {
                 name: TypeName::Tuple(arity_a),
                 substitution: substitution_a,
             }),
-            TyData::Apply(ApplicationTy {
+            TyKind::Apply(ApplicationTy {
                 name: TypeName::Tuple(arity_b),
                 substitution: substitution_b,
             }),

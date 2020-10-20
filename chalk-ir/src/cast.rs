@@ -78,7 +78,7 @@ macro_rules! reflexive_impl {
     };
 }
 
-reflexive_impl!(for(I: Interner) TyData<I>);
+reflexive_impl!(for(I: Interner) TyKind<I>);
 reflexive_impl!(for(I: Interner) LifetimeData<I>);
 reflexive_impl!(for(I: Interner) ConstData<I>);
 reflexive_impl!(for(I: Interner) TraitRef<I>);
@@ -164,15 +164,15 @@ impl<I: Interner, T: HasInterner<Interner = I> + CastTo<Goal<I>>> CastTo<Goal<I>
     }
 }
 
-impl<I: Interner> CastTo<TyData<I>> for ApplicationTy<I> {
-    fn cast_to(self, _interner: &I) -> TyData<I> {
-        TyData::Apply(self)
+impl<I: Interner> CastTo<TyKind<I>> for ApplicationTy<I> {
+    fn cast_to(self, _interner: &I) -> TyKind<I> {
+        TyKind::Apply(self)
     }
 }
 
-impl<I: Interner> CastTo<TyData<I>> for AliasTy<I> {
-    fn cast_to(self, _interner: &I) -> TyData<I> {
-        TyData::Alias(self)
+impl<I: Interner> CastTo<TyKind<I>> for AliasTy<I> {
+    fn cast_to(self, _interner: &I) -> TyKind<I> {
+        TyKind::Alias(self)
     }
 }
 

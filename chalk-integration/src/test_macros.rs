@@ -3,7 +3,7 @@
 #[macro_export]
 macro_rules! ty {
     (apply $n:tt $($arg:tt)*) => {
-        chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+        chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
             name: ty_name!($n),
             substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
@@ -13,7 +13,7 @@ macro_rules! ty {
     };
 
     (function $n:tt $($arg:tt)*) => {
-        chalk_ir::TyData::Function(chalk_ir::FnPointer {
+        chalk_ir::TyKind::Function(chalk_ir::FnPointer {
             num_binders: $n,
             substitution: chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
@@ -28,7 +28,7 @@ macro_rules! ty {
     };
 
     (placeholder $n:expr) => {
-        chalk_ir::TyData::Placeholder(PlaceholderIndex {
+        chalk_ir::TyKind::Placeholder(PlaceholderIndex {
             ui: UniverseIndex { counter: $n },
             idx: 0,
         }).intern(&chalk_integration::interner::ChalkIr)
@@ -45,17 +45,17 @@ macro_rules! ty {
     };
 
     (infer $b:expr) => {
-        chalk_ir::TyData::InferenceVar(chalk_ir::InferenceVar::from($b), chalk_ir::TyVariableKind::General)
+        chalk_ir::TyKind::InferenceVar(chalk_ir::InferenceVar::from($b), chalk_ir::TyVariableKind::General)
             .intern(&chalk_integration::interner::ChalkIr)
     };
 
     (bound $d:tt $b:tt) => {
-        chalk_ir::TyData::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::new($d), $b))
+        chalk_ir::TyKind::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::new($d), $b))
             .intern(&chalk_integration::interner::ChalkIr)
     };
 
     (bound $b:expr) => {
-        chalk_ir::TyData::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::INNERMOST, $b))
+        chalk_ir::TyKind::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::INNERMOST, $b))
             .intern(&chalk_integration::interner::ChalkIr)
     };
 

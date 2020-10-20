@@ -200,7 +200,7 @@ impl ProgramLowerer {
                             &ChalkIr,
                             upvar_tys?.into_iter().map(|ty| ty.cast(&ChalkIr)),
                         );
-                        Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                        Ok(chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                             name: chalk_ir::TypeName::Tuple(defn.upvars.len()),
                             substitution,
                         })
@@ -334,7 +334,7 @@ impl ProgramLowerer {
                                                 // Instantiate the bounds with the innermost bound variable, which represents Self, as the self type.
                                                 qil.into_where_clauses(
                                                     interner,
-                                                    chalk_ir::TyData::BoundVar(BoundVar::new(
+                                                    chalk_ir::TyKind::BoundVar(BoundVar::new(
                                                         DebruijnIndex::INNERMOST,
                                                         0,
                                                     ))

@@ -4,7 +4,7 @@ use super::{builder::ClauseBuilder, generalize};
 use crate::RustIrDatabase;
 use chalk_ir::{
     cast::Cast, fold::shift::Shift, interner::Interner, Binders, BoundVar, DebruijnIndex, TraitId,
-    TraitRef, Ty, TyData, WhereClause,
+    TraitRef, Ty, TyKind, WhereClause,
 };
 
 /// If the self type `S` of an `Implemented` goal is a `dyn trait` type, we wish
@@ -41,7 +41,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
 ) {
     let interner = db.interner();
     let dyn_ty = match self_ty.data(interner) {
-        TyData::Dyn(dyn_ty) => dyn_ty,
+        TyKind::Dyn(dyn_ty) => dyn_ty,
         _ => return,
     };
     let generalized_dyn_ty = generalize::Generalize::apply(db.interner(), dyn_ty);

@@ -85,8 +85,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (
-                &TyData::InferenceVar(var1, kind1),
-                &TyData::InferenceVar(var2, kind2),
+                &TyKind::InferenceVar(var1, kind1),
+                &TyKind::InferenceVar(var2, kind2),
             ) => {
                 if kind1 == kind2 {
                     self.unify_var_var(var1, var2)
@@ -104,15 +104,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
             }
 
             // Unifying an inference variable with a non-inference variable.
-            (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Apply(_))
-            | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Placeholder(_))
-            | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Dyn(_))
-            | (&TyData::InferenceVar(var, kind), ty_data @ &TyData::Function(_))
+            (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Apply(_))
+            | (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Placeholder(_))
+            | (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Dyn(_))
+            | (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Function(_))
             // The reflexive matches
-            | (ty_data @ &TyData::Apply(_), &TyData::InferenceVar(var, kind))
-            | (ty_data @ &TyData::Placeholder(_), &TyData::InferenceVar(var, kind))
-            | (ty_data @ &TyData::Dyn(_), &TyData::InferenceVar(var, kind))
-            | (ty_data @ &TyData::Function(_), &TyData::InferenceVar(var, kind))
+            | (ty_data @ &TyKind::Apply(_), &TyKind::InferenceVar(var, kind))
+            | (ty_data @ &TyKind::Placeholder(_), &TyKind::InferenceVar(var, kind))
+            | (ty_data @ &TyKind::Dyn(_), &TyKind::InferenceVar(var, kind))
+            | (ty_data @ &TyKind::Function(_), &TyKind::InferenceVar(var, kind))
             => {
                 let ty = ty_data.clone().intern(interner);
 
@@ -128,7 +128,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             }
 
             // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
-            (&TyData::Function(ref fn1), &TyData::Function(ref fn2)) => {
+            (&TyKind::Function(ref fn1), &TyKind::Function(ref fn2)) => {
                 if fn1.sig == fn2.sig {
                     self.unify_binders(fn1, fn2)
                 } else {
@@ -138,49 +138,49 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // This would correspond to unifying a `fn` type with a non-fn
             // type in Rust; error.
-            (&TyData::Function(_), &TyData::Apply(_))
-            | (&TyData::Function(_), &TyData::Dyn(_))
-            | (&TyData::Function(_), &TyData::Placeholder(_))
-            | (&TyData::Apply(_), &TyData::Function(_))
-            | (&TyData::Placeholder(_), &TyData::Function(_))
-            | (&TyData::Dyn(_), &TyData::Function(_)) => Err(NoSolution),
+            (&TyKind::Function(_), &TyKind::Apply(_))
+            | (&TyKind::Function(_), &TyKind::Dyn(_))
+            | (&TyKind::Function(_), &TyKind::Placeholder(_))
+            | (&TyKind::Apply(_), &TyKind::Function(_))
+            | (&TyKind::Placeholder(_), &TyKind::Function(_))
+            | (&TyKind::Dyn(_), &TyKind::Function(_)) => Err(NoSolution),
 
-            (&TyData::Placeholder(ref p1), &TyData::Placeholder(ref p2)) => {
+            (&TyKind::Placeholder(ref p1), &TyKind::Placeholder(ref p2)) => {
                 Zip::zip_with(self, p1, p2)
             }
 
-            (&TyData::Apply(ref apply1), &TyData::Apply(ref apply2)) => {
+            (&TyKind::Apply(ref apply1), &TyKind::Apply(ref apply2)) => {
                 Zip::zip_with(self, apply1, apply2)
             }
 
             // Cannot unify (e.g.) some struct type `Foo` and a placeholder like `T`
-            (&TyData::Apply(_), &TyData::Placeholder(_))
-            | (&TyData::Placeholder(_), &TyData::Apply(_)) => Err(NoSolution),
+            (&TyKind::Apply(_), &TyKind::Placeholder(_))
+            | (&TyKind::Placeholder(_), &TyKind::Apply(_)) => Err(NoSolution),
 
             // Cannot unify `dyn Trait` with things like structs or placeholders
-            (&TyData::Placeholder(_), &TyData::Dyn(_))
-            | (&TyData::Dyn(_), &TyData::Placeholder(_))
-            | (&TyData::Apply(_), &TyData::Dyn(_))
-            | (&TyData::Dyn(_), &TyData::Apply(_)) => Err(NoSolution),
+            (&TyKind::Placeholder(_), &TyKind::Dyn(_))
+            | (&TyKind::Dyn(_), &TyKind::Placeholder(_))
+            | (&TyKind::Apply(_), &TyKind::Dyn(_))
+            | (&TyKind::Dyn(_), &TyKind::Apply(_)) => Err(NoSolution),
 
             // Unifying two dyn is possible if they have the same bounds.
-            (&TyData::Dyn(ref qwc1), &TyData::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+            (&TyKind::Dyn(ref qwc1), &TyKind::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
 
             // Unifying an alias type with some other type `U`.
-            (&TyData::Apply(_), &TyData::Alias(ref alias))
-            | (&TyData::Placeholder(_), &TyData::Alias(ref alias))
-            | (&TyData::Function(_), &TyData::Alias(ref alias))
-            | (&TyData::InferenceVar(_, _), &TyData::Alias(ref alias))
-            | (&TyData::Dyn(_), &TyData::Alias(ref alias)) => self.unify_alias_ty(alias, a),
+            (&TyKind::Apply(_), &TyKind::Alias(ref alias))
+            | (&TyKind::Placeholder(_), &TyKind::Alias(ref alias))
+            | (&TyKind::Function(_), &TyKind::Alias(ref alias))
+            | (&TyKind::InferenceVar(_, _), &TyKind::Alias(ref alias))
+            | (&TyKind::Dyn(_), &TyKind::Alias(ref alias)) => self.unify_alias_ty(alias, a),
 
-            (&TyData::Alias(ref alias), &TyData::Alias(_))
-            | (&TyData::Alias(ref alias), &TyData::Apply(_))
-            | (&TyData::Alias(ref alias), &TyData::Placeholder(_))
-            | (&TyData::Alias(ref alias), &TyData::Function(_))
-            | (&TyData::Alias(ref alias), &TyData::InferenceVar(_, _))
-            | (&TyData::Alias(ref alias), &TyData::Dyn(_)) => self.unify_alias_ty(alias, b),
+            (&TyKind::Alias(ref alias), &TyKind::Alias(_))
+            | (&TyKind::Alias(ref alias), &TyKind::Apply(_))
+            | (&TyKind::Alias(ref alias), &TyKind::Placeholder(_))
+            | (&TyKind::Alias(ref alias), &TyKind::Function(_))
+            | (&TyKind::Alias(ref alias), &TyKind::InferenceVar(_, _))
+            | (&TyKind::Alias(ref alias), &TyKind::Dyn(_)) => self.unify_alias_ty(alias, b),
 
-            (TyData::BoundVar(_), _) | (_, TyData::BoundVar(_)) => panic!(
+            (TyKind::BoundVar(_), _) | (_, TyKind::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
                 a, b
             ),

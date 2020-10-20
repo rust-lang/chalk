@@ -8,7 +8,7 @@ use chalk_ir::{
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
-    QuantifiedWhereClause, TyData,
+    QuantifiedWhereClause, TyKind,
 };
 use std::fmt;
 use std::fmt::Debug;
@@ -40,7 +40,7 @@ pub enum ChalkFnAbi {
 pub struct ChalkIr;
 
 impl Interner for ChalkIr {
-    type InternedType = Arc<TyData<ChalkIr>>;
+    type InternedType = Arc<TyKind<ChalkIr>>;
     type InternedLifetime = LifetimeData<ChalkIr>;
     type InternedConst = Arc<ConstData<ChalkIr>>;
     type InternedConcreteConst = u32;
@@ -212,11 +212,11 @@ impl Interner for ChalkIr {
         tls::with_current_program(|prog| Some(prog?.debug_quantified_where_clauses(clauses, fmt)))
     }
 
-    fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
+    fn intern_ty(&self, ty: TyKind<ChalkIr>) -> Arc<TyKind<ChalkIr>> {
         Arc::new(ty)
     }
 
-    fn ty_data<'a>(&self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {
+    fn ty_data<'a>(&self, ty: &'a Arc<TyKind<ChalkIr>>) -> &'a TyKind<Self> {
         ty
     }
 
@@ -236,7 +236,7 @@ impl Interner for ChalkIr {
         constant
     }
 
-    fn const_eq(&self, _ty: &Arc<TyData<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
+    fn const_eq(&self, _ty: &Arc<TyKind<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
         c1 == c2
     }
 

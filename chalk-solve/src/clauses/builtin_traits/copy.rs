@@ -2,7 +2,7 @@ use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyVariableKind, TypeName, VariableKind,
+    ApplicationTy, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, TypeName, VariableKind,
 };
 use std::iter;
 use tracing::instrument;
@@ -37,11 +37,11 @@ pub fn add_copy_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: &TraitRef<I>,
-    ty: &TyData<I>,
+    ty: &TyKind<I>,
     binders: &CanonicalVarKinds<I>,
 ) {
     match ty {
-        TyData::Apply(ApplicationTy { name, substitution }) => match name {
+        TyKind::Apply(ApplicationTy { name, substitution }) => match name {
             TypeName::Tuple(arity) => {
                 push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
             }
@@ -81,14 +81,14 @@ pub fn add_copy_program_clauses<I: Interner>(
             | TypeName::Error => {}
         },
 
-        TyData::Function(_) => builder.push_fact(trait_ref.clone()),
+        TyKind::Function(_) => builder.push_fact(trait_ref.clone()),
 
-        TyData::InferenceVar(_, kind) => match kind {
+        TyKind::InferenceVar(_, kind) => match kind {
             TyVariableKind::Integer | TyVariableKind::Float => builder.push_fact(trait_ref.clone()),
             TyVariableKind::General => {}
         },
 
-        TyData::BoundVar(bound_var) => {
+        TyKind::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
                 VariableKind::Ty(TyVariableKind::Integer) | VariableKind::Ty(TyVariableKind::Float) => {
@@ -98,6 +98,6 @@ pub fn add_copy_program_clauses<I: Interner>(
             }
         }
 
-        TyData::Alias(_) | TyData::Dyn(_) | TyData::Placeholder(_) => {}
+        TyKind::Alias(_) | TyKind::Dyn(_) | TyKind::Placeholder(_) => {}
     };
 }

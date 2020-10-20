@@ -32,7 +32,7 @@ use crate::SeparatorTraitRef;
 use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
-use crate::TyData;
+use crate::TyKind;
 use crate::VariableKind;
 use crate::VariableKinds;
 use crate::{Const, ConstData};
@@ -62,7 +62,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `Ty<Self>`, which wraps this type.
     ///
     /// An `InternedType` must be something that can be created from a
-    /// `TyData` (by the [`intern_ty`] method) and then later
+    /// `TyKind` (by the [`intern_ty`] method) and then later
     /// converted back (by the [`ty_data`] method). The interned form
     /// must also introduce indirection, either via a `Box`, `&`, or
     /// other pointer type.
@@ -458,12 +458,12 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     }
 
     /// Create an "interned" type from `ty`. This is not normally
-    /// invoked directly; instead, you invoke `TyData::intern` (which
+    /// invoked directly; instead, you invoke `TyKind::intern` (which
     /// will ultimately call this method).
-    fn intern_ty(&self, ty: TyData<Self>) -> Self::InternedType;
+    fn intern_ty(&self, ty: TyKind<Self>) -> Self::InternedType;
 
-    /// Lookup the `TyData` from an interned type.
-    fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
+    /// Lookup the `TyKind` from an interned type.
+    fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyKind<Self>;
 
     /// Create an "interned" lifetime from `lifetime`. This is not
     /// normally invoked directly; instead, you invoke
