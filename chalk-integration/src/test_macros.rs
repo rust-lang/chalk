@@ -45,7 +45,7 @@ macro_rules! ty {
     };
 
     (infer $b:expr) => {
-        chalk_ir::TyData::InferenceVar(chalk_ir::InferenceVar::from($b), chalk_ir::TyKind::General)
+        chalk_ir::TyData::InferenceVar(chalk_ir::InferenceVar::from($b), chalk_ir::TyVariableKind::General)
             .intern(&chalk_integration::interner::ChalkIr)
     };
 

@@ -23,7 +23,7 @@ pub type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
 pub type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 pub type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
-pub type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
+pub type OpaqueTyVariableKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
@@ -45,7 +45,7 @@ pub struct Env<'k> {
     pub trait_ids: &'k TraitIds,
     pub trait_kinds: &'k TraitKinds,
     pub opaque_ty_ids: &'k OpaqueTyIds,
-    pub opaque_ty_kinds: &'k OpaqueTyKinds,
+    pub opaque_ty_kinds: &'k OpaqueTyVariableKinds,
     pub associated_ty_lookups: &'k AssociatedTyLookups,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,

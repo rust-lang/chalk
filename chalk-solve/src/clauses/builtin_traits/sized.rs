@@ -5,7 +5,7 @@ use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyKind, TypeName, VariableKind,
+    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyVariableKind, TypeName, VariableKind,
 };
 
 fn push_adt_sized_conditions<I: Interner>(
@@ -100,20 +100,20 @@ pub fn add_sized_program_clauses<I: Interner>(
         },
 
         TyData::Function(_)
-        | TyData::InferenceVar(_, TyKind::Float)
-        | TyData::InferenceVar(_, TyKind::Integer) => builder.push_fact(trait_ref.clone()),
+        | TyData::InferenceVar(_, TyVariableKind::Float)
+        | TyData::InferenceVar(_, TyVariableKind::Integer) => builder.push_fact(trait_ref.clone()),
 
         TyData::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
-                VariableKind::Ty(TyKind::Integer) | VariableKind::Ty(TyKind::Float) => {
+                VariableKind::Ty(TyVariableKind::Integer) | VariableKind::Ty(TyVariableKind::Float) => {
                     builder.push_fact(trait_ref.clone())
                 }
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }
 
-        TyData::InferenceVar(_, TyKind::General)
+        TyData::InferenceVar(_, TyVariableKind::General)
         | TyData::Placeholder(_)
         | TyData::Dyn(_)
         | TyData::Alias(_) => {}

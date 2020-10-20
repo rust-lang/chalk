@@ -439,16 +439,16 @@ impl<I: Interner> Ty<I> {
         }
     }
 
-    /// Returns true if this is a `BoundVar` or an `InferenceVar` of `TyKind::General`.
+    /// Returns true if this is a `BoundVar` or an `InferenceVar` of `TyVariableKind::General`.
     pub fn is_general_var(&self, interner: &I, binders: &CanonicalVarKinds<I>) -> bool {
         match self.data(interner) {
             TyData::BoundVar(bv)
                 if bv.debruijn == DebruijnIndex::INNERMOST
-                    && binders.at(interner, bv.index).kind == VariableKind::Ty(TyKind::General) =>
+                    && binders.at(interner, bv.index).kind == VariableKind::Ty(TyVariableKind::General) =>
             {
                 true
             }
-            TyData::InferenceVar(_, TyKind::General) => true,
+            TyData::InferenceVar(_, TyVariableKind::General) => true,
             _ => false,
         }
     }
@@ -547,7 +547,7 @@ pub enum TyData<I: Interner> {
     BoundVar(BoundVar),
 
     /// Inference variable defined in the current inference context.
-    InferenceVar(InferenceVar, TyKind),
+    InferenceVar(InferenceVar, TyVariableKind),
 }
 
 impl<I: Interner> Copy for TyData<I>
@@ -874,7 +874,7 @@ impl InferenceVar {
     }
 
     /// Wraps the inference variable in a type.
-    pub fn to_ty<I: Interner>(self, interner: &I, kind: TyKind) -> Ty<I> {
+    pub fn to_ty<I: Interner>(self, interner: &I, kind: TyVariableKind) -> Ty<I> {
         TyData::<I>::InferenceVar(self, kind).intern(interner)
     }
 
@@ -1169,11 +1169,11 @@ impl<I: Interner> ApplicationTy<I> {
 /// ```
 /// In this example, `i` is known to be some type of integer. We can infer that
 /// it is `usize` because that is the only integer type that slices have an
-/// `Index` impl for. `i` would have a `TyKind` of `Integer` to guide the
+/// `Index` impl for. `i` would have a `TyVariableKind` of `Integer` to guide the
 /// inference process.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
-pub enum TyKind {
+pub enum TyVariableKind {
     General,
     Integer,
     Float,
@@ -1183,7 +1183,7 @@ pub enum TyKind {
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[allow(missing_docs)]
 pub enum VariableKind<I: Interner> {
-    Ty(TyKind),
+    Ty(TyVariableKind),
     Lifetime,
     Const(Ty<I>),
 }
@@ -1925,7 +1925,7 @@ impl<T: HasInterner> Binders<T> {
         // The new variable is at the front and everything afterwards is shifted up by 1
         let new_var = TyData::BoundVar(BoundVar::new(DebruijnIndex::INNERMOST, 0)).intern(interner);
         let value = op(new_var);
-        let binders = VariableKinds::from1(interner, VariableKind::Ty(TyKind::General));
+        let binders = VariableKinds::from1(interner, VariableKind::Ty(TyVariableKind::General));
         Binders { binders, value }
     }
 

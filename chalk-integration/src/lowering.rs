@@ -4,7 +4,7 @@ mod program_lowerer;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{
     self, BoundVar, ClausePriority, DebruijnIndex, ImplId, QuantifiedWhereClauses, Substitution,
-    TyKind,
+    TyVariableKind,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{self, IntoWhereClauses};
@@ -102,7 +102,7 @@ lower_param_map!(Clause, None);
 lower_param_map!(
     TraitDefn,
     Some(chalk_ir::WithKind::new(
-        chalk_ir::VariableKind::Ty(TyKind::General),
+        chalk_ir::VariableKind::Ty(TyVariableKind::General),
         Atom::from(SELF),
     ))
 );
@@ -120,11 +120,11 @@ impl Lower for VariableKind {
     type Lowered = chalk_ir::WithKind<ChalkIr, Ident>;
     fn lower(&self) -> Self::Lowered {
         let (kind, n) = match self {
-            VariableKind::Ty(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::General), n),
+            VariableKind::Ty(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::General), n),
             VariableKind::IntegerTy(n) => {
-                (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Integer), n)
+                (chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Integer), n)
             }
-            VariableKind::FloatTy(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Float), n),
+            VariableKind::FloatTy(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Float), n),
             VariableKind::Lifetime(n) => (chalk_ir::VariableKind::Lifetime, n),
             VariableKind::Const(ref n) => (chalk_ir::VariableKind::Const(get_type_of_u32()), n),
         };
@@ -672,7 +672,7 @@ impl LowerWithEnv for Ty {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::WithKind::new(
-                        chalk_ir::VariableKind::Ty(TyKind::General),
+                        chalk_ir::VariableKind::Ty(TyVariableKind::General),
                         Atom::from(FIXME_SELF),
                     )),
                     |env| {

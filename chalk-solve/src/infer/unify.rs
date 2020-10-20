@@ -90,9 +90,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
             ) => {
                 if kind1 == kind2 {
                     self.unify_var_var(var1, var2)
-                } else if kind1 == TyKind::General {
+                } else if kind1 == TyVariableKind::General {
                     self.unify_general_var_specific_ty(var1, b.clone())
-                } else if kind2 == TyKind::General {
+                } else if kind2 == TyVariableKind::General {
                     self.unify_general_var_specific_ty(var2, a.clone())
                 } else {
                     debug!(
@@ -118,11 +118,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
                 match (kind, ty.is_integer(interner), ty.is_float(interner)) {
                     // General inference variables can unify with any type
-                    (TyKind::General, _, _)
+                    (TyVariableKind::General, _, _)
                     // Integer inference variables can only unify with integer types
-                    | (TyKind::Integer, true, _)
+                    | (TyVariableKind::Integer, true, _)
                     // Float inference variables can only unify with float types
-                    | (TyKind::Float, _, true) => self.unify_var_ty(var, &ty),
+                    | (TyVariableKind::Float, _, true) => self.unify_var_ty(var, &ty),
                     _ => Err(NoSolution),
                 }
             }
@@ -200,8 +200,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     /// Unify a general inference variable with a specific inference variable
-    /// (type kind is not `General`). For example, unify a `TyKind::General`
-    /// inference variable with a `TyKind::Integer` variable, resulting in the
+    /// (type kind is not `General`). For example, unify a `TyVariableKind::General`
+    /// inference variable with a `TyVariableKind::Integer` variable, resulting in the
     /// general inference variable narrowing to an integer variable.
 
     #[instrument(level = "debug", skip(self))]
@@ -630,7 +630,7 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
-        kind: TyKind,
+        kind: TyVariableKind,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner();

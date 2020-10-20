@@ -270,7 +270,7 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
-        kind: TyKind,
+        kind: TyVariableKind,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<TI>> {
         if self.forbid_inference_vars() {

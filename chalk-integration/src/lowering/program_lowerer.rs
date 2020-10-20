@@ -1,7 +1,7 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
-    GeneratorId, ImplId, OpaqueTyId, TraitId, TyKind, VariableKinds,
+    GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -37,7 +37,7 @@ pub(super) struct ProgramLowerer {
     generator_kinds: GeneratorKinds,
     closure_kinds: ClosureKinds,
     trait_kinds: TraitKinds,
-    opaque_ty_kinds: OpaqueTyKinds,
+    opaque_ty_kinds: OpaqueTyVariableKinds,
     object_safe_traits: HashSet<TraitId<ChalkIr>>,
     foreign_ty_ids: ForeignIds,
 }
@@ -321,7 +321,7 @@ impl ProgramLowerer {
                             let bounds: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
                                 .in_binders(
                                     Some(chalk_ir::WithKind::new(
-                                        chalk_ir::VariableKind::Ty(TyKind::General),
+                                        chalk_ir::VariableKind::Ty(TyVariableKind::General),
                                         Atom::from(FIXME_SELF),
                                     )),
                                     |env| {
@@ -347,7 +347,7 @@ impl ProgramLowerer {
                             let where_clauses: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
                                 .in_binders(
                                 Some(chalk_ir::WithKind::new(
-                                    chalk_ir::VariableKind::Ty(TyKind::General),
+                                    chalk_ir::VariableKind::Ty(TyVariableKind::General),
                                     Atom::from(FIXME_SELF),
                                 )),
                                 |env| opaque_ty.where_clauses.lower(env),

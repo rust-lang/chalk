@@ -2,7 +2,7 @@ use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyKind, TypeName, VariableKind,
+    ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyVariableKind, TypeName, VariableKind,
 };
 use std::iter;
 use tracing::instrument;
@@ -84,14 +84,14 @@ pub fn add_copy_program_clauses<I: Interner>(
         TyData::Function(_) => builder.push_fact(trait_ref.clone()),
 
         TyData::InferenceVar(_, kind) => match kind {
-            TyKind::Integer | TyKind::Float => builder.push_fact(trait_ref.clone()),
-            TyKind::General => {}
+            TyVariableKind::Integer | TyVariableKind::Float => builder.push_fact(trait_ref.clone()),
+            TyVariableKind::General => {}
         },
 
         TyData::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
-                VariableKind::Ty(TyKind::Integer) | VariableKind::Ty(TyKind::Float) => {
+                VariableKind::Ty(TyVariableKind::Integer) | VariableKind::Ty(TyVariableKind::Float) => {
                     builder.push_fact(trait_ref.clone())
                 }
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
