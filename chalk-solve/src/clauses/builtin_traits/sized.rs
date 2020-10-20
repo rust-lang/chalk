@@ -5,7 +5,8 @@ use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, TypeName, VariableKind,
+    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, TypeName,
+    VariableKind,
 };
 
 fn push_adt_sized_conditions<I: Interner>(
@@ -106,9 +107,8 @@ pub fn add_sized_program_clauses<I: Interner>(
         TyKind::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
-                VariableKind::Ty(TyVariableKind::Integer) | VariableKind::Ty(TyVariableKind::Float) => {
-                    builder.push_fact(trait_ref.clone())
-                }
+                VariableKind::Ty(TyVariableKind::Integer)
+                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref.clone()),
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }

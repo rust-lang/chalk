@@ -40,7 +40,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
     self_ty: Ty<I>,
 ) {
     let interner = db.interner();
-    let dyn_ty = match self_ty.data(interner) {
+    let dyn_ty = match self_ty.kind(interner) {
         TyKind::Dyn(dyn_ty) => dyn_ty,
         _ => return,
     };

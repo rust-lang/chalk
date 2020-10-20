@@ -95,7 +95,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     let interner = db.interner();
     let trait_id = db.well_known_trait_id(well_known).unwrap();
 
-    match self_ty.data(interner) {
+    match self_ty.kind(interner) {
         TyKind::Apply(apply) => match apply.name {
             TypeName::FnDef(fn_def_id) => {
                 let fn_def_datum = builder.db.fn_def_datum(fn_def_id);

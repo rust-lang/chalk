@@ -32,7 +32,7 @@ use crate::SeparatorTraitRef;
 use crate::Substitution;
 use crate::TraitId;
 use crate::Ty;
-use crate::TyKind;
+use crate::TyData;
 use crate::VariableKind;
 use crate::VariableKinds;
 use crate::{Const, ConstData};
@@ -460,10 +460,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyKind::intern` (which
     /// will ultimately call this method).
-    fn intern_ty(&self, ty: TyKind<Self>) -> Self::InternedType;
+    fn intern_ty(&self, ty: TyData<Self>) -> Self::InternedType;
 
     /// Lookup the `TyKind` from an interned type.
-    fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyKind<Self>;
+    fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
 
     /// Create an "interned" lifetime from `lifetime`. This is not
     /// normally invoked directly; instead, you invoke

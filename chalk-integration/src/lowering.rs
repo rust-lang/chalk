@@ -120,11 +120,18 @@ impl Lower for VariableKind {
     type Lowered = chalk_ir::WithKind<ChalkIr, Ident>;
     fn lower(&self) -> Self::Lowered {
         let (kind, n) = match self {
-            VariableKind::Ty(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::General), n),
-            VariableKind::IntegerTy(n) => {
-                (chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Integer), n)
-            }
-            VariableKind::FloatTy(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Float), n),
+            VariableKind::Ty(n) => (
+                chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::General),
+                n,
+            ),
+            VariableKind::IntegerTy(n) => (
+                chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Integer),
+                n,
+            ),
+            VariableKind::FloatTy(n) => (
+                chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Float),
+                n,
+            ),
             VariableKind::Lifetime(n) => (chalk_ir::VariableKind::Lifetime, n),
             VariableKind::Const(ref n) => (chalk_ir::VariableKind::Const(get_type_of_u32()), n),
         };

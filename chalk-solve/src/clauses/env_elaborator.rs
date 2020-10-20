@@ -65,7 +65,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     }
     #[instrument(level = "debug", skip(self, _outer_binder))]
     fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
-        match ty.data(self.interner()) {
+        match ty.kind(self.interner()) {
             TyKind::Apply(application_ty) => {
                 match_type_name(&mut self.builder, self.environment, application_ty)
             }

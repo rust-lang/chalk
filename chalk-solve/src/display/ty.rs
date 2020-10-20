@@ -312,7 +312,7 @@ impl<I: Interner> RenderAsRust<I> for GenericArgData<I> {
 impl<I: Interner> RenderAsRust<I> for Ty<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to TyKind
-        self.data(s.db().interner()).fmt(s, f)
+        self.kind(s.db().interner()).fmt(s, f)
     }
 }
 

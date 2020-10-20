@@ -44,7 +44,7 @@ impl<I: Interner> ImplDatum<I> {
             .skip_binders()
             .trait_ref
             .self_type_parameter(interner)
-            .data(interner)
+            .kind(interner)
         {
             TyKind::Apply(apply) => match apply.name {
                 TypeName::Adt(id) => Some(id),

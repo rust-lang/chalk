@@ -29,7 +29,7 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
     fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Self::Result {
         let interner = self.interner;
 
-        match ty.data(interner) {
+        match ty.kind(interner) {
             TyKind::BoundVar(bound_var) => {
                 // check if bound var refers to the outermost binder
                 if bound_var.debruijn.shifted_in() == outer_binder {
@@ -84,7 +84,7 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
     fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Self::Result {
         let interner = self.interner;
 
-        match ty.data(interner) {
+        match ty.kind(interner) {
             TyKind::BoundVar(bound_var) => {
                 if bound_var.debruijn.shifted_in() == outer_binder
                     && self.parameters.contains(&bound_var.index)
@@ -184,7 +184,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
     // for more info visit `fn assemble_candidates_for_unsizing` and
     // `fn confirm_builtin_unisize_candidate` in rustc.
 
-    match (source_ty.data(interner), target_ty.data(interner)) {
+    match (source_ty.kind(interner), target_ty.kind(interner)) {
         // dyn Trait + AutoX + 'a -> dyn Trait + AutoY + 'b
         (
             TyKind::Dyn(DynTy {

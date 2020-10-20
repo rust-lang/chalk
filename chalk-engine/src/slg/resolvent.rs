@@ -373,7 +373,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
-        if let TyKind::BoundVar(answer_depth) = answer.data(interner) {
+        if let TyKind::BoundVar(answer_depth) = answer.kind(interner) {
             if self.unify_free_answer_var(
                 interner,
                 *answer_depth,
@@ -385,7 +385,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
         // Otherwise, the answer and the selected subgoal ought to be a perfect match for
         // one another.
-        match (answer.data(interner), pending.data(interner)) {
+        match (answer.kind(interner), pending.kind(interner)) {
             (TyKind::BoundVar(answer_depth), TyKind::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }

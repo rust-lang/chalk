@@ -391,8 +391,11 @@ pub struct Ty<I: Interner> {
 impl<I: Interner> Ty<I> {
     /// Creates a type from `TyKind`.
     pub fn new(interner: &I, data: impl CastTo<TyKind<I>>) -> Self {
+        let data = TyData {
+            kind: data.cast(interner),
+        };
         Ty {
-            interned: I::intern_ty(interner, data.cast(interner)),
+            interned: I::intern_ty(interner, data),
         }
     }
 
@@ -402,8 +405,13 @@ impl<I: Interner> Ty<I> {
     }
 
     /// Gets the underlying type data.
-    pub fn data(&self, interner: &I) -> &TyKind<I> {
+    pub fn data(&self, interner: &I) -> &TyData<I> {
         I::ty_data(interner, &self.interned)
+    }
+
+    /// Gets the underlying type kind.
+    pub fn kind(&self, interner: &I) -> &TyKind<I> {
+        &I::ty_data(interner, &self.interned).kind
     }
 
     /// Creates a `FromEnv` constraint using this type.
@@ -423,7 +431,7 @@ impl<I: Interner> Ty<I> {
 
     /// If this is a `TyKind::BoundVar(d)`, returns `Some(d)` else `None`.
     pub fn bound_var(&self, interner: &I) -> Option<BoundVar> {
-        if let TyKind::BoundVar(bv) = self.data(interner) {
+        if let TyKind::BoundVar(bv) = &self.data(interner).kind {
             Some(*bv)
         } else {
             None
@@ -432,7 +440,7 @@ impl<I: Interner> Ty<I> {
 
     /// If this is a `TyKind::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self, interner: &I) -> Option<InferenceVar> {
-        if let TyKind::InferenceVar(depth, _) = self.data(interner) {
+        if let TyKind::InferenceVar(depth, _) = &self.data(interner).kind {
             Some(*depth)
         } else {
             None
@@ -441,10 +449,11 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is a `BoundVar` or an `InferenceVar` of `TyVariableKind::General`.
     pub fn is_general_var(&self, interner: &I, binders: &CanonicalVarKinds<I>) -> bool {
-        match self.data(interner) {
+        match &self.data(interner).kind {
             TyKind::BoundVar(bv)
                 if bv.debruijn == DebruijnIndex::INNERMOST
-                    && binders.at(interner, bv.index).kind == VariableKind::Ty(TyVariableKind::General) =>
+                    && binders.at(interner, bv.index).kind
+                        == VariableKind::Ty(TyVariableKind::General) =>
             {
                 true
             }
@@ -455,7 +464,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is an `Alias`.
     pub fn is_alias(&self, interner: &I) -> bool {
-        match self.data(interner) {
+        match &self.data(interner).kind {
             TyKind::Alias(..) => true,
             _ => false,
         }
@@ -463,7 +472,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is an `IntTy` or `UintTy`.
     pub fn is_integer(&self, interner: &I) -> bool {
-        match self.data(interner) {
+        match &self.data(interner).kind {
             TyKind::Apply(ApplicationTy {
                 name: TypeName::Scalar(Scalar::Int(_)),
                 ..
@@ -478,7 +487,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is a `FloatTy`.
     pub fn is_float(&self, interner: &I) -> bool {
-        match self.data(interner) {
+        match &self.data(interner).kind {
             TyKind::Apply(ApplicationTy {
                 name: TypeName::Scalar(Scalar::Float(_)),
                 ..
@@ -489,7 +498,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns `Some(adt_id)` if this is an ADT, `None` otherwise
     pub fn adt_id(&self, interner: &I) -> Option<AdtId<I>> {
-        match self.data(interner) {
+        match &self.data(interner).kind {
             TyKind::Apply(ApplicationTy {
                 name: TypeName::Adt(adt_id),
                 ..
@@ -504,6 +513,13 @@ impl<I: Interner> Ty<I> {
     pub fn needs_shift(&self, interner: &I) -> bool {
         self.has_free_vars(interner)
     }
+}
+
+/// Contains the data for a Ty
+#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
+pub struct TyData<I: Interner> {
+    /// The kind
+    pub kind: TyKind<I>,
 }
 
 /// Type data, which holds the actual type information.
@@ -2431,7 +2447,7 @@ impl<I: Interner> Substitution<I> {
         self.iter(interner).zip(0..).all(|(generic_arg, index)| {
             let index_db = BoundVar::new(DebruijnIndex::INNERMOST, index);
             match generic_arg.data(interner) {
-                GenericArgData::Ty(ty) => match ty.data(interner) {
+                GenericArgData::Ty(ty) => match &ty.data(interner).kind {
                     TyKind::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },

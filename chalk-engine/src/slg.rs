@@ -371,7 +371,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
     /// Returns true if the two types could be unequal.
     fn aggregate_tys(&mut self, new: &Ty<I>, current: &Ty<I>) -> bool {
         let interner = self.interner;
-        match (new.data(interner), current.data(interner)) {
+        match (new.kind(interner), current.kind(interner)) {
             (_, TyKind::BoundVar(_)) => {
                 // If the aggregate solution already has an inference
                 // variable here, then no matter what type we produce,

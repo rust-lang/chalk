@@ -407,7 +407,7 @@ where
         TI: 'i,
     {
         let interner = folder.interner();
-        match self.data(interner) {
+        match self.kind(interner) {
             TyKind::BoundVar(bound_var) => {
                 if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
                     // This variable was bound outside of the binders

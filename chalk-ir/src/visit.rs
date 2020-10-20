@@ -272,7 +272,7 @@ where
         I: 'i,
     {
         let interner = visitor.interner();
-        match self.data(interner) {
+        match self.kind(interner) {
             TyKind::BoundVar(bound_var) => {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)

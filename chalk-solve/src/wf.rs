@@ -101,7 +101,7 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             self.types
                 .push(ty.shifted_out_to(interner, outer_binder).unwrap())
         };
-        match ty.data(interner) {
+        match ty.kind(interner) {
             TyKind::Apply(apply) => {
                 push_ty();
                 apply.visit_with(self, outer_binder);
@@ -630,7 +630,7 @@ impl WfWellKnownConstraints {
             .skip_binders()
             .trait_ref
             .self_type_parameter(interner)
-            .data(interner)
+            .kind(interner)
         {
             TyKind::Apply(ApplicationTy { name, .. }) => match name {
                 TypeName::Scalar(_)
@@ -650,9 +650,8 @@ impl WfWellKnownConstraints {
                 let interner = gb.interner();
 
                 let ty = trait_ref.self_type_parameter(interner);
-                let ty_data = ty.data(interner);
 
-                let (adt_id, substitution) = match ty_data {
+                let (adt_id, substitution) = match ty.kind(interner) {
                     TyKind::Apply(ApplicationTy { name, substitution }) => match name {
                         TypeName::Adt(adt_id) => (*adt_id, substitution),
                         _ => unreachable!(),
@@ -890,7 +889,7 @@ impl WfWellKnownConstraints {
             )
         };
 
-        match (source.data(interner), target.data(interner)) {
+        match (source.kind(interner), target.kind(interner)) {
             (TyKind::Apply(source_app), TyKind::Apply(target_app)) => {
                 match (&source_app.name, &target_app.name) {
                     (TypeName::Ref(s_m), TypeName::Ref(t_m))

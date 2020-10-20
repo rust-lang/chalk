@@ -91,9 +91,8 @@ pub fn add_copy_program_clauses<I: Interner>(
         TyKind::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
-                VariableKind::Ty(TyVariableKind::Integer) | VariableKind::Ty(TyVariableKind::Float) => {
-                    builder.push_fact(trait_ref.clone())
-                }
+                VariableKind::Ty(TyVariableKind::Integer)
+                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref.clone()),
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }

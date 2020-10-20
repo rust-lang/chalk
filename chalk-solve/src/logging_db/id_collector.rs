@@ -121,8 +121,7 @@ where
         ty: &chalk_ir::Ty<I>,
         outer_binder: chalk_ir::DebruijnIndex,
     ) -> Self::Result {
-        let ty_data = ty.data(self.db.interner());
-        match ty_data {
+        match ty.kind(self.db.interner()) {
             TyKind::Apply(apply_ty) => match apply_ty.name {
                 TypeName::Adt(adt) => self.record(adt),
                 TypeName::FnDef(fn_def) => self.record(fn_def),

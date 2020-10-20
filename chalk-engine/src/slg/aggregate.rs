@@ -231,7 +231,7 @@ struct AntiUnifier<'infer, 'intern, I: Interner> {
 impl<I: Interner> AntiUnifier<'_, '_, I> {
     fn aggregate_tys(&mut self, ty0: &Ty<I>, ty1: &Ty<I>) -> Ty<I> {
         let interner = self.interner;
-        match (ty0.data(interner), ty1.data(interner)) {
+        match (ty0.kind(interner), ty1.kind(interner)) {
             // If we see bound things on either side, just drop in a
             // fresh variable. This means we will sometimes
             // overgeneralize.  So for example if we have two

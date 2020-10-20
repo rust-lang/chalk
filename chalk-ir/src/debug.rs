@@ -220,6 +220,12 @@ impl<I: Interner> Debug for TypeName<I> {
     }
 }
 
+impl<I: Interner> Debug for TyData<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        self.kind.fmt(fmt)
+    }
+}
+
 impl<I: Interner> Debug for TyKind<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
@@ -871,8 +877,12 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
         let value = self.skip_kind();
         match &self.kind {
             VariableKind::Ty(TyVariableKind::General) => write!(fmt, "{:?} with kind type", value),
-            VariableKind::Ty(TyVariableKind::Integer) => write!(fmt, "{:?} with kind integer type", value),
-            VariableKind::Ty(TyVariableKind::Float) => write!(fmt, "{:?} with kind float type", value),
+            VariableKind::Ty(TyVariableKind::Integer) => {
+                write!(fmt, "{:?} with kind integer type", value)
+            }
+            VariableKind::Ty(TyVariableKind::Float) => {
+                write!(fmt, "{:?} with kind float type", value)
+            }
             VariableKind::Lifetime => write!(fmt, "{:?} with kind lifetime", value),
             VariableKind::Const(ty) => write!(fmt, "{:?} with kind {:?}", value, ty),
         }

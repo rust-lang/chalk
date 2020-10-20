@@ -460,7 +460,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                 .skip_binders()
                 .trait_ref
                 .self_type_parameter(interner);
-            match ty.data(interner) {
+            match ty.kind(interner) {
                 TyKind::Apply(app) => Some(app.clone()),
                 _ => None,
             }

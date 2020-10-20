@@ -81,7 +81,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         debug_span!("unify_ty_ty", ?a, ?b);
 
-        match (a.data(interner), b.data(interner)) {
+        match (a.kind(interner), b.kind(interner)) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
             (

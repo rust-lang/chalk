@@ -26,8 +26,8 @@ where
         impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
             fn zip_tys(&mut self, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
                 let interner = self.interner;
-                let could_match = match (a.data(interner), b.data(interner)) {
-                    (&TyKind::Apply(ref a), &TyKind::Apply(ref b)) => {
+                let could_match = match (a.kind(interner), b.kind(interner)) {
+                    (TyKind::Apply(ref a), TyKind::Apply(ref b)) => {
                         let names_could_match = a.name == b.name;
 
                         names_could_match
