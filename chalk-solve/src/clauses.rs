@@ -753,7 +753,7 @@ fn match_ty<I: Interner>(
             .db
             .opaque_ty_data(opaque_ty.opaque_ty_id)
             .to_program_clauses(builder, environment),
-        TyKind::Function(quantified_ty) => {
+        TyKind::Function(_quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
         }
         TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => return Err(Floundered),

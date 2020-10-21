@@ -431,7 +431,7 @@ impl<I: Interner> Ty<I> {
 
     /// If this is a `TyKind::BoundVar(d)`, returns `Some(d)` else `None`.
     pub fn bound_var(&self, interner: &I) -> Option<BoundVar> {
-        if let TyKind::BoundVar(bv) = &self.data(interner).kind {
+        if let TyKind::BoundVar(bv) = self.kind(interner) {
             Some(*bv)
         } else {
             None
@@ -440,7 +440,7 @@ impl<I: Interner> Ty<I> {
 
     /// If this is a `TyKind::InferenceVar(d)`, returns `Some(d)` else `None`.
     pub fn inference_var(&self, interner: &I) -> Option<InferenceVar> {
-        if let TyKind::InferenceVar(depth, _) = &self.data(interner).kind {
+        if let TyKind::InferenceVar(depth, _) = self.kind(interner) {
             Some(*depth)
         } else {
             None
@@ -449,7 +449,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is a `BoundVar` or an `InferenceVar` of `TyVariableKind::General`.
     pub fn is_general_var(&self, interner: &I, binders: &CanonicalVarKinds<I>) -> bool {
-        match &self.data(interner).kind {
+        match self.kind(interner) {
             TyKind::BoundVar(bv)
                 if bv.debruijn == DebruijnIndex::INNERMOST
                     && binders.at(interner, bv.index).kind
@@ -464,7 +464,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is an `Alias`.
     pub fn is_alias(&self, interner: &I) -> bool {
-        match &self.data(interner).kind {
+        match self.kind(interner) {
             TyKind::Alias(..) => true,
             _ => false,
         }
@@ -472,7 +472,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is an `IntTy` or `UintTy`.
     pub fn is_integer(&self, interner: &I) -> bool {
-        match &self.data(interner).kind {
+        match self.kind(interner) {
             TyKind::Apply(ApplicationTy {
                 name: TypeName::Scalar(Scalar::Int(_)),
                 ..
@@ -487,7 +487,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is a `FloatTy`.
     pub fn is_float(&self, interner: &I) -> bool {
-        match &self.data(interner).kind {
+        match self.kind(interner) {
             TyKind::Apply(ApplicationTy {
                 name: TypeName::Scalar(Scalar::Float(_)),
                 ..
@@ -498,7 +498,7 @@ impl<I: Interner> Ty<I> {
 
     /// Returns `Some(adt_id)` if this is an ADT, `None` otherwise
     pub fn adt_id(&self, interner: &I) -> Option<AdtId<I>> {
-        match &self.data(interner).kind {
+        match self.kind(interner) {
             TyKind::Apply(ApplicationTy {
                 name: TypeName::Adt(adt_id),
                 ..
@@ -2447,7 +2447,7 @@ impl<I: Interner> Substitution<I> {
         self.iter(interner).zip(0..).all(|(generic_arg, index)| {
             let index_db = BoundVar::new(DebruijnIndex::INNERMOST, index);
             match generic_arg.data(interner) {
-                GenericArgData::Ty(ty) => match &ty.data(interner).kind {
+                GenericArgData::Ty(ty) => match ty.kind(interner) {
                     TyKind::BoundVar(depth) => index_db == *depth,
                     _ => false,
                 },

@@ -165,13 +165,13 @@ other type without any effect, and so forth.
 
 ## Mapping to rustc types
 
-The rustc [`TyVariableKind`] enum has a lot more variants than chalk. This
+The rustc [`TyKind`] enum has a lot more variants than chalk. This
 section describes how the rustc types can be mapped to chalk
 types. The intention is that, at least when transitioning, rustc would
-implement the `Interner` trait and would map from the [`TyVariableKind`]
+implement the `Interner` trait and would map from the [`TyKind`]
 enum to chalk's `TyKind` on the fly, when `data()` is invoked.
 
-[`TyVariableKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyVariableKind.html
+[`TyKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html
 
 This section describes how each of rustc's variants can be mapped to
 Chalk variants.
