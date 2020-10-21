@@ -2,14 +2,18 @@
 
 #[macro_export]
 macro_rules! ty {
-    (apply $n:tt $($arg:tt)*) => {
-        chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-            name: ty_name!($n),
-            substitution: chalk_ir::Substitution::from_iter(
+    (apply (item $n:expr) $($arg:tt)*) => {
+        chalk_ir::TyKind::Adt(
+            chalk_ir::AdtId(chalk_integration::interner::RawId {
+                index: $n,
+
+            }),
+            chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
-        }).intern(&chalk_integration::interner::ChalkIr)
+        )
+        .intern(&chalk_integration::interner::ChalkIr)
     };
 
     (function $n:tt $($arg:tt)*) => {
@@ -113,14 +117,5 @@ macro_rules! lifetime {
 
     (($($b:tt)*)) => {
         lifetime!($($b)*)
-    };
-}
-
-#[macro_export]
-macro_rules! ty_name {
-    ((item $n:expr)) => {
-        chalk_ir::TypeName::Adt(chalk_ir::AdtId(chalk_integration::interner::RawId {
-            index: $n,
-        }))
     };
 }

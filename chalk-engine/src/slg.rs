@@ -405,10 +405,6 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 );
             }
 
-            (TyKind::Apply(apply1), TyKind::Apply(apply2)) => {
-                self.aggregate_application_tys(apply1, apply2)
-            }
-
             (TyKind::Placeholder(p1), TyKind::Placeholder(p2)) => {
                 self.aggregate_placeholders(p1, p2)
             }
@@ -423,12 +419,56 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 TyKind::Alias(AliasTy::Opaque(opaque_ty2)),
             ) => self.aggregate_opaque_ty_tys(opaque_ty1, opaque_ty2),
 
-            // For everything else, be conservative here and just say we may invalidate.
-            (TyKind::Function(_), _)
-            | (TyKind::Dyn(_), _)
-            | (TyKind::Apply(_), _)
-            | (TyKind::Placeholder(_), _)
-            | (TyKind::Alias(_), _) => true,
+            (TyKind::Adt(id_a, substitution_a), TyKind::Adt(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (
+                TyKind::AssociatedType(id_a, substitution_a),
+                TyKind::AssociatedType(id_b, substitution_b),
+            ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
+            (TyKind::Scalar(scalar_a), TyKind::Scalar(scalar_b)) => scalar_a != scalar_b,
+            (TyKind::Str, TyKind::Str) => false,
+            (TyKind::Tuple(arity_a, substitution_a), TyKind::Tuple(arity_b, substitution_b)) => {
+                self.aggregate_name_and_substs(arity_a, substitution_a, arity_b, substitution_b)
+            }
+            (
+                TyKind::OpaqueType(id_a, substitution_a),
+                TyKind::OpaqueType(id_b, substitution_b),
+            ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
+            (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => substitution_a
+                .iter(interner)
+                .zip(substitution_b.iter(interner))
+                .any(|(new, current)| self.aggregate_generic_args(new, current)),
+            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (TyKind::Ref(id_a, substitution_a), TyKind::Ref(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (TyKind::Raw(id_a, substitution_a), TyKind::Raw(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (TyKind::Never, TyKind::Never) => false,
+            (TyKind::Array(substitution_a), TyKind::Array(substitution_b)) => substitution_a
+                .iter(interner)
+                .zip(substitution_b.iter(interner))
+                .any(|(new, current)| self.aggregate_generic_args(new, current)),
+            (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (
+                TyKind::GeneratorWitness(id_a, substitution_a),
+                TyKind::GeneratorWitness(id_b, substitution_b),
+            ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
+            (TyKind::Foreign(id_a, substitution_a), TyKind::Foreign(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            }
+            (TyKind::Error, TyKind::Error) => false,
+
+            (_, _) => true,
         }
     }
 
@@ -482,28 +522,6 @@ impl<I: Interner> MayInvalidate<'_, I> {
             // Only variants left are placeholder = concrete, which always fails
             (ConstValue::Placeholder(_), _) | (ConstValue::Concrete(_), _) => true,
         }
-    }
-
-    fn aggregate_application_tys(
-        &mut self,
-        new: &ApplicationTy<I>,
-        current: &ApplicationTy<I>,
-    ) -> bool {
-        let ApplicationTy {
-            name: new_name,
-            substitution: new_substitution,
-        } = new;
-        let ApplicationTy {
-            name: current_name,
-            substitution: current_substitution,
-        } = current;
-
-        self.aggregate_name_and_substs(
-            new_name,
-            new_substitution,
-            current_name,
-            current_substitution,
-        )
     }
 
     fn aggregate_placeholders(

@@ -4,10 +4,7 @@ use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{
-    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, TypeName,
-    VariableKind,
-};
+use chalk_ir::{AdtId, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, VariableKind};
 
 fn push_adt_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
@@ -75,30 +72,28 @@ pub fn add_sized_program_clauses<I: Interner>(
     binders: &CanonicalVarKinds<I>,
 ) {
     match ty {
-        TyKind::Apply(ApplicationTy { name, substitution }) => match name {
-            TypeName::Adt(adt_id) => {
-                push_adt_sized_conditions(db, builder, trait_ref, *adt_id, substitution)
-            }
-            TypeName::Tuple(arity) => {
-                push_tuple_sized_conditions(db, builder, trait_ref, *arity, substitution)
-            }
-            TypeName::Array
-            | TypeName::Never
-            | TypeName::Closure(_)
-            | TypeName::FnDef(_)
-            | TypeName::Scalar(_)
-            | TypeName::Raw(_)
-            | TypeName::Generator(_)
-            | TypeName::GeneratorWitness(_)
-            | TypeName::Ref(_) => builder.push_fact(trait_ref.clone()),
+        TyKind::Adt(adt_id, substitution) => {
+            push_adt_sized_conditions(db, builder, trait_ref, *adt_id, substitution)
+        }
+        TyKind::Tuple(arity, substitution) => {
+            push_tuple_sized_conditions(db, builder, trait_ref, *arity, substitution)
+        }
+        TyKind::Array(_)
+        | TyKind::Never
+        | TyKind::Closure(_, _)
+        | TyKind::FnDef(_, _)
+        | TyKind::Scalar(_)
+        | TyKind::Raw(_, _)
+        | TyKind::Generator(_, _)
+        | TyKind::GeneratorWitness(_, _)
+        | TyKind::Ref(_, _) => builder.push_fact(trait_ref.clone()),
 
-            TypeName::AssociatedType(_)
-            | TypeName::Slice
-            | TypeName::OpaqueType(_)
-            | TypeName::Str
-            | TypeName::Foreign(_)
-            | TypeName::Error => {}
-        },
+        TyKind::AssociatedType(_, _)
+        | TyKind::Slice(_)
+        | TyKind::OpaqueType(_, _)
+        | TyKind::Str
+        | TyKind::Foreign(_, _)
+        | TyKind::Error => {}
 
         TyKind::Function(_)
         | TyKind::InferenceVar(_, TyVariableKind::Float)

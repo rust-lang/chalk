@@ -200,11 +200,8 @@ impl ProgramLowerer {
                             &ChalkIr,
                             upvar_tys?.into_iter().map(|ty| ty.cast(&ChalkIr)),
                         );
-                        Ok(chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                            name: chalk_ir::TypeName::Tuple(defn.upvars.len()),
-                            substitution,
-                        })
-                        .intern(&ChalkIr))
+                        Ok(chalk_ir::TyKind::Tuple(defn.upvars.len(), substitution)
+                            .intern(&ChalkIr))
                     })?;
                     closure_upvars.insert(closure_def_id, upvars);
                 }

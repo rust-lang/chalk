@@ -134,7 +134,7 @@ where
     fn impl_provided_for(
         &self,
         auto_trait_id: chalk_ir::TraitId<I>,
-        app_ty: &chalk_ir::ApplicationTy<I>,
+        app_ty: &chalk_ir::TyKind<I>,
     ) -> bool {
         self.db.impl_provided_for(auto_trait_id, app_ty)
     }

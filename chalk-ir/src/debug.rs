@@ -116,12 +116,6 @@ impl<I: Interner> Debug for Constraints<I> {
     }
 }
 
-impl<I: Interner> Debug for ApplicationTy<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_application_ty(self, fmt).unwrap_or_else(|| write!(fmt, "ApplicationTy(?)"))
-    }
-}
-
 impl<I: Interner> Debug for SeparatorTraitRef<'_, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_separator_trait_ref(self, fmt)
@@ -182,44 +176,6 @@ impl Debug for UniverseIndex {
     }
 }
 
-impl<I: Interner> Debug for TypeName<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        match self {
-            TypeName::Adt(id) => write!(fmt, "{:?}", id),
-            TypeName::AssociatedType(assoc_ty) => write!(fmt, "{:?}", assoc_ty),
-            TypeName::Scalar(scalar) => write!(fmt, "{:?}", scalar),
-            TypeName::Str => write!(fmt, "Str"),
-            TypeName::Tuple(arity) => write!(fmt, "{:?}", arity),
-            TypeName::OpaqueType(opaque_ty) => write!(fmt, "!{:?}", opaque_ty),
-            TypeName::Slice => write!(fmt, "{{slice}}"),
-            TypeName::FnDef(fn_def) => write!(fmt, "{:?}", fn_def),
-            TypeName::Ref(mutability) => write!(
-                fmt,
-                "{}",
-                match mutability {
-                    Mutability::Mut => "{{&mut}}",
-                    Mutability::Not => "{{&}}",
-                }
-            ),
-            TypeName::Raw(mutability) => write!(
-                fmt,
-                "{}",
-                match mutability {
-                    Mutability::Mut => "{{*mut}}",
-                    Mutability::Not => "{{*const}}",
-                }
-            ),
-            TypeName::Never => write!(fmt, "Never"),
-            TypeName::Array => write!(fmt, "{{array}}"),
-            TypeName::Closure(id) => write!(fmt, "{{closure:{:?}}}", id),
-            TypeName::Generator(generator) => write!(fmt, "{:?}", generator),
-            TypeName::GeneratorWitness(witness) => write!(fmt, "{:?}", witness),
-            TypeName::Foreign(foreign_ty) => write!(fmt, "{:?}", foreign_ty),
-            TypeName::Error => write!(fmt, "{{error}}"),
-        }
-    }
-}
-
 impl<I: Interner> Debug for TyData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         self.kind.fmt(fmt)
@@ -234,10 +190,54 @@ impl<I: Interner> Debug for TyKind<I> {
             TyKind::InferenceVar(var, TyVariableKind::General) => write!(fmt, "{:?}", var),
             TyKind::InferenceVar(var, TyVariableKind::Integer) => write!(fmt, "{:?}i", var),
             TyKind::InferenceVar(var, TyVariableKind::Float) => write!(fmt, "{:?}f", var),
-            TyKind::Apply(apply) => write!(fmt, "{:?}", apply),
             TyKind::Alias(alias) => write!(fmt, "{:?}", alias),
             TyKind::Placeholder(index) => write!(fmt, "{:?}", index),
             TyKind::Function(function) => write!(fmt, "{:?}", function),
+            TyKind::Adt(id, substitution) => write!(fmt, "{:?}<{:?}>", id, substitution),
+            TyKind::AssociatedType(assoc_ty, substitution) => {
+                write!(fmt, "{:?}<{:?}>", assoc_ty, substitution)
+            }
+            TyKind::Scalar(scalar) => write!(fmt, "{:?}", scalar),
+            TyKind::Str => write!(fmt, "Str"),
+            TyKind::Tuple(arity, substitution) => write!(fmt, "{:?}<{:?}>", arity, substitution),
+            TyKind::OpaqueType(opaque_ty, substitution) => {
+                write!(fmt, "!{:?}<{:?}>", opaque_ty, substitution)
+            }
+            TyKind::Slice(substitution) => write!(fmt, "{{slice}}<{:?}>", substitution),
+            TyKind::FnDef(fn_def, substitution) => write!(fmt, "{:?}<{:?}>", fn_def, substitution),
+            TyKind::Ref(mutability, substitution) => write!(
+                fmt,
+                "{}<{:?}>",
+                match mutability {
+                    Mutability::Mut => "{{&mut}}",
+                    Mutability::Not => "{{&}}",
+                },
+                substitution,
+            ),
+            TyKind::Raw(mutability, substitution) => write!(
+                fmt,
+                "{}<{:?}>",
+                match mutability {
+                    Mutability::Mut => "{{*mut}}",
+                    Mutability::Not => "{{*const}}",
+                },
+                substitution,
+            ),
+            TyKind::Never => write!(fmt, "Never"),
+            TyKind::Array(substitution) => write!(fmt, "{{array}}<{:?}>", substitution),
+            TyKind::Closure(id, substitution) => {
+                write!(fmt, "{{closure:{:?}}}<{:?}>", id, substitution)
+            }
+            TyKind::Generator(generator, substitution) => {
+                write!(fmt, "{:?}<{:?}>", generator, substitution)
+            }
+            TyKind::GeneratorWitness(witness, substitution) => {
+                write!(fmt, "{:?}<{:?}>", witness, substitution)
+            }
+            TyKind::Foreign(foreign_ty, substitution) => {
+                write!(fmt, "{:?}<{:?}>", foreign_ty, substitution)
+            }
+            TyKind::Error => write!(fmt, "{{error}}"),
         }
     }
 }
@@ -467,29 +467,98 @@ impl<I: Interner> ProgramClauseImplication<I> {
 }
 
 /// Helper struct for showing debug output for application types.
-pub struct ApplicationTyDebug<'a, I: Interner> {
-    application_ty: &'a ApplicationTy<I>,
+pub struct TyKindDebug<'a, I: Interner> {
+    ty: &'a TyKind<I>,
     interner: &'a I,
 }
 
-impl<'a, I: Interner> Debug for ApplicationTyDebug<'a, I> {
+impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        let ApplicationTyDebug {
-            application_ty,
-            interner,
-        } = self;
-        let ApplicationTy { name, substitution } = application_ty;
-        write!(fmt, "{:?}{:?}", name, substitution.with_angle(interner))
+        let interner = self.interner;
+        match self.ty {
+            TyKind::BoundVar(db) => write!(fmt, "{:?}", db),
+            TyKind::Dyn(clauses) => write!(fmt, "{:?}", clauses),
+            TyKind::InferenceVar(var, TyVariableKind::General) => write!(fmt, "{:?}", var),
+            TyKind::InferenceVar(var, TyVariableKind::Integer) => write!(fmt, "{:?}i", var),
+            TyKind::InferenceVar(var, TyVariableKind::Float) => write!(fmt, "{:?}f", var),
+            TyKind::Alias(alias) => write!(fmt, "{:?}", alias),
+            TyKind::Placeholder(index) => write!(fmt, "{:?}", index),
+            TyKind::Function(function) => write!(fmt, "{:?}", function),
+            TyKind::Adt(id, substitution) => {
+                write!(fmt, "{:?}{:?}", id, substitution.with_angle(interner))
+            }
+            TyKind::AssociatedType(assoc_ty, substitution) => {
+                write!(fmt, "{:?}{:?}", assoc_ty, substitution.with_angle(interner))
+            }
+            TyKind::Scalar(scalar) => write!(fmt, "{:?}", scalar),
+            TyKind::Str => write!(fmt, "Str"),
+            TyKind::Tuple(arity, substitution) => {
+                write!(fmt, "{:?}{:?}", arity, substitution.with_angle(interner))
+            }
+            TyKind::OpaqueType(opaque_ty, substitution) => write!(
+                fmt,
+                "!{:?}{:?}",
+                opaque_ty,
+                substitution.with_angle(interner)
+            ),
+            TyKind::Slice(substitution) => {
+                write!(fmt, "{{slice}}{:?}", substitution.with_angle(interner))
+            }
+            TyKind::FnDef(fn_def, substitution) => {
+                write!(fmt, "{:?}{:?}", fn_def, substitution.with_angle(interner))
+            }
+            TyKind::Ref(mutability, substitution) => write!(
+                fmt,
+                "{}{:?}",
+                match mutability {
+                    Mutability::Mut => "{{&mut}}",
+                    Mutability::Not => "{{&}}",
+                },
+                substitution.with_angle(interner),
+            ),
+            TyKind::Raw(mutability, substitution) => write!(
+                fmt,
+                "{}{:?}",
+                match mutability {
+                    Mutability::Mut => "{{*mut}}",
+                    Mutability::Not => "{{*const}}",
+                },
+                substitution.with_angle(interner),
+            ),
+            TyKind::Never => write!(fmt, "Never"),
+            TyKind::Array(substitution) => {
+                write!(fmt, "{{array}}{:?}", substitution.with_angle(interner))
+            }
+            TyKind::Closure(id, substitution) => write!(
+                fmt,
+                "{{closure:{:?}}}{:?}",
+                id,
+                substitution.with_angle(interner)
+            ),
+            TyKind::Generator(generator, substitution) => write!(
+                fmt,
+                "{:?}{:?}",
+                generator,
+                substitution.with_angle(interner)
+            ),
+            TyKind::GeneratorWitness(witness, substitution) => {
+                write!(fmt, "{:?}{:?}", witness, substitution.with_angle(interner))
+            }
+            TyKind::Foreign(foreign_ty, substitution) => write!(
+                fmt,
+                "{:?}{:?}",
+                foreign_ty,
+                substitution.with_angle(interner)
+            ),
+            TyKind::Error => write!(fmt, "{{error}}"),
+        }
     }
 }
 
-impl<I: Interner> ApplicationTy<I> {
+impl<I: Interner> TyKind<I> {
     /// Show debug output for the application type.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> ApplicationTyDebug<'a, I> {
-        ApplicationTyDebug {
-            application_ty: self,
-            interner,
-        }
+    pub fn debug<'a>(&'a self, interner: &'a I) -> TyKindDebug<'a, I> {
+        TyKindDebug { ty: self, interner }
     }
 }
 

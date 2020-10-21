@@ -16,6 +16,124 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db().interner();
         match self {
+            TyKind::Adt(sid, substitution) => {
+                write!(f, "{}", sid.display(s))?;
+                let parameters = substitution.as_slice(interner);
+                let parameters = parameters.iter().map(|param| param.display(s));
+                write_joined_non_empty_list!(f, "<{}>", parameters, ", ")
+            }
+            TyKind::AssociatedType(assoc_type_id, substitution) => {
+                // (Iterator::Item)(x)
+                // should be written in Rust as <X as Iterator>::Item
+                let datum = s.db().associated_ty_data(*assoc_type_id);
+                assert!(
+                    substitution
+                        .iter(interner)
+                        .filter_map(move |p| p.ty(interner))
+                        .count()
+                        >= 1,
+                    "AssociatedType should have at least 1 parameter"
+                );
+                write!(
+                    f,
+                    "<{} as {}>::{}",
+                    substitution
+                        .iter(interner)
+                        .filter_map(move |p| p.ty(interner))
+                        .next()
+                        .unwrap()
+                        .display(s),
+                    datum.trait_id.display(s),
+                    datum.id.display(s),
+                )?;
+                let params = substitution.as_slice(interner);
+                write_joined_non_empty_list!(
+                    f,
+                    "<{}>",
+                    params[1..].iter().map(|ty| ty.display(s)),
+                    ","
+                )
+            }
+            TyKind::Scalar(scalar) => write!(f, "{}", scalar.display(s)),
+            TyKind::Tuple(arity, substitution) => {
+                write!(
+                    f,
+                    "({}{})",
+                    substitution
+                        .as_slice(interner)
+                        .iter()
+                        .map(|p| p.display(s))
+                        .format(", "),
+                    if *arity == 1 {
+                        // need trailing single comma
+                        ","
+                    } else {
+                        ""
+                    }
+                )
+            }
+            TyKind::OpaqueType(opaque_ty_id, substitution) => write!(
+                f,
+                "{}",
+                display_type_with_generics(s, *opaque_ty_id, substitution.as_slice(interner))
+            ),
+            TyKind::Raw(raw, substitution) => {
+                let mutability = match raw {
+                    Mutability::Mut => "*mut ",
+                    Mutability::Not => "*const ",
+                };
+                write!(
+                    f,
+                    "{}{}",
+                    mutability,
+                    substitution
+                        .iter(interner)
+                        .filter_map(move |p| p.ty(interner))
+                        .next()
+                        .unwrap()
+                        .display(s)
+                )
+            }
+            TyKind::Ref(mutability, substitution) => {
+                let mutability = match mutability {
+                    Mutability::Mut => "mut ",
+                    Mutability::Not => "",
+                };
+                write!(
+                    f,
+                    "&{} {}{}",
+                    substitution.at(interner, 0).display(s),
+                    mutability,
+                    substitution.at(interner, 1).display(s)
+                )
+            }
+            TyKind::Str => write!(f, "str"),
+            TyKind::Slice(substitution) => write!(
+                f,
+                "[{}]",
+                substitution
+                    .iter(interner)
+                    .filter_map(move |p| p.ty(interner))
+                    .next()
+                    .unwrap()
+                    .display(s)
+            ),
+            TyKind::Error => write!(f, "{{error}}"),
+            TyKind::Never => write!(f, "!"),
+
+            // FIXME: write out valid types for these variants
+            TyKind::FnDef(..) => write!(f, "<fn_def>"),
+            TyKind::Closure(..) => write!(f, "<closure>"),
+            TyKind::Foreign(..) => write!(f, "<foreign>"),
+            TyKind::Generator(..) => write!(f, "<generator>"),
+            TyKind::GeneratorWitness(..) => write!(f, "<generator_witness>"),
+
+            TyKind::Array(substitution) => write!(
+                f,
+                "[{}; {}]",
+                substitution.at(interner, 0).display(s),
+                substitution.at(interner, 1).display(s),
+            ),
             TyKind::Dyn(dyn_ty) => {
                 // the lifetime needs to be outside of the bounds, so we
                 // introduce a new scope for the bounds
@@ -37,7 +155,6 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
             TyKind::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
             TyKind::InferenceVar(_, _) => write!(f, "_"),
             TyKind::Alias(alias_ty) => alias_ty.fmt(s, f),
-            TyKind::Apply(apply_ty) => apply_ty.fmt(s, f),
             TyKind::Function(func) => func.fmt(s, f),
             TyKind::Placeholder(_) => write!(f, "<placeholder>"),
         }
@@ -113,122 +230,6 @@ impl<I: Interner> RenderAsRust<I> for FnPointer<I> {
                 .format(", "),
             parameters[parameters.len() - 1].display(s),
         )
-    }
-}
-
-impl<I: Interner> RenderAsRust<I> for ApplicationTy<I> {
-    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        let interner = s.db().interner();
-        match self.name {
-            TypeName::Adt(sid) => {
-                write!(f, "{}", sid.display(s))?;
-                let parameters = self.substitution.as_slice(interner);
-                let parameters = parameters.iter().map(|param| param.display(s));
-                write_joined_non_empty_list!(f, "<{}>", parameters, ", ")?;
-            }
-            TypeName::AssociatedType(assoc_type_id) => {
-                // (Iterator::Item)(x)
-                // should be written in Rust as <X as Iterator>::Item
-                let datum = s.db().associated_ty_data(assoc_type_id);
-                assert!(
-                    self.len_type_parameters(interner) >= 1,
-                    "AssociatedType should have at least 1 parameter"
-                );
-                write!(
-                    f,
-                    "<{} as {}>::{}",
-                    self.first_type_parameter(interner).unwrap().display(s),
-                    datum.trait_id.display(s),
-                    datum.id.display(s),
-                )?;
-                let params = self.substitution.as_slice(interner);
-                write_joined_non_empty_list!(
-                    f,
-                    "<{}>",
-                    params[1..].iter().map(|ty| ty.display(s)),
-                    ","
-                )?;
-            }
-            TypeName::Scalar(scalar) => write!(f, "{}", scalar.display(s))?,
-            TypeName::Tuple(arity) => {
-                write!(
-                    f,
-                    "({}{})",
-                    self.substitution
-                        .as_slice(interner)
-                        .iter()
-                        .map(|p| p.display(s))
-                        .format(", "),
-                    if arity == 1 {
-                        // need trailing single comma
-                        ","
-                    } else {
-                        ""
-                    }
-                )?
-            }
-            TypeName::OpaqueType(opaque_ty_id) => {
-                write!(
-                    f,
-                    "{}",
-                    display_type_with_generics(
-                        s,
-                        opaque_ty_id,
-                        self.substitution.as_slice(interner)
-                    )
-                )?;
-            }
-            TypeName::Raw(raw) => {
-                let mutability = match raw {
-                    Mutability::Mut => "*mut ",
-                    Mutability::Not => "*const ",
-                };
-                write!(
-                    f,
-                    "{}{}",
-                    mutability,
-                    self.first_type_parameter(interner).unwrap().display(s)
-                )?
-            }
-            TypeName::Ref(mutability) => {
-                let mutability = match mutability {
-                    Mutability::Mut => "mut ",
-                    Mutability::Not => "",
-                };
-                write!(
-                    f,
-                    "&{} {}{}",
-                    self.substitution.at(interner, 0).display(s),
-                    mutability,
-                    self.substitution.at(interner, 1).display(s)
-                )?;
-            }
-            TypeName::Str => write!(f, "str")?,
-            TypeName::Slice => {
-                write!(
-                    f,
-                    "[{}]",
-                    self.first_type_parameter(interner).unwrap().display(s)
-                )?;
-            }
-            TypeName::Error => write!(f, "{{error}}")?,
-            TypeName::Never => write!(f, "!")?,
-
-            // FIXME: write out valid types for these variants
-            TypeName::FnDef(_) => write!(f, "<fn_def>")?,
-            TypeName::Closure(..) => write!(f, "<closure>")?,
-            TypeName::Foreign(_) => write!(f, "<foreign>")?,
-            TypeName::Generator(..) => write!(f, "<generator>")?,
-            TypeName::GeneratorWitness(..) => write!(f, "<generator_witness>")?,
-
-            TypeName::Array => write!(
-                f,
-                "[{}; {}]",
-                self.first_type_parameter(interner).unwrap().display(s),
-                self.substitution.at(interner, 1).display(s)
-            )?,
-        }
-        Ok(())
     }
 }
 

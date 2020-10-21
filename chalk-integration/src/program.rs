@@ -3,10 +3,10 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::debug::Angle;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, Binders,
-    CanonicalVarKinds, ClosureId, FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals,
-    ImplId, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, Substitution, TraitId, Ty, TyKind,
+    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
+    FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy,
+    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
+    Substitution, TraitId, Ty, TyKind,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -223,7 +223,7 @@ impl tls::DebugContext for Program {
 
     fn debug_ty(&self, ty: &Ty<ChalkIr>, fmt: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let interner = self.interner();
-        write!(fmt, "{:?}", ty.data(interner))
+        write!(fmt, "{:?}", ty.kind(interner).debug(interner))
     }
 
     fn debug_lifetime(
@@ -314,15 +314,6 @@ impl tls::DebugContext for Program {
     ) -> Result<(), fmt::Error> {
         let interner = self.interner();
         write!(fmt, "{:?}", clauses.as_slice(interner))
-    }
-
-    fn debug_application_ty(
-        &self,
-        application_ty: &ApplicationTy<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Result<(), fmt::Error> {
-        let interner = self.interner();
-        write!(fmt, "{:?}", application_ty.debug(interner))
     }
 
     fn debug_substitution(
@@ -445,14 +436,18 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn impl_provided_for(
         &self,
         auto_trait_id: TraitId<ChalkIr>,
-        app_ty: &ApplicationTy<ChalkIr>,
+        impl_ty: &TyKind<ChalkIr>,
     ) -> bool {
         let interner = self.interner();
 
-        // an iterator containing the `ApplicationTy`s which have an impl for the trait `auto_trait_id`.
-        let mut impl_app_tys = self.impl_data.values().filter_map(|impl_datum| {
+        // we don't compare actual substitutions as
+        // - given a `struct S<T>`; an implementation for `S<A>` should suppress an auto impl for `S<B>`, and
+        // - an implementation for `[A]` should suppress an auto impl for `[B]`, and
+        // - an implementation for `(A, B, C)` should suppress an auto impl for `(D, E, F)`
+        // this may change later
+        self.impl_data.values().any(|impl_datum| {
             if impl_datum.trait_id() != auto_trait_id {
-                return None;
+                return false;
             }
 
             let ty = impl_datum
@@ -460,18 +455,29 @@ impl RustIrDatabase<ChalkIr> for Program {
                 .skip_binders()
                 .trait_ref
                 .self_type_parameter(interner);
-            match ty.kind(interner) {
-                TyKind::Apply(app) => Some(app.clone()),
-                _ => None,
+            match (impl_ty, ty.kind(interner)) {
+                (TyKind::Adt(id_a, _), TyKind::Adt(id_b, _)) => id_a == id_b,
+                (TyKind::AssociatedType(id_a, _), TyKind::AssociatedType(id_b, _)) => id_a == id_b,
+                (TyKind::Scalar(scalar_a), TyKind::Scalar(scalar_b)) => scalar_a == scalar_b,
+                (TyKind::Str, TyKind::Str) => true,
+                (TyKind::Tuple(arity_a, _), TyKind::Tuple(arity_b, _)) => arity_a == arity_b,
+                (TyKind::OpaqueType(id_a, _), TyKind::OpaqueType(id_b, _)) => id_a == id_b,
+                (TyKind::Slice(_), TyKind::Slice(_)) => true,
+                (TyKind::FnDef(id_a, _), TyKind::FnDef(id_b, _)) => id_a == id_b,
+                (TyKind::Ref(id_a, _), TyKind::Ref(id_b, _)) => id_a == id_b,
+                (TyKind::Raw(id_a, _), TyKind::Raw(id_b, _)) => id_a == id_b,
+                (TyKind::Never, TyKind::Never) => true,
+                (TyKind::Array(_), TyKind::Array(_)) => true,
+                (TyKind::Closure(id_a, _), TyKind::Closure(id_b, _)) => id_a == id_b,
+                (TyKind::Generator(id_a, _), TyKind::Generator(id_b, _)) => id_a == id_b,
+                (TyKind::GeneratorWitness(id_a, _), TyKind::GeneratorWitness(id_b, _)) => {
+                    id_a == id_b
+                }
+                (TyKind::Foreign(id_a, _), TyKind::Foreign(id_b, _)) => id_a == id_b,
+                (TyKind::Error, TyKind::Error) => true,
+                (_, _) => false,
             }
-        });
-
-        // we only compare the `TypeName`s as
-        // - given a `struct S<T>`; an implementation for `S<A>` should suppress an auto impl for `S<B>`, and
-        // - an implementation for `[A]` should suppress an auto impl for `[B]`, and
-        // - an implementation for `(A, B, C)` should suppress an auto impl for `(D, E, F)`
-        // this may change later
-        impl_app_tys.any(|x| x.name == app_ty.name)
+        })
     }
 
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<ChalkIr>> {

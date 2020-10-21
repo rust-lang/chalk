@@ -1,9 +1,8 @@
 use crate::interner::ChalkIr;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKinds,
-    FnDefId, GenericArg, Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution,
-    TraitId, Ty, VariableKinds,
+    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, FnDefId, GenericArg,
+    Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution, TraitId, Ty, VariableKinds,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -121,12 +120,6 @@ pub trait DebugContext {
     fn debug_program_clauses(
         &self,
         clauses: &ProgramClauses<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Result<(), fmt::Error>;
-
-    fn debug_application_ty(
-        &self,
-        application_ty: &ApplicationTy<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

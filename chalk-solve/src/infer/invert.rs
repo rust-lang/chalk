@@ -46,7 +46,7 @@ impl<I: Interner> InferenceTable<I> {
     /// An additional complication arises around free universal
     /// variables.  Consider a query like `not { !0 = !1 }`, where
     /// `!0` and `!1` are placeholders for universally quantified
-    /// types (i.e., `TypeName::Placeholder`). If we just tried to
+    /// types (i.e., `TyKind::Placeholder`). If we just tried to
     /// prove `!0 = !1`, we would get false, because those types
     /// cannot be unified -- this would then allow us to conclude that
     /// `not { !0 = !1 }`, i.e., `forall<X, Y> { not { X = Y } }`, but

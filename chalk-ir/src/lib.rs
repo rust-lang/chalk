@@ -211,67 +211,6 @@ pub enum Mutability {
     Not,
 }
 
-/// Different kinds of Rust types.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Fold, Visit)]
-pub enum TypeName<I: Interner> {
-    /// Abstract data types, i.e., structs, unions, or enumerations.
-    /// For example, a type like `Vec<T>`.
-    Adt(AdtId<I>),
-
-    /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(AssocTypeId<I>),
-
-    /// a scalar type like `bool` or `u32`
-    Scalar(Scalar),
-
-    /// a tuple of the given arity
-    Tuple(usize),
-
-    /// an array type like `[T; N]`
-    Array,
-
-    /// a slice type like `[T]`
-    Slice,
-
-    /// a raw pointer type like `*const T` or `*mut T`
-    Raw(Mutability),
-
-    /// a reference type like `&T` or `&mut T`
-    Ref(Mutability),
-
-    /// a placeholder for opaque types like `impl Trait`
-    OpaqueType(OpaqueTyId<I>),
-
-    /// a function definition
-    FnDef(FnDefId<I>),
-
-    /// the string primitive type
-    Str,
-
-    /// the never type `!`
-    Never,
-
-    /// A closure.
-    Closure(ClosureId<I>),
-
-    /// A generator.
-    Generator(GeneratorId<I>),
-
-    /// A generator witness.
-    GeneratorWitness(GeneratorId<I>),
-
-    /// foreign types
-    Foreign(ForeignDefId<I>),
-
-    /// This can be used to represent an error, e.g. during name resolution of a type.
-    /// Chalk itself will not produce this, just pass it through when given.
-    Error,
-}
-
-impl<I: Interner> HasInterner for TypeName<I> {
-    type Interner = I;
-}
-
 /// An universe index is how a universally quantified parameter is
 /// represented when it's binder is moved into the environment.
 /// An example chain of transformations would be:
@@ -473,14 +412,7 @@ impl<I: Interner> Ty<I> {
     /// Returns true if this is an `IntTy` or `UintTy`.
     pub fn is_integer(&self, interner: &I) -> bool {
         match self.kind(interner) {
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Scalar(Scalar::Int(_)),
-                ..
-            })
-            | TyKind::Apply(ApplicationTy {
-                name: TypeName::Scalar(Scalar::Uint(_)),
-                ..
-            }) => true,
+            TyKind::Scalar(Scalar::Int(_)) | TyKind::Scalar(Scalar::Uint(_)) => true,
             _ => false,
         }
     }
@@ -488,10 +420,7 @@ impl<I: Interner> Ty<I> {
     /// Returns true if this is a `FloatTy`.
     pub fn is_float(&self, interner: &I) -> bool {
         match self.kind(interner) {
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Scalar(Scalar::Float(_)),
-                ..
-            }) => true,
+            TyKind::Scalar(Scalar::Float(_)) => true,
             _ => false,
         }
     }
@@ -499,10 +428,7 @@ impl<I: Interner> Ty<I> {
     /// Returns `Some(adt_id)` if this is an ADT, `None` otherwise
     pub fn adt_id(&self, interner: &I) -> Option<AdtId<I>> {
         match self.kind(interner) {
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Adt(adt_id),
-                ..
-            }) => Some(*adt_id),
+            TyKind::Adt(adt_id, _) => Some(*adt_id),
             _ => None,
         }
     }
@@ -525,12 +451,58 @@ pub struct TyData<I: Interner> {
 /// Type data, which holds the actual type information.
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub enum TyKind<I: Interner> {
-    /// An "application" type is one that applies the set of type
-    /// arguments to some base type. For example, `Vec<u32>` would be
-    /// "applying" the parameters `[u32]` to the code type `Vec`.
-    /// This type is also used for base types like `u32` (which just apply
-    /// an empty list).
-    Apply(ApplicationTy<I>),
+    /// Abstract data types, i.e., structs, unions, or enumerations.
+    /// For example, a type like `Vec<T>`.
+    Adt(AdtId<I>, Substitution<I>),
+
+    /// an associated type like `Iterator::Item`; see `AssociatedType` for details
+    AssociatedType(AssocTypeId<I>, Substitution<I>),
+
+    /// a scalar type like `bool` or `u32`
+    Scalar(Scalar),
+
+    /// a tuple of the given arity
+    Tuple(usize, Substitution<I>),
+
+    /// an array type like `[T; N]`
+    Array(Substitution<I>),
+
+    /// a slice type like `[T]`
+    Slice(Substitution<I>),
+
+    /// a raw pointer type like `*const T` or `*mut T`
+    Raw(Mutability, Substitution<I>),
+
+    /// a reference type like `&T` or `&mut T`
+    Ref(Mutability, Substitution<I>),
+
+    /// a placeholder for opaque types like `impl Trait`
+    OpaqueType(OpaqueTyId<I>, Substitution<I>),
+
+    /// a function definition
+    FnDef(FnDefId<I>, Substitution<I>),
+
+    /// the string primitive type
+    Str,
+
+    /// the never type `!`
+    Never,
+
+    /// A closure.
+    Closure(ClosureId<I>, Substitution<I>),
+
+    /// A generator.
+    Generator(GeneratorId<I>, Substitution<I>),
+
+    /// A generator witness.
+    GeneratorWitness(GeneratorId<I>, Substitution<I>),
+
+    /// foreign types
+    Foreign(ForeignDefId<I>, Substitution<I>),
+
+    /// This can be used to represent an error, e.g. during name resolution of a type.
+    /// Chalk itself will not produce this, just pass it through when given.
+    Error,
 
     /// instantiated from a universally quantified type, e.g., from
     /// `forall<T> { .. }`. Stands in as a representative of "some
@@ -1137,43 +1109,6 @@ impl PlaceholderIndex {
             value: ConstValue::Placeholder(self),
         }
         .intern(interner)
-    }
-}
-
-/// Normal Rust types, containing the type name and zero or more generic arguments.
-/// For example, in `Vec<u32>` those would be `Vec` and `[u32]` respectively.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
-pub struct ApplicationTy<I: Interner> {
-    /// The type name.
-    pub name: TypeName<I>,
-    /// The substitution containing the generic arguments.
-    pub substitution: Substitution<I>,
-}
-
-impl<I: Interner> Copy for ApplicationTy<I> where I::InternedSubstitution: Copy {}
-
-impl<I: Interner> ApplicationTy<I> {
-    /// Create an interned type from this application type.
-    pub fn intern(self, interner: &I) -> Ty<I> {
-        Ty::new(interner, self)
-    }
-
-    /// Gets an iterator of all type parameters.
-    pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
-        self.substitution
-            .iter(interner)
-            .filter_map(move |p| p.ty(interner))
-            .cloned()
-    }
-
-    /// Gets the first type parameter.
-    pub fn first_type_parameter(&self, interner: &I) -> Option<Ty<I>> {
-        self.type_parameters(interner).next()
-    }
-
-    /// Gets the number of type parameters.
-    pub fn len_type_parameters(&self, interner: &I) -> usize {
-        self.type_parameters(interner).count()
     }
 }
 
@@ -2477,6 +2412,13 @@ impl<I: Interner> Substitution<I> {
                 DebruijnIndex::INNERMOST,
             )
             .unwrap()
+    }
+
+    /// Gets an iterator of all type parameters.
+    pub fn type_parameters<'a>(&'a self, interner: &'a I) -> impl Iterator<Item = Ty<I>> + 'a {
+        self.iter(interner)
+            .filter_map(move |p| p.ty(interner))
+            .cloned()
     }
 }
 

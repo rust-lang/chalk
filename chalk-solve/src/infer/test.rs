@@ -3,7 +3,7 @@
 use super::unify::UnificationResult;
 use super::*;
 use chalk_integration::interner::ChalkIr;
-use chalk_integration::{arg, lifetime, ty, ty_name};
+use chalk_integration::{arg, lifetime, ty};
 
 #[test]
 fn universe_error() {

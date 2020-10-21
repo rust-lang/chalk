@@ -73,7 +73,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chalk_integration::{arg, ty, ty_name};
+    use chalk_integration::{arg, ty};
 
     #[test]
     fn one_type() {
