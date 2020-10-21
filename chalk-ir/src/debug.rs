@@ -222,16 +222,22 @@ impl<I: Interner> Debug for TypeName<I> {
 
 impl<I: Interner> Debug for TyData<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        self.kind.fmt(fmt)
+    }
+}
+
+impl<I: Interner> Debug for TyKind<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            TyData::BoundVar(db) => write!(fmt, "{:?}", db),
-            TyData::Dyn(clauses) => write!(fmt, "{:?}", clauses),
-            TyData::InferenceVar(var, TyKind::General) => write!(fmt, "{:?}", var),
-            TyData::InferenceVar(var, TyKind::Integer) => write!(fmt, "{:?}i", var),
-            TyData::InferenceVar(var, TyKind::Float) => write!(fmt, "{:?}f", var),
-            TyData::Apply(apply) => write!(fmt, "{:?}", apply),
-            TyData::Alias(alias) => write!(fmt, "{:?}", alias),
-            TyData::Placeholder(index) => write!(fmt, "{:?}", index),
-            TyData::Function(function) => write!(fmt, "{:?}", function),
+            TyKind::BoundVar(db) => write!(fmt, "{:?}", db),
+            TyKind::Dyn(clauses) => write!(fmt, "{:?}", clauses),
+            TyKind::InferenceVar(var, TyVariableKind::General) => write!(fmt, "{:?}", var),
+            TyKind::InferenceVar(var, TyVariableKind::Integer) => write!(fmt, "{:?}i", var),
+            TyKind::InferenceVar(var, TyVariableKind::Float) => write!(fmt, "{:?}f", var),
+            TyKind::Apply(apply) => write!(fmt, "{:?}", apply),
+            TyKind::Alias(alias) => write!(fmt, "{:?}", alias),
+            TyKind::Placeholder(index) => write!(fmt, "{:?}", index),
+            TyKind::Function(function) => write!(fmt, "{:?}", function),
         }
     }
 }
@@ -332,9 +338,9 @@ impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
                 write!(fmt, ", ")?;
             }
             match binder {
-                VariableKind::Ty(TyKind::General) => write!(fmt, "type")?,
-                VariableKind::Ty(TyKind::Integer) => write!(fmt, "integer type")?,
-                VariableKind::Ty(TyKind::Float) => write!(fmt, "float type")?,
+                VariableKind::Ty(TyVariableKind::General) => write!(fmt, "type")?,
+                VariableKind::Ty(TyVariableKind::Integer) => write!(fmt, "integer type")?,
+                VariableKind::Ty(TyVariableKind::Float) => write!(fmt, "float type")?,
                 VariableKind::Lifetime => write!(fmt, "lifetime")?,
                 VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty)?,
             }
@@ -857,9 +863,9 @@ impl<I: Interner> Debug for GenericArgData<I> {
 impl<I: Interner> Debug for VariableKind<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
-            VariableKind::Ty(TyKind::General) => write!(fmt, "type"),
-            VariableKind::Ty(TyKind::Integer) => write!(fmt, "integer type"),
-            VariableKind::Ty(TyKind::Float) => write!(fmt, "float type"),
+            VariableKind::Ty(TyVariableKind::General) => write!(fmt, "type"),
+            VariableKind::Ty(TyVariableKind::Integer) => write!(fmt, "integer type"),
+            VariableKind::Ty(TyVariableKind::Float) => write!(fmt, "float type"),
             VariableKind::Lifetime => write!(fmt, "lifetime"),
             VariableKind::Const(ty) => write!(fmt, "const: {:?}", ty),
         }
@@ -870,9 +876,13 @@ impl<I: Interner, T: Debug> Debug for WithKind<I, T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let value = self.skip_kind();
         match &self.kind {
-            VariableKind::Ty(TyKind::General) => write!(fmt, "{:?} with kind type", value),
-            VariableKind::Ty(TyKind::Integer) => write!(fmt, "{:?} with kind integer type", value),
-            VariableKind::Ty(TyKind::Float) => write!(fmt, "{:?} with kind float type", value),
+            VariableKind::Ty(TyVariableKind::General) => write!(fmt, "{:?} with kind type", value),
+            VariableKind::Ty(TyVariableKind::Integer) => {
+                write!(fmt, "{:?} with kind integer type", value)
+            }
+            VariableKind::Ty(TyVariableKind::Float) => {
+                write!(fmt, "{:?} with kind float type", value)
+            }
             VariableKind::Lifetime => write!(fmt, "{:?} with kind lifetime", value),
             VariableKind::Const(ty) => write!(fmt, "{:?} with kind {:?}", value, ty),
         }

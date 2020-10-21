@@ -23,7 +23,7 @@ pub type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
 pub type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 pub type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
-pub type OpaqueTyKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
+pub type OpaqueTyVariableKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
@@ -45,7 +45,7 @@ pub struct Env<'k> {
     pub trait_ids: &'k TraitIds,
     pub trait_kinds: &'k TraitKinds,
     pub opaque_ty_ids: &'k OpaqueTyIds,
-    pub opaque_ty_kinds: &'k OpaqueTyKinds,
+    pub opaque_ty_kinds: &'k OpaqueTyVariableKinds,
     pub associated_ty_lookups: &'k AssociatedTyLookups,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,
@@ -105,7 +105,7 @@ impl Env<'_> {
                     actual: 0,
                 })
             } else {
-                Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                Ok(chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                     name: type_name,
                     substitution: chalk_ir::Substitution::empty(interner),
                 })
@@ -118,7 +118,7 @@ impl Env<'_> {
             Ok(TypeLookup::Parameter(p)) => {
                 let b = p.skip_kind();
                 Ok(match &p.kind {
-                    chalk_ir::VariableKind::Ty(_) => chalk_ir::TyData::BoundVar(*b)
+                    chalk_ir::VariableKind::Ty(_) => chalk_ir::TyKind::BoundVar(*b)
                         .intern(interner)
                         .cast(interner),
                     chalk_ir::VariableKind::Lifetime => chalk_ir::LifetimeData::BoundVar(*b)
@@ -137,7 +137,7 @@ impl Env<'_> {
             Ok(TypeLookup::Generator(id)) => {
                 apply(self.generator_kind(id), chalk_ir::TypeName::Generator(id))
             }
-            Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyData::Alias(chalk_ir::AliasTy::Opaque(
+            Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Opaque(
                 chalk_ir::OpaqueTy {
                     opaque_ty_id: id,
                     substitution: chalk_ir::Substitution::empty(interner),
@@ -145,7 +145,7 @@ impl Env<'_> {
             ))
             .intern(interner)
             .cast(interner)),
-            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Foreign(id),
                 substitution: chalk_ir::Substitution::empty(interner),
             })

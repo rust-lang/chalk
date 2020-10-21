@@ -130,10 +130,10 @@ where
         false
     }
 
-    /// Invoked for `TyData::BoundVar` instances that are not bound
+    /// Invoked for `TyKind::BoundVar` instances that are not bound
     /// within the type being folded over:
     ///
-    /// - `depth` is the depth of the `TyData::BoundVar`; this has
+    /// - `depth` is the depth of the `TyKind::BoundVar`; this has
     ///   been adjusted to account for binders in scope.
     /// - `binders` is the number of binders in scope.
     ///
@@ -151,7 +151,7 @@ where
             )
         } else {
             let bound_var = bound_var.shifted_in_from(outer_binder);
-            Ok(TyData::<TI>::BoundVar(bound_var).intern(self.target_interner()))
+            Ok(TyKind::<TI>::BoundVar(bound_var).intern(self.target_interner()))
         }
     }
 
@@ -270,7 +270,7 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
-        kind: TyKind,
+        kind: TyVariableKind,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<TI>> {
         if self.forbid_inference_vars() {
@@ -407,8 +407,8 @@ where
         TI: 'i,
     {
         let interner = folder.interner();
-        match self.data(interner) {
-            TyData::BoundVar(bound_var) => {
+        match self.kind(interner) {
+            TyKind::BoundVar(bound_var) => {
                 if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
                     // This variable was bound outside of the binders
                     // that we have traversed during folding;
@@ -419,18 +419,18 @@ where
                     // This variable was bound within the binders that
                     // we folded over, so just return a bound
                     // variable.
-                    Ok(TyData::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
+                    Ok(TyKind::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
                 }
             }
-            TyData::Dyn(clauses) => Ok(TyData::Dyn(clauses.fold_with(folder, outer_binder)?)
+            TyKind::Dyn(clauses) => Ok(TyKind::Dyn(clauses.fold_with(folder, outer_binder)?)
                 .intern(folder.target_interner())),
-            TyData::InferenceVar(var, kind) => folder.fold_inference_ty(*var, *kind, outer_binder),
-            TyData::Apply(apply) => Ok(TyData::Apply(apply.fold_with(folder, outer_binder)?)
+            TyKind::InferenceVar(var, kind) => folder.fold_inference_ty(*var, *kind, outer_binder),
+            TyKind::Apply(apply) => Ok(TyKind::Apply(apply.fold_with(folder, outer_binder)?)
                 .intern(folder.target_interner())),
-            TyData::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, outer_binder)?),
-            TyData::Alias(proj) => Ok(TyData::Alias(proj.fold_with(folder, outer_binder)?)
+            TyKind::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, outer_binder)?),
+            TyKind::Alias(proj) => Ok(TyKind::Alias(proj.fold_with(folder, outer_binder)?)
                 .intern(folder.target_interner())),
-            TyData::Function(fun) => Ok(TyData::Function(fun.fold_with(folder, outer_binder)?)
+            TyKind::Function(fun) => Ok(TyKind::Function(fun.fold_with(folder, outer_binder)?)
                 .intern(folder.target_interner())),
         }
     }

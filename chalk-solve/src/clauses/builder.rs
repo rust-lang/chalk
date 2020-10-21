@@ -166,7 +166,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_bound_ty(&mut self, op: impl FnOnce(&mut Self, Ty<I>)) {
         let interner = self.interner();
         let binders = Binders::new(
-            VariableKinds::from1(interner, VariableKind::Ty(TyKind::General)),
+            VariableKinds::from1(interner, VariableKind::Ty(TyVariableKind::General)),
             PhantomData::<I>,
         );
         self.push_binders(&binders, |this, PhantomData| {

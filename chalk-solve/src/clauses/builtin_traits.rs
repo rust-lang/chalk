@@ -23,7 +23,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
 
     builder.push_binders(&generalized, |builder, trait_ref| {
         let self_ty = trait_ref.self_type_parameter(db.interner());
-        let ty = self_ty.data(db.interner());
+        let ty = self_ty.kind(db.interner());
 
         match well_known {
             WellKnownTrait::Sized => {

@@ -4,7 +4,7 @@ mod program_lowerer;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::{
     self, BoundVar, ClausePriority, DebruijnIndex, ImplId, QuantifiedWhereClauses, Substitution,
-    TyKind,
+    TyVariableKind,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{self, IntoWhereClauses};
@@ -102,7 +102,7 @@ lower_param_map!(Clause, None);
 lower_param_map!(
     TraitDefn,
     Some(chalk_ir::WithKind::new(
-        chalk_ir::VariableKind::Ty(TyKind::General),
+        chalk_ir::VariableKind::Ty(TyVariableKind::General),
         Atom::from(SELF),
     ))
 );
@@ -120,11 +120,18 @@ impl Lower for VariableKind {
     type Lowered = chalk_ir::WithKind<ChalkIr, Ident>;
     fn lower(&self) -> Self::Lowered {
         let (kind, n) = match self {
-            VariableKind::Ty(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::General), n),
-            VariableKind::IntegerTy(n) => {
-                (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Integer), n)
-            }
-            VariableKind::FloatTy(n) => (chalk_ir::VariableKind::Ty(chalk_ir::TyKind::Float), n),
+            VariableKind::Ty(n) => (
+                chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::General),
+                n,
+            ),
+            VariableKind::IntegerTy(n) => (
+                chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Integer),
+                n,
+            ),
+            VariableKind::FloatTy(n) => (
+                chalk_ir::VariableKind::Ty(chalk_ir::TyVariableKind::Float),
+                n,
+            ),
             VariableKind::Lifetime(n) => (chalk_ir::VariableKind::Lifetime, n),
             VariableKind::Const(ref n) => (chalk_ir::VariableKind::Const(get_type_of_u32()), n),
         };
@@ -668,11 +675,11 @@ impl LowerWithEnv for Ty {
             Ty::Dyn {
                 ref bounds,
                 ref lifetime,
-            } => chalk_ir::TyData::Dyn(chalk_ir::DynTy {
+            } => chalk_ir::TyKind::Dyn(chalk_ir::DynTy {
                 bounds: env.in_binders(
                     // FIXME: Figure out a proper name for this type parameter
                     Some(chalk_ir::WithKind::new(
-                        chalk_ir::VariableKind::Ty(TyKind::General),
+                        chalk_ir::VariableKind::Ty(TyVariableKind::General),
                         Atom::from(FIXME_SELF),
                     )),
                     |env| {
@@ -681,7 +688,7 @@ impl LowerWithEnv for Ty {
                             bounds.lower(env)?.iter().flat_map(|qil| {
                                 qil.into_where_clauses(
                                     interner,
-                                    chalk_ir::TyData::BoundVar(BoundVar::new(
+                                    chalk_ir::TyKind::BoundVar(BoundVar::new(
                                         DebruijnIndex::INNERMOST,
                                         0,
                                     ))
@@ -745,7 +752,7 @@ impl LowerWithEnv for Ty {
                         })?;
                     }
                 }
-                chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+                chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                     name: apply_name,
                     substitution,
                 })
@@ -753,7 +760,7 @@ impl LowerWithEnv for Ty {
             }
 
             Ty::Projection { ref proj } => {
-                chalk_ir::TyData::Alias(chalk_ir::AliasTy::Projection(proj.lower(env)?))
+                chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Projection(proj.lower(env)?))
                     .intern(interner)
             }
 
@@ -776,9 +783,9 @@ impl LowerWithEnv for Ty {
                     substitution: Substitution::from_iter(interner, lowered_tys),
                     sig: sig.lower()?,
                 };
-                chalk_ir::TyData::Function(function).intern(interner)
+                chalk_ir::TyKind::Function(function).intern(interner)
             }
-            Ty::Tuple { ref types } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Tuple { ref types } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Tuple(types.len()),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
@@ -787,13 +794,13 @@ impl LowerWithEnv for Ty {
             })
             .intern(interner),
 
-            Ty::Scalar { ty } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Scalar { ty } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Scalar(ty.lower()),
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner),
 
-            Ty::Array { ty, len } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Array { ty, len } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Array,
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
@@ -805,7 +812,7 @@ impl LowerWithEnv for Ty {
             })
             .intern(interner),
 
-            Ty::Slice { ty } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Slice { ty } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Slice,
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
@@ -814,7 +821,7 @@ impl LowerWithEnv for Ty {
             })
             .intern(interner),
 
-            Ty::Raw { mutability, ty } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Raw { mutability, ty } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Raw(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_fallible(
                     interner,
@@ -827,7 +834,7 @@ impl LowerWithEnv for Ty {
                 mutability,
                 lifetime,
                 ty,
-            } => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Ref(mutability.lower()),
                 substitution: chalk_ir::Substitution::from_iter(
                     interner,
@@ -839,13 +846,13 @@ impl LowerWithEnv for Ty {
             })
             .intern(interner),
 
-            Ty::Str => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Str => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Str,
                 substitution: chalk_ir::Substitution::empty(interner),
             })
             .intern(interner),
 
-            Ty::Never => chalk_ir::TyData::Apply(chalk_ir::ApplicationTy {
+            Ty::Never => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
                 name: chalk_ir::TypeName::Never,
                 substitution: chalk_ir::Substitution::empty(interner),
             })

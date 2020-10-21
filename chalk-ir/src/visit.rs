@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use crate::{
     BoundVar, Const, ConstValue, DebruijnIndex, DomainGoal, Goal, InferenceVar, Interner, Lifetime,
-    LifetimeData, PlaceholderIndex, ProgramClause, Ty, TyData, WhereClause,
+    LifetimeData, PlaceholderIndex, ProgramClause, Ty, TyKind, WhereClause,
 };
 
 mod binder_impls;
@@ -272,20 +272,20 @@ where
         I: 'i,
     {
         let interner = visitor.interner();
-        match self.data(interner) {
-            TyData::BoundVar(bound_var) => {
+        match self.kind(interner) {
+            TyKind::BoundVar(bound_var) => {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
                     R::new()
                 }
             }
-            TyData::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
-            TyData::InferenceVar(var, _) => visitor.visit_inference_var(*var, outer_binder),
-            TyData::Apply(apply) => apply.visit_with(visitor, outer_binder),
-            TyData::Placeholder(ui) => visitor.visit_free_placeholder(*ui, outer_binder),
-            TyData::Alias(proj) => proj.visit_with(visitor, outer_binder),
-            TyData::Function(fun) => fun.visit_with(visitor, outer_binder),
+            TyKind::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
+            TyKind::InferenceVar(var, _) => visitor.visit_inference_var(*var, outer_binder),
+            TyKind::Apply(apply) => apply.visit_with(visitor, outer_binder),
+            TyKind::Placeholder(ui) => visitor.visit_free_placeholder(*ui, outer_binder),
+            TyKind::Alias(proj) => proj.visit_with(visitor, outer_binder),
+            TyKind::Function(fun) => fun.visit_with(visitor, outer_binder),
         }
     }
 }

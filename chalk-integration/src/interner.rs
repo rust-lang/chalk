@@ -4,11 +4,11 @@ use chalk_ir::{
     AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData,
     Constraint, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
-    SeparatorTraitRef, Substitution, TraitId, Ty, VariableKind, VariableKinds,
+    SeparatorTraitRef, Substitution, TraitId, Ty, TyData, VariableKind, VariableKinds,
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
-    QuantifiedWhereClause, TyData,
+    QuantifiedWhereClause,
 };
 use std::fmt;
 use std::fmt::Debug;

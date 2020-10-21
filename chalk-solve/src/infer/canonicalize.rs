@@ -154,7 +154,7 @@ where
     fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
-        kind: TyKind,
+        kind: TyVariableKind,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>> {
         let interner = self.interner;
@@ -176,7 +176,7 @@ where
 
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!(position=?bound_var, "not yet unified");
-                Ok(TyData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
+                Ok(TyKind::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
             }
         }
     }

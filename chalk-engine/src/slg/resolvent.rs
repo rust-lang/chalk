@@ -373,7 +373,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         // "inputs" to the subgoal table. We need to extract the
         // resulting answer that the subgoal found and unify it with
         // the value from our "pending subgoal".
-        if let TyData::BoundVar(answer_depth) = answer.data(interner) {
+        if let TyKind::BoundVar(answer_depth) = answer.kind(interner) {
             if self.unify_free_answer_var(
                 interner,
                 *answer_depth,
@@ -385,39 +385,39 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
 
         // Otherwise, the answer and the selected subgoal ought to be a perfect match for
         // one another.
-        match (answer.data(interner), pending.data(interner)) {
-            (TyData::BoundVar(answer_depth), TyData::BoundVar(pending_depth)) => {
+        match (answer.kind(interner), pending.kind(interner)) {
+            (TyKind::BoundVar(answer_depth), TyKind::BoundVar(pending_depth)) => {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (TyData::Apply(answer), TyData::Apply(pending)) => Zip::zip_with(self, answer, pending),
+            (TyKind::Apply(answer), TyKind::Apply(pending)) => Zip::zip_with(self, answer, pending),
 
-            (TyData::Dyn(answer), TyData::Dyn(pending)) => Zip::zip_with(self, answer, pending),
+            (TyKind::Dyn(answer), TyKind::Dyn(pending)) => Zip::zip_with(self, answer, pending),
 
-            (TyData::Alias(answer), TyData::Alias(pending)) => Zip::zip_with(self, answer, pending),
+            (TyKind::Alias(answer), TyKind::Alias(pending)) => Zip::zip_with(self, answer, pending),
 
-            (TyData::Placeholder(answer), TyData::Placeholder(pending)) => {
+            (TyKind::Placeholder(answer), TyKind::Placeholder(pending)) => {
                 Zip::zip_with(self, answer, pending)
             }
 
-            (TyData::Function(answer), TyData::Function(pending)) => {
+            (TyKind::Function(answer), TyKind::Function(pending)) => {
                 self.outer_binder.shift_in();
                 Zip::zip_with(self, &answer.substitution, &pending.substitution)?;
                 self.outer_binder.shift_out();
                 Ok(())
             }
 
-            (TyData::InferenceVar(_, _), _) | (_, TyData::InferenceVar(_, _)) => panic!(
+            (TyKind::InferenceVar(_, _), _) | (_, TyKind::InferenceVar(_, _)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
             ),
 
-            (TyData::BoundVar(_), _)
-            | (TyData::Apply(_), _)
-            | (TyData::Dyn(_), _)
-            | (TyData::Alias(_), _)
-            | (TyData::Placeholder(_), _)
-            | (TyData::Function(_), _) => panic!(
+            (TyKind::BoundVar(_), _)
+            | (TyKind::Apply(_), _)
+            | (TyKind::Dyn(_), _)
+            | (TyKind::Alias(_), _)
+            | (TyKind::Placeholder(_), _)
+            | (TyKind::Function(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

@@ -1,6 +1,6 @@
 //! Writer logic for types.
 //!
-//! Contains the highly-recursive logic for writing `TyData` and its variants.
+//! Contains the highly-recursive logic for writing `TyKind` and its variants.
 use std::fmt::{Formatter, Result};
 
 use crate::split::Split;
@@ -12,11 +12,11 @@ use super::{
     state::InternalWriterState,
 };
 
-impl<I: Interner> RenderAsRust<I> for TyData<I> {
+impl<I: Interner> RenderAsRust<I> for TyKind<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db().interner();
         match self {
-            TyData::Dyn(dyn_ty) => {
+            TyKind::Dyn(dyn_ty) => {
                 // the lifetime needs to be outside of the bounds, so we
                 // introduce a new scope for the bounds
                 {
@@ -34,12 +34,12 @@ impl<I: Interner> RenderAsRust<I> for TyData<I> {
                 write!(f, " + {}", dyn_ty.lifetime.display(s))?;
                 Ok(())
             }
-            TyData::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
-            TyData::InferenceVar(_, _) => write!(f, "_"),
-            TyData::Alias(alias_ty) => alias_ty.fmt(s, f),
-            TyData::Apply(apply_ty) => apply_ty.fmt(s, f),
-            TyData::Function(func) => func.fmt(s, f),
-            TyData::Placeholder(_) => write!(f, "<placeholder>"),
+            TyKind::BoundVar(bound_var) => write!(f, "{}", s.display_bound_var(bound_var)),
+            TyKind::InferenceVar(_, _) => write!(f, "_"),
+            TyKind::Alias(alias_ty) => alias_ty.fmt(s, f),
+            TyKind::Apply(apply_ty) => apply_ty.fmt(s, f),
+            TyKind::Function(func) => func.fmt(s, f),
+            TyKind::Placeholder(_) => write!(f, "<placeholder>"),
         }
     }
 }
@@ -311,8 +311,8 @@ impl<I: Interner> RenderAsRust<I> for GenericArgData<I> {
 
 impl<I: Interner> RenderAsRust<I> for Ty<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        // delegate to TyData
-        self.data(s.db().interner()).fmt(s, f)
+        // delegate to TyKind
+        self.kind(s.db().interner()).fmt(s, f)
     }
 }
 

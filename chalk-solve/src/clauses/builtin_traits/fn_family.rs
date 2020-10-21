@@ -5,7 +5,7 @@ use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
     AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution,
-    TraitId, Ty, TyData, TypeName, VariableKinds,
+    TraitId, Ty, TyKind, TypeName, VariableKinds,
 };
 
 fn push_clauses<I: Interner>(
@@ -18,7 +18,7 @@ fn push_clauses<I: Interner>(
     return_type: Ty<I>,
 ) {
     let interner = db.interner();
-    let tupled = TyData::Apply(ApplicationTy {
+    let tupled = TyKind::Apply(ApplicationTy {
         name: TypeName::Tuple(arg_sub.len(interner)),
         substitution: arg_sub,
     })
@@ -95,8 +95,8 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     let interner = db.interner();
     let trait_id = db.well_known_trait_id(well_known).unwrap();
 
-    match self_ty.data(interner) {
-        TyData::Apply(apply) => match apply.name {
+    match self_ty.kind(interner) {
+        TyKind::Apply(apply) => match apply.name {
             TypeName::FnDef(fn_def_id) => {
                 let fn_def_datum = builder.db.fn_def_datum(fn_def_id);
                 if fn_def_datum.sig.safety == Safety::Safe && !fn_def_datum.sig.variadic {
@@ -140,7 +140,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             }
             _ => Ok(()),
         },
-        TyData::Function(fn_val) if fn_val.sig.safety == Safety::Safe && !fn_val.sig.variadic => {
+        TyKind::Function(fn_val) if fn_val.sig.safety == Safety::Safe && !fn_val.sig.variadic => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(VariableKinds::from_iter(interner, binders), orig_sub);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
@@ -164,7 +164,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             Ok(())
         }
         // Function traits are non-enumerable
-        TyData::InferenceVar(..) | TyData::Alias(..) => Err(Floundered),
+        TyKind::InferenceVar(..) | TyKind::Alias(..) => Err(Floundered),
         _ => Ok(()),
     }
 }

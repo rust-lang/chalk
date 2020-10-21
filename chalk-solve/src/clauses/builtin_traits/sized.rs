@@ -5,7 +5,8 @@ use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
-    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyData, TyKind, TypeName, VariableKind,
+    AdtId, ApplicationTy, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, TypeName,
+    VariableKind,
 };
 
 fn push_adt_sized_conditions<I: Interner>(
@@ -70,11 +71,11 @@ pub fn add_sized_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: &TraitRef<I>,
-    ty: &TyData<I>,
+    ty: &TyKind<I>,
     binders: &CanonicalVarKinds<I>,
 ) {
     match ty {
-        TyData::Apply(ApplicationTy { name, substitution }) => match name {
+        TyKind::Apply(ApplicationTy { name, substitution }) => match name {
             TypeName::Adt(adt_id) => {
                 push_adt_sized_conditions(db, builder, trait_ref, *adt_id, substitution)
             }
@@ -99,23 +100,22 @@ pub fn add_sized_program_clauses<I: Interner>(
             | TypeName::Error => {}
         },
 
-        TyData::Function(_)
-        | TyData::InferenceVar(_, TyKind::Float)
-        | TyData::InferenceVar(_, TyKind::Integer) => builder.push_fact(trait_ref.clone()),
+        TyKind::Function(_)
+        | TyKind::InferenceVar(_, TyVariableKind::Float)
+        | TyKind::InferenceVar(_, TyVariableKind::Integer) => builder.push_fact(trait_ref.clone()),
 
-        TyData::BoundVar(bound_var) => {
+        TyKind::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
-                VariableKind::Ty(TyKind::Integer) | VariableKind::Ty(TyKind::Float) => {
-                    builder.push_fact(trait_ref.clone())
-                }
+                VariableKind::Ty(TyVariableKind::Integer)
+                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref.clone()),
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }
 
-        TyData::InferenceVar(_, TyKind::General)
-        | TyData::Placeholder(_)
-        | TyData::Dyn(_)
-        | TyData::Alias(_) => {}
+        TyKind::InferenceVar(_, TyVariableKind::General)
+        | TyKind::Placeholder(_)
+        | TyKind::Dyn(_)
+        | TyKind::Alias(_) => {}
     }
 }

@@ -22,24 +22,24 @@ used to intern all the types, as rustc does, or it could be used to
 The purpose of the [`Interner`] trait is to give control over how
 types and other bits of chalk-ir are represented in memory. This is
 done via an "indirection" strategy. We'll explain that strategy here
-in terms of [`Ty`] and [`TyData`], the two types used to represent
+in terms of [`Ty`] and [`TyKind`], the two types used to represent
 Rust types, but the same pattern is repeated for many other things.
 
 [`Interner`]: http://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html
 [`Ty`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
-[`TyData`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyData.html
+[`TyKind`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
 
-Types are represented by a [`Ty<I>`] type and the [`TyData<I>`] enum.
+Types are represented by a [`Ty<I>`] type and the [`TyKind<I>`] enum.
 There is no *direct* connection between them. The link is rather made
 by the [`Interner`] trait, via the [`InternedTy`] associated type:
 
 [`Ty<I>`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
-[`TyData<I>`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyData.html
+[`TyKind<I>`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
 [`InternedTy`]: http://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html#associatedtype.InternedType
 
 ```rust,ignore
 struct Ty<I: Interner>(I::InternedTy);
-enum TyData<I: Interner> { .. }
+enum TyKind<I: Interner> { .. }
 ```
 
 The way this works is that the [`Interner`] trait has an associated
@@ -58,11 +58,11 @@ trait Interner {
 ```
 
 However, as a user you are not meant to use these directly. Rather,
-they are encapsulated in methods on the [`Ty`] and [`TyData`] types:
+they are encapsulated in methods on the [`Ty`] and [`TyKind`] types:
 
 ```rust,ignore
 impl<I: Interner> Ty<I> {
-  fn data(&self) -> &TyData<I> {
+  fn data(&self) -> &TyKind<I> {
     I::lookup_ty(self)
   }
 }
@@ -71,7 +71,7 @@ impl<I: Interner> Ty<I> {
 and
 
 ```rust,ignore
-impl<I: Interner> TyData<I> {
+impl<I: Interner> TyKind<I> {
   fn intern(&self, i: &I) -> Ty<I> {
     Ty(i.intern_ty(self))
   }

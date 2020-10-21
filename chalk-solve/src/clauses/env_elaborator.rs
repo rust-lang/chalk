@@ -6,7 +6,7 @@ use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
-use crate::{debug_span, TyData};
+use crate::{debug_span, TyKind};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::{DebruijnIndex, Environment};
@@ -65,20 +65,20 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     }
     #[instrument(level = "debug", skip(self, _outer_binder))]
     fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
-        match ty.data(self.interner()) {
-            TyData::Apply(application_ty) => {
+        match ty.kind(self.interner()) {
+            TyKind::Apply(application_ty) => {
                 match_type_name(&mut self.builder, self.environment, application_ty)
             }
-            TyData::Alias(alias_ty) => {
+            TyKind::Alias(alias_ty) => {
                 match_alias_ty(&mut self.builder, self.environment, alias_ty)
             }
-            TyData::Placeholder(_) => {}
+            TyKind::Placeholder(_) => {}
 
             // FIXME(#203) -- We haven't fully figured out the implied
             // bounds story around `dyn Trait` types.
-            TyData::Dyn(_) => (),
+            TyKind::Dyn(_) => (),
 
-            TyData::Function(_) | TyData::BoundVar(_) | TyData::InferenceVar(_, _) => (),
+            TyKind::Function(_) | TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => (),
         }
     }
 
