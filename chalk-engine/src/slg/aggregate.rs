@@ -319,16 +319,11 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 .map(|(&name, substitution)| TyKind::Raw(name, substitution).intern(interner))
                 .unwrap_or_else(|| self.new_ty_variable()),
             (TyKind::Never, TyKind::Never) => TyKind::Never.intern(interner),
-            (TyKind::Array(substitution_a), TyKind::Array(substitution_b)) => {
-                let substitution = Substitution::from_iter(
-                    interner,
-                    substitution_a
-                        .iter(interner)
-                        .zip(substitution_b.iter(interner))
-                        .map(|(p1, p2)| self.aggregate_generic_args(p1, p2)),
-                );
-                TyKind::Array(substitution).intern(interner)
-            }
+            (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => TyKind::Array(
+                self.aggregate_tys(ty_a, ty_b),
+                self.aggregate_consts(const_a, const_b),
+            )
+            .intern(interner),
             (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => self
                 .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
                 .map(|(&name, substitution)| TyKind::Closure(name, substitution).intern(interner))

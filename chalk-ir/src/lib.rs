@@ -465,7 +465,7 @@ pub enum TyKind<I: Interner> {
     Tuple(usize, Substitution<I>),
 
     /// an array type like `[T; N]`
-    Array(Substitution<I>),
+    Array(Ty<I>, Const<I>),
 
     /// a slice type like `[T]`
     Slice(Substitution<I>),
@@ -544,6 +544,8 @@ where
     I::InternedSubstitution: Copy,
     I::InternedVariableKinds: Copy,
     I::InternedQuantifiedWhereClauses: Copy,
+    I::InternedType: Copy,
+    I::InternedConst: Copy,
 {
 }
 

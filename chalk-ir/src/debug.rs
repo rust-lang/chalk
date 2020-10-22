@@ -224,7 +224,7 @@ impl<I: Interner> Debug for TyKind<I> {
                 substitution,
             ),
             TyKind::Never => write!(fmt, "Never"),
-            TyKind::Array(substitution) => write!(fmt, "{{array}}<{:?}>", substitution),
+            TyKind::Array(ty, const_) => write!(fmt, "[{:?}; {:?}]", ty, const_),
             TyKind::Closure(id, substitution) => {
                 write!(fmt, "{{closure:{:?}}}<{:?}>", id, substitution)
             }
@@ -526,9 +526,7 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
                 substitution.with_angle(interner),
             ),
             TyKind::Never => write!(fmt, "Never"),
-            TyKind::Array(substitution) => {
-                write!(fmt, "{{array}}{:?}", substitution.with_angle(interner))
-            }
+            TyKind::Array(ty, const_) => write!(fmt, "[{:?}; {:?}]", ty, const_),
             TyKind::Closure(id, substitution) => write!(
                 fmt,
                 "{{closure:{:?}}}{:?}",

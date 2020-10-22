@@ -65,8 +65,8 @@ where
                         TyKind::Raw(mutability_b, substitution_b),
                     ) => mutability_a == mutability_b && matches(substitution_a, substitution_b),
                     (TyKind::Never, TyKind::Never) => true,
-                    (TyKind::Array(substitution_a), TyKind::Array(substitution_b)) => {
-                        matches(substitution_a, substitution_b)
+                    (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
+                        ty_a.could_match(interner, ty_b) && const_a.could_match(interner, const_b)
                     }
                     (
                         TyKind::Closure(id_a, substitution_a),

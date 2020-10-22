@@ -467,7 +467,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                 (TyKind::Ref(id_a, _), TyKind::Ref(id_b, _)) => id_a == id_b,
                 (TyKind::Raw(id_a, _), TyKind::Raw(id_b, _)) => id_a == id_b,
                 (TyKind::Never, TyKind::Never) => true,
-                (TyKind::Array(_), TyKind::Array(_)) => true,
+                (TyKind::Array(_, _), TyKind::Array(_, _)) => true,
                 (TyKind::Closure(id_a, _), TyKind::Closure(id_b, _)) => id_a == id_b,
                 (TyKind::Generator(id_a, _), TyKind::Generator(id_b, _)) => id_a == id_b,
                 (TyKind::GeneratorWitness(id_a, _), TyKind::GeneratorWitness(id_b, _)) => {

@@ -78,7 +78,7 @@ pub fn add_sized_program_clauses<I: Interner>(
         TyKind::Tuple(arity, substitution) => {
             push_tuple_sized_conditions(db, builder, trait_ref, *arity, substitution)
         }
-        TyKind::Array(_)
+        TyKind::Array(_, _)
         | TyKind::Never
         | TyKind::Closure(_, _)
         | TyKind::FnDef(_, _)

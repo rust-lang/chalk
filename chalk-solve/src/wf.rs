@@ -7,7 +7,7 @@ use chalk_ir::{
     cast::*,
     fold::shift::Shift,
     interner::Interner,
-    visit::{Visit, Visitor},
+    visit::{Visit, VisitResult, Visitor},
     *,
 };
 use tracing::debug;
@@ -144,9 +144,10 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             TyKind::Never => {
                 push_ty();
             }
-            TyKind::Array(substitution) => {
+            TyKind::Array(ty, const_) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
+                ty.visit_with(self, outer_binder)
+                    .combine(const_.visit_with(self, outer_binder))
             }
             TyKind::Closure(_id, substitution) => {
                 push_ty();

@@ -46,7 +46,7 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
             .cloned()
             .collect(),
 
-        TyKind::Array(_) | TyKind::Str | TyKind::Never | TyKind::Scalar(_) => Vec::new(),
+        TyKind::Array(_, _) | TyKind::Str | TyKind::Never | TyKind::Scalar(_) => Vec::new(),
 
         TyKind::Generator(generator_id, substitution) => {
             let generator_datum = &db.generator_datum(*generator_id);
@@ -742,7 +742,7 @@ fn match_ty<I: Interner>(
         | TyKind::Slice(_)
         | TyKind::Raw(_, _)
         | TyKind::Ref(_, _)
-        | TyKind::Array(_)
+        | TyKind::Array(_, _)
         | TyKind::Never
         | TyKind::Closure(_, _)
         | TyKind::Foreign(_, _)

@@ -128,12 +128,7 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
             TyKind::Generator(..) => write!(f, "<generator>"),
             TyKind::GeneratorWitness(..) => write!(f, "<generator_witness>"),
 
-            TyKind::Array(substitution) => write!(
-                f,
-                "[{}; {}]",
-                substitution.at(interner, 0).display(s),
-                substitution.at(interner, 1).display(s),
-            ),
+            TyKind::Array(ty, const_) => write!(f, "[{}; {}]", ty.display(s), const_.display(s),),
             TyKind::Dyn(dyn_ty) => {
                 // the lifetime needs to be outside of the bounds, so we
                 // introduce a new scope for the bounds

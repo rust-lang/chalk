@@ -449,10 +449,9 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
             }
             (TyKind::Never, TyKind::Never) => false,
-            (TyKind::Array(substitution_a), TyKind::Array(substitution_b)) => substitution_a
-                .iter(interner)
-                .zip(substitution_b.iter(interner))
-                .any(|(new, current)| self.aggregate_generic_args(new, current)),
+            (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
+                self.aggregate_tys(ty_a, ty_b) || self.aggregate_consts(const_a, const_b)
+            }
             (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
             }

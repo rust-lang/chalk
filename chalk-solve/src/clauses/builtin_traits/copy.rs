@@ -42,14 +42,8 @@ pub fn add_copy_program_clauses<I: Interner>(
         TyKind::Tuple(arity, substitution) => {
             push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
         }
-        TyKind::Array(substitution) => {
-            let interner = db.interner();
-            needs_impl_for_tys(
-                db,
-                builder,
-                trait_ref,
-                iter::once(substitution.at(interner, 0).assert_ty_ref(interner).clone()),
-            );
+        TyKind::Array(ty, _) => {
+            needs_impl_for_tys(db, builder, trait_ref, iter::once(ty.clone()));
         }
         TyKind::FnDef(_, _) => {
             builder.push_fact(trait_ref.clone());

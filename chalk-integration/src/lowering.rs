@@ -782,14 +782,9 @@ impl LowerWithEnv for Ty {
 
             Ty::Scalar { ty } => chalk_ir::TyKind::Scalar(ty.lower()).intern(interner),
 
-            Ty::Array { ty, len } => chalk_ir::TyKind::Array(chalk_ir::Substitution::from_iter(
-                interner,
-                &[
-                    ty.lower(env)?.cast(interner),
-                    len.lower(env)?.cast(interner),
-                ],
-            ))
-            .intern(interner),
+            Ty::Array { ty, len } => {
+                chalk_ir::TyKind::Array(ty.lower(env)?, len.lower(env)?).intern(interner)
+            }
 
             Ty::Slice { ty } => chalk_ir::TyKind::Slice(chalk_ir::Substitution::from_fallible(
                 interner,

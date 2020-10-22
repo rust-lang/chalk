@@ -474,10 +474,11 @@ where
             )
             .intern(folder.target_interner()),
             TyKind::Never => TyKind::Never.intern(folder.target_interner()),
-            TyKind::Array(substitution) => {
-                TyKind::Array(substitution.fold_with(folder, outer_binder)?)
-                    .intern(folder.target_interner())
-            }
+            TyKind::Array(ty, const_) => TyKind::Array(
+                ty.fold_with(folder, outer_binder)?,
+                const_.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
             TyKind::Closure(id, substitution) => TyKind::Closure(
                 id.fold_with(folder, outer_binder)?,
                 substitution.fold_with(folder, outer_binder)?,

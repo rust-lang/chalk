@@ -304,7 +304,9 @@ where
                 substitution.visit_with(visitor, outer_binder)
             }
             TyKind::Never => R::new(),
-            TyKind::Array(substitution) => substitution.visit_with(visitor, outer_binder),
+            TyKind::Array(ty, const_) => ty
+                .visit_with(visitor, outer_binder)
+                .combine(const_.visit_with(visitor, outer_binder)),
             TyKind::Closure(_id, substitution) => substitution.visit_with(visitor, outer_binder),
             TyKind::Generator(_generator, substitution) => {
                 substitution.visit_with(visitor, outer_binder)

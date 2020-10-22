@@ -457,8 +457,9 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 Zip::zip_with(self, substitution_a, substitution_b)
             }
             (TyKind::Never, TyKind::Never) => Ok(()),
-            (TyKind::Array(substitution_a), TyKind::Array(substitution_b)) => {
-                Zip::zip_with(self, substitution_a, substitution_b)
+            (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
+                Zip::zip_with(self, ty_a, ty_b)?;
+                Zip::zip_with(self, const_a, const_b)
             }
             (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
                 Zip::zip_with(self, id_a, id_b)?;
