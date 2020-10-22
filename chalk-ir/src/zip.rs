@@ -215,11 +215,16 @@ eq_zip!(I => AdtId<I>);
 eq_zip!(I => TraitId<I>);
 eq_zip!(I => AssocTypeId<I>);
 eq_zip!(I => OpaqueTyId<I>);
-eq_zip!(I => TypeName<I>);
+eq_zip!(I => GeneratorId<I>);
+eq_zip!(I => ForeignDefId<I>);
+eq_zip!(I => FnDefId<I>);
+eq_zip!(I => ClosureId<I>);
 eq_zip!(I => QuantifierKind);
 eq_zip!(I => PhantomData<I>);
 eq_zip!(I => PlaceholderIndex);
 eq_zip!(I => ClausePriority);
+eq_zip!(I => Mutability);
+eq_zip!(I => Scalar);
 
 impl<T: HasInterner<Interner = I> + Zip<I>, I: Interner> Zip<I> for InEnvironment<T> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>

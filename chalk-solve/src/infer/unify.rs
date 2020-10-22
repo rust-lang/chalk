@@ -84,10 +84,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         match (a.kind(interner), b.kind(interner)) {
             // Unifying two inference variables: unify them in the underlying
             // ena table.
-            (
-                &TyKind::InferenceVar(var1, kind1),
-                &TyKind::InferenceVar(var2, kind2),
-            ) => {
+            (&TyKind::InferenceVar(var1, kind1), &TyKind::InferenceVar(var2, kind2)) => {
                 if kind1 == kind2 {
                     self.unify_var_var(var1, var2)
                 } else if kind1 == TyVariableKind::General {
@@ -103,17 +100,34 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
+            // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
+            (&TyKind::Function(ref fn1), &TyKind::Function(ref fn2)) => {
+                if fn1.sig == fn2.sig {
+                    self.unify_binders(fn1, fn2)
+                } else {
+                    Err(NoSolution)
+                }
+            }
+
+            (&TyKind::Placeholder(ref p1), &TyKind::Placeholder(ref p2)) => {
+                Zip::zip_with(self, p1, p2)
+            }
+
+            // Unifying two dyn is possible if they have the same bounds.
+            (&TyKind::Dyn(ref qwc1), &TyKind::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+
+            (TyKind::BoundVar(_), _) | (_, TyKind::BoundVar(_)) => panic!(
+                "unification encountered bound variable: a={:?} b={:?}",
+                a, b
+            ),
+
+            // Unifying an alias type with some other type `U`.
+            (_, &TyKind::Alias(ref alias)) => self.unify_alias_ty(alias, a),
+            (&TyKind::Alias(ref alias), _) => self.unify_alias_ty(alias, b),
+
             // Unifying an inference variable with a non-inference variable.
-            (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Apply(_))
-            | (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Placeholder(_))
-            | (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Dyn(_))
-            | (&TyKind::InferenceVar(var, kind), ty_data @ &TyKind::Function(_))
-            // The reflexive matches
-            | (ty_data @ &TyKind::Apply(_), &TyKind::InferenceVar(var, kind))
-            | (ty_data @ &TyKind::Placeholder(_), &TyKind::InferenceVar(var, kind))
-            | (ty_data @ &TyKind::Dyn(_), &TyKind::InferenceVar(var, kind))
-            | (ty_data @ &TyKind::Function(_), &TyKind::InferenceVar(var, kind))
-            => {
+            (&TyKind::InferenceVar(var, kind), ty_data @ _)
+            | (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
                 let ty = ty_data.clone().intern(interner);
 
                 match (kind, ty.is_integer(interner), ty.is_float(interner)) {
@@ -127,63 +141,84 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
-            // Unifying `forall<X> { T }` with some other forall type `forall<X> { U }`
-            (&TyKind::Function(ref fn1), &TyKind::Function(ref fn2)) => {
-                if fn1.sig == fn2.sig {
-                    self.unify_binders(fn1, fn2)
-                } else {
-                    Err(NoSolution)
-                }
-            }
-
             // This would correspond to unifying a `fn` type with a non-fn
             // type in Rust; error.
-            (&TyKind::Function(_), &TyKind::Apply(_))
-            | (&TyKind::Function(_), &TyKind::Dyn(_))
-            | (&TyKind::Function(_), &TyKind::Placeholder(_))
-            | (&TyKind::Apply(_), &TyKind::Function(_))
-            | (&TyKind::Placeholder(_), &TyKind::Function(_))
-            | (&TyKind::Dyn(_), &TyKind::Function(_)) => Err(NoSolution),
-
-            (&TyKind::Placeholder(ref p1), &TyKind::Placeholder(ref p2)) => {
-                Zip::zip_with(self, p1, p2)
-            }
-
-            (&TyKind::Apply(ref apply1), &TyKind::Apply(ref apply2)) => {
-                Zip::zip_with(self, apply1, apply2)
-            }
+            (&TyKind::Function(_), _) | (_, &TyKind::Function(_)) => Err(NoSolution),
 
             // Cannot unify (e.g.) some struct type `Foo` and a placeholder like `T`
-            (&TyKind::Apply(_), &TyKind::Placeholder(_))
-            | (&TyKind::Placeholder(_), &TyKind::Apply(_)) => Err(NoSolution),
+            (_, &TyKind::Placeholder(_)) | (&TyKind::Placeholder(_), _) => Err(NoSolution),
 
             // Cannot unify `dyn Trait` with things like structs or placeholders
-            (&TyKind::Placeholder(_), &TyKind::Dyn(_))
-            | (&TyKind::Dyn(_), &TyKind::Placeholder(_))
-            | (&TyKind::Apply(_), &TyKind::Dyn(_))
-            | (&TyKind::Dyn(_), &TyKind::Apply(_)) => Err(NoSolution),
+            (_, &TyKind::Dyn(_)) | (&TyKind::Dyn(_), _) => Err(NoSolution),
 
-            // Unifying two dyn is possible if they have the same bounds.
-            (&TyKind::Dyn(ref qwc1), &TyKind::Dyn(ref qwc2)) => Zip::zip_with(self, qwc1, qwc2),
+            (TyKind::Adt(id_a, substitution_a), TyKind::Adt(id_b, substitution_b)) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::AssociatedType(assoc_ty_a, substitution_a),
+                TyKind::AssociatedType(assoc_ty_b, substitution_b),
+            ) => {
+                Zip::zip_with(self, assoc_ty_a, assoc_ty_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Scalar(scalar_a), TyKind::Scalar(scalar_b)) => {
+                Zip::zip_with(self, scalar_a, scalar_b)
+            }
+            (TyKind::Str, TyKind::Str) => Ok(()),
+            (TyKind::Tuple(_arity_a, substitution_a), TyKind::Tuple(_arity_b, substitution_b)) => {
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::OpaqueType(opaque_ty_a, substitution_a),
+                TyKind::OpaqueType(opaque_ty_b, substitution_b),
+            ) => {
+                Zip::zip_with(self, opaque_ty_a, opaque_ty_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => {
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::FnDef(fn_def_a, substitution_a), TyKind::FnDef(fn_def_b, substitution_b)) => {
+                Zip::zip_with(self, fn_def_a, fn_def_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::Ref(mutability_a, lifetime_a, ty_a),
+                TyKind::Ref(mutability_b, lifetime_b, ty_b),
+            ) => {
+                Zip::zip_with(self, mutability_a, mutability_b)?;
+                Zip::zip_with(self, lifetime_a, lifetime_b)?;
+                Zip::zip_with(self, ty_a, ty_b)
+            }
+            (TyKind::Raw(mutability_a, ty_a), TyKind::Raw(mutability_b, ty_b)) => {
+                Zip::zip_with(self, mutability_a, mutability_b)?;
+                Zip::zip_with(self, ty_a, ty_b)
+            }
+            (TyKind::Never, TyKind::Never) => Ok(()),
+            (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
+                Zip::zip_with(self, ty_a, ty_b)?;
+                Zip::zip_with(self, const_a, const_b)
+            }
+            (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::GeneratorWitness(id_a, substitution_a),
+                TyKind::GeneratorWitness(id_b, substitution_b),
+            ) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => Zip::zip_with(self, id_a, id_b),
+            (TyKind::Error, TyKind::Error) => Ok(()),
 
-            // Unifying an alias type with some other type `U`.
-            (&TyKind::Apply(_), &TyKind::Alias(ref alias))
-            | (&TyKind::Placeholder(_), &TyKind::Alias(ref alias))
-            | (&TyKind::Function(_), &TyKind::Alias(ref alias))
-            | (&TyKind::InferenceVar(_, _), &TyKind::Alias(ref alias))
-            | (&TyKind::Dyn(_), &TyKind::Alias(ref alias)) => self.unify_alias_ty(alias, a),
-
-            (&TyKind::Alias(ref alias), &TyKind::Alias(_))
-            | (&TyKind::Alias(ref alias), &TyKind::Apply(_))
-            | (&TyKind::Alias(ref alias), &TyKind::Placeholder(_))
-            | (&TyKind::Alias(ref alias), &TyKind::Function(_))
-            | (&TyKind::Alias(ref alias), &TyKind::InferenceVar(_, _))
-            | (&TyKind::Alias(ref alias), &TyKind::Dyn(_)) => self.unify_alias_ty(alias, b),
-
-            (TyKind::BoundVar(_), _) | (_, TyKind::BoundVar(_)) => panic!(
-                "unification encountered bound variable: a={:?} b={:?}",
-                a, b
-            ),
+            (_, _) => Err(NoSolution),
         }
     }
 

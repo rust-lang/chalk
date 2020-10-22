@@ -10,7 +10,7 @@ use chalk_ir::{
     visit::{Visit, VisitResult},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
     OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
-    Ty, TyKind, TypeName, VariableKind, WhereClause, WithKind,
+    Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -46,10 +46,7 @@ impl<I: Interner> ImplDatum<I> {
             .self_type_parameter(interner)
             .kind(interner)
         {
-            TyKind::Apply(apply) => match apply.name {
-                TypeName::Adt(id) => Some(id),
-                _ => None,
-            },
+            TyKind::Adt(id, _) => Some(*id),
             _ => None,
         }
     }
@@ -96,12 +93,6 @@ pub enum AdtKind {
 }
 
 chalk_ir::const_visit!(AdtKind);
-
-impl<I: Interner> AdtDatum<I> {
-    pub fn name(&self, interner: &I) -> TypeName<I> {
-        self.id.cast(interner)
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
 pub struct AdtDatumBound<I: Interner> {
@@ -708,7 +699,7 @@ pub struct GeneratorWitnessDatum<I: Interner> {
 /// know their precise values.
 ///
 /// Unlike the binder in `GeneratorWitnessDatum`, this `Binder` never gets substituted
-/// via an `ApplicationTy`. Instead, we handle this `Binders` specially when determining
+/// via an `Ty`. Instead, we handle this `Binders` specially when determining
 /// auto trait impls. See `push_auto_trait_impls_generator_witness` for more details.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub struct GeneratorWitnessExistential<I: Interner> {

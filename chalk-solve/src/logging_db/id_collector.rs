@@ -4,7 +4,7 @@ use chalk_ir::{
     interner::Interner,
     visit::Visitor,
     visit::{SuperVisit, Visit},
-    AliasTy, DebruijnIndex, TyKind, TypeName, WhereClause,
+    AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
 use std::collections::BTreeSet;
 
@@ -122,12 +122,9 @@ where
         outer_binder: chalk_ir::DebruijnIndex,
     ) -> Self::Result {
         match ty.kind(self.db.interner()) {
-            TyKind::Apply(apply_ty) => match apply_ty.name {
-                TypeName::Adt(adt) => self.record(adt),
-                TypeName::FnDef(fn_def) => self.record(fn_def),
-                TypeName::OpaqueType(opaque) => self.record(opaque),
-                _ => {}
-            },
+            TyKind::Adt(adt, _) => self.record(*adt),
+            TyKind::FnDef(fn_def, _) => self.record(*fn_def),
+            TyKind::OpaqueType(opaque, _) => self.record(*opaque),
             TyKind::Alias(alias) => match alias {
                 AliasTy::Projection(projection_ty) => {
                     let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
@@ -142,6 +139,7 @@ where
             TyKind::Function(..) => (),
             TyKind::InferenceVar(..) => (),
             TyKind::Placeholder(..) => (),
+            _ => {}
         }
         ty.super_visit_with(self, outer_binder)
     }

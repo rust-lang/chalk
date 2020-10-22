@@ -107,7 +107,7 @@ where
 mod test {
     use super::*;
     use chalk_integration::interner::ChalkIr;
-    use chalk_integration::{arg, ty, ty_name};
+    use chalk_integration::{arg, ty};
 
     const U0: UniverseIndex = UniverseIndex { counter: 0 };
 

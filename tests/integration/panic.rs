@@ -86,10 +86,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
 
         let substitution = Ty::new(
             &ChalkIr,
-            ApplicationTy {
-                name: TypeName::Adt(AdtId(RawId { index: 1 })),
-                substitution: Substitution::empty(&ChalkIr),
-            },
+            TyKind::Adt(AdtId(RawId { index: 1 }), Substitution::empty(&ChalkIr)),
         );
 
         let binders = Binders::new(
@@ -184,11 +181,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
-    fn impl_provided_for(
-        &self,
-        auto_trait_id: TraitId<ChalkIr>,
-        app_ty: &ApplicationTy<ChalkIr>,
-    ) -> bool {
+    fn impl_provided_for(&self, auto_trait_id: TraitId<ChalkIr>, app_ty: &TyKind<ChalkIr>) -> bool {
         unimplemented!()
     }
 
@@ -270,10 +263,10 @@ fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
                         &ChalkIr,
                         Ty::new(
                             &ChalkIr,
-                            ApplicationTy {
-                                name: TypeName::Adt(AdtId(interner::RawId { index: 1 })),
-                                substitution: Substitution::empty(&ChalkIr),
-                            },
+                            TyKind::Adt(
+                                AdtId(interner::RawId { index: 1 }),
+                                Substitution::empty(&ChalkIr),
+                            ),
                         ),
                     ),
                 })))

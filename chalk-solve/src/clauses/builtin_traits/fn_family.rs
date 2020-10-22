@@ -4,8 +4,8 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, ApplicationTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution,
-    TraitId, Ty, TyKind, TypeName, VariableKinds,
+    AliasTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty,
+    TyKind, VariableKinds,
 };
 
 fn push_clauses<I: Interner>(
@@ -18,11 +18,7 @@ fn push_clauses<I: Interner>(
     return_type: Ty<I>,
 ) {
     let interner = db.interner();
-    let tupled = TyKind::Apply(ApplicationTy {
-        name: TypeName::Tuple(arg_sub.len(interner)),
-        substitution: arg_sub,
-    })
-    .intern(interner);
+    let tupled = TyKind::Tuple(arg_sub.len(interner), arg_sub).intern(interner);
     let substitution =
         Substitution::from_iter(interner, &[self_ty.cast(interner), tupled.cast(interner)]);
     builder.push_fact(TraitRef {
@@ -96,50 +92,47 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     let trait_id = db.well_known_trait_id(well_known).unwrap();
 
     match self_ty.kind(interner) {
-        TyKind::Apply(apply) => match apply.name {
-            TypeName::FnDef(fn_def_id) => {
-                let fn_def_datum = builder.db.fn_def_datum(fn_def_id);
-                if fn_def_datum.sig.safety == Safety::Safe && !fn_def_datum.sig.variadic {
-                    let bound = fn_def_datum
-                        .binders
-                        .substitute(builder.interner(), &apply.substitution);
-                    push_clauses_for_apply(
-                        db,
-                        builder,
-                        well_known,
-                        trait_id,
-                        self_ty,
-                        &bound.inputs_and_output,
-                    );
-                }
-                Ok(())
-            }
-            TypeName::Closure(closure_id) => {
-                let closure_kind = db.closure_kind(closure_id, &apply.substitution);
-                let trait_matches = match (well_known, closure_kind) {
-                    (WellKnownTrait::Fn, ClosureKind::Fn) => true,
-                    (WellKnownTrait::FnMut, ClosureKind::FnMut)
-                    | (WellKnownTrait::FnMut, ClosureKind::Fn) => true,
-                    (WellKnownTrait::FnOnce, _) => true,
-                    _ => false,
-                };
-                if !trait_matches {
-                    return Ok(());
-                }
-                let closure_inputs_and_output =
-                    db.closure_inputs_and_output(closure_id, &apply.substitution);
+        TyKind::FnDef(fn_def_id, substitution) => {
+            let fn_def_datum = builder.db.fn_def_datum(*fn_def_id);
+            if fn_def_datum.sig.safety == Safety::Safe && !fn_def_datum.sig.variadic {
+                let bound = fn_def_datum
+                    .binders
+                    .substitute(builder.interner(), &substitution);
                 push_clauses_for_apply(
                     db,
                     builder,
                     well_known,
                     trait_id,
                     self_ty,
-                    &closure_inputs_and_output,
+                    &bound.inputs_and_output,
                 );
-                Ok(())
             }
-            _ => Ok(()),
-        },
+            Ok(())
+        }
+        TyKind::Closure(closure_id, substitution) => {
+            let closure_kind = db.closure_kind(*closure_id, &substitution);
+            let trait_matches = match (well_known, closure_kind) {
+                (WellKnownTrait::Fn, ClosureKind::Fn) => true,
+                (WellKnownTrait::FnMut, ClosureKind::FnMut)
+                | (WellKnownTrait::FnMut, ClosureKind::Fn) => true,
+                (WellKnownTrait::FnOnce, _) => true,
+                _ => false,
+            };
+            if !trait_matches {
+                return Ok(());
+            }
+            let closure_inputs_and_output =
+                db.closure_inputs_and_output(*closure_id, &substitution);
+            push_clauses_for_apply(
+                db,
+                builder,
+                well_known,
+                trait_id,
+                self_ty,
+                &closure_inputs_and_output,
+            );
+            Ok(())
+        }
         TyKind::Function(fn_val) if fn_val.sig.safety == Safety::Safe && !fn_val.sig.variadic => {
             let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
             let bound_ref = Binders::new(VariableKinds::from_iter(interner, binders), orig_sub);

@@ -390,8 +390,6 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 self.assert_matching_vars(*answer_depth, *pending_depth)
             }
 
-            (TyKind::Apply(answer), TyKind::Apply(pending)) => Zip::zip_with(self, answer, pending),
-
             (TyKind::Dyn(answer), TyKind::Dyn(pending)) => Zip::zip_with(self, answer, pending),
 
             (TyKind::Alias(answer), TyKind::Alias(pending)) => Zip::zip_with(self, answer, pending),
@@ -412,12 +410,74 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 answer, pending,
             ),
 
-            (TyKind::BoundVar(_), _)
-            | (TyKind::Apply(_), _)
-            | (TyKind::Dyn(_), _)
-            | (TyKind::Alias(_), _)
-            | (TyKind::Placeholder(_), _)
-            | (TyKind::Function(_), _) => panic!(
+            (TyKind::Adt(id_a, substitution_a), TyKind::Adt(id_b, substitution_b)) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::AssociatedType(assoc_ty_a, substitution_a),
+                TyKind::AssociatedType(assoc_ty_b, substitution_b),
+            ) => {
+                Zip::zip_with(self, assoc_ty_a, assoc_ty_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Scalar(scalar_a), TyKind::Scalar(scalar_b)) => {
+                Zip::zip_with(self, scalar_a, scalar_b)
+            }
+            (TyKind::Str, TyKind::Str) => Ok(()),
+            (TyKind::Tuple(_arity_a, substitution_a), TyKind::Tuple(_arity_b, substitution_b)) => {
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::OpaqueType(opaque_ty_a, substitution_a),
+                TyKind::OpaqueType(opaque_ty_b, substitution_b),
+            ) => {
+                Zip::zip_with(self, opaque_ty_a, opaque_ty_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => {
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::FnDef(fn_def_a, substitution_a), TyKind::FnDef(fn_def_b, substitution_b)) => {
+                Zip::zip_with(self, fn_def_a, fn_def_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::Ref(mutability_a, lifetime_a, ty_a),
+                TyKind::Ref(mutability_b, lifetime_b, ty_b),
+            ) => {
+                Zip::zip_with(self, mutability_a, mutability_b)?;
+                Zip::zip_with(self, lifetime_a, lifetime_b)?;
+                Zip::zip_with(self, ty_a, ty_b)
+            }
+            (TyKind::Raw(mutability_a, ty_a), TyKind::Raw(mutability_b, ty_b)) => {
+                Zip::zip_with(self, mutability_a, mutability_b)?;
+                Zip::zip_with(self, ty_a, ty_b)
+            }
+            (TyKind::Never, TyKind::Never) => Ok(()),
+            (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
+                Zip::zip_with(self, ty_a, ty_b)?;
+                Zip::zip_with(self, const_a, const_b)
+            }
+            (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (
+                TyKind::GeneratorWitness(id_a, substitution_a),
+                TyKind::GeneratorWitness(id_b, substitution_b),
+            ) => {
+                Zip::zip_with(self, id_a, id_b)?;
+                Zip::zip_with(self, substitution_a, substitution_b)
+            }
+            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => Zip::zip_with(self, id_a, id_b),
+            (TyKind::Error, TyKind::Error) => Ok(()),
+
+            (_, _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

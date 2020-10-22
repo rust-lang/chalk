@@ -282,10 +282,50 @@ where
             }
             TyKind::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
             TyKind::InferenceVar(var, _) => visitor.visit_inference_var(*var, outer_binder),
-            TyKind::Apply(apply) => apply.visit_with(visitor, outer_binder),
             TyKind::Placeholder(ui) => visitor.visit_free_placeholder(*ui, outer_binder),
             TyKind::Alias(proj) => proj.visit_with(visitor, outer_binder),
             TyKind::Function(fun) => fun.visit_with(visitor, outer_binder),
+            TyKind::Adt(_id, substitution) => substitution.visit_with(visitor, outer_binder),
+            TyKind::AssociatedType(_assoc_ty, substitution) => {
+                substitution.visit_with(visitor, outer_binder)
+            }
+            TyKind::Scalar(scalar) => scalar.visit_with(visitor, outer_binder),
+            TyKind::Str => R::new(),
+            TyKind::Tuple(arity, substitution) => arity
+                .visit_with(visitor, outer_binder)
+                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::OpaqueType(opaque_ty, substitution) => opaque_ty
+                .visit_with(visitor, outer_binder)
+                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::Slice(substitution) => substitution.visit_with(visitor, outer_binder),
+            TyKind::FnDef(fn_def, substitution) => fn_def
+                .visit_with(visitor, outer_binder)
+                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::Ref(mutability, lifetime, ty) => {
+                mutability.visit_with(visitor, outer_binder).combine(
+                    lifetime
+                        .visit_with(visitor, outer_binder)
+                        .combine(ty.visit_with(visitor, outer_binder)),
+                )
+            }
+            TyKind::Raw(mutability, ty) => mutability
+                .visit_with(visitor, outer_binder)
+                .combine(ty.visit_with(visitor, outer_binder)),
+            TyKind::Never => R::new(),
+            TyKind::Array(ty, const_) => ty
+                .visit_with(visitor, outer_binder)
+                .combine(const_.visit_with(visitor, outer_binder)),
+            TyKind::Closure(id, substitution) => id
+                .visit_with(visitor, outer_binder)
+                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::Generator(generator, substitution) => generator
+                .visit_with(visitor, outer_binder)
+                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::GeneratorWitness(witness, substitution) => witness
+                .visit_with(visitor, outer_binder)
+                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::Foreign(foreign_ty) => foreign_ty.visit_with(visitor, outer_binder),
+            TyKind::Error => R::new(),
         }
     }
 }

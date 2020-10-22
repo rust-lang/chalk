@@ -97,22 +97,23 @@ impl Env<'_> {
     ) -> LowerResult<chalk_ir::GenericArg<ChalkIr>> {
         let interner = self.interner();
 
-        let apply = |k: &TypeKind, type_name: chalk_ir::TypeName<ChalkIr>| {
-            if k.binders.len(interner) > 0 {
-                Err(RustIrError::IncorrectNumberOfTypeParameters {
-                    identifier: name.clone(),
-                    expected: k.binders.len(interner),
-                    actual: 0,
-                })
-            } else {
-                Ok(chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                    name: type_name,
-                    substitution: chalk_ir::Substitution::empty(interner),
-                })
-                .intern(interner)
-                .cast(interner))
-            }
-        };
+        macro_rules! tykind {
+            ($k:expr, $tykind:ident, $id:expr) => {
+                if $k.binders.len(interner) > 0 {
+                    Err(RustIrError::IncorrectNumberOfTypeParameters {
+                        identifier: name.clone(),
+                        expected: $k.binders.len(interner),
+                        actual: 0,
+                    })
+                } else {
+                    Ok(
+                        chalk_ir::TyKind::$tykind($id, chalk_ir::Substitution::empty(interner))
+                            .intern(interner),
+                    )
+                    .cast(interner)
+                }
+            };
+        }
 
         match self.lookup_type(name) {
             Ok(TypeLookup::Parameter(p)) => {
@@ -129,14 +130,10 @@ impl Env<'_> {
                     }
                 })
             }
-            Ok(TypeLookup::Adt(id)) => apply(self.adt_kind(id), chalk_ir::TypeName::Adt(id)),
-            Ok(TypeLookup::FnDef(id)) => apply(self.fn_def_kind(id), chalk_ir::TypeName::FnDef(id)),
-            Ok(TypeLookup::Closure(id)) => {
-                apply(self.closure_kind(id), chalk_ir::TypeName::Closure(id))
-            }
-            Ok(TypeLookup::Generator(id)) => {
-                apply(self.generator_kind(id), chalk_ir::TypeName::Generator(id))
-            }
+            Ok(TypeLookup::Adt(id)) => tykind!(self.adt_kind(id), Adt, id),
+            Ok(TypeLookup::FnDef(id)) => tykind!(self.fn_def_kind(id), FnDef, id),
+            Ok(TypeLookup::Closure(id)) => tykind!(self.closure_kind(id), Closure, id),
+            Ok(TypeLookup::Generator(id)) => tykind!(self.generator_kind(id), Generator, id),
             Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Opaque(
                 chalk_ir::OpaqueTy {
                     opaque_ty_id: id,
@@ -145,12 +142,9 @@ impl Env<'_> {
             ))
             .intern(interner)
             .cast(interner)),
-            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Foreign(id),
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
-            .intern(interner)
-            .cast(interner)),
+            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyKind::Foreign(id)
+                .intern(interner)
+                .cast(interner)),
             Ok(TypeLookup::Trait(_)) => Err(RustIrError::NotStruct(name.clone())),
             Err(_) => Err(RustIrError::InvalidParameterName(name.clone())),
         }

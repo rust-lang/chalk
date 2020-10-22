@@ -108,12 +108,7 @@ lower_param_map!(
 );
 
 fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
-    chalk_ir::ApplicationTy {
-        name: chalk_ir::TypeName::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::U32)),
-        substitution: Substitution::empty(&ChalkIr),
-    }
-    .cast(&ChalkIr)
-    .intern(&ChalkIr)
+    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::U32)).intern(&ChalkIr)
 }
 
 impl Lower for VariableKind {
@@ -703,60 +698,51 @@ impl LowerWithEnv for Ty {
             .intern(interner),
 
             Ty::Apply { name, ref args } => {
-                let (apply_name, k) = match env.lookup_type(&name)? {
+                macro_rules! tykind {
+                    ($k:expr, $tykind:ident, $id:expr) => {{
+                        if $k.binders.len(interner) != args.len() {
+                            Err(RustIrError::IncorrectNumberOfTypeParameters {
+                                identifier: name.clone(),
+                                expected: $k.binders.len(interner),
+                                actual: args.len(),
+                            })?;
+                        }
+
+                        let substitution = chalk_ir::Substitution::from_fallible(
+                            interner,
+                            args.iter().map(|t| Ok(t.lower(env)?)),
+                        )?;
+
+                        for (param, arg) in $k
+                            .binders
+                            .binders
+                            .iter(interner)
+                            .zip(substitution.iter(interner))
+                        {
+                            if param.kind() != arg.kind() {
+                                Err(RustIrError::IncorrectParameterKind {
+                                    identifier: name.clone(),
+                                    expected: param.kind(),
+                                    actual: arg.kind(),
+                                })?;
+                            }
+                        }
+                        chalk_ir::TyKind::$tykind($id, substitution).intern(interner)
+                    }};
+                }
+                match env.lookup_type(&name)? {
                     TypeLookup::Parameter(_) => {
                         return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
                     }
-
-                    TypeLookup::Adt(id) => (chalk_ir::TypeName::Adt(id), env.adt_kind(id)),
-                    TypeLookup::FnDef(id) => (chalk_ir::TypeName::FnDef(id), env.fn_def_kind(id)),
-                    TypeLookup::Closure(id) => {
-                        (chalk_ir::TypeName::Closure(id), env.closure_kind(id))
-                    }
-                    TypeLookup::Opaque(id) => {
-                        (chalk_ir::TypeName::OpaqueType(id), env.opaque_kind(id))
-                    }
-                    TypeLookup::Generator(id) => {
-                        (chalk_ir::TypeName::Generator(id), env.generator_kind(id))
-                    }
-
+                    TypeLookup::Adt(id) => tykind!(env.adt_kind(id), Adt, id),
+                    TypeLookup::FnDef(id) => tykind!(env.fn_def_kind(id), FnDef, id),
+                    TypeLookup::Closure(id) => tykind!(env.closure_kind(id), Closure, id),
+                    TypeLookup::Opaque(id) => tykind!(env.opaque_kind(id), OpaqueType, id),
+                    TypeLookup::Generator(id) => tykind!(env.generator_kind(id), Generator, id),
                     TypeLookup::Foreign(_) | TypeLookup::Trait(_) => {
                         panic!("Unexpected apply type")
                     }
-                };
-
-                if k.binders.len(interner) != args.len() {
-                    Err(RustIrError::IncorrectNumberOfTypeParameters {
-                        identifier: name.clone(),
-                        expected: k.binders.len(interner),
-                        actual: args.len(),
-                    })?;
                 }
-
-                let substitution = chalk_ir::Substitution::from_fallible(
-                    interner,
-                    args.iter().map(|t| Ok(t.lower(env)?)),
-                )?;
-
-                for (param, arg) in k
-                    .binders
-                    .binders
-                    .iter(interner)
-                    .zip(substitution.iter(interner))
-                {
-                    if param.kind() != arg.kind() {
-                        Err(RustIrError::IncorrectParameterKind {
-                            identifier: name.clone(),
-                            expected: param.kind(),
-                            actual: arg.kind(),
-                        })?;
-                    }
-                }
-                chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                    name: apply_name,
-                    substitution,
-                })
-                .intern(interner)
             }
 
             Ty::Projection { ref proj } => {
@@ -785,78 +771,37 @@ impl LowerWithEnv for Ty {
                 };
                 chalk_ir::TyKind::Function(function).intern(interner)
             }
-            Ty::Tuple { ref types } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Tuple(types.len()),
-                substitution: chalk_ir::Substitution::from_fallible(
+            Ty::Tuple { ref types } => chalk_ir::TyKind::Tuple(
+                types.len(),
+                chalk_ir::Substitution::from_fallible(
                     interner,
                     types.iter().map(|t| Ok(t.lower(env)?)),
                 )?,
-            })
+            )
             .intern(interner),
 
-            Ty::Scalar { ty } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Scalar(ty.lower()),
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
-            .intern(interner),
+            Ty::Scalar { ty } => chalk_ir::TyKind::Scalar(ty.lower()).intern(interner),
 
-            Ty::Array { ty, len } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Array,
-                substitution: chalk_ir::Substitution::from_iter(
-                    interner,
-                    &[
-                        ty.lower(env)?.cast(interner),
-                        len.lower(env)?.cast(interner),
-                    ],
-                ),
-            })
-            .intern(interner),
+            Ty::Array { ty, len } => {
+                chalk_ir::TyKind::Array(ty.lower(env)?, len.lower(env)?).intern(interner)
+            }
 
-            Ty::Slice { ty } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Slice,
-                substitution: chalk_ir::Substitution::from_fallible(
-                    interner,
-                    std::iter::once(ty.lower(env)),
-                )?,
-            })
-            .intern(interner),
+            Ty::Slice { ty } => chalk_ir::TyKind::Slice(ty.lower(env)?).intern(interner),
 
-            Ty::Raw { mutability, ty } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Raw(mutability.lower()),
-                substitution: chalk_ir::Substitution::from_fallible(
-                    interner,
-                    std::iter::once(Ok(ty.lower(env)?)),
-                )?,
-            })
-            .intern(interner),
+            Ty::Raw { mutability, ty } => {
+                chalk_ir::TyKind::Raw(mutability.lower(), ty.lower(env)?).intern(interner)
+            }
 
             Ty::Ref {
                 mutability,
                 lifetime,
                 ty,
-            } => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Ref(mutability.lower()),
-                substitution: chalk_ir::Substitution::from_iter(
-                    interner,
-                    &[
-                        lifetime.lower(env)?.cast(interner),
-                        ty.lower(env)?.cast(interner),
-                    ],
-                ),
-            })
-            .intern(interner),
+            } => chalk_ir::TyKind::Ref(mutability.lower(), lifetime.lower(env)?, ty.lower(env)?)
+                .intern(interner),
 
-            Ty::Str => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Str,
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
-            .intern(interner),
+            Ty::Str => chalk_ir::TyKind::Str.intern(interner),
 
-            Ty::Never => chalk_ir::TyKind::Apply(chalk_ir::ApplicationTy {
-                name: chalk_ir::TypeName::Never,
-                substitution: chalk_ir::Substitution::empty(interner),
-            })
-            .intern(interner),
+            Ty::Never => chalk_ir::TyKind::Never.intern(interner),
         })
     }
 }

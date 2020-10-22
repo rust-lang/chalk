@@ -1,6 +1,6 @@
 use super::program_clauses::ToProgramClauses;
 use crate::clauses::builder::ClauseBuilder;
-use crate::clauses::{match_alias_ty, match_type_name};
+use crate::clauses::{match_alias_ty, match_ty};
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
@@ -66,9 +66,6 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     #[instrument(level = "debug", skip(self, _outer_binder))]
     fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
         match ty.kind(self.interner()) {
-            TyKind::Apply(application_ty) => {
-                match_type_name(&mut self.builder, self.environment, application_ty)
-            }
             TyKind::Alias(alias_ty) => {
                 match_alias_ty(&mut self.builder, self.environment, alias_ty)
             }
@@ -79,6 +76,13 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
             TyKind::Dyn(_) => (),
 
             TyKind::Function(_) | TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => (),
+
+            _ => {
+                // This shouldn't fail because of the above clauses
+                match_ty(&mut self.builder, self.environment, &ty)
+                    .map_err(|_| ())
+                    .unwrap()
+            }
         }
     }
 

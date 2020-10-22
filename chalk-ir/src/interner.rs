@@ -1,7 +1,6 @@
 //! Encapsulates the concrete representation of core types such as types and goals.
 use crate::AdtId;
 use crate::AliasTy;
-use crate::ApplicationTy;
 use crate::AssocTypeId;
 use crate::CanonicalVarKind;
 use crate::CanonicalVarKinds;
@@ -402,16 +401,6 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     #[allow(unused_variables)]
     fn debug_program_clauses(
         clauses: &ProgramClauses<Self>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
-        None
-    }
-
-    /// Prints the debug representation of an ApplicationTy.
-    /// Returns `None` to fallback to the default debug output.
-    #[allow(unused_variables)]
-    fn debug_application_ty(
-        application_ty: &ApplicationTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None

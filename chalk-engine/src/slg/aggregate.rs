@@ -247,10 +247,6 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             | (TyKind::Function(_), TyKind::Function(_))
             | (TyKind::Dyn(_), TyKind::Dyn(_)) => self.new_ty_variable(),
 
-            (TyKind::Apply(apply1), TyKind::Apply(apply2)) => {
-                self.aggregate_application_tys(apply1, apply2)
-            }
-
             (
                 TyKind::Alias(AliasTy::Projection(proj1)),
                 TyKind::Alias(AliasTy::Projection(proj2)),
@@ -265,37 +261,104 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                 self.aggregate_placeholder_tys(placeholder1, placeholder2)
             }
 
-            // Mismatched base kinds.
-            (TyKind::InferenceVar(_, _), _)
-            | (TyKind::BoundVar(_), _)
-            | (TyKind::Dyn(_), _)
-            | (TyKind::Function(_), _)
-            | (TyKind::Apply(_), _)
-            | (TyKind::Alias(_), _)
-            | (TyKind::Placeholder(_), _) => self.new_ty_variable(),
+            (TyKind::Adt(id_a, substitution_a), TyKind::Adt(id_b, substitution_b)) => self
+                .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                .map(|(&name, substitution)| TyKind::Adt(name, substitution).intern(interner))
+                .unwrap_or_else(|| self.new_ty_variable()),
+            (
+                TyKind::AssociatedType(id_a, substitution_a),
+                TyKind::AssociatedType(id_b, substitution_b),
+            ) => self
+                .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                .map(|(&name, substitution)| {
+                    TyKind::AssociatedType(name, substitution).intern(interner)
+                })
+                .unwrap_or_else(|| self.new_ty_variable()),
+            (TyKind::Scalar(scalar_a), TyKind::Scalar(scalar_b)) => {
+                if scalar_a == scalar_b {
+                    TyKind::Scalar(*scalar_a).intern(interner)
+                } else {
+                    self.new_ty_variable()
+                }
+            }
+            (TyKind::Str, TyKind::Str) => TyKind::Str.intern(interner),
+            (TyKind::Tuple(arity_a, substitution_a), TyKind::Tuple(arity_b, substitution_b)) => {
+                self.aggregate_name_and_substs(arity_a, substitution_a, arity_b, substitution_b)
+                    .map(|(&name, substitution)| TyKind::Tuple(name, substitution).intern(interner))
+                    .unwrap_or_else(|| self.new_ty_variable())
+            }
+            (
+                TyKind::OpaqueType(id_a, substitution_a),
+                TyKind::OpaqueType(id_b, substitution_b),
+            ) => self
+                .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                .map(|(&name, substitution)| {
+                    TyKind::OpaqueType(name, substitution).intern(interner)
+                })
+                .unwrap_or_else(|| self.new_ty_variable()),
+            (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => {
+                TyKind::Slice(self.aggregate_tys(ty_a, ty_b)).intern(interner)
+            }
+            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => self
+                .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                .map(|(&name, substitution)| TyKind::FnDef(name, substitution).intern(interner))
+                .unwrap_or_else(|| self.new_ty_variable()),
+            (TyKind::Ref(id_a, lifetime_a, ty_a), TyKind::Ref(id_b, lifetime_b, ty_b)) => {
+                if id_a == id_b {
+                    TyKind::Ref(
+                        *id_a,
+                        self.aggregate_lifetimes(lifetime_a, lifetime_b),
+                        self.aggregate_tys(ty_a, ty_b),
+                    )
+                    .intern(interner)
+                } else {
+                    self.new_ty_variable()
+                }
+            }
+            (TyKind::Raw(id_a, ty_a), TyKind::Raw(id_b, ty_b)) => {
+                if id_a == id_b {
+                    TyKind::Raw(*id_a, self.aggregate_tys(ty_a, ty_b)).intern(interner)
+                } else {
+                    self.new_ty_variable()
+                }
+            }
+            (TyKind::Never, TyKind::Never) => TyKind::Never.intern(interner),
+            (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => TyKind::Array(
+                self.aggregate_tys(ty_a, ty_b),
+                self.aggregate_consts(const_a, const_b),
+            )
+            .intern(interner),
+            (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => self
+                .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                .map(|(&name, substitution)| TyKind::Closure(name, substitution).intern(interner))
+                .unwrap_or_else(|| self.new_ty_variable()),
+            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                    .map(|(&name, substitution)| {
+                        TyKind::Generator(name, substitution).intern(interner)
+                    })
+                    .unwrap_or_else(|| self.new_ty_variable())
+            }
+            (
+                TyKind::GeneratorWitness(id_a, substitution_a),
+                TyKind::GeneratorWitness(id_b, substitution_b),
+            ) => self
+                .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+                .map(|(&name, substitution)| {
+                    TyKind::GeneratorWitness(name, substitution).intern(interner)
+                })
+                .unwrap_or_else(|| self.new_ty_variable()),
+            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => {
+                if id_a == id_b {
+                    TyKind::Foreign(*id_a).intern(interner)
+                } else {
+                    self.new_ty_variable()
+                }
+            }
+            (TyKind::Error, TyKind::Error) => TyKind::Error.intern(interner),
+
+            (_, _) => self.new_ty_variable(),
         }
-    }
-
-    fn aggregate_application_tys(
-        &mut self,
-        apply1: &ApplicationTy<I>,
-        apply2: &ApplicationTy<I>,
-    ) -> Ty<I> {
-        let interner = self.interner;
-        let ApplicationTy {
-            name: name1,
-            substitution: substitution1,
-        } = apply1;
-        let ApplicationTy {
-            name: name2,
-            substitution: substitution2,
-        } = apply2;
-
-        self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
-            .map(|(&name, substitution)| {
-                TyKind::Apply(ApplicationTy { name, substitution }).intern(interner)
-            })
-            .unwrap_or_else(|| self.new_ty_variable())
     }
 
     fn aggregate_placeholder_tys(
@@ -501,7 +564,7 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
 #[cfg(test)]
 mod test {
     use crate::slg::aggregate::AntiUnifier;
-    use chalk_integration::{arg, ty, ty_name};
+    use chalk_integration::{arg, ty};
     use chalk_ir::UniverseIndex;
     use chalk_solve::infer::InferenceTable;
 

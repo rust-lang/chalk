@@ -93,14 +93,11 @@ Placeholder associated types are never written directly by the user.
 They are used internally by the trait system only, as we will see
 shortly.
 
-In rustc, they correspond to the `TyVariableKind::UnnormalizedProjectionTy` enum
+In rustc, they correspond to the `TyKind::UnnormalizedProjectionTy` enum
 variant, declared in [`compiler/rustc_middle/src/ty/sty.rs`][sty]. In chalk, we use an
-`ApplicationTy` with a name living in a special namespace dedicated to
-placeholder associated types (see the `TypeName` enum declared in
-[`chalk-ir/src/lib.rs`][chalk_type_name]).
+`AssociatedType`.
 
 [sty]: https://github.com/rust-lang/rust/blob/master/compiler/rustc_middle/src/ty/sty.rs
-[chalk_type_name]: https://github.com/rust-lang-nursery/chalk/blob/master/chalk-ir/src/lib.rs
 
 ## Projection equality
 

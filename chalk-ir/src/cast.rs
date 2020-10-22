@@ -164,12 +164,6 @@ impl<I: Interner, T: HasInterner<Interner = I> + CastTo<Goal<I>>> CastTo<Goal<I>
     }
 }
 
-impl<I: Interner> CastTo<TyKind<I>> for ApplicationTy<I> {
-    fn cast_to(self, _interner: &I) -> TyKind<I> {
-        TyKind::Apply(self)
-    }
-}
-
 impl<I: Interner> CastTo<TyKind<I>> for AliasTy<I> {
     fn cast_to(self, _interner: &I) -> TyKind<I> {
         TyKind::Alias(self)
@@ -303,42 +297,6 @@ where
 {
     fn cast_to(self, interner: &U::Interner) -> Vec<U> {
         self.into_iter().casted(interner).collect()
-    }
-}
-
-impl<I> CastTo<TypeName<I>> for AdtId<I>
-where
-    I: Interner,
-{
-    fn cast_to(self, _interner: &I) -> TypeName<I> {
-        TypeName::Adt(self)
-    }
-}
-
-impl<I> CastTo<TypeName<I>> for GeneratorId<I>
-where
-    I: Interner,
-{
-    fn cast_to(self, _interner: &I) -> TypeName<I> {
-        TypeName::Generator(self)
-    }
-}
-
-impl<I> CastTo<TypeName<I>> for FnDefId<I>
-where
-    I: Interner,
-{
-    fn cast_to(self, _interner: &I) -> TypeName<I> {
-        TypeName::FnDef(self)
-    }
-}
-
-impl<I> CastTo<TypeName<I>> for OpaqueTyId<I>
-where
-    I: Interner,
-{
-    fn cast_to(self, _interner: &I) -> TypeName<I> {
-        TypeName::OpaqueType(self)
     }
 }
 

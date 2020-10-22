@@ -1,10 +1,10 @@
 use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    AdtId, AliasTy, ApplicationTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData,
-    Constraint, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
-    SeparatorTraitRef, Substitution, TraitId, Ty, TyData, VariableKind, VariableKinds,
+    AdtId, AliasTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData, Constraint,
+    FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication,
+    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId,
+    Ty, TyData, VariableKind, VariableKinds,
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
@@ -180,13 +180,6 @@ impl Interner for ChalkIr {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| Some(prog?.debug_program_clauses(clause, fmt)))
-    }
-
-    fn debug_application_ty(
-        application_ty: &ApplicationTy<ChalkIr>,
-        fmt: &mut fmt::Formatter<'_>,
-    ) -> Option<fmt::Result> {
-        tls::with_current_program(|prog| Some(prog?.debug_application_ty(application_ty, fmt)))
     }
 
     fn debug_substitution(

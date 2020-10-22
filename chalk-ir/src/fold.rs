@@ -407,32 +407,98 @@ where
         TI: 'i,
     {
         let interner = folder.interner();
-        match self.kind(interner) {
+        Ok(match self.kind(interner) {
             TyKind::BoundVar(bound_var) => {
                 if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
                     // This variable was bound outside of the binders
                     // that we have traversed during folding;
                     // therefore, it is free. Let the folder have a
                     // crack at it.
-                    folder.fold_free_var_ty(bound_var1, outer_binder)
+                    folder.fold_free_var_ty(bound_var1, outer_binder)?
                 } else {
                     // This variable was bound within the binders that
                     // we folded over, so just return a bound
                     // variable.
-                    Ok(TyKind::<TI>::BoundVar(*bound_var).intern(folder.target_interner()))
+                    TyKind::<TI>::BoundVar(*bound_var).intern(folder.target_interner())
                 }
             }
-            TyKind::Dyn(clauses) => Ok(TyKind::Dyn(clauses.fold_with(folder, outer_binder)?)
-                .intern(folder.target_interner())),
-            TyKind::InferenceVar(var, kind) => folder.fold_inference_ty(*var, *kind, outer_binder),
-            TyKind::Apply(apply) => Ok(TyKind::Apply(apply.fold_with(folder, outer_binder)?)
-                .intern(folder.target_interner())),
-            TyKind::Placeholder(ui) => Ok(folder.fold_free_placeholder_ty(*ui, outer_binder)?),
-            TyKind::Alias(proj) => Ok(TyKind::Alias(proj.fold_with(folder, outer_binder)?)
-                .intern(folder.target_interner())),
-            TyKind::Function(fun) => Ok(TyKind::Function(fun.fold_with(folder, outer_binder)?)
-                .intern(folder.target_interner())),
-        }
+            TyKind::Dyn(clauses) => TyKind::Dyn(clauses.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner()),
+            TyKind::InferenceVar(var, kind) => {
+                folder.fold_inference_ty(*var, *kind, outer_binder)?
+            }
+            TyKind::Placeholder(ui) => folder.fold_free_placeholder_ty(*ui, outer_binder)?,
+            TyKind::Alias(proj) => TyKind::Alias(proj.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner()),
+            TyKind::Function(fun) => TyKind::Function(fun.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner()),
+            TyKind::Adt(id, substitution) => TyKind::Adt(
+                id.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::AssociatedType(assoc_ty, substitution) => TyKind::AssociatedType(
+                assoc_ty.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Scalar(scalar) => TyKind::Scalar(scalar.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner()),
+            TyKind::Str => TyKind::Str.intern(folder.target_interner()),
+            TyKind::Tuple(arity, substitution) => {
+                TyKind::Tuple(*arity, substitution.fold_with(folder, outer_binder)?)
+                    .intern(folder.target_interner())
+            }
+            TyKind::OpaqueType(opaque_ty, substitution) => TyKind::OpaqueType(
+                opaque_ty.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Slice(substitution) => {
+                TyKind::Slice(substitution.fold_with(folder, outer_binder)?)
+                    .intern(folder.target_interner())
+            }
+            TyKind::FnDef(fn_def, substitution) => TyKind::FnDef(
+                fn_def.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Ref(mutability, lifetime, ty) => TyKind::Ref(
+                mutability.fold_with(folder, outer_binder)?,
+                lifetime.fold_with(folder, outer_binder)?,
+                ty.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Raw(mutability, ty) => TyKind::Raw(
+                mutability.fold_with(folder, outer_binder)?,
+                ty.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Never => TyKind::Never.intern(folder.target_interner()),
+            TyKind::Array(ty, const_) => TyKind::Array(
+                ty.fold_with(folder, outer_binder)?,
+                const_.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Closure(id, substitution) => TyKind::Closure(
+                id.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Generator(id, substitution) => TyKind::Generator(
+                id.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::GeneratorWitness(id, substitution) => TyKind::GeneratorWitness(
+                id.fold_with(folder, outer_binder)?,
+                substitution.fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.target_interner()),
+            TyKind::Foreign(id) => TyKind::Foreign(id.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner()),
+            TyKind::Error => TyKind::Error.intern(folder.target_interner()),
+        })
     }
 }
 

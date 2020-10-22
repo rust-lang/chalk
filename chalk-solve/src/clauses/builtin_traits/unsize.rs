@@ -8,9 +8,8 @@ use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
     visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
-    ApplicationTy, Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal,
-    LifetimeOutlives, QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeName,
-    TypeOutlives, WhereClause,
+    Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, LifetimeOutlives,
+    QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
 
 struct UnsizeParameterCollector<'a, I: Interner> {
@@ -313,38 +312,17 @@ pub fn add_unsize_program_clauses<I: Interner>(
             );
         }
 
-        (
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Array,
-                substitution: array_subst,
-            }),
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Slice,
-                substitution: slice_subst,
-            }),
-        ) => {
-            let array_ty = array_subst.at(interner, 0);
-            let slice_ty = slice_subst.at(interner, 0);
-
+        (TyKind::Array(array_ty, _array_const), TyKind::Slice(slice_ty)) => {
             let eq_goal = EqGoal {
-                a: array_ty.clone(),
-                b: slice_ty.clone(),
+                a: array_ty.clone().cast(interner),
+                b: slice_ty.clone().cast(interner),
             };
 
             builder.push_clause(trait_ref.clone(), iter::once(eq_goal));
         }
 
         // Adt<T> -> Adt<U>
-        (
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Adt(adt_id_a),
-                substitution: substitution_a,
-            }),
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Adt(adt_id_b),
-                substitution: substitution_b,
-            }),
-        ) => {
+        (TyKind::Adt(adt_id_a, substitution_a), TyKind::Adt(adt_id_b, substitution_b)) => {
             if adt_id_a != adt_id_b {
                 return;
             }
@@ -420,12 +398,9 @@ pub fn add_unsize_program_clauses<I: Interner>(
             );
 
             let eq_goal = EqGoal {
-                a: TyKind::Apply(ApplicationTy {
-                    name: TypeName::Adt(adt_id),
-                    substitution,
-                })
-                .intern(interner)
-                .cast(interner),
+                a: TyKind::Adt(adt_id, substitution)
+                    .intern(interner)
+                    .cast(interner),
                 b: target_ty.clone().cast(interner),
             }
             .cast(interner);
@@ -451,16 +426,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
         }
 
         // (.., T) -> (.., U)
-        (
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Tuple(arity_a),
-                substitution: substitution_a,
-            }),
-            TyKind::Apply(ApplicationTy {
-                name: TypeName::Tuple(arity_b),
-                substitution: substitution_b,
-            }),
-        ) => {
+        (TyKind::Tuple(arity_a, substitution_a), TyKind::Tuple(arity_b, substitution_b)) => {
             if arity_a != arity_b || *arity_a == 0 {
                 return;
             }
@@ -471,16 +437,16 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
             // Check that the source tuple with the target's
             // last element is equal to the target.
-            let new_tuple = ApplicationTy {
-                name: TypeName::Tuple(*arity),
-                substitution: Substitution::from_iter(
+            let new_tuple = TyKind::Tuple(
+                *arity,
+                Substitution::from_iter(
                     interner,
                     substitution_a
                         .iter(interner)
                         .take(arity - 1)
                         .chain(iter::once(tail_ty_b)),
                 ),
-            }
+            )
             .cast(interner)
             .intern(interner);
 
