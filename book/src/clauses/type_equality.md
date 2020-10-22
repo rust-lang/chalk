@@ -95,7 +95,7 @@ shortly.
 
 In rustc, they correspond to the `TyKind::UnnormalizedProjectionTy` enum
 variant, declared in [`compiler/rustc_middle/src/ty/sty.rs`][sty]. In chalk, we use an
-[`AssociatedType`].
+`AssociatedType`.
 
 [sty]: https://github.com/rust-lang/rust/blob/master/compiler/rustc_middle/src/ty/sty.rs
 

@@ -9,7 +9,7 @@ representation of types is controlled by the [`Interner`] trait.
 [`Interner`]: http://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html
 [`Ty`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
 [`TyKind`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
-[`data`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.data
+[`kind`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.kind
 
 ## The `TyKind` variants and how they map to Rust syntax
 
