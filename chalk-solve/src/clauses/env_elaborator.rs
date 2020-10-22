@@ -78,7 +78,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
             TyKind::Function(_) | TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => (),
 
             _ => {
-                // This should fail because of the above clauses
+                // This shouldn't fail because of the above clauses
                 match_ty(&mut self.builder, self.environment, &ty)
                     .map_err(|_| ())
                     .unwrap()

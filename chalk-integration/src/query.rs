@@ -225,9 +225,8 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
         .filter(|(_, auto_trait)| auto_trait.is_auto_trait())
     {
         for &adt_id in program.adt_data.keys() {
-            let ty = chalk_ir::TyKind::Adt(adt_id, Substitution::empty(builder.interner()))
-                .intern(&ChalkIr);
-            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, &ty.kind(&ChalkIr))
+            let ty = chalk_ir::TyKind::Adt(adt_id, Substitution::empty(builder.interner()));
+            chalk_solve::clauses::push_auto_trait_impls(builder, auto_trait_id, &ty)
                 .map_err(|_| ())
                 .unwrap();
         }

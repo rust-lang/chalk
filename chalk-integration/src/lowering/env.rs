@@ -98,7 +98,7 @@ impl Env<'_> {
         let interner = self.interner();
 
         macro_rules! tykind {
-            ($k:expr, $type:expr) => {
+            ($k:expr, $tykind:ident, $id:expr) => {
                 if $k.binders.len(interner) > 0 {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name.clone(),
@@ -106,7 +106,11 @@ impl Env<'_> {
                         actual: 0,
                     })
                 } else {
-                    $type.cast(interner)
+                    Ok(
+                        chalk_ir::TyKind::$tykind($id, chalk_ir::Substitution::empty(interner))
+                            .intern(interner),
+                    )
+                    .cast(interner)
                 }
             };
         }
@@ -126,34 +130,10 @@ impl Env<'_> {
                     }
                 })
             }
-            Ok(TypeLookup::Adt(id)) => tykind!(
-                self.adt_kind(id),
-                Ok(
-                    chalk_ir::TyKind::Adt(id, chalk_ir::Substitution::empty(interner))
-                        .intern(interner)
-                )
-            ),
-            Ok(TypeLookup::FnDef(id)) => tykind!(
-                self.fn_def_kind(id),
-                Ok(
-                    chalk_ir::TyKind::FnDef(id, chalk_ir::Substitution::empty(interner))
-                        .intern(interner)
-                )
-            ),
-            Ok(TypeLookup::Closure(id)) => tykind!(
-                self.closure_kind(id),
-                Ok(
-                    chalk_ir::TyKind::Closure(id, chalk_ir::Substitution::empty(interner))
-                        .intern(interner)
-                )
-            ),
-            Ok(TypeLookup::Generator(id)) => tykind!(
-                self.generator_kind(id),
-                Ok(
-                    chalk_ir::TyKind::Generator(id, chalk_ir::Substitution::empty(interner))
-                        .intern(interner)
-                )
-            ),
+            Ok(TypeLookup::Adt(id)) => tykind!(self.adt_kind(id), Adt, id),
+            Ok(TypeLookup::FnDef(id)) => tykind!(self.fn_def_kind(id), FnDef, id),
+            Ok(TypeLookup::Closure(id)) => tykind!(self.closure_kind(id), Closure, id),
+            Ok(TypeLookup::Generator(id)) => tykind!(self.generator_kind(id), Generator, id),
             Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Opaque(
                 chalk_ir::OpaqueTy {
                     opaque_ty_id: id,

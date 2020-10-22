@@ -1,17 +1,17 @@
 # Rust types
 
-Rust types are represented by the [`Ty`] and [`TyData`] types.
+Rust types are represented by the [`Ty`] and [`TyKind`] types.
 You use [`Ty`] to represent "some Rust type". But to actually inspect
-what sort of type you have, you invoke the [`data`] method, which
-returns a [`TyData`]. As described earlier, the actual in-memory
+what sort of type you have, you invoke the [`kind`] method, which
+returns a [`TyKind`]. As described earlier, the actual in-memory
 representation of types is controlled by the [`Interner`] trait.
 
 [`Interner`]: http://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html
 [`Ty`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
-[`TyData`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyData.html
+[`TyKind`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
 [`data`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.data
 
-## The `TyData` variants and how they map to Rust syntax
+## The `TyKind` variants and how they map to Rust syntax
 
 This section covers the variants we use to categorize types. We have
 endeavored to create a breakdown that simplifies the Rust "surface
@@ -22,16 +22,17 @@ differences in how they are handled.
 
 | Chalk variant | Example Rust types |
 | ------------- | ------------------ |
-| `Apply` | `Vec<u32>`, `f32` |
 | `Placeholder` | how we represent `T` when type checking `fn foo<T>() { .. }` |
 | `Dyn` | `dyn Trait` |
 | `Fn` | `fn(&u8)` |
 | `Alias` | `<T as Iterator>::Item`, or the `Foo` in `type Foo = impl Trait` and `type Foo = u32` |
 | `BoundVariable` | an uninstantiated generic parameter like the `T` in `struct Foo<T>` |
+| `Adt` | `struct Foo<T>` |
+| ... | ... |
 
 ## Justification for each variant
 
-Each variant of `TyData` generally wraps a single struct, which
+Each variant of `TyKind` generally wraps a single struct, which
 represents a type known to be of that particular variant. This section
 goes through the variants in a bit more detail, and in particular
 describes why each variant exists.
