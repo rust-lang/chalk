@@ -56,14 +56,17 @@ pub fn add_copy_program_clauses<I: Interner>(
         }
 
         // these impls are in libcore
-        TyKind::Ref(_, _) | TyKind::Raw(_, _) | TyKind::Scalar(_) | TyKind::Never | TyKind::Str => {
-        }
+        TyKind::Ref(_, _, _)
+        | TyKind::Raw(_, _)
+        | TyKind::Scalar(_)
+        | TyKind::Never
+        | TyKind::Str => {}
 
         TyKind::Adt(_, _)
         | TyKind::AssociatedType(_, _)
         | TyKind::Slice(_)
         | TyKind::OpaqueType(_, _)
-        | TyKind::Foreign(_, _)
+        | TyKind::Foreign(_)
         | TyKind::Generator(_, _)
         | TyKind::GeneratorWitness(_, _)
         | TyKind::Error => {}

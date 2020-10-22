@@ -439,11 +439,13 @@ impl<I: Interner> MayInvalidate<'_, I> {
             (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
             }
-            (TyKind::Ref(id_a, substitution_a), TyKind::Ref(id_b, substitution_b)) => {
-                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            (TyKind::Ref(id_a, lifetime_a, ty_a), TyKind::Ref(id_b, lifetime_b, ty_b)) => {
+                id_a != id_b
+                    || self.aggregate_lifetimes(lifetime_a, lifetime_b)
+                    || self.aggregate_tys(ty_a, ty_b)
             }
-            (TyKind::Raw(id_a, substitution_a), TyKind::Raw(id_b, substitution_b)) => {
-                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
+            (TyKind::Raw(id_a, ty_a), TyKind::Raw(id_b, ty_b)) => {
+                id_a != id_b || self.aggregate_tys(ty_a, ty_b)
             }
             (TyKind::Never, TyKind::Never) => false,
             (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
@@ -459,9 +461,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 TyKind::GeneratorWitness(id_a, substitution_a),
                 TyKind::GeneratorWitness(id_b, substitution_b),
             ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
-            (TyKind::Foreign(id_a, substitution_a), TyKind::Foreign(id_b, substitution_b)) => {
-                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
-            }
+            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => id_a != id_b,
             (TyKind::Error, TyKind::Error) => false,
 
             (_, _) => true,

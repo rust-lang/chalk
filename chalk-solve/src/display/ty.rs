@@ -77,36 +77,14 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
                 "{}",
                 display_type_with_generics(s, *opaque_ty_id, substitution.as_slice(interner))
             ),
-            TyKind::Raw(raw, substitution) => {
-                let mutability = match raw {
-                    Mutability::Mut => "*mut ",
-                    Mutability::Not => "*const ",
-                };
-                write!(
-                    f,
-                    "{}{}",
-                    mutability,
-                    substitution
-                        .iter(interner)
-                        .filter_map(move |p| p.ty(interner))
-                        .next()
-                        .unwrap()
-                        .display(s)
-                )
-            }
-            TyKind::Ref(mutability, substitution) => {
-                let mutability = match mutability {
-                    Mutability::Mut => "mut ",
-                    Mutability::Not => "",
-                };
-                write!(
-                    f,
-                    "&{} {}{}",
-                    substitution.at(interner, 0).display(s),
-                    mutability,
-                    substitution.at(interner, 1).display(s)
-                )
-            }
+            TyKind::Raw(mutability, ty) => match mutability {
+                Mutability::Mut => write!(f, "*mut {}", ty.display(s)),
+                Mutability::Not => write!(f, "*const {}", ty.display(s)),
+            },
+            TyKind::Ref(mutability, lifetime, ty) => match mutability {
+                Mutability::Mut => write!(f, "&{} mut {}", lifetime.display(s), ty.display(s)),
+                Mutability::Not => write!(f, "&{} {}", lifetime.display(s), ty.display(s)),
+            },
             TyKind::Str => write!(f, "str"),
             TyKind::Slice(ty) => write!(f, "[{}]", ty.display(s)),
             TyKind::Error => write!(f, "{{error}}"),

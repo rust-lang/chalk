@@ -471,10 +471,10 @@ pub enum TyKind<I: Interner> {
     Slice(Ty<I>),
 
     /// a raw pointer type like `*const T` or `*mut T`
-    Raw(Mutability, Substitution<I>),
+    Raw(Mutability, Ty<I>),
 
     /// a reference type like `&T` or `&mut T`
-    Ref(Mutability, Substitution<I>),
+    Ref(Mutability, Lifetime<I>, Ty<I>),
 
     /// a placeholder for opaque types like `impl Trait`
     OpaqueType(OpaqueTyId<I>, Substitution<I>),
@@ -498,7 +498,7 @@ pub enum TyKind<I: Interner> {
     GeneratorWitness(GeneratorId<I>, Substitution<I>),
 
     /// foreign types
-    Foreign(ForeignDefId<I>, Substitution<I>),
+    Foreign(ForeignDefId<I>),
 
     /// This can be used to represent an error, e.g. during name resolution of a type.
     /// Chalk itself will not produce this, just pass it through when given.

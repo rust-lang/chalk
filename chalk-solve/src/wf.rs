@@ -102,12 +102,14 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 .push(ty.shifted_out_to(interner, outer_binder).unwrap())
         };
         match ty.kind(interner) {
-            TyKind::Adt(_id, substitution) => {
+            TyKind::Adt(id, substitution) => {
                 push_ty();
+                id.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder);
             }
-            TyKind::AssociatedType(_assoc_ty, substitution) => {
+            TyKind::AssociatedType(assoc_ty, substitution) => {
                 push_ty();
+                assoc_ty.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder);
             }
             TyKind::Scalar(scalar) => {
@@ -117,28 +119,34 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             TyKind::Str => {
                 push_ty();
             }
-            TyKind::Tuple(_arity, substitution) => {
+            TyKind::Tuple(arity, substitution) => {
                 push_ty();
+                arity.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder);
             }
-            TyKind::OpaqueType(_opaque_ty, substitution) => {
+            TyKind::OpaqueType(opaque_ty, substitution) => {
                 push_ty();
+                opaque_ty.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder);
             }
             TyKind::Slice(substitution) => {
                 push_ty();
                 substitution.visit_with(self, outer_binder);
             }
-            TyKind::FnDef(_fn_def, substitution) => {
+            TyKind::FnDef(fn_def, substitution) => {
                 push_ty();
+                fn_def.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder);
             }
-            TyKind::Ref(_mutability, substitution) => {
+            TyKind::Ref(mutability, lifetime, ty) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
+                mutability.visit_with(self, outer_binder);
+                lifetime.visit_with(self, outer_binder);
+                ty.visit_with(self, outer_binder);
             }
-            TyKind::Raw(_mutability, substitution) => {
+            TyKind::Raw(mutability, substitution) => {
                 push_ty();
+                mutability.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder);
             }
             TyKind::Never => {
@@ -161,9 +169,8 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 push_ty();
                 substitution.visit_with(self, outer_binder);
             }
-            TyKind::Foreign(_foreign_ty, substitution) => {
+            TyKind::Foreign(_foreign_ty) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
             }
             TyKind::Error => {
                 push_ty();
@@ -696,7 +703,7 @@ impl WfWellKnownConstraints {
         {
             TyKind::Scalar(_)
             | TyKind::Raw(_, _)
-            | TyKind::Ref(Mutability::Not, _)
+            | TyKind::Ref(Mutability::Not, _, _)
             | TyKind::Never => return true,
 
             TyKind::Adt(_, _) => (),
@@ -941,15 +948,12 @@ impl WfWellKnownConstraints {
         };
 
         match (source.kind(interner), target.kind(interner)) {
-            (TyKind::Ref(s_m, subst_a), TyKind::Ref(t_m, subst_b))
-            | (TyKind::Ref(s_m, subst_a), TyKind::Raw(t_m, subst_b))
-            | (TyKind::Raw(s_m, subst_a), TyKind::Raw(t_m, subst_b)) => {
+            (TyKind::Ref(s_m, _, source), TyKind::Ref(t_m, _, target))
+            | (TyKind::Ref(s_m, _, source), TyKind::Raw(t_m, target))
+            | (TyKind::Raw(s_m, source), TyKind::Raw(t_m, target)) => {
                 if (*s_m, *t_m) == (Mutability::Not, Mutability::Mut) {
                     return false;
                 }
-
-                let source = subst_a.type_parameters(interner).next().unwrap();
-                let target = subst_b.type_parameters(interner).next().unwrap();
 
                 let unsize_trait_id =
                     if let Some(id) = db.well_known_trait_id(WellKnownTrait::Unsize) {
@@ -963,7 +967,7 @@ impl WfWellKnownConstraints {
                     trait_id: unsize_trait_id,
                     substitution: Substitution::from_iter(
                         interner,
-                        [source, target].iter().cloned(),
+                        [source.clone(), target.clone()].iter().cloned(),
                     ),
                 }
                 .cast(interner);

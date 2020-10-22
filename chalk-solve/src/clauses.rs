@@ -37,15 +37,13 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         // And for `PhantomData<T>`, we pass `T`.
         TyKind::Adt(_, substitution)
         | TyKind::Tuple(_, substitution)
-        | TyKind::Raw(_, substitution)
-        | TyKind::Ref(_, substitution)
         | TyKind::FnDef(_, substitution) => substitution
             .iter(interner)
             .filter_map(|x| x.ty(interner))
             .cloned()
             .collect(),
 
-        TyKind::Slice(ty) => vec![ty.clone()],
+        TyKind::Raw(_, ty) | TyKind::Ref(_, _, ty) | TyKind::Slice(ty) => vec![ty.clone()],
 
         TyKind::Array(_, _) | TyKind::Str | TyKind::Never | TyKind::Scalar(_) => Vec::new(),
 
@@ -73,7 +71,7 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         TyKind::Placeholder(_) => panic!("this function should not be called for placeholders"),
         TyKind::Dyn(_) => panic!("this function should not be called for dyn types"),
         TyKind::Alias(_) => panic!("this function should not be called for alias"),
-        TyKind::Foreign(_, _) => panic!("constituent_types of foreign types are unknown!"),
+        TyKind::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TyKind::Error => Vec::new(),
         TyKind::OpaqueType(_, _) => unimplemented!(),
         TyKind::AssociatedType(_, _) => unimplemented!(),
@@ -157,7 +155,7 @@ pub fn push_auto_trait_impls<I: Interner>(
         TyKind::InferenceVar(_, _) | TyKind::BoundVar(_) => Err(Floundered),
 
         // auto traits are not implemented for foreign types
-        TyKind::Foreign(_, _) => Ok(()),
+        TyKind::Foreign(_) => Ok(()),
 
         // closures require binders, while the other types do not
         TyKind::Closure(closure_id, _) => {
@@ -742,11 +740,11 @@ fn match_ty<I: Interner>(
         | TyKind::Str
         | TyKind::Slice(_)
         | TyKind::Raw(_, _)
-        | TyKind::Ref(_, _)
+        | TyKind::Ref(_, _, _)
         | TyKind::Array(_, _)
         | TyKind::Never
         | TyKind::Closure(_, _)
-        | TyKind::Foreign(_, _)
+        | TyKind::Foreign(_)
         | TyKind::Generator(_, _)
         | TyKind::GeneratorWitness(_, _) => builder.push_fact(WellFormed::Ty(ty.clone())),
         TyKind::Placeholder(_) => {

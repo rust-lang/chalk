@@ -788,30 +788,16 @@ impl LowerWithEnv for Ty {
 
             Ty::Slice { ty } => chalk_ir::TyKind::Slice(ty.lower(env)?).intern(interner),
 
-            Ty::Raw { mutability, ty } => chalk_ir::TyKind::Raw(
-                mutability.lower(),
-                chalk_ir::Substitution::from_fallible(
-                    interner,
-                    std::iter::once(Ok(ty.lower(env)?)),
-                )?,
-            )
-            .intern(interner),
+            Ty::Raw { mutability, ty } => {
+                chalk_ir::TyKind::Raw(mutability.lower(), ty.lower(env)?).intern(interner)
+            }
 
             Ty::Ref {
                 mutability,
                 lifetime,
                 ty,
-            } => chalk_ir::TyKind::Ref(
-                mutability.lower(),
-                chalk_ir::Substitution::from_iter(
-                    interner,
-                    &[
-                        lifetime.lower(env)?.cast(interner),
-                        ty.lower(env)?.cast(interner),
-                    ],
-                ),
-            )
-            .intern(interner),
+            } => chalk_ir::TyKind::Ref(mutability.lower(), lifetime.lower(env)?, ty.lower(env)?)
+                .intern(interner),
 
             Ty::Str => chalk_ir::TyKind::Str.intern(interner),
 

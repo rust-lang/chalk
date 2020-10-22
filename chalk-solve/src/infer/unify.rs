@@ -184,18 +184,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 Zip::zip_with(self, substitution_a, substitution_b)
             }
             (
-                TyKind::Ref(mutability_a, substitution_a),
-                TyKind::Ref(mutability_b, substitution_b),
+                TyKind::Ref(mutability_a, lifetime_a, ty_a),
+                TyKind::Ref(mutability_b, lifetime_b, ty_b),
             ) => {
                 Zip::zip_with(self, mutability_a, mutability_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                Zip::zip_with(self, lifetime_a, lifetime_b)?;
+                Zip::zip_with(self, ty_a, ty_b)
             }
-            (
-                TyKind::Raw(mutability_a, substitution_a),
-                TyKind::Raw(mutability_b, substitution_b),
-            ) => {
+            (TyKind::Raw(mutability_a, ty_a), TyKind::Raw(mutability_b, ty_b)) => {
                 Zip::zip_with(self, mutability_a, mutability_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
+                Zip::zip_with(self, ty_a, ty_b)
             }
             (TyKind::Never, TyKind::Never) => Ok(()),
             (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
@@ -217,10 +215,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 Zip::zip_with(self, id_a, id_b)?;
                 Zip::zip_with(self, substitution_a, substitution_b)
             }
-            (TyKind::Foreign(id_a, substitution_a), TyKind::Foreign(id_b, substitution_b)) => {
-                Zip::zip_with(self, id_a, id_b)?;
-                Zip::zip_with(self, substitution_a, substitution_b)
-            }
+            (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => Zip::zip_with(self, id_a, id_b),
             (TyKind::Error, TyKind::Error) => Ok(()),
 
             (_, _) => Err(NoSolution),

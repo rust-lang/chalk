@@ -463,14 +463,15 @@ where
                 substitution.fold_with(folder, outer_binder)?,
             )
             .intern(folder.target_interner()),
-            TyKind::Ref(mutability, substitution) => TyKind::Ref(
+            TyKind::Ref(mutability, lifetime, ty) => TyKind::Ref(
                 mutability.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                lifetime.fold_with(folder, outer_binder)?,
+                ty.fold_with(folder, outer_binder)?,
             )
             .intern(folder.target_interner()),
-            TyKind::Raw(mutability, substitution) => TyKind::Raw(
+            TyKind::Raw(mutability, ty) => TyKind::Raw(
                 mutability.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                ty.fold_with(folder, outer_binder)?,
             )
             .intern(folder.target_interner()),
             TyKind::Never => TyKind::Never.intern(folder.target_interner()),
@@ -494,11 +495,8 @@ where
                 substitution.fold_with(folder, outer_binder)?,
             )
             .intern(folder.target_interner()),
-            TyKind::Foreign(id, substitution) => TyKind::Foreign(
-                id.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
-            )
-            .intern(folder.target_interner()),
+            TyKind::Foreign(id) => TyKind::Foreign(id.fold_with(folder, outer_binder)?)
+                .intern(folder.target_interner()),
             TyKind::Error => TyKind::Error.intern(folder.target_interner()),
         })
     }

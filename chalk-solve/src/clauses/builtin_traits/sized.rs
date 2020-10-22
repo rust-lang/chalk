@@ -86,13 +86,13 @@ pub fn add_sized_program_clauses<I: Interner>(
         | TyKind::Raw(_, _)
         | TyKind::Generator(_, _)
         | TyKind::GeneratorWitness(_, _)
-        | TyKind::Ref(_, _) => builder.push_fact(trait_ref.clone()),
+        | TyKind::Ref(_, _, _) => builder.push_fact(trait_ref.clone()),
 
         TyKind::AssociatedType(_, _)
         | TyKind::Slice(_)
         | TyKind::OpaqueType(_, _)
         | TyKind::Str
-        | TyKind::Foreign(_, _)
+        | TyKind::Foreign(_)
         | TyKind::Error => {}
 
         TyKind::Function(_)

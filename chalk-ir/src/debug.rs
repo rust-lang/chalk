@@ -205,24 +205,14 @@ impl<I: Interner> Debug for TyKind<I> {
             }
             TyKind::Slice(substitution) => write!(fmt, "{{slice}}<{:?}>", substitution),
             TyKind::FnDef(fn_def, substitution) => write!(fmt, "{:?}<{:?}>", fn_def, substitution),
-            TyKind::Ref(mutability, substitution) => write!(
-                fmt,
-                "{}<{:?}>",
-                match mutability {
-                    Mutability::Mut => "{{&mut}}",
-                    Mutability::Not => "{{&}}",
-                },
-                substitution,
-            ),
-            TyKind::Raw(mutability, substitution) => write!(
-                fmt,
-                "{}<{:?}>",
-                match mutability {
-                    Mutability::Mut => "{{*mut}}",
-                    Mutability::Not => "{{*const}}",
-                },
-                substitution,
-            ),
+            TyKind::Ref(mutability, lifetime, ty) => match mutability {
+                Mutability::Mut => write!(fmt, "(&{:?} mut {:?})", lifetime, ty),
+                Mutability::Not => write!(fmt, "(&{:?} {:?})", lifetime, ty),
+            },
+            TyKind::Raw(mutability, ty) => match mutability {
+                Mutability::Mut => write!(fmt, "(*mut {:?})", ty),
+                Mutability::Not => write!(fmt, "(*const {:?})", ty),
+            },
             TyKind::Never => write!(fmt, "Never"),
             TyKind::Array(ty, const_) => write!(fmt, "[{:?}; {:?}]", ty, const_),
             TyKind::Closure(id, substitution) => {
@@ -234,9 +224,7 @@ impl<I: Interner> Debug for TyKind<I> {
             TyKind::GeneratorWitness(witness, substitution) => {
                 write!(fmt, "{:?}<{:?}>", witness, substitution)
             }
-            TyKind::Foreign(foreign_ty, substitution) => {
-                write!(fmt, "{:?}<{:?}>", foreign_ty, substitution)
-            }
+            TyKind::Foreign(foreign_ty) => write!(fmt, "{:?}", foreign_ty),
             TyKind::Error => write!(fmt, "{{error}}"),
         }
     }
@@ -505,24 +493,14 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
             TyKind::FnDef(fn_def, substitution) => {
                 write!(fmt, "{:?}{:?}", fn_def, substitution.with_angle(interner))
             }
-            TyKind::Ref(mutability, substitution) => write!(
-                fmt,
-                "{}{:?}",
-                match mutability {
-                    Mutability::Mut => "{{&mut}}",
-                    Mutability::Not => "{{&}}",
-                },
-                substitution.with_angle(interner),
-            ),
-            TyKind::Raw(mutability, substitution) => write!(
-                fmt,
-                "{}{:?}",
-                match mutability {
-                    Mutability::Mut => "{{*mut}}",
-                    Mutability::Not => "{{*const}}",
-                },
-                substitution.with_angle(interner),
-            ),
+            TyKind::Ref(mutability, lifetime, ty) => match mutability {
+                Mutability::Mut => write!(fmt, "(&{:?} mut {:?})", lifetime, ty),
+                Mutability::Not => write!(fmt, "(&{:?} {:?})", lifetime, ty),
+            },
+            TyKind::Raw(mutability, ty) => match mutability {
+                Mutability::Mut => write!(fmt, "(*mut {:?})", ty),
+                Mutability::Not => write!(fmt, "(*const {:?})", ty),
+            },
             TyKind::Never => write!(fmt, "Never"),
             TyKind::Array(ty, const_) => write!(fmt, "[{:?}; {:?}]", ty, const_),
             TyKind::Closure(id, substitution) => write!(
@@ -540,12 +518,7 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
             TyKind::GeneratorWitness(witness, substitution) => {
                 write!(fmt, "{:?}{:?}", witness, substitution.with_angle(interner))
             }
-            TyKind::Foreign(foreign_ty, substitution) => write!(
-                fmt,
-                "{:?}{:?}",
-                foreign_ty,
-                substitution.with_angle(interner)
-            ),
+            TyKind::Foreign(foreign_ty) => write!(fmt, "{:?}", foreign_ty,),
             TyKind::Error => write!(fmt, "{{error}}"),
         }
     }

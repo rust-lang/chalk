@@ -162,12 +162,9 @@ impl Env<'_> {
             ))
             .intern(interner)
             .cast(interner)),
-            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyKind::Foreign(
-                id,
-                chalk_ir::Substitution::empty(interner),
-            )
-            .intern(interner)
-            .cast(interner)),
+            Ok(TypeLookup::Foreign(id)) => Ok(chalk_ir::TyKind::Foreign(id)
+                .intern(interner)
+                .cast(interner)),
             Ok(TypeLookup::Trait(_)) => Err(RustIrError::NotStruct(name.clone())),
             Err(_) => Err(RustIrError::InvalidParameterName(name.clone())),
         }

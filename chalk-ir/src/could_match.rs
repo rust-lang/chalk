@@ -55,13 +55,16 @@ where
                         TyKind::FnDef(fn_def_b, substitution_b),
                     ) => fn_def_a == fn_def_b && matches(substitution_a, substitution_b),
                     (
-                        TyKind::Ref(mutability_a, substitution_a),
-                        TyKind::Ref(mutability_b, substitution_b),
-                    ) => mutability_a == mutability_b && matches(substitution_a, substitution_b),
-                    (
-                        TyKind::Raw(mutability_a, substitution_a),
-                        TyKind::Raw(mutability_b, substitution_b),
-                    ) => mutability_a == mutability_b && matches(substitution_a, substitution_b),
+                        TyKind::Ref(mutability_a, lifetime_a, ty_a),
+                        TyKind::Ref(mutability_b, lifetime_b, ty_b),
+                    ) => {
+                        mutability_a == mutability_b
+                            && lifetime_a.could_match(interner, &lifetime_b)
+                            && ty_a.could_match(interner, &ty_b)
+                    }
+                    (TyKind::Raw(mutability_a, ty_a), TyKind::Raw(mutability_b, ty_b)) => {
+                        mutability_a == mutability_b && ty_a.could_match(interner, &ty_b)
+                    }
                     (TyKind::Never, TyKind::Never) => true,
                     (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {
                         ty_a.could_match(interner, ty_b) && const_a.could_match(interner, const_b)
@@ -78,10 +81,9 @@ where
                         TyKind::GeneratorWitness(generator_a, substitution_a),
                         TyKind::GeneratorWitness(generator_b, substitution_b),
                     ) => generator_a == generator_b && matches(substitution_a, substitution_b),
-                    (
-                        TyKind::Foreign(foreign_ty_a, substitution_a),
-                        TyKind::Foreign(foreign_ty_b, substitution_b),
-                    ) => foreign_ty_a == foreign_ty_b && matches(substitution_a, substitution_b),
+                    (TyKind::Foreign(foreign_ty_a), TyKind::Foreign(foreign_ty_b)) => {
+                        foreign_ty_a == foreign_ty_b
+                    }
                     (TyKind::Error, TyKind::Error) => true,
 
                     _ => true,

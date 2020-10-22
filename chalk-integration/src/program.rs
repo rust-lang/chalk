@@ -464,7 +464,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                 (TyKind::OpaqueType(id_a, _), TyKind::OpaqueType(id_b, _)) => id_a == id_b,
                 (TyKind::Slice(_), TyKind::Slice(_)) => true,
                 (TyKind::FnDef(id_a, _), TyKind::FnDef(id_b, _)) => id_a == id_b,
-                (TyKind::Ref(id_a, _), TyKind::Ref(id_b, _)) => id_a == id_b,
+                (TyKind::Ref(id_a, _, _), TyKind::Ref(id_b, _, _)) => id_a == id_b,
                 (TyKind::Raw(id_a, _), TyKind::Raw(id_b, _)) => id_a == id_b,
                 (TyKind::Never, TyKind::Never) => true,
                 (TyKind::Array(_, _), TyKind::Array(_, _)) => true,
@@ -473,7 +473,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                 (TyKind::GeneratorWitness(id_a, _), TyKind::GeneratorWitness(id_b, _)) => {
                     id_a == id_b
                 }
-                (TyKind::Foreign(id_a, _), TyKind::Foreign(id_b, _)) => id_a == id_b,
+                (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => id_a == id_b,
                 (TyKind::Error, TyKind::Error) => true,
                 (_, _) => false,
             }
