@@ -501,9 +501,7 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
                 opaque_ty,
                 substitution.with_angle(interner)
             ),
-            TyKind::Slice(substitution) => {
-                write!(fmt, "{{slice}}{:?}", substitution.with_angle(interner))
-            }
+            TyKind::Slice(ty) => write!(fmt, "[{:?}]", ty),
             TyKind::FnDef(fn_def, substitution) => {
                 write!(fmt, "{:?}{:?}", fn_def, substitution.with_angle(interner))
             }

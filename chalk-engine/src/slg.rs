@@ -435,10 +435,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 TyKind::OpaqueType(id_a, substitution_a),
                 TyKind::OpaqueType(id_b, substitution_b),
             ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
-            (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => substitution_a
-                .iter(interner)
-                .zip(substitution_b.iter(interner))
-                .any(|(new, current)| self.aggregate_generic_args(new, current)),
+            (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => self.aggregate_tys(ty_a, ty_b),
             (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
             }

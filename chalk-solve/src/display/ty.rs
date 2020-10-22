@@ -108,16 +108,7 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
                 )
             }
             TyKind::Str => write!(f, "str"),
-            TyKind::Slice(substitution) => write!(
-                f,
-                "[{}]",
-                substitution
-                    .iter(interner)
-                    .filter_map(move |p| p.ty(interner))
-                    .next()
-                    .unwrap()
-                    .display(s)
-            ),
+            TyKind::Slice(ty) => write!(f, "[{}]", ty.display(s)),
             TyKind::Error => write!(f, "{{error}}"),
             TyKind::Never => write!(f, "!"),
 

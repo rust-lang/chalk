@@ -312,12 +312,10 @@ pub fn add_unsize_program_clauses<I: Interner>(
             );
         }
 
-        (TyKind::Array(array_ty, _array_const), TyKind::Slice(slice_subst)) => {
-            let slice_ty = slice_subst.at(interner, 0);
-
+        (TyKind::Array(array_ty, _array_const), TyKind::Slice(slice_ty)) => {
             let eq_goal = EqGoal {
                 a: array_ty.clone().cast(interner),
-                b: slice_ty.clone(),
+                b: slice_ty.clone().cast(interner),
             };
 
             builder.push_clause(trait_ref.clone(), iter::once(eq_goal));

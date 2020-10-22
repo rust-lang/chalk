@@ -296,15 +296,8 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
                     TyKind::OpaqueType(name, substitution).intern(interner)
                 })
                 .unwrap_or_else(|| self.new_ty_variable()),
-            (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => {
-                let substitution = Substitution::from_iter(
-                    interner,
-                    substitution_a
-                        .iter(interner)
-                        .zip(substitution_b.iter(interner))
-                        .map(|(p1, p2)| self.aggregate_generic_args(p1, p2)),
-                );
-                TyKind::Slice(substitution).intern(interner)
+            (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => {
+                TyKind::Slice(self.aggregate_tys(ty_a, ty_b)).intern(interner)
             }
             (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => self
                 .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)

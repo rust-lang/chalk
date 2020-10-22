@@ -49,9 +49,7 @@ where
                         TyKind::OpaqueType(opaque_ty_a, substitution_a),
                         TyKind::OpaqueType(opaque_ty_b, substitution_b),
                     ) => opaque_ty_a == opaque_ty_b && matches(substitution_a, substitution_b),
-                    (TyKind::Slice(substitution_a), TyKind::Slice(substitution_b)) => {
-                        matches(substitution_a, substitution_b)
-                    }
+                    (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => ty_a.could_match(interner, ty_b),
                     (
                         TyKind::FnDef(fn_def_a, substitution_a),
                         TyKind::FnDef(fn_def_b, substitution_b),

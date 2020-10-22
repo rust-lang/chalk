@@ -468,7 +468,7 @@ pub enum TyKind<I: Interner> {
     Array(Ty<I>, Const<I>),
 
     /// a slice type like `[T]`
-    Slice(Substitution<I>),
+    Slice(Ty<I>),
 
     /// a raw pointer type like `*const T` or `*mut T`
     Raw(Mutability, Substitution<I>),

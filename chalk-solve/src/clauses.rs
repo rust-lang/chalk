@@ -37,7 +37,6 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         // And for `PhantomData<T>`, we pass `T`.
         TyKind::Adt(_, substitution)
         | TyKind::Tuple(_, substitution)
-        | TyKind::Slice(substitution)
         | TyKind::Raw(_, substitution)
         | TyKind::Ref(_, substitution)
         | TyKind::FnDef(_, substitution) => substitution
@@ -45,6 +44,8 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
             .filter_map(|x| x.ty(interner))
             .cloned()
             .collect(),
+
+        TyKind::Slice(ty) => vec![ty.clone()],
 
         TyKind::Array(_, _) | TyKind::Str | TyKind::Never | TyKind::Scalar(_) => Vec::new(),
 
