@@ -6,12 +6,12 @@ This is a glossary of terminology (possibly) used in the chalk crate.
 
 ### Basic notation
 
-| Notation     | Meaning                          |
-|--------------|----------------------------------|
-| `?0`         | [Type inference variable]        |
-| `^0`, `^1.0` | [Bound variable]                 |
-| `!0`         | [Placeholder]                    |
-| `A :- B`     | [Clause]; A is true if B is true |
+| Notation     | Meaning                                 |
+|--------------|-----------------------------------------|
+| `?0`         | [Type inference variable]               |
+| `^0`, `^1.0` | [Bound variable]; bound in a [`forall`] |
+| `!0`, `!1.0` | [Placeholder]                           |
+| `A :- B`     | [Clause]; A is true if B is true        |
 
 ### Rules
 
@@ -26,6 +26,7 @@ This is a glossary of terminology (possibly) used in the chalk crate.
 
 [Type inference variable]: ../types/rust_types.md#inference-variables
 [Bound variable]: ../types/rust_types.md#bound-variables
+[`forall`]: #debruijn-index
 [Placeholder]: ../types/rust_types.md#placeholders
 [Clause]: ../clauses/goals_and_clauses.md
 
@@ -102,6 +103,11 @@ innermost binder increasing from the inside out.
 Given the example `forall<T> { exists<U> { T: Foo<Item=U> } }` the
 literal names `U` and `T` are replaced with `0` and `1` respectively and the names are erased from the binders: `forall<_>
 { exists<_> { 1: Foo<Item=0> } }`.
+
+As another example, in `forall<X, Y> { forall <Z> { X } }`, `X` is represented
+as `^1.0`. The `1` represents the de Bruijn index of the variable and the `0`
+represents the index in that scope: `X` is bound in the second scope counting
+from where it is referenced, and it is the first variable bound in that scope.
 
 ## Formula
 A formula is a logical expression consisting of literals and constants connected
