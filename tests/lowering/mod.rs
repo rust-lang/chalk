@@ -503,7 +503,7 @@ fn scalars() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 }
@@ -527,7 +527,7 @@ fn raw_pointers() {
             struct *const i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 
@@ -537,7 +537,7 @@ fn raw_pointers() {
             impl Foo for *i32 { }
         }
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 }
@@ -561,7 +561,7 @@ fn refs() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 }
@@ -587,7 +587,7 @@ fn slices() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 }
@@ -635,7 +635,7 @@ fn arrays() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 
@@ -659,7 +659,7 @@ fn arrays() {
         }
 
         error_msg {
-            "parse error: UnrecognizedToken"
+            "parse error: Unrecognizedtoken"
         }
     }
 }
