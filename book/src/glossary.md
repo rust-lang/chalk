@@ -2,6 +2,34 @@
 
 This is a glossary of terminology (possibly) used in the chalk crate.
 
+## Notation
+
+### Basic notation
+
+| Notation     | Meaning                                 |
+|--------------|-----------------------------------------|
+| `?0`         | [Type inference variable]               |
+| `^0`, `^1.0` | [Bound variable]; bound in a [`forall`] |
+| `!0`, `!1.0` | [Placeholder]                           |
+| `A :- B`     | [Clause]; A is true if B is true        |
+
+### Rules
+
+- `forall<T> { (Vec<T>: Clone) :- (T: Clone)`: for every `T`, `Vec<T>`
+  implements `Clone` if `T` implements `Clone`
+
+### Queries
+
+- `Vec<i32>: Clone`: does `Vec<i32>` implement `Clone`?
+- `exists<T> { Vec<T>: Clone }`: does there exist a `T` such that `Vec<T>`
+  implements `Clone`?
+
+[Type inference variable]: ../types/rust_types.md#inference-variables
+[Bound variable]: ../types/rust_types.md#bound-variables
+[`forall`]: #debruijn-index
+[Placeholder]: ../types/rust_types.md#placeholders
+[Clause]: ../clauses/goals_and_clauses.md
+
 ## Binary connective
 There are sixteen logical connectives on two boolean variables. The most
 interesting in this context are listed below. There is also a truth table given
@@ -50,7 +78,7 @@ the optional positive literal. Due to the equivalence `(P => Q) <=> (!P || Q)`
 the clause can be expressed as `B && C && ... => A` which means that A is true
 if `B`, `C`, etc. are all true. All rules in chalk are in this form. For example
 
-```notrust
+```rust,ignore
 struct A<T> {}
 impl<T> B for A<T> where T: C + D {}
 ```
@@ -58,7 +86,7 @@ impl<T> B for A<T> where T: C + D {}
 is expressed as the *Horn clause* `(T: C) && (T: D) => (A<T>: B)`. This formula
 has to hold for all values of `T`. The second example
 
-```notrust
+```rust,ignore
 struct A {}
 impl B for A {}
 impl C for A {}
@@ -75,6 +103,11 @@ innermost binder increasing from the inside out.
 Given the example `forall<T> { exists<U> { T: Foo<Item=U> } }` the
 literal names `U` and `T` are replaced with `0` and `1` respectively and the names are erased from the binders: `forall<_>
 { exists<_> { 1: Foo<Item=0> } }`.
+
+As another example, in `forall<X, Y> { forall <Z> { X } }`, `X` is represented
+as `^1.0`. The `1` represents the de Bruijn index of the variable and the `0`
+represents the index in that scope: `X` is bound in the second scope counting
+from where it is referenced, and it is the first variable bound in that scope.
 
 ## Formula
 A formula is a logical expression consisting of literals and constants connected
@@ -149,7 +182,7 @@ syntactic rules.
 In the context of the Rust type system this means that basic rules for type
 construction have to be met. Two examples: 1) Given a struct definition
 
-```notrust
+```rust,ignore
 struct HashSet<T: Hash>
 ```
 then a type `HashSet<i32>` is well-formed since `i32` implements `Hash`. A type
