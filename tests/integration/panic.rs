@@ -153,7 +153,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         })
     }
 
-    fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
+    fn adt_repr(&self, id: AdtId<ChalkIr>) -> Arc<AdtRepr<ChalkIr>> {
         unimplemented!()
     }
 
@@ -251,6 +251,10 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
     ) -> Substitution<ChalkIr> {
+        unimplemented!()
+    }
+
+    fn discriminant_type(&self, ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
         unimplemented!()
     }
 

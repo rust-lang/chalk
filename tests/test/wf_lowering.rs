@@ -1438,3 +1438,21 @@ fn coerce_unsized_struct() {
         }
     }
 }
+
+#[test]
+fn no_discriminant_kind_impls() {
+    lowering_error! {
+        program {
+            #[lang(discriminant_kind)]
+            trait DiscriminantKind {
+                type Discriminant;
+            }
+
+            impl DiscriminantKind for u32 {
+                type Discriminant = u32;
+            }
+        } error_msg {
+            "trait impl for `DiscriminantKind` does not meet well-formedness requirements"
+        }
+    }
+}

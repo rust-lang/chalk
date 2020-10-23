@@ -4,6 +4,7 @@ use chalk_ir::{Floundered, Substitution, Ty};
 
 mod clone;
 mod copy;
+mod discriminant_kind;
 mod fn_family;
 mod sized;
 mod unsize;
@@ -68,6 +69,10 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
                 fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
                 Ok(())
             })
+        }
+        WellKnownTrait::DiscriminantKind => {
+            discriminant_kind::add_discriminant_clauses(db, builder, self_ty);
+            Ok(())
         }
         _ => Ok(()),
     }

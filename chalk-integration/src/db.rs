@@ -129,7 +129,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().generator_witness_datum(id)
     }
 
-    fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
+    fn adt_repr(&self, id: AdtId<ChalkIr>) -> Arc<AdtRepr<ChalkIr>> {
         self.program_ir().unwrap().adt_repr(id)
     }
 
@@ -241,6 +241,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn fn_def_name(&self, fn_def_id: FnDefId<ChalkIr>) -> String {
         self.program_ir().unwrap().fn_def_name(fn_def_id)
+    }
+
+    fn discriminant_type(&self, ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
+        self.program_ir().unwrap().discriminant_type(ty)
     }
 }
 
