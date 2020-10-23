@@ -1,5 +1,25 @@
 use super::*;
 
+// Test that user-provided impls of `Discriminantkind` are prohibited
+#[test]
+fn no_discriminant_kind_impls() {
+    lowering_error! {
+        program {
+            #[lang(discriminant_kind)]
+            trait DiscriminantKind {
+                type Discriminant;
+            }
+
+            impl DiscriminantKind for u32 {
+                type Discriminant = u32;
+            }
+        } error_msg {
+            "trait impl for `DiscriminantKind` does not meet well-formedness requirements"
+        }
+    }
+}
+
+// Test that all types are implementing DiscriminantKind
 #[test]
 fn discriminant_kind_impl() {
     test! {
@@ -75,12 +95,14 @@ fn discriminant_kind_assoc() {
             }
         }
 
+        // Discriminant for types with no discriminant should be u8
         goal {
             Normalize(<u32 as DiscriminantKind>::Discriminant -> u8)
         } yields {
             "Unique"
         }
 
+        // Same as above
         goal {
             forall<'a> {
                 Normalize(<dyn Principal + 'a as DiscriminantKind>::Discriminant -> u8)
@@ -89,12 +111,15 @@ fn discriminant_kind_assoc() {
             "Unique"
         }
 
+        // Discriminant for enums with unspecified discriminant should be isize
         goal {
             Normalize(<A as DiscriminantKind>::Discriminant -> isize)
         } yields {
             "Unique"
         }
 
+        // Discriminant should be the same as specified in `repr`
+        // -----
         goal {
             Normalize(<B as DiscriminantKind>::Discriminant -> isize)
         } yields {
@@ -118,13 +143,16 @@ fn discriminant_kind_assoc() {
         } yields {
             "Unique"
         }
+        //--------
 
+        // Generators have u32 as the discriminant
         goal {
             Normalize(<empty_gen as DiscriminantKind>::Discriminant -> u32)
         } yields {
             "Unique"
         }
 
+        // Placeholders don't have a determined discriminant
         goal {
             forall<T> {
                 exists<U> {
