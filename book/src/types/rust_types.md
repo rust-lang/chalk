@@ -39,10 +39,10 @@ describes why each variant exists.
 
 ### Application types
 
-The `Apply` variant contains an `ApplicationTy`. These are kind of the
-"normal Rust types", like `Vec<u32>` or `f32`. They consist of a "type
-name" (in our examples, `Vec` and `f32` respecively) and zero or more
-generic arguments (respectively, `[u32]` and `[]`).
+Most of "normal rust types" like `Vec<u32>` or `(f32, Vec<isize>)` are represented with 
+`TyKind` variants containing some type-specific info ("type name") and a substitution
+that is "applied" to that type. In this case, type names are `Vec` and "tuple of arity 2",
+and substitutions are `[u32]` and `[f32, Vec<isize>]`.
 
 They are equal to other types (modulo aliases, see below) iff they
 have the same "type name" and the generic arguments are
@@ -61,17 +61,13 @@ placeholder. Similarly, in that same function, the associated type
 Like application types, placeholder *types* are only known to be
 equal.
 
-However, we choose not to represent placeholder types as type names
-because they need to be created during type unification and other
-operations, and hence that would require treating `TypeName` less opaquely.
-
-Moreover, when proving negative goals, e.g., `not { Implemented(T:
+When proving negative goals, e.g., `not { Implemented(T:
 Trait) }`, placeholders are treated quite differently from application
 types, since they do not (in fact) represent a known type. When
-solving negative goals, placeholderes are replaced with inference
+solving negative goals, placeholders are replaced with inference
 variables -- the idea is that this goal is only true if there is *no
 type* `T` that implements `Trait`. Therefore, if we can find no
-answeres for `exists<T> { Implemented(T: Trait) }`, then we know that
+answers for `exists<T> { Implemented(T: Trait) }`, then we know that
 the negation is true. (Note that this means that e.g. `forall<X> { X =
 i32 }` is false but so is `forall<X> { not { X = i32 } }`.)
 
@@ -110,16 +106,16 @@ that is outside the scope of the chalk-ir crate.
 
 ### Function pointer types
 
-The `Fn` variant wraps a `FnTy` struct and represents a `fn()` type
+The `Function` variant wraps a `FnPointer` struct and represents a `fn()` type
 (in other words, a function pointer). In some ways, fn types are like
 application types, but with one crucial difference: they also contain
 a `forall` binder that for lifetimes whose value is determined when
 the function is called. Consider e.g. a type like `fn(&u32)` or --
 more explicitly -- `for<'a> fn(&'a u32)`.
 
-Two `Fn` types `A, B` are equal `A = B` if `A <: B` and `B <: A`
+Two `Function` types `A, B` are equal `A = B` if `A <: B` and `B <: A`
 
-Two `Fn` types `A, B` are subtypes `A <: B` if
+Two `Function` types `A, B` are subtypes `A <: B` if
 
 * After instantiating the lifetime parameters on `B` universally...
     * You can instantiate the lifetime parameters on `A` existentially...
@@ -143,7 +139,7 @@ them in the [aliases chapter](./rust_types/alias.md).
 
 ### Bound variables
 
-The `BoundVariable` variant represents some variable that is bound in
+The `BoundVar` variant represents some variable that is bound in
 an outer term. For example, given a term like `forall<X> {
 Implemented(X: Trait) }`, the `X` is bound. Bound variables in chalk
 (like rustc) use de bruijin indices (See below).
@@ -166,7 +162,7 @@ other type without any effect, and so forth.
 
 ## Mapping to rustc types
 
-The rustc [`TyKind`] enum has a lot more variants than chalk. This
+The rustc [`TyKind`] enum is almost equivalent to chalk's. This
 section describes how the rustc types can be mapped to chalk
 types. The intention is that, at least when transitioning, rustc would
 implement the `Interner` trait and would map from the [`TyKind`]
@@ -174,36 +170,33 @@ enum to chalk's `TyKind` on the fly, when `data()` is invoked.
 
 [`TyKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html
 
-This section describes how each of rustc's variants can be mapped to
-Chalk variants.
-
 | rustc type | chalk variant (and some notes) |
 | ------------- | ------------------ |
-| `Bool` | `Apply` |
-| `Char` | `Apply` |
-| `Int(_)` | `Apply` |
-| `Uint(_)` | `Apply` |
-| `Float(_)` | `Apply` |
-| `Adt(_, _)` | `Apply` |
-| `Foreign(_)` | `Apply` |
-| `Str` | `Apply` |
-| `Array(_, _)` | `Apply` |
-| `Slice(_)` | `Apply` |
-| `RawPtr(_)` | `Apply` |
-| `Ref(_, _, _)` | `Apply` |
-| `FnDef(_, _)` | `Apply` |
-| `FnPtr(_, _)` | `Fn` |
-| `Dynamic(_, _)` | `Dyn` |
-| `Closure(_, _)` | `Apply` |
-| `Generator(_, _)` | `Apply` |
-| `GeneratorWitness(_)` | `GeneratorWitness` |
-| `Never` | `Apply` |
-| `Tuple(_)` | `Apply` |
-| `Projection(_)` | `Alias` |
-| `UnnormalizedProjection(_)` | (see below) |
-| `Opaque(_, _)` | `Alias` |
-| `Param(_)` | XXX Placeholder? |
-| `Bound(_, _)` | `BoundVariable` |
-| `Placeholder(_)` | `Placeholder` |
-| `Infer(_)` | `InferenceVar` |
+| `Bool` | `Scalar` |
+| `Char` | `Scalar` |
+| `Int` | `Scalar` |
+| `Uint` | `Scalar` |
+| `Float` | `Scalar` |
+| `Adt` | `Adt` |
+| `Foreign` | `Foreign` |
+| `Str` | `Str` |
+| `Array` | `Array` |
+| `Slice` | `Slice` |
+| `RawPtr` | `Raw` |
+| `Ref` | `Ref` |
+| `FnDef` | `FnDef` |
+| `FnPtr` | `Function` |
+| `Dynamic` | `Dyn` |
+| `Closure` | `Closure` |
+| `Generator` | `Generator` |
+| `GeneratorWitness` | `GeneratorWitness` |
+| `Never` | `Never` |
+| `Tuple` | `Tuple` |
+| `Projection` | `Alias` |
+| `UnnormalizedProjection` | (see below) |
+| `Opaque` | `Alias` |
+| `Param` | XXX Placeholder? |
+| `Bound` | `BoundVar` |
+| `Placeholder` | `Placeholder` |
+| `Infer` | `InferenceVar` |
 | `Error` | `Error` |

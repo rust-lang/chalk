@@ -57,13 +57,13 @@ definition, and depend a bit on the kind of alias. We describe that lowering in 
 ## Alias placeholders
 
 For each kind of alias (except for explicit type aliases), there is also a
-corresponding *placeholder* variant in the [`TypeName`] enum. In those cases
+corresponding *placeholder* variant in the [`TyKind`] enum. In those cases
 where we cannot normalize the alias to something specific, it can be equated to
 the placeholder type (see e.g. [`AssociatedType`], which is the placeholder
 variant for associated type projections). Note that placeholders are
 *application types* -- unlike an alias, a placeholder is only known to be equal
 with itself, just like an application type.
 
-[`TypeName`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TypeName.html
-[`AssociatedType`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TypeName.html#variant.AssociatedType
+[`TyKind`]: https://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
+[`AssociatedType`]: https://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html#variant.AssociatedType
 
