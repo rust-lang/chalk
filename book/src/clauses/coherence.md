@@ -61,7 +61,7 @@ Thus, it is probably best to look at the only *truly authoritative* source on th
 
 ## The Orphan Check in rustc
 
-The orphan check as implemented today in the Rust compiler takes place in the `[orphan_check](https://github.com/rust-lang/rust/blob/b7c6e8f1805cd8a4b0a1c1f22f17a89e9e2cea23/src/librustc/traits/coherence.rs#L236)` function which is called [for every declared impl](https://github.com/rust-lang/rust/blob/b7c6e8f1805cd8a4b0a1c1f22f17a89e9e2cea23/src/librustc_typeck/coherence/orphan.rs#L45). Since implementations for locally defined traits are always defined, that function returns OK if the trait being implemented is local. Otherwise, it dispatches to the `[orphan_check_trait_ref](https://github.com/rust-lang/rust/blob/b7c6e8f1805cd8a4b0a1c1f22f17a89e9e2cea23/src/librustc/traits/coherence.rs#L343)` function which does the major orphan rules checking.
+The orphan check as implemented today in the Rust compiler takes place in the [`orphan_check`](https://github.com/rust-lang/rust/blob/b7c6e8f1805cd8a4b0a1c1f22f17a89e9e2cea23/src/librustc/traits/coherence.rs#L236) function which is called [for every declared impl](https://github.com/rust-lang/rust/blob/b7c6e8f1805cd8a4b0a1c1f22f17a89e9e2cea23/src/librustc_typeck/coherence/orphan.rs#L45). Since implementations for locally defined traits are always defined, that function returns OK if the trait being implemented is local. Otherwise, it dispatches to the [`orphan_check_trait_ref`](https://github.com/rust-lang/rust/blob/b7c6e8f1805cd8a4b0a1c1f22f17a89e9e2cea23/src/librustc/traits/coherence.rs#L343) function which does the major orphan rules checking.
 
 Recall that the impls we are dealing with are in the form `impl<T0…Tn> Trait<P1…Pn> for P0`.
 
@@ -90,37 +90,39 @@ Here’s how the lowering rules would look:
 For each trait `Trait`,
 
 - If `Trait` is local to the current crate, we generate:
-    forall<Self, P1...Pn> { LocalImplAllowed(Self: Trait<P1...Pn>) }
+    `forall<Self, P1…Pn> { LocalImplAllowed(Self: Trait<P1...Pn>) }`
     This models that any impls are allowed if the trait is local to the current crate.
 - If `Trait` is upstream to the current crate, we need a rule which models the additional conditions on which impls are allowed:
-    forall<Self, P1...Pn> { LocalImplAllowed(Self: Trait<P1...Pn>) :- IsLocal(Self) }
-    forall<Self, P1...Pn> {
-      LocalImplAllowed(Self: Trait<P1...Pn>) :- IsFullyVisible(Self), IsLocal(P1)
-    }
-    forall<Self, P1...Pn> {
-      LocalImplAllowed(Self: Trait<P1...Pn>) :-
-        IsFullyVisible(Self),
-        IsFullyVisible(P1),
-        IsLocal(P2)
-    }
-    forall<Self, P1...Pn> {
-      LocalImplAllowed(Self: Trait<P1...Pn>) :-
-        IsFullyVisible(Self),
-        IsFullyVisible(P1),
-        IsFullyVisible(P2),
-        IsLocal(P3)
-    }
+```ignore
+forall<Self, P1...Pn> { LocalImplAllowed(Self: Trait<P1...Pn>) :- IsLocal(Self) }
+forall<Self, P1...Pn> {
+  LocalImplAllowed(Self: Trait<P1...Pn>) :- IsFullyVisible(Self), IsLocal(P1)
+}
+forall<Self, P1...Pn> {
+  LocalImplAllowed(Self: Trait<P1...Pn>) :-
+    IsFullyVisible(Self),
+    IsFullyVisible(P1),
+    IsLocal(P2)
+}
+forall<Self, P1...Pn> {
+  LocalImplAllowed(Self: Trait<P1...Pn>) :-
+    IsFullyVisible(Self),
+    IsFullyVisible(P1),
+    IsFullyVisible(P2),
+    IsLocal(P3)
+}
+...
+forall<Self, P1...Pn> {
+  LocalImplAllowed(Self: Trait<P1...Pn>) :-
+    IsFullyVisible(Self),
+    IsFullyVisible(P1),
+    IsFullyVisible(P2),
     ...
-    forall<Self, P1...Pn> {
-      LocalImplAllowed(Self: Trait<P1...Pn>) :-
-        IsFullyVisible(Self),
-        IsFullyVisible(P1),
-        IsFullyVisible(P2),
-        ...
-        IsFullyVisible(Pn-1),
-        IsLocal(Pn)
-    }
-    Here, we have modelled every possible case of `P1` to `Pn` being local and then checked if all prior type parameters are fully visible. This truly is a direct translation of the rules listed above!
+    IsFullyVisible(Pn-1),
+    IsLocal(Pn)
+}
+```
+Here, we have modelled every possible case of `P1` to `Pn` being local and then checked if all prior type parameters are fully visible. This truly is a direct translation of the rules listed above!
 
 Now, to complete the orphan check, we can iterate over each impl of the same form as before and check if `LocalImplAllowed(P0: Trait<P1…Pn>)` is provable.
 
@@ -131,16 +133,20 @@ The purpose of the overlap check is to ensure that there is only up to one impl 
 
 This is a simple application of the mathematical law:
 
-> If two sets $$A$$ and $$B$$ are disjoint, then $$A\cap B = \emptyset$$
+> If two sets *A* and *B* are disjoint, then *A* ∩ *B* = ∅
 
 More concretely, let’s say you have the following two impls: ([example from RFC 1023](https://rust-lang.github.io/rfcs/1023-rebalancing-coherence.html#type-locality-and-negative-reasoning))
 
-    impl<T: Copy> Clone for T {..}
-    impl<U> Clone for MyType<U> {..}
+```rust,ignore
+impl<T: Copy> Clone for T { /* ... */ }
+impl<U> Clone for MyType<U> { /* ... */ }
+```
 
 Then we’ll try to solve the following:
 
-    not { exists<T, U> { T = MyType<U>, T: Copy } }
+```ignore
+not { exists<T, U> { T = MyType<U>, T: Copy } }
+```
 
 One way to read this is to say “try to prove that there is no `MyType<U>` for any `U` that implements the `Copy` trait”. The reason we’re trying to prove this is because if there is such an implementation, then the second impl would overlap with the first one. The first impl applies to any type that implements `Copy`.
 
@@ -181,47 +187,51 @@ This significantly narrows down our set of potential impls that we need to accou
 
 For downstream crates, we need to add rules for all possible impls that they could potentially add using any upstream traits or traits in the current crate. We can do this by enumerating the possibilities generated from the orphan rules specified above:
 
+```ignore
+// Given a trait MyTrait<P1...Pn> where WCs
 
-    // Given a trait MyTrait<P1...Pn> where WCs
-    
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        WCs,                  // where clauses
-        Compatible,
-        DownstreamType(Self), // local to a downstream crate
-        CannotProve,
-    }
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        WCs,
-        Compatible,
-        IsFullyVisible(Self),
-        DownstreamType(P1),
-        CannotProve,
-    }
-    ...
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        WCs,
-        Compatible,
-        IsFullyVisible(Self),
-        IsFullyVisible(P1),
-        ...,
-        IsFullyVisible(Pn-1),
-        DownstreamType(Pn),
-        CannotProve,
-    }
+forall<Self, P1...Pn> {
+  Implemented(Self: MyTrait<P1...Pn>) :-
+    WCs,                  // where clauses
+    Compatible,
+    DownstreamType(Self), // local to a downstream crate
+    CannotProve,
+}
+forall<Self, P1...Pn> {
+  Implemented(Self: MyTrait<P1...Pn>) :-
+    WCs,
+    Compatible,
+    IsFullyVisible(Self),
+    DownstreamType(P1),
+    CannotProve,
+}
+...
+forall<Self, P1...Pn> {
+  Implemented(Self: MyTrait<P1...Pn>) :-
+    WCs,
+    Compatible,
+    IsFullyVisible(Self),
+    IsFullyVisible(P1),
+    ...,
+    IsFullyVisible(Pn-1),
+    DownstreamType(Pn),
+    CannotProve,
+}
+```
 
 Perhaps somewhat surprisingly, `IsFullyVisible` works here too. This is because our previous definition of the lowering for `IsFullyVisible` was quite broad. By lowering *all* types in the current crate and in upstream crates with `IsFullyVisible`, that predicate covers the correct set of types here too. The orphan rules only require that there are no types parameters prior to the first local type. Types that are not type parameters and also by definition not downstream types are all of the types in the current crate and in upstream crates. This is exactly what `IsFullyVisible` covers.
 
 Fundamental types in both the current crate and in upstream crates can be considered local in a downstream crate if they are provided with a downstream type. To model this, we can add an additional rule for fundamental types:
 
-
-    forall<T> { DownstreamType(MyFundamentalType<T>) :- DownstreamType(T) }
+```ignore
+forall<T> { DownstreamType(MyFundamentalType<T>) :- DownstreamType(T) }
+```
 
 **Where clauses:** Traits can have where clauses.
 
-    #[upstream] trait Foo<T, U, V> where Self: Eq<T> { ... }
+```rust,ignore
+#[upstream] trait Foo<T, U, V> where Self: Eq<T> { /* ... */ }
+```
 
 **The question is**: do we need to bring these where clauses down into the rule that we generate for the overlap check?
 **Answer:** Yes. Since the trait can only be implemented for types that satisfy its where clauses, it makes sense to also limit our assumption of compatible impls to impls that can exist.
@@ -234,60 +244,79 @@ Thus, based on the discussion above, the overlap check with coherence in mind ca
 
 
 - All disjoint queries take place inside of `compatible`
+
 - `compatible { G }` desugars into `forall<T> { (Compatible, DownstreamType(T)) => G }`, thus introducing a `Compatible` predicate using implication
+
 - For each upstream trait `MyTrait<P1…Pn>`, we lower it into the following rule:
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        Compatible,
-        IsUpstream(Self),
-        IsUpstream(P1),
-        ...,
-        IsUpstream(Pn),
-        CannotProve
-    }
-    This will accomplish our goal of returning an ambiguous answer whenever the overlap check query asks about any impls that an upstream crate may add in a compatible way. We determined in the discussion above that these are the only impls in any crate that can be added compatibly. 
-    **Note:** Trait where clauses are lowered into the rule’s conditions as well as a prerequisite to everything else.
+
+  ```ignore
+  forall<Self, P1...Pn> {
+    Implemented(Self: MyTrait<P1...Pn>) :-
+      Compatible,
+      IsUpstream(Self),
+      IsUpstream(P1),
+      ...,
+      IsUpstream(Pn),
+      CannotProve
+  }
+  ```
+
+  This will accomplish our goal of returning an ambiguous answer whenever the
+overlap check query asks about any impls that an upstream crate may add in a
+compatible way. We determined in the discussion above that these are the only
+impls in any crate that can be added compatibly.
+
+  **Note:** Trait `where` clauses are lowered into the rule’s conditions as well as a prerequisite to everything else.
+
 - For all traits `MyTrait<P1…Pn> where WCs` in the current crate and in upstream traits,
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        WCs,                  // where clauses
-        Compatible,
-        DownstreamType(Self), // local to a downstream crate
-        CannotProve,
-    }
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        WCs,
-        Compatible,
-        IsFullyVisible(Self),
-        DownstreamType(P1),
-        CannotProve,
-    }
-    ...
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        WCs,
-        Compatible,
-        IsFullyVisible(Self),
-        IsFullyVisible(P1),
-        ...,
-        IsFullyVisible(Pn-1),
-        DownstreamType(Pn),
-        CannotProve,
-    }
+  ```ignore
+  forall<Self, P1...Pn> {
+    Implemented(Self: MyTrait<P1...Pn>) :-
+      WCs,                  // where clauses
+      Compatible,
+      DownstreamType(Self), // local to a downstream crate
+      CannotProve,
+  }
+  forall<Self, P1...Pn> {
+    Implemented(Self: MyTrait<P1...Pn>) :-
+      WCs,
+      Compatible,
+      IsFullyVisible(Self),
+      DownstreamType(P1),
+      CannotProve,
+  }
+  ...
+  forall<Self, P1...Pn> {
+    Implemented(Self: MyTrait<P1...Pn>) :-
+      WCs,
+      Compatible,
+      IsFullyVisible(Self),
+      IsFullyVisible(P1),
+      ...,
+      IsFullyVisible(Pn-1),
+      DownstreamType(Pn),
+      CannotProve,
+  }
+  ```
+  
 - For fundamental types in both the current crate and in upstream crates,
-    forall<T> { DownstreamType(MyFundamentalType<T>) :- DownstreamType(T) }
+  ```ignore
+  forall<T> { DownstreamType(MyFundamentalType<T>) :- DownstreamType(T) }
+  ```
+
 ## Alternative Designs
 
 Initially, when Niko and I started working on this, Niko suggested the following implementation:
 
-- For each upstream trait, `MyTrait<P1…Pn>`, we lower it into the following rule:
-    forall<Self, P1...Pn> {
-      Implemented(Self: MyTrait<P1...Pn>) :-
-        Compatible,
-        not { LocalImplAllowed(Self: MyTrait<P1...Pn>) },
-        CannotProve
-    }
+> For each upstream trait, `MyTrait<P1…Pn>`, we lower it into the following rule:
+> ```ignore
+> forall<Self, P1...Pn> {
+>   Implemented(Self: MyTrait<P1...Pn>) :-
+>     Compatible,
+>     not { LocalImplAllowed(Self: MyTrait<P1...Pn>) },
+>     CannotProve
+> }
+> ```
 
 This appears to make sense because we need to assume that any impls that the current crate cannot add itself may exist somewhere else. By using `not { LocalImplAllowed(…) }`, we modelled exactly that. The problem is, that this assumption is actually too strong. What we actually need to model is that any **compatible** impls that the current crate cannot add itself may exist somewhere else. This is a **subset** of the impls covered by `not { LocalImplAllowed(…) }`.
 
