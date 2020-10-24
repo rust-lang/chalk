@@ -102,7 +102,7 @@ fn generalize() {
             // If this is invariant, then the generalizer might be doing
             // the right thing here by creating the general form of `&'a u32` equal to
             // just `&'a u32`
-            "Unique; substitution [?0 := {{&}}<'!1_0, Uint(U32)>], lifetime constraints []"
+            "Unique; substitution [?0 := (&'!1_0 Uint(U32))], lifetime constraints []"
         }
     }
 }

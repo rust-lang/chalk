@@ -640,7 +640,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 let ena_var = self.table.new_variable(universe_index);
                 ena_var.to_ty(interner)
             }
-            TyKind::InferenceVar(var, kind) => {
+            TyKind::InferenceVar(_var, kind) => {
                 if matches!(kind, TyVariableKind::Integer | TyVariableKind::Float) {
                     ty.clone()
                 } else if let Some(ty) = self.table.normalize_ty_shallow(interner, ty) {
