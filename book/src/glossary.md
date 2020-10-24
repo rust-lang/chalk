@@ -24,11 +24,11 @@ This is a glossary of terminology (possibly) used in the chalk crate.
 - `exists<T> { Vec<T>: Clone }`: does there exist a `T` such that `Vec<T>`
   implements `Clone`?
 
-[Type inference variable]: ../types/rust_types.md#inference-variables
-[Bound variable]: ../types/rust_types.md#bound-variables
+[Type inference variable]: ./types/rust_types.md#inference-variables
+[Bound variable]: ./types/rust_types.md#bound-variables
 [`forall`]: #debruijn-index
-[Placeholder]: ../types/rust_types.md#placeholders
-[Clause]: ../clauses/goals_and_clauses.md
+[Placeholder]: ./types/rust_types.md#placeholders
+[Clause]: ./clauses/goals_and_clauses.md
 
 ## Binary connective
 There are sixteen logical connectives on two boolean variables. The most
