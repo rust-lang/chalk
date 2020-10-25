@@ -35,6 +35,7 @@ fn subtype_simple() {
 fn struct_lifetime_variance() {
     test! {
         program {
+            #[variance(Covariant)]
             struct Foo<'a> { }
         }
 
@@ -43,10 +44,8 @@ fn struct_lifetime_variance() {
                 Subtype(Foo<'a>, Foo<'b>)
             }
         } yields {
-            // FIXME: we should really just require this in one direction?
             "Unique; substitution [], lifetime constraints [\
             InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }\
             ]"
         }
     }
@@ -81,7 +80,9 @@ fn fn_lifetime_variance() {
         goal {
             Subtype(for<'a, 'b> fn(&'a u32, &'b u32), for<'a> fn(&'a u32, &'a u32))
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; for<?U1,?U1> { substitution [], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '^0.1: '!1_0 }] }"
         }
     }
 }
@@ -103,6 +104,26 @@ fn generalize() {
             // the right thing here by creating the general form of `&'a u32` equal to
             // just `&'a u32`
             "Unique; substitution [?0 := (&'!1_0 Uint(U32))], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn multi_lifetime() {
+    test! {
+        program {}
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(&'a u32, U),
+                    Subtype(&'b u32, U)
+                }
+            }
+        } yields {
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+            InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+            InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }] }"
         }
     }
 }

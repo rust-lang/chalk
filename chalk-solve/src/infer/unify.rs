@@ -835,7 +835,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 &LifetimeData::Placeholder(PlaceholderIndex { ui, .. }),
             )
             | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Empty(ui)) => {
-                self.unify_lifetime_var(variance, a, b, a_var, b, ui)
+                self.unify_lifetime_var(variance, a_var, b, ui)
             }
 
             (
@@ -843,17 +843,17 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 &LifetimeData::InferenceVar(b_var),
             )
             | (&LifetimeData::Empty(ui), &LifetimeData::InferenceVar(b_var)) => {
-                self.unify_lifetime_var(variance, a, b, b_var, a, ui)
+                self.unify_lifetime_var(variance.invert(), b_var, a, ui)
             }
 
             (&LifetimeData::InferenceVar(a_var), &LifetimeData::Erased)
             | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static) => {
-                self.unify_lifetime_var(variance, a, b, a_var, b, UniverseIndex::root())
+                self.unify_lifetime_var(variance, a_var, b, UniverseIndex::root())
             }
 
             (&LifetimeData::Erased, &LifetimeData::InferenceVar(b_var))
             | (&LifetimeData::Static, &LifetimeData::InferenceVar(b_var)) => {
-                self.unify_lifetime_var(variance, a, b, b_var, a, UniverseIndex::root())
+                self.unify_lifetime_var(variance.invert(), b_var, a, UniverseIndex::root())
             }
 
             (&LifetimeData::Static, &LifetimeData::Static)
@@ -893,15 +893,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_lifetime_var(
         &mut self,
         variance: Variance,
-        a: &Lifetime<I>,
-        b: &Lifetime<I>,
         var: InferenceVar,
         value: &Lifetime<I>,
         value_ui: UniverseIndex,
     ) -> Fallible<()> {
         let var = EnaVariable::from(var);
         let var_ui = self.table.universe_of_unbound_var(var);
-        if var_ui.can_see(value_ui) {
+        if var_ui.can_see(value_ui) && matches!(variance, Variance::Invariant) {
             debug!("{:?} in {:?} can see {:?}; unifying", var, var_ui, value_ui);
             self.table
                 .unify
@@ -916,7 +914,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_eq_goals(variance, a.clone(), b.clone()))
+            Ok(self.push_lifetime_eq_goals(
+                variance,
+                var.to_lifetime(&self.interner),
+                value.clone(),
+            ))
         }
     }
 
