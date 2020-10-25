@@ -45,7 +45,7 @@ fn struct_lifetime_variance() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }\
             ]"
         }
     }
