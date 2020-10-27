@@ -31,7 +31,7 @@ struct SynEqFolder<'i, I: Interner> {
     /// The new parameters will either be added to an enclosing `exists` binder (when lowering a goal)
     /// or to an enclosing `forall` binder (when lowering a program clause).
     new_params: Vec<VariableKind<I>>,
-    /// For each new parameter `X`, a new goal is introduced to define it, e.g. `AliasEq(<T as Iterator>::Item, X)
+    /// For each new parameter `X`, a new goal is introduced to define it, e.g. `EqGoal(<T as Iterator>::Item, X)
     new_goals: Vec<Goal<I>>,
 
     /// Stores the current number of variables in the binder we are adding parameters to.
@@ -83,7 +83,7 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
     /// ```notrust
     /// forall<X, Y> {
     ///     Implemented(Y: Debug) :-
-    ///         AliasEq(<X as Iterator>::Item>, Y),
+    ///         EqGoal(<X as Iterator>::Item>, Y),
     ///         Implemented(X: Debug)
     /// }
     /// ```
@@ -114,7 +114,7 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
         // ```
         //
         // then save out the `new_params` and `new_goals` vectors to store any new variables created as a result.
-        // In this case, that would be the `Y` parameter and `AliasEq(<X as Iterator>::Item, Y)` goals.
+        // In this case, that would be the `Y` parameter and `EqGoal(<X as Iterator>::Item, Y)` goals.
         //
         // Note that these new parameters will have indices that come after the existing parameters,
         // so any references to existing parameters like `X` in the "conditions" are still valid even if we insert new parameters.
@@ -124,7 +124,7 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
         let mut new_goals = take(&mut self.new_goals);
 
         // Now fold the conditions (in our example, Implemented(X: Debug).
-        // The resulting list might be expanded to include new AliasEq goals.
+        // The resulting list might be expanded to include new EqGoal goals.
         let mut conditions = implication.conditions.fold_with(self, outer_binder)?;
 
         new_params.extend(take(&mut self.new_params));
