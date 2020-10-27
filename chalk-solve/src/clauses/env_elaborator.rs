@@ -6,7 +6,7 @@ use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
-use crate::{debug_span, TyData};
+use crate::{debug_span, TyKind};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::{DebruijnIndex, Environment};

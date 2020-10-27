@@ -5,8 +5,8 @@ use chalk_ir::{
     fold::{shift::Shift, Fold, Folder, SuperFold},
     interner::Interner,
     AliasTy, Binders, BoundVar, DebruijnIndex, EqGoal, Fallible, Goal, GoalData, Goals,
-    ProgramClause, ProgramClauseData, ProgramClauseImplication, QuantifierKind, Ty, TyData, TyKind,
-    VariableKind, VariableKinds,
+    ProgramClause, ProgramClauseData, ProgramClauseImplication, QuantifierKind, Ty, TyKind,
+    TyVariableKind, VariableKind, VariableKinds,
 };
 
 /// Converts a set of clauses to require only syntactic equality.
@@ -48,10 +48,11 @@ impl<'i, I: Interner> Folder<'i, I> for SynEqFolder<'i, I> {
         let interner = self.interner;
         let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.binders_len);
 
-        let new_ty = TyData::BoundVar(bound_var).intern(interner);
-        match ty.data(interner) {
-            TyData::Alias(AliasTy::Projection(_)) | TyData::Function(_) => {
-                self.new_params.push(VariableKind::Ty(TyKind::General));
+        let new_ty = TyKind::BoundVar(bound_var).intern(interner);
+        match ty.kind(interner) {
+            TyKind::Alias(AliasTy::Projection(_)) | TyKind::Function(_) => {
+                self.new_params
+                    .push(VariableKind::Ty(TyVariableKind::General));
                 self.new_goals.push(
                     EqGoal {
                         a: new_ty.clone().cast(interner),
