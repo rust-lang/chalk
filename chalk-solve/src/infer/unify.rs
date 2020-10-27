@@ -874,7 +874,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&LifetimeData::Erased, &LifetimeData::Placeholder(_))
             | (&LifetimeData::Erased, &LifetimeData::Empty(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_eq_goals(variance, a.clone(), b.clone()))
+                    Ok(self.push_lifetime_outlives_goals(variance, a.clone(), b.clone()))
                 } else {
                     Ok(())
                 }
@@ -914,7 +914,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_eq_goals(
+            Ok(self.push_lifetime_outlives_goals(
                 variance,
                 var.to_lifetime(&self.interner),
                 value.clone(),
@@ -1023,12 +1023,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
-    fn push_lifetime_eq_goals(&mut self, variance: Variance, a: Lifetime<I>, b: Lifetime<I>) {
+    fn push_lifetime_outlives_goals(&mut self, variance: Variance, a: Lifetime<I>, b: Lifetime<I>) {
         debug!(
             "pushing lifetime eq goals for a={:?} b={:?} with variance {:?}",
             a, b, variance
         );
-        if matches!(variance, Variance::Invariant | Variance::Covariant) {
+        if matches!(variance, Variance::Invariant | Variance::Contravariant) {
             self.goals.push(InEnvironment::new(
                 self.environment,
                 WhereClause::LifetimeOutlives(LifetimeOutlives {
@@ -1038,7 +1038,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 .cast(self.interner),
             ));
         }
-        if matches!(variance, Variance::Invariant | Variance::Contravariant) {
+        if matches!(variance, Variance::Invariant | Variance::Covariant) {
             self.goals.push(InEnvironment::new(
                 self.environment,
                 WhereClause::LifetimeOutlives(LifetimeOutlives { a: b, b: a }).cast(self.interner),
@@ -1180,7 +1180,7 @@ where
             // exists<'x> forall<'b> ?T = Foo<'x>, where 'x = 'b
 
             let tick_x = self.unifier.table.new_variable(self.universe_index);
-            self.unifier.push_lifetime_eq_goals(
+            self.unifier.push_lifetime_outlives_goals(
                 Variance::Invariant,
                 tick_x.to_lifetime(interner),
                 ui.to_lifetime(interner),

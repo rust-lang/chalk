@@ -45,7 +45,7 @@ fn struct_lifetime_variance() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }\
+            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 } \
             ]"
         }
     }
@@ -65,7 +65,7 @@ fn ref_lifetime_variance() {
         } yields {
             // Seems good!
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }\
+            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }\
             ]"
         }
     }
@@ -81,8 +81,8 @@ fn fn_lifetime_variance() {
             Subtype(for<'a, 'b> fn(&'a u32, &'b u32), for<'a> fn(&'a u32, &'a u32))
         } yields {
             "Unique; for<?U1,?U1> { substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
-            InEnvironment { environment: Env([]), goal: '^0.1: '!1_0 }] }"
+            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+            InEnvironment { environment: Env([]), goal: '!1_0: '^0.1 }] }"
         }
     }
 }
@@ -122,8 +122,8 @@ fn multi_lifetime() {
             }
         } yields {
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
-            InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }] }"
+            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0  }, \
+            InEnvironment { environment: Env([]), goal: '!1_1: '^0.0  }] }"
         }
     }
 }
