@@ -75,8 +75,10 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         TyKind::Alias(_) => panic!("this function should not be called for alias"),
         TyKind::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TyKind::Error => Vec::new(),
-        TyKind::OpaqueType(_, _) => unimplemented!(),
-        TyKind::AssociatedType(_, _) => unimplemented!(),
+        TyKind::OpaqueType(_, _) => panic!("constituent_types of opaque types are unknown!"),
+        TyKind::AssociatedType(_, _) => {
+            panic!("constituent_types of associated types are unknown!")
+        }
     }
 }
 
@@ -176,12 +178,16 @@ pub fn push_auto_trait_impls<I: Interner>(
             Ok(())
         }
 
-        // Unimplemented
-        TyKind::OpaqueType(_, _) => Ok(()),
-        TyKind::AssociatedType(_, _) => Ok(()),
+        TyKind::OpaqueType(opaque_ty_id, _) => {
+            push_auto_trait_impls_opaque(builder, auto_trait_id, *opaque_ty_id);
+            Ok(())
+        }
 
         // No auto traits
-        TyKind::Placeholder(_) | TyKind::Dyn(_) | TyKind::Alias(_) => Ok(()),
+        TyKind::AssociatedType(_, _)
+        | TyKind::Placeholder(_)
+        | TyKind::Dyn(_)
+        | TyKind::Alias(_) => Ok(()),
 
         // app_ty implements AutoTrait if all constituents of app_ty implement AutoTrait
         _ => {
