@@ -764,7 +764,37 @@ fn match_ty<I: Interner>(
             builder.push_fact(WellFormed::Ty(ty.clone()));
         }
         TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => return Err(Floundered),
-        TyKind::Dyn(_) => {}
+        TyKind::Dyn(dyn_ty) => {
+            // FIXME(#203)
+            // - Object safety? (not needed with RFC 2027)
+            // - Implied bounds
+            // - Bounds on the associated types
+            // - Checking that all associated types are specified, including
+            //   those on supertraits.
+            // - For trait objects with GATs, check that the bounds are fully
+            //   general (`dyn for<'a> StreamingIterator<Item<'a> = &'a ()>` is OK,
+            //   `dyn StreamingIterator<Item<'static> = &'static ()>` is not).
+            let bounds = dyn_ty
+                .bounds
+                .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
+
+            let mut wf_goals = Vec::new();
+
+            wf_goals.extend(bounds.iter(interner).flat_map(|bound| {
+                bound.map_ref(|bound| -> Vec<_> {
+                    match bound {
+                        WhereClause::Implemented(trait_ref) => {
+                            vec![DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()))]
+                        }
+                        WhereClause::AliasEq(_)
+                        | WhereClause::LifetimeOutlives(_)
+                        | WhereClause::TypeOutlives(_) => vec![],
+                    }
+                })
+            }));
+
+            builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
+        }
     })
 }
 
