@@ -221,6 +221,10 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
 /// example `Vec<u32>` anti-unified with `Vec<i32>` might be
 /// `Vec<?X>`. This is a **very simplistic** anti-unifier.
 ///
+/// NOTE: The values here are canonicalized, but output is not, this means
+/// that any escaping bound variables that we see have to be replaced with
+/// inference variables.
+///
 /// [Anti-unification]: https://en.wikipedia.org/wiki/Anti-unification_(computer_science)
 struct AntiUnifier<'infer, 'intern, I: Interner> {
     infer: &'infer mut InferenceTable<I>,
@@ -243,6 +247,8 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             // &'a u32)` and `for<'a, 'b> fn(&'a u32, &'b u32)` seems
             // kinda hard. Don't try to be smart for now, just plop a
             // variable in there and be done with it.
+            // This also ensures that any bound variables we do see
+            // were bound by `Canonical`.
             (TyKind::BoundVar(_), TyKind::BoundVar(_))
             | (TyKind::Function(_), TyKind::Function(_))
             | (TyKind::Dyn(_), TyKind::Dyn(_)) => self.new_ty_variable(),
@@ -485,7 +491,12 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
     fn aggregate_lifetimes(&mut self, l1: &Lifetime<I>, l2: &Lifetime<I>) -> Lifetime<I> {
         let interner = self.interner;
         match (l1.data(interner), l2.data(interner)) {
-            (LifetimeData::Phantom(..), _) | (_, LifetimeData::Phantom(..)) => unreachable!(),
+            (LifetimeData::Phantom(void, ..), _) | (_, LifetimeData::Phantom(void, ..)) => {
+                match *void {}
+            }
+            (LifetimeData::BoundVar(..), _) | (_, LifetimeData::BoundVar(..)) => {
+                self.new_lifetime_variable()
+            }
             _ => {
                 if l1 == l2 {
                     l1.clone()
