@@ -248,3 +248,26 @@ fn ambiguous_add() {
         }
     }
 }
+
+/// Simplified version of a goal that needs to be solved for type checking
+/// `1 << &2`.
+#[test]
+fn shl_ice() {
+    test! {
+        program {
+            //#[non_enumerable]
+            trait Shl<Rhs> { }
+
+            impl<'a> Shl<&'a u32> for u32 { }
+            impl<'a> Shl<&'a u16> for u32 { }
+        }
+
+        goal {
+            exists<U> {
+                u32: Shl<U>
+            }
+        } yields {
+            "Ambiguous"
+        }
+    }
+}
