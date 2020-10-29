@@ -348,6 +348,7 @@ mod slices;
 mod string;
 mod subtype;
 mod tuples;
+mod type_flags;
 mod unify;
 mod unpin;
 mod unsize;

@@ -211,6 +211,7 @@ dependencies = [
 name = "chalk-ir"
 version = "0.44.0-dev.0"
 dependencies = [
+ "bitflags",
  "chalk-derive",
  "lazy_static",
 ]
