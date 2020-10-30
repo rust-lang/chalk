@@ -259,7 +259,7 @@ impl<I: Interner> RenderAsRust<I> for ConstValue<I> {
             ConstValue::BoundVar(v) => write!(f, "{}", s.display_bound_var(v)),
             ConstValue::InferenceVar(_) => write!(f, "_"),
             ConstValue::Placeholder(_) => write!(f, "<const placeholder>"),
-            ConstValue::Concrete(_value) => unimplemented!("const values"),
+            ConstValue::Concrete(value) => write!(f, "{:?}", value.interned),
         }
     }
 }
