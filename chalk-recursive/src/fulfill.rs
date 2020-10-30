@@ -87,7 +87,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn u_canonicalize<T>(
         &mut self,
         interner: &I,
-        value0: &Canonical<T>,
+        value0: Canonical<T>,
     ) -> (UCanonical<T::Result>, UniverseMap)
     where
         T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
@@ -334,7 +334,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.interner();
         let (quantified, free_vars) = self.infer.canonicalize(interner, &wc);
-        let (quantified, universes) = self.infer.u_canonicalize(interner, &quantified);
+        let (quantified, universes) = self.infer.u_canonicalize(interner, quantified);
         let result = self.solver.solve_goal(quantified, minimums);
         Ok(PositiveSolution {
             free_vars,
@@ -359,7 +359,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         // Negate the result
         let (quantified, _) = self
             .infer
-            .u_canonicalize(self.solver.interner(), &canonicalized);
+            .u_canonicalize(self.solver.interner(), canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
         if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
             if solution.is_unique() {
@@ -387,7 +387,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         subst: Canonical<ConstrainedSubst<I>>,
     ) {
         use chalk_solve::infer::ucanonicalize::UniverseMapExt;
-        let subst = universes.map_from_canonical(self.interner(), &subst);
+        let subst = universes.map_from_canonical(self.interner(), subst);
         let ConstrainedSubst { subst, constraints } = self
             .infer
             .instantiate_canonical(self.solver.interner(), &subst);

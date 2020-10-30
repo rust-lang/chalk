@@ -249,7 +249,7 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
         let UCanonicalized {
             quantified,
             universes,
-        } = self.infer.u_canonicalize(interner, &canonicalized_goal);
+        } = self.infer.u_canonicalize(interner, canonicalized_goal);
         (quantified, universes)
     }
 
@@ -468,7 +468,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
         }
     }
 
-    /// Returns true if the two consts could be unequal.    
+    /// Returns true if the two consts could be unequal.
     fn aggregate_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
         true
     }

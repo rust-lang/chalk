@@ -81,7 +81,7 @@ where
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_var_ty`.
-    fn fold_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Fallible<Ty<TI>> {
+    fn fold_ty(&mut self, ty: Ty<I>, outer_binder: DebruijnIndex) -> Fallible<Ty<TI>> {
         ty.super_fold_with(self.as_dyn(), outer_binder)
     }
 
@@ -91,7 +91,7 @@ where
     /// specialized folding methods below, like `fold_free_var_lifetime`.
     fn fold_lifetime(
         &mut self,
-        lifetime: &Lifetime<I>,
+        lifetime: Lifetime<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<TI>> {
         lifetime.super_fold_with(self.as_dyn(), outer_binder)
@@ -103,7 +103,7 @@ where
     /// specialized folding methods below, like `fold_free_var_const`.
     fn fold_const(
         &mut self,
-        constant: &Const<I>,
+        constant: Const<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<TI>> {
         constant.super_fold_with(self.as_dyn(), outer_binder)
@@ -112,14 +112,14 @@ where
     /// Invoked for every program clause. By default, recursively folds the goals contents.
     fn fold_program_clause(
         &mut self,
-        clause: &ProgramClause<I>,
+        clause: ProgramClause<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<ProgramClause<TI>> {
         clause.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every goal. By default, recursively folds the goals contents.
-    fn fold_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> Fallible<Goal<TI>> {
+    fn fold_goal(&mut self, goal: Goal<I>, outer_binder: DebruijnIndex) -> Fallible<Goal<TI>> {
         goal.super_fold_with(self.as_dyn(), outer_binder)
     }
 
@@ -348,7 +348,7 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -363,7 +363,7 @@ pub trait Fold<I: Interner, TI: TargetInterner<I> = I>: Debug {
 pub trait SuperFold<I: Interner, TI: TargetInterner<I> = I>: Fold<I, TI> {
     /// Recursively folds the value.
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -379,7 +379,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Ty<I> {
     type Result = Ty<TI>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -398,7 +398,7 @@ where
     TI: TargetInterner<I>,
 {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<TI>>
@@ -509,7 +509,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Lifetime<I> {
     type Result = Lifetime<TI>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -527,7 +527,7 @@ where
     TI: TargetInterner<I>,
 {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<TI>>
@@ -568,7 +568,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Const<I> {
     type Result = Const<TI>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -586,7 +586,7 @@ where
     TI: TargetInterner<I>,
 {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<TI>>
@@ -627,7 +627,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goal<I> {
     type Result = Goal<TI>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -642,7 +642,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Goal<I> {
 /// Superfold folds recursively.
 impl<I: Interner, TI: TargetInterner<I>> SuperFold<I, TI> for Goal<I> {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -666,7 +666,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for ProgramClause<I> {
     type Result = ProgramClause<TI>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I, TI>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>

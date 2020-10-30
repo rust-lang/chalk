@@ -266,7 +266,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn u_canonicalize<T>(
         &mut self,
         interner: &I,
-        value0: &Canonical<T>,
+        value0: Canonical<T>,
     ) -> (UCanonical<T::Result>, UniverseMap)
     where
         T: HasInterner<Interner = I> + Fold<I> + Visit<I>,

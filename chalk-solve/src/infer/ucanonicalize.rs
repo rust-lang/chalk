@@ -10,7 +10,7 @@ impl<I: Interner> InferenceTable<I> {
     pub fn u_canonicalize<T>(
         &mut self,
         interner: &I,
-        value0: &Canonical<T>,
+        value0: Canonical<T>,
     ) -> UCanonicalized<T::Result>
     where
         T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
@@ -83,7 +83,7 @@ pub trait UniverseMapExt {
     fn map_from_canonical<T, I>(
         &self,
         interner: &I,
-        canonical_value: &Canonical<T>,
+        canonical_value: Canonical<T>,
     ) -> Canonical<T::Result>
     where
         T: Fold<I> + HasInterner<Interner = I>,
@@ -162,7 +162,7 @@ impl UniverseMapExt for UniverseMap {
     fn map_from_canonical<T, I>(
         &self,
         interner: &I,
-        canonical_value: &Canonical<T>,
+        canonical_value: Canonical<T>,
     ) -> Canonical<T::Result>
     where
         T: Fold<I> + HasInterner<Interner = I>,

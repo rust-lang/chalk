@@ -645,11 +645,17 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 use chalk_solve::infer::ucanonicalize::UniverseMapExt;
                 let table_goal = universe_map.map_from_canonical(
                     self.context.program().interner(),
-                    &self.forest.tables[subgoal_table].table_goal.canonical,
+                    self.forest.tables[subgoal_table]
+                        .table_goal
+                        .canonical
+                        .clone(),
                 );
                 let answer_subst = universe_map.map_from_canonical(
                     self.context.program().interner(),
-                    &self.forest.answer(subgoal_table, answer_index).subst,
+                    self.forest
+                        .answer(subgoal_table, answer_index)
+                        .subst
+                        .clone(),
                 );
                 match strand.infer.apply_answer_subst(
                     self.context.program().interner(),
