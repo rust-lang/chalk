@@ -55,7 +55,11 @@ where
                 .assert_ty_ref(interner)
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)), // FIXME shift
-            None => Ok(var.to_ty(interner, kind)),
+            None => {
+                // Normalize all inference vars which have been unified into a
+                // single variable. Ena calls this the "root" variable.
+                Ok(self.table.inference_var_root(var).to_ty(interner, kind))
+            }
         }
     }
 
@@ -104,6 +108,7 @@ mod test {
     use super::*;
     use chalk_integration::interner::ChalkIr;
     use chalk_integration::{arg, ty};
+    use chalk_solve::logging::with_tracing_logs;
 
     const U0: UniverseIndex = UniverseIndex { counter: 0 };
 
@@ -138,13 +143,16 @@ mod test {
                 &ty!(apply (item 0) (expr b)),
             )
             .unwrap();
-        // FIXME: can't just assert these are equal because the inference var gets set to a new var (?2)
-        // which is unified with b (?1). It might be good to pick a root to return. For now,
-        // this doesn't work as-is.
-        //assert_eq!(
-        //    DeepNormalizer::normalize_deep(&mut table, interner, &a),
-        //    &ty!(apply (item 1)),
-        //);
+        // a is unified to Adt<#0>(c), where 'c' is a new inference var
+        // created by the generalizer to generalize 'b'. It then unifies 'b'
+        // and 'c', and when we normalize them, they'll both be output as
+        // the same "root" variable. However, there are no guarantees for
+        // _which_ of 'b' and 'c' becomes the root. We need to normalize
+        // "b" too, then, to ensure we get a consistent result.
+        assert_eq!(
+            DeepNormalizer::normalize_deep(&mut table, interner, &a),
+            ty!(apply (item 0) (expr DeepNormalizer::normalize_deep(&mut table, interner, &b))),
+        );
         table
             .relate(
                 interner,

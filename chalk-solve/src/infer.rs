@@ -146,6 +146,17 @@ impl<I: Interner> InferenceTable<I> {
             .map(|p| p.assert_const_ref(interner).clone())
     }
 
+    /// Finds the root inference var for the given variable.
+    ///
+    /// The returned variable will be exactly equivalent to the given
+    /// variable except in name. All variables which have been unified to
+    /// eachother (but don't yet have a value) have the same "root".
+    ///
+    /// This is useful for `DeepNormalizer`.
+    pub fn inference_var_root(&mut self, var: InferenceVar) -> InferenceVar {
+        self.unify.find(var).into()
+    }
+
     /// If type `leaf` is a free inference variable, and that variable has been
     /// bound, returns `Some(P)` where `P` is the parameter to which it has been bound.
     pub fn probe_var(&mut self, leaf: InferenceVar) -> Option<GenericArg<I>> {

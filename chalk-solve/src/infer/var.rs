@@ -50,6 +50,12 @@ impl<I: Interner> From<InferenceVar> for EnaVariable<I> {
     }
 }
 
+impl<I: Interner> From<EnaVariable<I>> for InferenceVar {
+    fn from(ena_var: EnaVariable<I>) -> InferenceVar {
+        ena_var.var
+    }
+}
+
 impl<I: Interner> EnaVariable<I> {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
