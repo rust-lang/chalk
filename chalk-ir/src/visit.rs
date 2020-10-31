@@ -14,21 +14,27 @@ pub use visitors::VisitExt;
 
 /// An copy of the unstable `std::ops::ControlFlow` for use in Chalk visitors.
 pub enum ControlFlow<B, C = ()> {
+    /// Continue in the loop, using the given value for the next iteration
     Continue(C),
+    /// Exit the loop, yielding the given value
     Break(B),
 }
 
 impl<B, C> ControlFlow<B, C> {
+    /// Returns `true` if this is a `Break` variant.
     #[inline]
     pub fn is_break(&self) -> bool {
         matches!(*self, ControlFlow::Break(_))
     }
 
+    /// Returns `true` if this is a `Continue` variant.
     #[inline]
     pub fn is_continue(&self) -> bool {
         matches!(*self, ControlFlow::Continue(_))
     }
 
+    /// Converts the `ControlFlow` into an `Option` which is `Some`
+    /// if the `ControlFlow` was `Break` and `None` otherwise.
     #[inline]
     pub fn break_value(self) -> Option<B> {
         match self {
@@ -39,13 +45,20 @@ impl<B, C> ControlFlow<B, C> {
 }
 
 impl<B> ControlFlow<B, ()> {
+    /// It's frequently the case that there's no value needed with `Continue`,
+    /// so this provides a way to avoid typing `(())`, if you prefer it.
     pub const CONTINUE: Self = ControlFlow::Continue(());
 }
 
 impl<C> ControlFlow<(), C> {
+    /// APIs like `try_for_each` don't need values with `Break`,
+    /// so this provides a way to avoid typing `(())`, if you prefer it.
     pub const BREAK: Self = ControlFlow::Break(());
 }
 
+/// Unwraps a `ControlFlow` or propagates its `Break` value.
+/// This replaces the `Try` implementation that would be used
+/// with `std::ops::ControlFlow`.
 #[macro_export]
 macro_rules! try_break {
     ($expr:expr) => {
