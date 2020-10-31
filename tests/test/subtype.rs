@@ -137,8 +137,7 @@ fn generalize() {
     }
 }
 
-/// Tests that the generalizer correctly generalizes lifetimes (as opposed to
-/// just that variance in general works).
+/// Tests that the generalizer correctly generalizes lifetimes.
 #[test]
 fn multi_lifetime() {
     test! {
@@ -168,7 +167,7 @@ fn multi_lifetime() {
     }
 }
 
-/// Tests that the generalizer generalizes lifetimes within a covariant struct.
+/// Tests that we handle variance for covariant structs correctly.
 #[test]
 fn multi_lifetime_covariant_struct() {
     test! {
@@ -193,8 +192,7 @@ fn multi_lifetime_covariant_struct() {
     }
 }
 
-/// Tests that the generalizer generalizes lifetimes within a contravariant
-/// struct, and that that variance contravariance is recognized.
+/// Tests that we handle variance for contravariant structs correctly.
 #[test]
 fn multi_lifetime_contravariant_struct() {
     test! {
@@ -219,7 +217,7 @@ fn multi_lifetime_contravariant_struct() {
     }
 }
 
-/// Tests that the generalizer generalizes lifetimes within a invariant struct.
+/// Tests that we handle variance for invariant structs correctly.
 #[test]
 fn multi_lifetime_invariant_struct() {
     test! {
@@ -251,7 +249,7 @@ fn multi_lifetime_invariant_struct() {
     }
 }
 
-/// Tests that the generalizer generalizes lifetimes within slices correctly.
+/// Tests that we handle variance for slices correctly.
 #[test]
 fn multi_lifetime_slice() {
     test! {
@@ -274,7 +272,7 @@ fn multi_lifetime_slice() {
     }
 }
 
-/// Tests that the generalizer generalizes lifetimes within tuples correctly.
+/// Tests that we handle variance for tuples correctly.
 #[test]
 fn multi_lifetime_tuple() {
     test! {
@@ -297,7 +295,7 @@ fn multi_lifetime_tuple() {
     }
 }
 
-/// Tests that the generalizer generalizes lifetimes within tuples correctly.
+/// Tests that we handle variance for arrays correctly.
 #[test]
 fn multi_lifetime_array() {
     test! {
@@ -314,8 +312,188 @@ fn multi_lifetime_array() {
         } yields {
             // Result should be identical to multi_lifetime result.
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0  }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '^0.0  }] }"
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
+            ]}"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into covariant structs correctly.
+#[test]
+fn generalize_covariant_struct() {
+    test! {
+        program {
+            #[variance(Covariant)]
+            struct Foo<A> {}
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(Foo<&'a u32>, U),
+                    Subtype(Foo<&'b u32>, U)
+                }
+            }
+        } yields {
+            "Unique; for<?U1> { substitution [?0 := Foo<(&'^0.0 Uint(U32))>], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ] }"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into contravariant structs correctly.
+#[test]
+fn generalize_contravariant_struct() {
+    test! {
+        program {
+            #[variance(Contravariant)]
+            struct Foo<A> {}
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(Foo<&'a u32>, U),
+                    Subtype(Foo<&'b u32>, U)
+                }
+            }
+        } yields {
+            // Result should be opposite generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := Foo<(&'^0.0 Uint(U32))>], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }  \
+            ] }"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into invariant structs correctly.
+#[test]
+fn generalize_invariant_struct() {
+    test! {
+        program {
+            #[variance(Invariant)]
+            struct Foo<A> {}
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(Foo<&'a u32>, U),
+                    Subtype(Foo<&'b u32>, U)
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            // Because A is invariant, we require the lifetimes to be equal
+            "Unique; substitution [?0 := Foo<(&'!1_0 Uint(U32))>], lifetime constraints [ \
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
+        } yields[SolverChoice::slg_default()] {
+            "Unique; substitution [?0 := Foo<(&'!1_1 Uint(U32))>], lifetime constraints [ \
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into slices correctly.
+#[test]
+fn generalize_slice() {
+    test! {
+        program {
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype([&'a u32], U),
+                    Subtype([&'b u32], U)
+                }
+            }
+        } yields {
+            // Result should be identical to generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := [(&'^0.0 Uint(U32))]], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ] }"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into tuples correctly.
+#[test]
+fn generalize_tuple() {
+    test! {
+        program {
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype((&'a u32,), U),
+                    Subtype((&'b u32,), U)
+                }
+            }
+        } yields {
+            // Result should be identical to generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := 1<(&'^0.0 Uint(U32))>], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ] }"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into N-tuples correctly.
+#[test]
+fn generalize_2tuple() {
+    test! {
+        program {
+        }
+
+        goal {
+            forall<'a, 'b, 'c, 'd> {
+                exists<U> {
+                    Subtype((&'a u32, &'c u32), U),
+                    Subtype((&'b u32, &'d u32), U)
+                }
+            }
+        } yields {
+            "Unique; for<?U1, ?U1> { substitution [?0 := 2<(&'^0.0 Uint(U32)), (&'^0.1 Uint(U32))>], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_2: '^0.1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_3: '^0.1 }  \
+            ] }"
+        }
+    }
+}
+
+/// Tests that the generalizer recurses into arrays correctly.
+#[test]
+fn generalize_array() {
+    test! {
+        program {
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype([&'a u32; 16], U),
+                    Subtype([&'b u32; 16], U)
+                }
+            }
+        } yields {
+            // Result should be identical to generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := [(&'^0.0 Uint(U32)); 16]], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ] }"
         }
     }
 }
