@@ -169,6 +169,38 @@ fn multi_lifetime() {
     }
 }
 
+/// Tests that the generalizer correctly generalizes lifetimes when given an
+/// inference var on the left hand side.
+#[test]
+fn multi_lifetime_inverted() {
+    test! {
+        program {}
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(U, &'a u32),
+                    Subtype(U, &'b u32)
+                }
+            }
+        } yields {
+            // Without the generalizer, we would yield a result like this:
+            //
+            // "Unique; substitution [?0 := (&'!1_1 Uint(U32))], lifetime
+            // constraints [InEnvironment { environment: Env([]), goal: '!1_1: '!1_0
+            // }]"
+            //
+            // This is incorrect, as we shouldn't be requiring 'a and 'b to be
+            // related to eachother. Instead, U should be &'?1 u32, with constraints
+            // ?1 : 'a, ?1: 'b.
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 } \
+            ]}"
+        }
+    }
+}
+
 /// Tests that we handle variance for covariant structs correctly.
 #[test]
 fn multi_lifetime_covariant_struct() {

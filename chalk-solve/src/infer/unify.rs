@@ -78,6 +78,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(RelationResult { goals: self.goals })
     }
 
+    /// Relate `a`, `b` with the variance such that if `variance = Covariant`, `a` is
+    /// a subtype of `b`.
     fn relate_ty_ty(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
 
@@ -158,17 +160,31 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // FIXME: needs to handle relating a var and ty; needs generalization
             // Relating an inference variable with a non-inference variable.
-            (&TyKind::InferenceVar(var, kind), ty_data @ _)
-            | (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
-                let ty = ty_data.clone().intern(interner);
+            (a_data @ &TyKind::InferenceVar(_, _), b_data @ _)
+            | (a_data @ _, b_data @ &TyKind::InferenceVar(_, _)) => {
+                // Correct variance when we flip a/b.
+                let (new_variance, var, kind, ty_data) = match (a_data, b_data) {
+                    (&TyKind::InferenceVar(var, kind), ty_data @ _) => {
+                        (variance, var, kind, ty_data)
+                    }
+                    (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
+                        // var is grabbed from 'b', but given in as the left
+                        // parameter to relate_var_ty, so we need to flip variance.
+                        (variance.invert(), var, kind, ty_data)
+                    }
+                    _ => unreachable!(),
+                };
 
+                let ty = ty_data.clone().intern(interner);
                 match (kind, ty.is_integer(interner), ty.is_float(interner)) {
                     // General inference variables can unify with any type
                     (TyVariableKind::General, _, _)
                     // Integer inference variables can only unify with integer types
                     | (TyVariableKind::Integer, true, _)
                     // Float inference variables can only unify with float types
-                    | (TyVariableKind::Float, _, true) => self.relate_var_ty(variance, var, &ty),
+                    | (TyVariableKind::Float, _, true) => {
+                        self.relate_var_ty(new_variance, var, &ty)
+                    },
                     _ => Err(NoSolution),
                 }
             }
@@ -799,7 +815,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             .unwrap();
         debug!("var {:?} set to {:?}", var, generalized_val);
 
-        self.relate_ty_ty(variance, &ty1, &generalized_val)?;
+        self.relate_ty_ty(variance, &generalized_val, &ty1)?;
 
         debug!(
             "generalized version {:?} related to original {:?}",
@@ -1026,6 +1042,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         Ok(())
     }
 
+    /// Relate `a`, `b` such that if `variance = Covariant`, `a` is a subtype of
+    /// `b` and thus `a` must outlive `b`.
     fn push_lifetime_outlives_goals(&mut self, variance: Variance, a: Lifetime<I>, b: Lifetime<I>) {
         debug!(
             "pushing lifetime outlives goals for a={:?} b={:?} with variance {:?}",
@@ -1049,6 +1067,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         }
     }
 
+    /// Pushes a goal of `a` being a subtype of `b`.
     fn push_subtype_goal(&mut self, a: Ty<I>, b: Ty<I>) {
         let subtype_goal = GoalData::SubtypeGoal(SubtypeGoal { a, b }).intern(self.interner());
         self.goals
