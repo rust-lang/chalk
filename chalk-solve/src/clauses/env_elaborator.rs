@@ -8,7 +8,7 @@ use crate::RustIrDatabase;
 use crate::Ty;
 use crate::{debug_span, TyKind};
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{Visit, Visitor};
+use chalk_ir::visit::{ControlFlow, Visit, Visitor};
 use chalk_ir::{DebruijnIndex, Environment};
 use rustc_hash::FxHashSet;
 use tracing::instrument;
@@ -54,9 +54,7 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
 }
 
 impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
-    type Result = ();
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I> {
         self
     }
 
@@ -64,7 +62,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
         self.db.interner()
     }
     #[instrument(level = "debug", skip(self, _outer_binder))]
-    fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) {
+    fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) -> ControlFlow<()> {
         match ty.kind(self.interner()) {
             TyKind::Alias(alias_ty) => {
                 match_alias_ty(&mut self.builder, self.environment, alias_ty)
@@ -84,9 +82,14 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
                     .unwrap()
             }
         }
+        ControlFlow::Ok(())
     }
 
-    fn visit_domain_goal(&mut self, domain_goal: &DomainGoal<I>, outer_binder: DebruijnIndex) {
+    fn visit_domain_goal(
+        &mut self,
+        domain_goal: &DomainGoal<I>,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<()> {
         if let DomainGoal::FromEnv(from_env) = domain_goal {
             debug_span!("visit_domain_goal", ?from_env);
             match from_env {
@@ -103,9 +106,12 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
                             .associated_ty_data(associated_ty_id)
                             .to_program_clauses(&mut self.builder, self.environment);
                     }
+                    ControlFlow::Ok(())
                 }
                 FromEnv::Ty(ty) => ty.visit_with(self, outer_binder),
             }
+        } else {
+            ControlFlow::Ok(())
         }
     }
 }

@@ -2,7 +2,7 @@
 
 use crate::infer::InferenceTable;
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{SuperVisit, Visit, Visitor};
+use chalk_ir::visit::{ControlFlow, SuperVisit, Visit, Visitor};
 use chalk_ir::*;
 use std::cmp::max;
 
@@ -39,16 +39,14 @@ impl<'infer, 'i, I: Interner> TySizeVisitor<'infer, 'i, I> {
 }
 
 impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
-    type Result = ();
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
         self
     }
 
-    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) {
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         if let Some(normalized_ty) = self.infer.normalize_ty_shallow(self.interner, ty) {
             normalized_ty.visit_with(self, outer_binder);
-            return;
+            return ControlFlow::Ok(());
         }
 
         self.size += 1;
@@ -63,6 +61,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
         if self.depth == 0 {
             self.size = 0;
         }
+        ControlFlow::Ok(())
     }
 
     fn interner(&self) -> &'i I {

@@ -2,7 +2,7 @@ use super::RecordedItemId;
 use crate::RustIrDatabase;
 use chalk_ir::{
     interner::Interner,
-    visit::Visitor,
+    visit::{ControlFlow, Visitor},
     visit::{SuperVisit, Visit},
     AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
@@ -63,7 +63,7 @@ pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
                     assoc_ty_datum
                         .bounds_on_self(collector.db.interner())
                         .visit_with(&mut collector, DebruijnIndex::INNERMOST);
-                    assoc_ty_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST)
+                    assoc_ty_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
                 }
             }
             RecordedItemId::OpaqueTy(opaque_id) => {
@@ -108,8 +108,7 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<'i, I> for IdCollector<'i, 
 where
     I: 'i,
 {
-    type Result = ();
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
         self
     }
     fn interner(&self) -> &'i I {
@@ -120,7 +119,7 @@ where
         &mut self,
         ty: &chalk_ir::Ty<I>,
         outer_binder: chalk_ir::DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         match ty.kind(self.db.interner()) {
             TyKind::Adt(adt, _) => self.record(*adt),
             TyKind::FnDef(fn_def, _) => self.record(*fn_def),
@@ -148,7 +147,7 @@ where
         &mut self,
         where_clause: &WhereClause<I>,
         outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         match where_clause {
             WhereClause::Implemented(trait_ref) => self.record(trait_ref.trait_id),
             WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {

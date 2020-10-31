@@ -162,10 +162,7 @@ fn derive_any_visit(
 
     let body = s.each(|bi| {
         quote! {
-            result = result.combine(::chalk_ir::visit::Visit::visit_with(#bi, visitor, outer_binder));
-            if result.return_early() {
-                return result;
-            }
+            ::chalk_ir::visit::Visit::visit_with(#bi, visitor, outer_binder)?;
         }
     });
 
@@ -178,19 +175,18 @@ fn derive_any_visit(
     s.bound_impl(
         quote!(::chalk_ir::visit:: #trait_name <#interner>),
         quote! {
-            fn #method_name <'i, R: ::chalk_ir::visit::VisitResult>(
+            fn #method_name <'i>(
                 &self,
-                visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner, Result = R >,
+                visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> R
+            ) -> ::chalk_ir::visit::ControlFlow<()>
             where
                 #interner: 'i
             {
-                let mut result = R::new();
                 match *self {
                     #body
                 }
-                return result;
+                ::chalk_ir::visit::ControlFlow::Ok(())
             }
         },
     )

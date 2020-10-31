@@ -12,54 +12,18 @@ pub mod visitors;
 
 pub use visitors::VisitExt;
 
-/// A "result type" that can be returned from a visitor. Visitors pick
-/// an appropriate result type depending on what sort of operation they
-/// are doing. A common choice is `FindAny`, which indicates that the visitor
-/// is searching for something and that the visitor should stop once it is found.
-pub trait VisitResult: Sized {
-    /// Creates a new visitor result.
-    fn new() -> Self;
-
-    /// Returns true if this result is "complete" and we can stop visiting any
-    /// further parts of the term. This is used by `FindAny`, for example, to
-    /// stop the search after a match has been found.
-    fn return_early(&self) -> bool;
-
-    /// Combines two visitor results.
-    fn combine(self, other: Self) -> Self;
-
-    /// Convenience helper for use in writing `Visitor` impls. Returns `self`
-    /// if `return_early()` is true, but otherwise combines `self` with the
-    /// result of invoking `op`.
-    ///
-    /// If you have a struct with two fields, `foo` and `bar`, you can
-    /// thus write code like
-    ///
-    /// ```rust,ignore
-    /// self.foo.visit_with(visitor, outer_binder)
-    ///     .and_then(|| self.bar.visit_with(visitor, outer_binder))
-    /// ```
-    ///
-    /// and `bar` will only be visited if necessary.
-    fn and_then(self, op: impl FnOnce() -> Self) -> Self {
-        if self.return_early() {
-            self
-        } else {
-            self.combine(op())
-        }
-    }
-}
-
-/// Unit type for a visitor indicates a "side-effecting" visitor that
-/// should visit an entire term.
-impl VisitResult for () {
-    fn new() -> Self {}
-
-    fn return_early(&self) -> bool {
-        false
-    }
-    fn combine(self, _other: Self) {}
-}
+/// A temporary replacement for `std::ops::ControlFlow` which isn't stabilized yet.
+///
+/// To continue visiting, return `ControlFlow::Ok(())`, and to stop visiting return
+/// `ControlFlow::Err(())`.
+//
+//
+// FIXME: replace this with `std::ops::ControlFlow` when it is stabilized. Then:
+// * remove this and replace all the imports to use `ControlFlow` from `std`
+// * (auto) replace all `ControlFlow::Ok(())` with `ControlFlow::CONTINUE`
+// * (auto) replace all `ControlFlow::Err(())` with `ControlFlow::BREAK`
+// * replace `is_err` with `is_break` and `is_ok` with `is_continue`
+pub type ControlFlow<B, C = ()> = Result<C, B>;
 
 /// A "visitor" recursively folds some term -- that is, some bit of IR,
 /// such as a `Goal`, and computes a value as a result.
@@ -74,9 +38,6 @@ pub trait Visitor<'i, I: Interner>
 where
     I: 'i,
 {
-    /// The type of result that this visitor produces.
-    type Result: VisitResult;
-
     /// Creates a `dyn` value from this visitor. Unfortunately, this
     /// must be added manually to each impl of visitor; it permits the
     /// default implements below to create a `&mut dyn Visitor` from
@@ -84,13 +45,13 @@ where
     /// method). Effectively, this limits impls of `visitor` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result>;
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when visiting. By default, invokes
     /// `super_visit_with`, which will in turn invoke the more
     /// specialized visiting methods below, like `visit_free_var`.
-    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         ty.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -102,7 +63,7 @@ where
         &mut self,
         lifetime: &Lifetime<I>,
         outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         lifetime.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -110,7 +71,7 @@ where
     /// encountered when visiting. By default, invokes
     /// `super_visit_with`, which will in turn invoke the more
     /// specialized visiting methods below, like `visit_free_var`.
-    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         constant.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -119,12 +80,12 @@ where
         &mut self,
         clause: &ProgramClause<I>,
         outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         clause.super_visit_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every goal. By default, recursively visits the goals contents.
-    fn visit_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         goal.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -133,7 +94,7 @@ where
         &mut self,
         domain_goal: &DomainGoal<I>,
         outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         domain_goal.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -146,14 +107,18 @@ where
 
     /// Invoked for `BoundVar` instances that are not bound
     /// within the type being visited over:
-    fn visit_free_var(&mut self, bound_var: BoundVar, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_free_var(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<()> {
         if self.forbid_free_vars() {
             panic!(
                 "unexpected free variable `{:?}` with outer binder {:?}",
                 bound_var, outer_binder
             )
         } else {
-            Self::Result::new()
+            ControlFlow::Ok(())
         }
     }
 
@@ -169,11 +134,11 @@ where
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
-            Self::Result::new()
+            ControlFlow::Ok(())
         }
     }
 
@@ -182,7 +147,7 @@ where
         &mut self,
         where_clause: &WhereClause<I>,
         outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         where_clause.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -199,11 +164,11 @@ where
         &mut self,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
+    ) -> ControlFlow<()> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            Self::Result::new()
+            ControlFlow::Ok(())
         }
     }
 
@@ -219,11 +184,11 @@ pub trait Visit<I: Interner>: Debug {
     /// visitor. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i;
 }
@@ -233,11 +198,11 @@ pub trait Visit<I: Interner>: Debug {
 /// the contents of the type.
 pub trait SuperVisit<I: Interner>: Visit<I> {
     /// Recursively visits the type contents.
-    fn super_visit_with<'i, R: VisitResult>(
+    fn super_visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i;
 }
@@ -246,11 +211,11 @@ pub trait SuperVisit<I: Interner>: Visit<I> {
 /// usually (in turn) invokes `super_visit_ty` to visit the individual
 /// parts.
 impl<I: Interner> Visit<I> for Ty<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -258,16 +223,16 @@ impl<I: Interner> Visit<I> for Ty<I> {
     }
 }
 
-/// "Super visit" for a type invokes te more detailed callbacks on the type
+/// "Super visit" for a type invokes the more detailed callbacks on the type
 impl<I> SuperVisit<I> for Ty<I>
 where
     I: Interner,
 {
-    fn super_visit_with<'i, R: VisitResult>(
+    fn super_visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -277,7 +242,7 @@ where
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
-                    R::new()
+                    ControlFlow::Ok(())
                 }
             }
             TyKind::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
@@ -290,52 +255,58 @@ where
                 substitution.visit_with(visitor, outer_binder)
             }
             TyKind::Scalar(scalar) => scalar.visit_with(visitor, outer_binder),
-            TyKind::Str => R::new(),
-            TyKind::Tuple(arity, substitution) => arity
-                .visit_with(visitor, outer_binder)
-                .combine(substitution.visit_with(visitor, outer_binder)),
-            TyKind::OpaqueType(opaque_ty, substitution) => opaque_ty
-                .visit_with(visitor, outer_binder)
-                .combine(substitution.visit_with(visitor, outer_binder)),
-            TyKind::Slice(substitution) => substitution.visit_with(visitor, outer_binder),
-            TyKind::FnDef(fn_def, substitution) => fn_def
-                .visit_with(visitor, outer_binder)
-                .combine(substitution.visit_with(visitor, outer_binder)),
-            TyKind::Ref(mutability, lifetime, ty) => {
-                mutability.visit_with(visitor, outer_binder).combine(
-                    lifetime
-                        .visit_with(visitor, outer_binder)
-                        .combine(ty.visit_with(visitor, outer_binder)),
-                )
+            TyKind::Str => ControlFlow::Ok(()),
+            TyKind::Tuple(arity, substitution) => {
+                arity.visit_with(visitor, outer_binder)?;
+                substitution.visit_with(visitor, outer_binder)
             }
-            TyKind::Raw(mutability, ty) => mutability
-                .visit_with(visitor, outer_binder)
-                .combine(ty.visit_with(visitor, outer_binder)),
-            TyKind::Never => R::new(),
-            TyKind::Array(ty, const_) => ty
-                .visit_with(visitor, outer_binder)
-                .combine(const_.visit_with(visitor, outer_binder)),
-            TyKind::Closure(id, substitution) => id
-                .visit_with(visitor, outer_binder)
-                .combine(substitution.visit_with(visitor, outer_binder)),
-            TyKind::Generator(generator, substitution) => generator
-                .visit_with(visitor, outer_binder)
-                .combine(substitution.visit_with(visitor, outer_binder)),
-            TyKind::GeneratorWitness(witness, substitution) => witness
-                .visit_with(visitor, outer_binder)
-                .combine(substitution.visit_with(visitor, outer_binder)),
+            TyKind::OpaqueType(opaque_ty, substitution) => {
+                opaque_ty.visit_with(visitor, outer_binder)?;
+                substitution.visit_with(visitor, outer_binder)
+            }
+            TyKind::Slice(substitution) => substitution.visit_with(visitor, outer_binder),
+            TyKind::FnDef(fn_def, substitution) => {
+                fn_def.visit_with(visitor, outer_binder)?;
+                substitution.visit_with(visitor, outer_binder)
+            }
+            TyKind::Ref(mutability, lifetime, ty) => {
+                mutability.visit_with(visitor, outer_binder)?;
+                lifetime.visit_with(visitor, outer_binder)?;
+                ty.visit_with(visitor, outer_binder)
+            }
+            TyKind::Raw(mutability, ty) => {
+                mutability.visit_with(visitor, outer_binder)?;
+                ty.visit_with(visitor, outer_binder)
+            }
+            TyKind::Never => ControlFlow::Ok(()),
+            TyKind::Array(ty, const_) => {
+                ty.visit_with(visitor, outer_binder)?;
+                const_.visit_with(visitor, outer_binder)
+            }
+            TyKind::Closure(id, substitution) => {
+                id.visit_with(visitor, outer_binder)?;
+                substitution.visit_with(visitor, outer_binder)
+            }
+            TyKind::Generator(generator, substitution) => {
+                generator.visit_with(visitor, outer_binder)?;
+                substitution.visit_with(visitor, outer_binder)
+            }
+            TyKind::GeneratorWitness(witness, substitution) => {
+                witness.visit_with(visitor, outer_binder)?;
+                substitution.visit_with(visitor, outer_binder)
+            }
             TyKind::Foreign(foreign_ty) => foreign_ty.visit_with(visitor, outer_binder),
-            TyKind::Error => R::new(),
+            TyKind::Error => ControlFlow::Ok(()),
         }
     }
 }
 
 impl<I: Interner> Visit<I> for Lifetime<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -344,11 +315,11 @@ impl<I: Interner> Visit<I> for Lifetime<I> {
 }
 
 impl<I: Interner> SuperVisit<I> for Lifetime<I> {
-    fn super_visit_with<'i, R: VisitResult>(
+    fn super_visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -358,25 +329,25 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
-                    R::new()
+                    ControlFlow::Ok(())
                 }
             }
             LifetimeData::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
             LifetimeData::Placeholder(universe) => {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
-            LifetimeData::Static => R::new(),
+            LifetimeData::Static => ControlFlow::Ok(()),
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }
 }
 
 impl<I: Interner> Visit<I> for Const<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -385,11 +356,11 @@ impl<I: Interner> Visit<I> for Const<I> {
 }
 
 impl<I: Interner> SuperVisit<I> for Const<I> {
-    fn super_visit_with<'i, R: VisitResult>(
+    fn super_visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -399,24 +370,24 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
-                    R::new()
+                    ControlFlow::Ok(())
                 }
             }
             ConstValue::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
             ConstValue::Placeholder(universe) => {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
-            ConstValue::Concrete(_) => R::new(),
+            ConstValue::Concrete(_) => ControlFlow::Ok(()),
         }
     }
 }
 
 impl<I: Interner> Visit<I> for Goal<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -425,11 +396,11 @@ impl<I: Interner> Visit<I> for Goal<I> {
 }
 
 impl<I: Interner> SuperVisit<I> for Goal<I> {
-    fn super_visit_with<'i, R: VisitResult>(
+    fn super_visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -439,11 +410,11 @@ impl<I: Interner> SuperVisit<I> for Goal<I> {
 }
 
 impl<I: Interner> Visit<I> for ProgramClause<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -452,11 +423,11 @@ impl<I: Interner> Visit<I> for ProgramClause<I> {
 }
 
 impl<I: Interner> Visit<I> for WhereClause<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
@@ -465,11 +436,11 @@ impl<I: Interner> Visit<I> for WhereClause<I> {
 }
 
 impl<I: Interner> Visit<I> for DomainGoal<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn Visitor<'i, I, Result = R>,
+        visitor: &mut dyn Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {

@@ -1,6 +1,6 @@
 //! Visitor helpers
 
-use crate::{BoundVar, DebruijnIndex, Interner, Visit, VisitResult, Visitor};
+use crate::{BoundVar, ControlFlow, DebruijnIndex, Interner, Visit, Visitor};
 
 /// Visitor extensions.
 pub trait VisitExt<I: Interner>: Visit<I> {
@@ -10,52 +10,18 @@ pub trait VisitExt<I: Interner>: Visit<I> {
             &mut FindFreeVarsVisitor { interner },
             DebruijnIndex::INNERMOST,
         )
-        .to_bool()
+        .is_err()
     }
 }
 
 impl<T, I: Interner> VisitExt<I> for T where T: Visit<I> {}
-
-/// Helper visitor for finding a specific value.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(missing_docs)]
-pub struct FindAny {
-    pub found: bool,
-}
-
-impl FindAny {
-    /// Visitor has found the value.
-    pub const FOUND: FindAny = FindAny { found: true };
-
-    /// Checks whether the value has been found.
-    pub fn to_bool(&self) -> bool {
-        self.found
-    }
-}
-
-impl VisitResult for FindAny {
-    fn new() -> Self {
-        FindAny { found: false }
-    }
-
-    fn return_early(&self) -> bool {
-        self.found
-    }
-    fn combine(self, other: Self) -> Self {
-        FindAny {
-            found: self.found || other.found,
-        }
-    }
-}
 
 struct FindFreeVarsVisitor<'i, I: Interner> {
     interner: &'i I,
 }
 
 impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
-    type Result = FindAny;
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
         self
     }
 
@@ -67,7 +33,7 @@ impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
         &mut self,
         _bound_var: BoundVar,
         _outer_binder: DebruijnIndex,
-    ) -> Self::Result {
-        FindAny::FOUND
+    ) -> ControlFlow<()> {
+        ControlFlow::Err(())
     }
 }
