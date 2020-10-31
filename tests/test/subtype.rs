@@ -45,7 +45,7 @@ fn struct_lifetime_variance() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 } \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 } \
             ]"
         }
     }
@@ -65,7 +65,7 @@ fn ref_lifetime_variance() {
         } yields {
             // Seems good!
             "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }\
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 } \
             ]"
         }
     }
@@ -81,8 +81,9 @@ fn fn_lifetime_variance_args() {
             for<'a, 'b> fn(&'a u32, &'b u32) = for<'a> fn(&'a u32, &'a u32)
         } yields {
             "Unique;substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
         }
     }
 }
@@ -161,8 +162,9 @@ fn multi_lifetime() {
             // related to eachother. Instead, U should be &'?1 u32, with constraints
             // ?1 : 'a, ?1: 'b.
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0  }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '^0.0  }] }"
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
+            ]}"
         }
     }
 }
@@ -186,8 +188,9 @@ fn multi_lifetime_covariant_struct() {
         } yields {
             // Result should be identical to multi_lifetime result.
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0  }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '^0.0  }] }"
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ]}"
         }
     }
 }
@@ -211,8 +214,9 @@ fn multi_lifetime_contravariant_struct() {
         } yields {
             // Result should be opposite multi_lifetime result.
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
-            InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }] }"
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }  \
+            ]}"
         }
     }
 }
@@ -266,8 +270,9 @@ fn multi_lifetime_slice() {
         } yields {
             // Result should be identical to multi_lifetime result.
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0  }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '^0.0  }] }"
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
+            ]}"
         }
     }
 }
@@ -289,8 +294,9 @@ fn multi_lifetime_tuple() {
         } yields {
             // Result should be identical to multi_lifetime result.
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '^0.0  }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '^0.0  }] }"
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
+            ]}"
         }
     }
 }
