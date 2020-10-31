@@ -218,7 +218,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
                 self.zip_substs(
                     variance,
-                    None,
+                    Some(Variances::from(
+                        &self.interner,
+                        std::iter::repeat(Variance::Covariant).take(*arity_a),
+                    )),
                     substitution_a.as_slice(interner),
                     substitution_b.as_slice(interner),
                 )
