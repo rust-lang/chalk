@@ -31,6 +31,7 @@ use std::collections::BTreeSet;
 /// references parent. IdCollector solves this by collecting all of the directly
 /// related identifiers, allowing those to be rendered as well, ensuring name
 /// resolution is successful.
+#[allow(unused_must_use)] // unused `Result`s from `Visitor`s
 pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
     db: &'i DB,
     identifiers: &'_ BTreeSet<RecordedItemId<I>>,

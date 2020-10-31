@@ -26,7 +26,7 @@ pub(super) fn elaborate_env_clauses<I: Interner>(
     environment: &Environment<I>,
 ) {
     let mut this_round = vec![];
-    in_clauses.visit_with(
+    let _ = in_clauses.visit_with(
         &mut EnvElaborator::new(db, &mut this_round, environment),
         DebruijnIndex::INNERMOST,
     );

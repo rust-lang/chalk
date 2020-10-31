@@ -13,7 +13,7 @@ pub fn needs_truncation<I: Interner>(
     value: impl Visit<I>,
 ) -> bool {
     let mut visitor = TySizeVisitor::new(interner, infer);
-    value.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
+    let _ = value.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
 
     visitor.max_size > max_size
 }
@@ -45,7 +45,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
 
     fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         if let Some(normalized_ty) = self.infer.normalize_ty_shallow(self.interner, ty) {
-            normalized_ty.visit_with(self, outer_binder);
+            normalized_ty.visit_with(self, outer_binder)?;
             return ControlFlow::Ok(());
         }
 
@@ -53,7 +53,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
         self.max_size = max(self.size, self.max_size);
 
         self.depth += 1;
-        ty.super_visit_with(self, outer_binder);
+        ty.super_visit_with(self, outer_binder)?;
         self.depth -= 1;
 
         // When we get back to the first invocation, clear the counters.
@@ -89,7 +89,7 @@ mod tests {
                          (placeholder 1)))));
 
         let mut visitor = TySizeVisitor::new(interner, &mut table);
-        ty0.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
+        let _ = ty0.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
         assert!(visitor.max_size == 5);
     }
 
@@ -113,7 +113,7 @@ mod tests {
                         (placeholder 1))));
 
         let mut visitor = TySizeVisitor::new(interner, &mut table);
-        vec![&ty0, &ty1].visit_with(&mut visitor, DebruijnIndex::INNERMOST);
+        let _ = vec![&ty0, &ty1].visit_with(&mut visitor, DebruijnIndex::INNERMOST);
         assert!(visitor.max_size == 5);
     }
 }

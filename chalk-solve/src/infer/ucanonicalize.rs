@@ -25,7 +25,7 @@ impl<I: Interner> InferenceTable<I> {
             universes.add(*universe.skip_kind());
         }
 
-        value0.value.visit_with(
+        let _ = value0.value.visit_with(
             &mut UCollector {
                 universes: &mut universes,
                 interner,

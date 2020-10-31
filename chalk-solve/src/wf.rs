@@ -63,7 +63,7 @@ impl<'i, I: Interner> InputTypeCollector<'i, I> {
 
     fn types_in(interner: &'i I, value: impl Visit<I>) -> Vec<Ty<I>> {
         let mut collector = Self::new(interner);
-        value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+        let _ = value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
         collector.types
     }
 }
@@ -104,12 +104,12 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
         match ty.kind(interner) {
             TyKind::Adt(id, substitution) => {
                 push_ty();
-                id.visit_with(self, outer_binder);
+                id.visit_with(self, outer_binder)?;
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::AssociatedType(assoc_ty, substitution) => {
                 push_ty();
-                assoc_ty.visit_with(self, outer_binder);
+                assoc_ty.visit_with(self, outer_binder)?;
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::Scalar(scalar) => {
@@ -122,12 +122,12 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             }
             TyKind::Tuple(arity, substitution) => {
                 push_ty();
-                arity.visit_with(self, outer_binder);
+                arity.visit_with(self, outer_binder)?;
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::OpaqueType(opaque_ty, substitution) => {
                 push_ty();
-                opaque_ty.visit_with(self, outer_binder);
+                opaque_ty.visit_with(self, outer_binder)?;
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::Slice(substitution) => {
@@ -136,18 +136,18 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             }
             TyKind::FnDef(fn_def, substitution) => {
                 push_ty();
-                fn_def.visit_with(self, outer_binder);
+                fn_def.visit_with(self, outer_binder)?;
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::Ref(mutability, lifetime, ty) => {
                 push_ty();
-                mutability.visit_with(self, outer_binder);
-                lifetime.visit_with(self, outer_binder);
+                mutability.visit_with(self, outer_binder)?;
+                lifetime.visit_with(self, outer_binder)?;
                 ty.visit_with(self, outer_binder)
             }
             TyKind::Raw(mutability, substitution) => {
                 push_ty();
-                mutability.visit_with(self, outer_binder);
+                mutability.visit_with(self, outer_binder)?;
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::Never => {
@@ -156,7 +156,7 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             }
             TyKind::Array(ty, const_) => {
                 push_ty();
-                ty.visit_with(self, outer_binder);
+                ty.visit_with(self, outer_binder)?;
                 const_.visit_with(self, outer_binder)
             }
             TyKind::Closure(_id, substitution) => {

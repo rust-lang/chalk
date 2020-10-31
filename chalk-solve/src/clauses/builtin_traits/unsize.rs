@@ -63,7 +63,7 @@ fn outer_binder_parameters_used<I: Interner>(
         interner,
         parameters: HashSet::new(),
     };
-    v.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
+    let _ = v.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
     visitor.parameters
 }
 
