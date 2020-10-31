@@ -224,6 +224,20 @@ fn multi_lifetime_covariant_struct() {
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
             ]}"
         }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(Foo<U>, Foo<&'a u32>),
+                    Subtype(Foo<U>, Foo<&'b u32>)
+                }
+            }
+        } yields {
+            // Result should be identical to multi_lifetime result.
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0  }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1  }  \
+            ]}"
+        }
     }
 }
 
@@ -250,6 +264,20 @@ fn multi_lifetime_contravariant_struct() {
                 InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }  \
             ]}"
         }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(Foo<U>, Foo<&'a u32>),
+                    Subtype(Foo<U>, Foo<&'b u32>)
+                }
+            }
+        } yields {
+            // Result should be opposite multi_lifetime result.
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ]}"
+        }
     }
 }
 
@@ -267,6 +295,27 @@ fn multi_lifetime_invariant_struct() {
                 exists<U> {
                     Subtype(Foo<&'a u32>, Foo<U>),
                     Subtype(Foo<&'b u32>, Foo<U>)
+                }
+            }
+        } yields[SolverChoice::recursive()] {
+            // Because A is invariant, we require the lifetimes to be equal
+            "Unique; substitution [?0 := (&'!1_0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
+        } yields[SolverChoice::slg_default()] {
+            // Because A is invariant, we require the lifetimes to be equal
+            "Unique; substitution [?0 := (&'!1_1 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(Foo<U>, Foo<&'a u32>),
+                    Subtype(Foo<U>, Foo<&'b u32>)
                 }
             }
         } yields[SolverChoice::recursive()] {
@@ -306,6 +355,20 @@ fn multi_lifetime_slice() {
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
             ]}"
         }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype([U], [&'a u32]),
+                    Subtype([U], [&'b u32])
+                }
+            }
+        } yields {
+            // Result should be identical to multi_lifetime result.
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 } \
+            ]}"
+        }
     }
 }
 
@@ -330,6 +393,20 @@ fn multi_lifetime_tuple() {
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
             ]}"
         }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype((U,), (&'a u32,)),
+                    Subtype((U,), (&'b u32,))
+                }
+            }
+        } yields {
+            // Result should be identical to multi_lifetime result.
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 } \
+            ]}"
+        }
     }
 }
 
@@ -352,6 +429,20 @@ fn multi_lifetime_array() {
             "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
                 InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 } \
+            ]}"
+        }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype([U; 16], [&'a u32; 16]),
+                    Subtype([U; 16], [&'b u32; 16])
+                }
+            }
+        } yields {
+            // Result should be identical to multi_lifetime result.
+            "Unique; for<?U1> { substitution [?0 := (&'^0.0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 } \
             ]}"
         }
     }
@@ -460,6 +551,20 @@ fn generalize_slice() {
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
             ] }"
         }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(U, [&'a u32]),
+                    Subtype(U, [&'b u32])
+                }
+            }
+        } yields {
+            // Result should be identical to generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := [(&'^0.0 Uint(U32))]], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }  \
+            ] }"
+        }
     }
 }
 
@@ -482,6 +587,20 @@ fn generalize_tuple() {
             "Unique; for<?U1> { substitution [?0 := 1<(&'^0.0 Uint(U32))>], lifetime constraints [\
                 InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ] }"
+        }
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(U, (&'a u32,)),
+                    Subtype(U, (&'b u32,))
+                }
+            }
+        } yields {
+            // Result should be identical to generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := 1<(&'^0.0 Uint(U32))>], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }  \
             ] }"
         }
     }
@@ -509,6 +628,21 @@ fn generalize_2tuple() {
                 InEnvironment { environment: Env([]), goal: '!1_3: '^0.1 }  \
             ] }"
         }
+        goal {
+            forall<'a, 'b, 'c, 'd> {
+                exists<U> {
+                    Subtype(U, (&'a u32, &'c u32)),
+                    Subtype(U, (&'b u32, &'d u32))
+                }
+            }
+        } yields {
+            "Unique; for<?U1, ?U1> { substitution [?0 := 2<(&'^0.0 Uint(U32)), (&'^0.1 Uint(U32))>], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '^0.1: '!1_2 }, \
+                InEnvironment { environment: Env([]), goal: '^0.1: '!1_3 }  \
+            ] }"
+        }
     }
 }
 
@@ -531,6 +665,21 @@ fn generalize_array() {
             "Unique; for<?U1> { substitution [?0 := [(&'^0.0 Uint(U32)); 16]], lifetime constraints [\
                 InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }  \
+            ] }"
+        }
+
+        goal {
+            forall<'a, 'b> {
+                exists<U> {
+                    Subtype(U, [&'a u32; 16]),
+                    Subtype(U, [&'b u32; 16])
+                }
+            }
+        } yields {
+            // Result should be identical to generalize_covariant_struct result.
+            "Unique; for<?U1> { substitution [?0 := [(&'^0.0 Uint(U32)); 16]], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }, \
+                InEnvironment { environment: Env([]), goal: '^0.0: '!1_1 }  \
             ] }"
         }
     }
