@@ -1025,7 +1025,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
     fn push_lifetime_outlives_goals(&mut self, variance: Variance, a: Lifetime<I>, b: Lifetime<I>) {
         debug!(
-            "pushing lifetime eq goals for a={:?} b={:?} with variance {:?}",
+            "pushing lifetime outlives goals for a={:?} b={:?} with variance {:?}",
             a, b, variance
         );
         if matches!(variance, Variance::Invariant | Variance::Contravariant) {
