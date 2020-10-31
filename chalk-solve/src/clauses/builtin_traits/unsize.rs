@@ -7,7 +7,7 @@ use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
-    visit::{visitors::FindAny, SuperVisit, Visit, VisitResult, Visitor},
+    visit::{ControlFlow, SuperVisit, Visit, Visitor},
     Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, LifetimeOutlives,
     QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
@@ -19,13 +19,11 @@ struct UnsizeParameterCollector<'a, I: Interner> {
 }
 
 impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
-    type Result = ();
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I> {
         self
     }
 
-    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         let interner = self.interner;
 
         match ty.kind(interner) {
@@ -34,12 +32,13 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
                 if bound_var.debruijn.shifted_in() == outer_binder {
                     self.parameters.insert(bound_var.index);
                 }
+                ControlFlow::CONTINUE
             }
             _ => ty.super_visit_with(self, outer_binder),
         }
     }
 
-    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         let interner = self.interner;
 
         if let ConstValue::BoundVar(bound_var) = constant.data(interner).value {
@@ -48,6 +47,7 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
                 self.parameters.insert(bound_var.index);
             }
         }
+        ControlFlow::CONTINUE
     }
 
     fn interner(&self) -> &'a I {
@@ -74,13 +74,11 @@ struct ParameterOccurenceCheck<'a, 'p, I: Interner> {
 }
 
 impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> {
-    type Result = FindAny;
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I> {
         self
     }
 
-    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         let interner = self.interner;
 
         match ty.kind(interner) {
@@ -88,16 +86,16 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
                 if bound_var.debruijn.shifted_in() == outer_binder
                     && self.parameters.contains(&bound_var.index)
                 {
-                    FindAny::FOUND
+                    ControlFlow::BREAK
                 } else {
-                    FindAny::new()
+                    ControlFlow::CONTINUE
                 }
             }
             _ => ty.super_visit_with(self, outer_binder),
         }
     }
 
-    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> Self::Result {
+    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         let interner = self.interner;
 
         match constant.data(interner).value {
@@ -105,12 +103,12 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
                 if bound_var.debruijn.shifted_in() == outer_binder
                     && self.parameters.contains(&bound_var.index)
                 {
-                    FindAny::FOUND
+                    ControlFlow::BREAK
                 } else {
-                    FindAny::new()
+                    ControlFlow::CONTINUE
                 }
             }
-            _ => FindAny::new(),
+            _ => ControlFlow::CONTINUE,
         }
     }
 
@@ -128,7 +126,8 @@ fn uses_outer_binder_params<I: Interner>(
         interner,
         parameters,
     };
-    v.visit_with(&mut visitor, DebruijnIndex::INNERMOST) == FindAny::FOUND
+    v.visit_with(&mut visitor, DebruijnIndex::INNERMOST)
+        .is_break()
 }
 
 fn principal_id<'a, I: Interner>(

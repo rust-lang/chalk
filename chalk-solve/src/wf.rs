@@ -7,7 +7,7 @@ use chalk_ir::{
     cast::*,
     fold::shift::Shift,
     interner::Interner,
-    visit::{Visit, VisitResult, Visitor},
+    visit::{ControlFlow, Visit, Visitor},
     *,
 };
 use tracing::debug;
@@ -69,9 +69,7 @@ impl<'i, I: Interner> InputTypeCollector<'i, I> {
 }
 
 impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
-    type Result = ();
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = Self::Result> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
         self
     }
 
@@ -79,22 +77,24 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
         self.interner
     }
 
-    fn visit_where_clause(&mut self, where_clause: &WhereClause<I>, outer_binder: DebruijnIndex) {
+    fn visit_where_clause(
+        &mut self,
+        where_clause: &WhereClause<I>,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<()> {
         match where_clause {
             WhereClause::AliasEq(alias_eq) => alias_eq
                 .alias
                 .clone()
                 .intern(self.interner)
                 .visit_with(self, outer_binder),
-            WhereClause::Implemented(trait_ref) => {
-                trait_ref.visit_with(self, outer_binder);
-            }
+            WhereClause::Implemented(trait_ref) => trait_ref.visit_with(self, outer_binder),
             WhereClause::TypeOutlives(TypeOutlives { ty, .. }) => ty.visit_with(self, outer_binder),
-            WhereClause::LifetimeOutlives(..) => {}
+            WhereClause::LifetimeOutlives(..) => ControlFlow::CONTINUE,
         }
     }
 
-    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) {
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         let interner = self.interner();
 
         let mut push_ty = || {
@@ -105,105 +105,110 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
             TyKind::Adt(id, substitution) => {
                 push_ty();
                 id.visit_with(self, outer_binder);
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::AssociatedType(assoc_ty, substitution) => {
                 push_ty();
                 assoc_ty.visit_with(self, outer_binder);
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::Scalar(scalar) => {
                 push_ty();
-                scalar.visit_with(self, outer_binder);
+                scalar.visit_with(self, outer_binder)
             }
             TyKind::Str => {
                 push_ty();
+                ControlFlow::CONTINUE
             }
             TyKind::Tuple(arity, substitution) => {
                 push_ty();
                 arity.visit_with(self, outer_binder);
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::OpaqueType(opaque_ty, substitution) => {
                 push_ty();
                 opaque_ty.visit_with(self, outer_binder);
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::Slice(substitution) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::FnDef(fn_def, substitution) => {
                 push_ty();
                 fn_def.visit_with(self, outer_binder);
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::Ref(mutability, lifetime, ty) => {
                 push_ty();
                 mutability.visit_with(self, outer_binder);
                 lifetime.visit_with(self, outer_binder);
-                ty.visit_with(self, outer_binder);
+                ty.visit_with(self, outer_binder)
             }
             TyKind::Raw(mutability, substitution) => {
                 push_ty();
                 mutability.visit_with(self, outer_binder);
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::Never => {
                 push_ty();
+                ControlFlow::CONTINUE
             }
             TyKind::Array(ty, const_) => {
                 push_ty();
-                ty.visit_with(self, outer_binder)
-                    .combine(const_.visit_with(self, outer_binder))
+                ty.visit_with(self, outer_binder);
+                const_.visit_with(self, outer_binder)
             }
             TyKind::Closure(_id, substitution) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::Generator(_generator, substitution) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::GeneratorWitness(_witness, substitution) => {
                 push_ty();
-                substitution.visit_with(self, outer_binder);
+                substitution.visit_with(self, outer_binder)
             }
             TyKind::Foreign(_foreign_ty) => {
                 push_ty();
+                ControlFlow::CONTINUE
             }
             TyKind::Error => {
                 push_ty();
+                ControlFlow::CONTINUE
             }
 
             TyKind::Dyn(clauses) => {
                 push_ty();
-                clauses.visit_with(self, outer_binder);
+                clauses.visit_with(self, outer_binder)
             }
 
             TyKind::Alias(AliasTy::Projection(proj)) => {
                 push_ty();
-                proj.visit_with(self, outer_binder);
+                proj.visit_with(self, outer_binder)
             }
 
             TyKind::Alias(AliasTy::Opaque(opaque_ty)) => {
                 push_ty();
-                opaque_ty.visit_with(self, outer_binder);
+                opaque_ty.visit_with(self, outer_binder)
             }
 
             TyKind::Placeholder(_) => {
                 push_ty();
+                ControlFlow::CONTINUE
             }
 
             // Type parameters do not carry any input types (so we can sort of assume they are
             // always WF).
-            TyKind::BoundVar(..) => (),
+            TyKind::BoundVar(..) => ControlFlow::CONTINUE,
 
             // Higher-kinded types such as `for<'a> fn(&'a u32)` introduce their own implied
             // bounds, and these bounds will be enforced upon calling such a function. In some
             // sense, well-formedness requirements for the input types of an HKT will be enforced
             // lazily, so no need to include them here.
-            TyKind::Function(..) => (),
+            TyKind::Function(..) => ControlFlow::CONTINUE,
 
             TyKind::InferenceVar(..) => {
                 panic!("unexpected inference variable in wf rules: {:?}", ty)
