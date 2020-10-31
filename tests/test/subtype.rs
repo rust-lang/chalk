@@ -235,11 +235,18 @@ fn multi_lifetime_invariant_struct() {
                     Subtype(Foo<&'b u32>, Foo<U>)
                 }
             }
-        } yields {
+        } yields[SolverChoice::recursive()] {
             // Because A is invariant, we require the lifetimes to be equal
-            "Unique; substitution [?0 := (&'!1_1 Uint(U32))], lifetime
-            constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"
+            "Unique; substitution [?0 := (&'!1_0 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
+        } yields[SolverChoice::slg_default()] {
+            // Because A is invariant, we require the lifetimes to be equal
+            "Unique; substitution [?0 := (&'!1_1 Uint(U32))], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
+            ]"
         }
     }
 }
@@ -277,8 +284,8 @@ fn multi_lifetime_tuple() {
         goal {
             forall<'a, 'b> {
                 exists<U> {
-                    Subtype((&'a u32, &'a u32), [U]),
-                    Subtype((&'b u32, &'b u32), [U])
+                    Subtype((&'a u32,), (U,)),
+                    Subtype((&'b u32,), (U,))
                 }
             }
         } yields {
@@ -300,8 +307,8 @@ fn multi_lifetime_array() {
         goal {
             forall<'a, 'b> {
                 exists<U> {
-                    Subtype([&'a u32; 16], [U]),
-                    Subtype([&'b u32; 16], [U])
+                    Subtype([&'a u32; 16], [U; 16]),
+                    Subtype([&'b u32; 16], [U; 16])
                 }
             }
         } yields {
