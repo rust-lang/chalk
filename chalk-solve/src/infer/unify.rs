@@ -219,7 +219,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
                 self.zip_substs(
                     variance,
-                    None,
+                    None, // TODO: AssociatedType variances?
                     substitution_a.as_slice(interner),
                     substitution_b.as_slice(interner),
                 )
@@ -790,13 +790,17 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // too much onto `var`. Instead of directly setting `var` equal to `ty`,
         // we just take the outermost structure we _know_ `var` holds, and then
         // apply that to `ty`. This involves creating new inference vars for
-        // everything inside `var`, then recursing down to unify those new
-        // inference variables with
+        // everything inside `var`, then calling `relate_ty_ty` to relate those
+        // inference vars to the things they generalized with the correct
+        // variance.
 
-        // TODO: the justification for why we need to generalize here is a bit
-        // weak. Could we include a concrete example of what this fixes? Or,
-        // alternatively, link to a test case which requires this & say "it's
-        // complicated why exactly we need this".
+        // The main problem this solves is that lifetime relationships are
+        // relationships, not just eq ones. So when solving &'a u32 <: U,
+        // generalizing we would end up with U = &'a u32. Instead, we want
+        // U = &'b u32, with a lifetime constraint 'a <: 'b. This matters
+        // especially when solving multiple constraints - for example, &'a u32
+        // <: U, &'b u32 <: U (where without generalizing, we'd end up with 'a
+        // <: 'b, where we really want 'a <: 'c, 'b <: 'c for some 'c).
 
         // Example operation: consider `ty` as `&'x SomeType`. To generalize
         // this, we create two new vars `'0` and `1`. Then we relate `var` with
