@@ -255,8 +255,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 if mutability_a != mutability_b {
                     return Err(NoSolution);
                 }
-                // Zipping lifetimes implies a is a subtype of b, meaning a outlives b
-                Zip::zip_with(self, variance, lifetime_a, lifetime_b)?;
+                // The lifetime is `Contravariant`
+                Zip::zip_with(
+                    self,
+                    variance.xform(Variance::Contravariant),
+                    lifetime_a,
+                    lifetime_b,
+                )?;
                 // The type is `Covariant` when not mut, `Invariant` otherwise
                 let output_variance = match mutability_a {
                     Mutability::Not => Variance::Covariant,
@@ -1050,8 +1055,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
             self.goals.push(InEnvironment::new(
                 self.environment,
                 WhereClause::LifetimeOutlives(LifetimeOutlives {
-                    a: b.clone(),
-                    b: a.clone(),
+                    a: a.clone(),
+                    b: b.clone(),
                 })
                 .cast(self.interner),
             ));
@@ -1059,7 +1064,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         if matches!(variance, Variance::Invariant | Variance::Covariant) {
             self.goals.push(InEnvironment::new(
                 self.environment,
-                WhereClause::LifetimeOutlives(LifetimeOutlives { a, b }).cast(self.interner),
+                WhereClause::LifetimeOutlives(LifetimeOutlives { a: b, b: a }).cast(self.interner),
             ));
         }
     }

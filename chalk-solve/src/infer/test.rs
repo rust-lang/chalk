@@ -413,10 +413,10 @@ fn lifetime_constraint_indirect() {
     assert_eq!(goals.len(), 2);
     assert_eq!(
         format!("{:?}", goals[0]),
-        "InEnvironment { environment: Env([]), goal: \'!1_0: \'?2 }",
+        "InEnvironment { environment: Env([]), goal: \'?2: \'!1_0 }",
     );
     assert_eq!(
         format!("{:?}", goals[1]),
-        "InEnvironment { environment: Env([]), goal: \'?2: \'!1_0 }",
+        "InEnvironment { environment: Env([]), goal: \'!1_0: \'?2 }",
     );
 }
