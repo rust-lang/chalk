@@ -158,35 +158,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (_, &TyKind::Alias(ref alias)) => self.relate_alias_ty(variance.invert(), alias, a),
             (&TyKind::Alias(ref alias), _) => self.relate_alias_ty(variance, alias, b),
 
-            // FIXME: needs to handle relating a var and ty; needs generalization
-            // Relating an inference variable with a non-inference variable.
-            (a_data @ &TyKind::InferenceVar(_, _), b_data @ _)
-            | (a_data @ _, b_data @ &TyKind::InferenceVar(_, _)) => {
-                // Correct variance when we flip a/b.
-                let (new_variance, var, kind, ty_data) = match (a_data, b_data) {
-                    (&TyKind::InferenceVar(var, kind), ty_data @ _) => {
-                        (variance, var, kind, ty_data)
-                    }
-                    (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
-                        // var is grabbed from 'b', but given in as the left
-                        // parameter to relate_var_ty, so we need to flip variance.
-                        (variance.invert(), var, kind, ty_data)
-                    }
-                    _ => unreachable!(),
-                };
-
+            (&TyKind::InferenceVar(var, kind), ty_data @ _) => {
                 let ty = ty_data.clone().intern(interner);
-                match (kind, ty.is_integer(interner), ty.is_float(interner)) {
-                    // General inference variables can unify with any type
-                    (TyVariableKind::General, _, _)
-                    // Integer inference variables can only unify with integer types
-                    | (TyVariableKind::Integer, true, _)
-                    // Float inference variables can only unify with float types
-                    | (TyVariableKind::Float, _, true) => {
-                        self.relate_var_ty(new_variance, var, &ty)
-                    },
-                    _ => Err(NoSolution),
-                }
+                self.relate_var_ty(variance, var, kind, &ty)
+            }
+            (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
+                // We need to invert the variance if inference var is `b` because we pass it in
+                // as `a` to relate_var_ty
+                let ty = ty_data.clone().intern(interner);
+                self.relate_var_ty(variance.invert(), var, kind, &ty)
             }
 
             // This would correspond to unifying a `fn` type with a non-fn
@@ -756,8 +736,26 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// - `ty` does not reference anything in a lifetime that could not be named in `var`
     ///   (the extended `OccursCheck` created to handle universes)
     #[instrument(level = "debug", skip(self))]
-    fn relate_var_ty(&mut self, variance: Variance, var: InferenceVar, ty: &Ty<I>) -> Fallible<()> {
+    fn relate_var_ty(
+        &mut self,
+        variance: Variance,
+        var: InferenceVar,
+        var_kind: TyVariableKind,
+        ty: &Ty<I>,
+    ) -> Fallible<()> {
         let interner = self.interner;
+
+        match (var_kind, ty.is_integer(interner), ty.is_float(interner)) {
+            // General inference variables can unify with any type
+            (TyVariableKind::General, _, _)
+            // Integer inference variables can only unify with integer types
+            | (TyVariableKind::Integer, true, _)
+            // Float inference variables can only unify with float types
+            | (TyVariableKind::Float, _, true) => {
+            },
+            _ => return Err(NoSolution),
+        }
+
         let var = EnaVariable::from(var);
 
         // Determine the universe index associated with this
