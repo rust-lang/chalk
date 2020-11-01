@@ -1,5 +1,7 @@
 # Unreleased
 
+# Release 0.37.0
+
 # Release 0.36.0
 
 # Release 0.35.0
