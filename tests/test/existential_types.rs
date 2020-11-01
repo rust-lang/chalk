@@ -413,7 +413,7 @@ fn dyn_associated_type_binding() {
                     <dyn FnOnce<(), Output = i32> + 's as FnOnce<()>>::Output = T
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Int(I32)], lifetime constraints []"
         } yields[SolverChoice::slg_default()] {
             // #234

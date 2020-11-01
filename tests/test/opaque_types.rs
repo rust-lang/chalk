@@ -166,7 +166,7 @@ fn opaque_generics() {
             }
         } yields[SolverChoice::slg_default()] {
             "Ambiguous" // #234
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Bar], lifetime constraints []"
         }
     }

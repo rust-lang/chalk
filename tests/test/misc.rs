@@ -130,7 +130,7 @@ fn only_draw_so_many() {
             exists<T> { T: Sized }
         } yields[SolverChoice::slg(10, Some(2))] {
             "Ambiguous; no inference guidance"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Ambiguous; no inference guidance"
         }
     }
@@ -158,7 +158,7 @@ fn only_draw_so_many_blow_up() {
             exists<T> { T: Foo }
         } yields[SolverChoice::slg(10, Some(2))] {
             "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0.0>] }"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Ambiguous; definite substitution for<?U0> { [?0 := Vec<^0.0>] }"
         }
     }
@@ -696,7 +696,7 @@ fn not_really_ambig() {
             exists<T> { Vec<T>: A }
         } yields[SolverChoice::slg_default()] {
             "Unique; substitution [?0 := Uint(U32)], lifetime constraints []"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Ambiguous; no inference guidance"
         }
     }
@@ -754,7 +754,7 @@ fn empty_definite_guidance() {
             // recursive solver infinite loop.
         } yields[SolverChoice::slg_default()] {
             "Unique"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Ambiguous"
         }
     }

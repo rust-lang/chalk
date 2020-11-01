@@ -24,6 +24,8 @@ pub(super) trait SolveDatabase<I: Interner>: Sized {
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>>;
 
+    fn max_size(&self) -> usize;
+
     fn interner(&self) -> &I;
 
     fn db(&self) -> &dyn RustIrDatabase<I>;

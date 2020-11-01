@@ -24,6 +24,9 @@ struct RecursiveContext<I: Interner> {
     /// result.
     cache: FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
 
+    /// The maximum size for goals.
+    max_size: usize,
+
     caching_enabled: bool,
 }
 
@@ -42,9 +45,13 @@ pub struct RecursiveSolver<I: Interner> {
 }
 
 impl<I: Interner> RecursiveSolver<I> {
-    pub fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
+    pub fn new(overflow_depth: usize, max_size: usize, caching_enabled: bool) -> Self {
         Self {
-            ctx: Box::new(RecursiveContext::new(overflow_depth, caching_enabled)),
+            ctx: Box::new(RecursiveContext::new(
+                overflow_depth,
+                max_size,
+                caching_enabled,
+            )),
         }
     }
 }
@@ -76,11 +83,12 @@ impl<T> MergeWith<T> for Fallible<T> {
 }
 
 impl<I: Interner> RecursiveContext<I> {
-    pub fn new(overflow_depth: usize, caching_enabled: bool) -> Self {
+    pub fn new(overflow_depth: usize, max_size: usize, caching_enabled: bool) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
             cache: FxHashMap::default(),
+            max_size,
             caching_enabled,
         }
     }
@@ -290,6 +298,10 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
     fn db(&self) -> &dyn RustIrDatabase<I> {
         self.program
+    }
+
+    fn max_size(&self) -> usize {
+        self.context.max_size
     }
 }
 

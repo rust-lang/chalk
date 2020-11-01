@@ -166,7 +166,7 @@ fn unify_quantified_lifetimes() {
              InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }\
              ] \
              }"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             // only difference is in the value of ?1, which is equivalent
             "Unique; for<?U0> { \
              substitution [?0 := '^0.0, ?1 := '^0.0], \
