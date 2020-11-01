@@ -55,6 +55,7 @@ pub enum SolverChoice {
     Recursive {
         overflow_depth: usize,
         caching_enabled: bool,
+        max_size: usize,
     },
 }
 
@@ -73,10 +74,20 @@ impl SolverChoice {
     }
 
     /// Returns the default recursive solver setup.
-    pub fn recursive() -> Self {
+    pub fn recursive_default() -> Self {
         SolverChoice::Recursive {
             overflow_depth: 100,
             caching_enabled: true,
+            max_size: 30,
+        }
+    }
+
+    /// Returns a recursive solver with specific parameters.
+    pub fn recursive(max_size: usize, overflow_depth: usize) -> Self {
+        SolverChoice::Recursive {
+            overflow_depth,
+            caching_enabled: true,
+            max_size,
         }
     }
 
@@ -89,7 +100,12 @@ impl SolverChoice {
             SolverChoice::Recursive {
                 overflow_depth,
                 caching_enabled,
-            } => Box::new(RecursiveSolver::new(overflow_depth, caching_enabled)),
+                max_size,
+            } => Box::new(RecursiveSolver::new(
+                overflow_depth,
+                max_size,
+                caching_enabled,
+            )),
         }
     }
 }

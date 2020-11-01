@@ -142,7 +142,7 @@ fn projection_equality() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Uint(U32)]"
         }
 
@@ -153,7 +153,7 @@ fn projection_equality() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Uint(U32)]"
         }
     }
@@ -183,7 +183,7 @@ fn projection_equality_priority1() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             // This is.. interesting, but not necessarily wrong.
             // It's certainly true that based on the impls we see
             // the only possible value for `U` is `u32`.
@@ -271,7 +271,7 @@ fn projection_equality_priority2() {
             // use the impl, but the SLG solver can't decide between
             // the placeholder and the normalized form.
             "Ambiguous; definite substitution for<?U1> { [?0 := S1, ?1 := ^0.0] }"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             // Constraining Out1 = S1 gives us only one choice, use the impl,
             // and the recursive solver prefers the normalized form.
             "Unique; substitution [?0 := S1, ?1 := Uint(U32)], lifetime constraints []"
@@ -298,7 +298,7 @@ fn projection_equality_from_env() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Uint(U32)]"
         }
     }
@@ -326,7 +326,7 @@ fn projection_equality_nested() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        }  yields[SolverChoice::recursive()] {
+        }  yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Uint(U32)]"
         }
     }
@@ -368,7 +368,7 @@ fn iterator_flatten() {
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Uint(U32)]"
         }
     }
@@ -720,7 +720,7 @@ fn normalize_under_binder() {
         } yields[SolverChoice::slg_default()] {
             // chalk#234, I think
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := I32], lifetime constraints []"
         }
 
@@ -743,7 +743,7 @@ fn normalize_under_binder() {
         } yields[SolverChoice::slg_default()] {
             // chalk#234, I think
             "Ambiguous"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; substitution [?0 := Ref<'!1_0, I32>], lifetime constraints []"
         }
 
@@ -1038,7 +1038,7 @@ fn guidance_for_projection_on_flounder() {
                     <Range<T> as Iterator>::Item = U
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Ambiguous; definite substitution for<?U0> { [?0 := ^0.0, ?1 := ^0.0] }"
         }
     }

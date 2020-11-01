@@ -77,7 +77,7 @@ macro_rules! parse_test_data {
               @parsed_goals[
                   $($parsed_goals)*
                       (stringify!($goal), SolverChoice::slg_default(), TestGoal::Aggregated($expected))
-                      (stringify!($goal), SolverChoice::recursive(), TestGoal::Aggregated($expected))
+                      (stringify!($goal), SolverChoice::recursive_default(), TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };

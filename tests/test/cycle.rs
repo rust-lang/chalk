@@ -165,7 +165,7 @@ fn overflow() {
             S<Z>: Q
         } yields[SolverChoice::slg(10, None)] {
             "Ambiguous; no inference guidance"
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Ambiguous; no inference guidance"
         }
     }

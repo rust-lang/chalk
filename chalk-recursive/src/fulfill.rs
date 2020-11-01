@@ -234,7 +234,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             Obligation::Prove(goal) => {
                 if self
                     .infer
-                    .needs_truncation(self.solver.interner(), 30, goal)
+                    .needs_truncation(self.solver.interner(), self.solver.max_size(), goal)
                 {
                     // the goal is too big. Record that we should return Ambiguous
                     self.cannot_prove = true;
@@ -244,7 +244,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             Obligation::Refute(goal) => {
                 if self
                     .infer
-                    .needs_truncation(self.solver.interner(), 30, goal)
+                    .needs_truncation(self.solver.interner(), self.solver.max_size(), goal)
                 {
                     // the goal is too big. Record that we should return Ambiguous
                     self.cannot_prove = true;
