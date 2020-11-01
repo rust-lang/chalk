@@ -79,11 +79,20 @@ fn fn_lifetime_variance_args() {
 
         goal {
             for<'a, 'b> fn(&'a u32, &'b u32) = for<'a> fn(&'a u32, &'a u32)
-        } yields {
-            "Unique;substitution [], lifetime constraints [\
-                InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-                InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }  \
-            ]"
+        } yields[SolverChoice::recursive()] {
+            "Unique; for<?U1,?U2,?U2> { substitution [], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!2_0: '^0.1 }, \
+                InEnvironment { environment: Env([]), goal: '!2_0: '^0.2 }\
+            ] }"
+        } yields[SolverChoice::slg_default()] {
+            "Unique; for<?U2,?U2,?U1> { substitution [], lifetime constraints [\
+                InEnvironment { environment: Env([]), goal: '!1_0: '^0.2 }, \
+                InEnvironment { environment: Env([]), goal: '!1_1: '^0.2 }, \
+                InEnvironment { environment: Env([]), goal: '!2_0: '^0.0 }, \
+                InEnvironment { environment: Env([]), goal: '!2_0: '^0.1 }\
+            ] }"
         }
     }
 }

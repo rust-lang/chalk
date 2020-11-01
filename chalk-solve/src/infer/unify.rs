@@ -393,13 +393,13 @@ impl<'t, I: Interner> Unifier<'t, I> {
         if let Variance::Invariant | Variance::Contravariant = variance {
             let a_universal = self.table.instantiate_binders_universally(interner, a);
             let b_existential = self.table.instantiate_binders_existentially(interner, b);
-            Zip::zip_with(self, variance, &a_universal, &b_existential)?;
+            Zip::zip_with(self, Variance::Contravariant, &a_universal, &b_existential)?;
         }
 
         if let Variance::Invariant | Variance::Covariant = variance {
             let b_universal = self.table.instantiate_binders_universally(interner, b);
             let a_existential = self.table.instantiate_binders_existentially(interner, a);
-            Zip::zip_with(self, variance, &a_existential, &b_universal)?;
+            Zip::zip_with(self, Variance::Covariant, &a_existential, &b_universal)?;
         }
 
         Ok(())
