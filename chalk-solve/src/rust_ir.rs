@@ -5,7 +5,7 @@
 use chalk_derive::{Fold, HasInterner, Visit};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::interner::{Interner, TargetInterner};
+use chalk_ir::interner::Interner;
 use chalk_ir::{
     visit::{Visit, VisitResult},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,

@@ -1890,7 +1890,7 @@ impl<T: HasInterner> Binders<T> {
 
 impl<T, I> Binders<Binders<T>>
 where
-    T: Fold<I, I> + HasInterner<Interner = I>,
+    T: Fold<I> + HasInterner<Interner = I>,
     T::Result: HasInterner<Interner = I>,
     I: Interner,
 {
@@ -1926,7 +1926,7 @@ impl<T: HasInterner> From<Binders<T>> for (VariableKinds<T::Interner>, T) {
 
 impl<T, I> Binders<T>
 where
-    T: Fold<I, I> + HasInterner<Interner = I>,
+    T: Fold<I> + HasInterner<Interner = I>,
     I: Interner,
 {
     /// Substitute `parameters` for the variables introduced by these
@@ -2403,7 +2403,7 @@ impl<I: Interner> Substitution<I> {
     /// Apply the substitution to a value.
     pub fn apply<T>(&self, value: &T, interner: &I) -> T::Result
     where
-        T: Fold<I, I>,
+        T: Fold<I>,
     {
         value
             .fold_with(
@@ -2541,10 +2541,6 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
 
     fn interner(&self) -> &'i I {
         self.interner
-    }
-
-    fn target_interner(&self) -> &'i I {
-        self.interner()
     }
 }
 

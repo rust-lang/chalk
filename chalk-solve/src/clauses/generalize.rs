@@ -23,7 +23,7 @@ pub struct Generalize<'i, I: Interner> {
 impl<I: Interner> Generalize<'_, I> {
     pub fn apply<T>(interner: &I, value: &T) -> Binders<T::Result>
     where
-        T: HasInterner<Interner = I> + Fold<I, I>,
+        T: HasInterner<Interner = I> + Fold<I>,
         T::Result: HasInterner<Interner = I>,
     {
         let mut generalize = Generalize {
@@ -77,10 +77,6 @@ impl<'i, I: Interner> Folder<'i, I> for Generalize<'i, I> {
     }
 
     fn interner(&self) -> &'i I {
-        self.interner
-    }
-
-    fn target_interner(&self) -> &'i I {
         self.interner
     }
 }
