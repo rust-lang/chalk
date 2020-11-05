@@ -288,7 +288,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
                     parse_quote! { #param: ::chalk_ir::fold::Fold<#interner, _TI, Result = _U> },
                 )
                 .add_where_predicate(
-                    parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = _TI> },
+                    parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = _TI> + Clone },
                 )
                 .add_where_predicate(
                     parse_quote! { _TI: ::chalk_ir::interner::TargetInterner<#interner> },

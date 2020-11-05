@@ -114,7 +114,7 @@ impl<I: Interner> Environment<I> {
 /// A goal with an environment to solve it in.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 #[allow(missing_docs)]
-pub struct InEnvironment<G: HasInterner> {
+pub struct InEnvironment<G: HasInterner + Clone> {
     pub environment: Environment<G::Interner>,
     pub goal: G,
 }
@@ -124,7 +124,7 @@ impl<G: HasInterner<Interner = I> + Copy, I: Interner> Copy for InEnvironment<G>
 {
 }
 
-impl<G: HasInterner> InEnvironment<G> {
+impl<G: HasInterner + Clone> InEnvironment<G> {
     /// Creates a new environment/goal pair.
     pub fn new(environment: &Environment<G::Interner>, goal: G) -> Self {
         InEnvironment {
@@ -137,7 +137,7 @@ impl<G: HasInterner> InEnvironment<G> {
     pub fn map<OP, H>(self, op: OP) -> InEnvironment<H>
     where
         OP: FnOnce(G) -> H,
-        H: HasInterner<Interner = G::Interner>,
+        H: HasInterner<Interner = G::Interner> + Clone,
     {
         InEnvironment {
             environment: self.environment,
@@ -146,7 +146,7 @@ impl<G: HasInterner> InEnvironment<G> {
     }
 }
 
-impl<G: HasInterner> HasInterner for InEnvironment<G> {
+impl<G: HasInterner + Clone> HasInterner for InEnvironment<G> {
     type Interner = G::Interner;
 }
 

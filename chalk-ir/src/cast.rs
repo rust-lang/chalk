@@ -240,8 +240,8 @@ where
 
 impl<T, U, I> CastTo<InEnvironment<U>> for InEnvironment<T>
 where
-    T: HasInterner<Interner = I> + CastTo<U>,
-    U: HasInterner<Interner = I>,
+    T: HasInterner<Interner = I> + CastTo<U> + Clone,
+    U: HasInterner<Interner = I> + Clone,
     I: Interner,
 {
     fn cast_to(self, interner: &U::Interner) -> InEnvironment<U> {

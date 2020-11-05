@@ -9,7 +9,7 @@ use crate::*;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-impl<'a, T: Fold<I, TI>, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a T {
+impl<'a, T: Fold<I, TI> + Clone, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for &'a T {
     type Result = T::Result;
     fn fold_with<'i>(
         self,

@@ -226,7 +226,7 @@ eq_zip!(I => ClausePriority);
 eq_zip!(I => Mutability);
 eq_zip!(I => Scalar);
 
-impl<T: HasInterner<Interner = I> + Zip<I>, I: Interner> Zip<I> for InEnvironment<T> {
+impl<T: HasInterner<Interner = I> + Zip<I> + Clone, I: Interner> Zip<I> for InEnvironment<T> {
     fn zip_with<'i, Z: Zipper<'i, I>>(zipper: &mut Z, a: &Self, b: &Self) -> Fallible<()>
     where
         I: 'i,
