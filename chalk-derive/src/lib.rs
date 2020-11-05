@@ -277,49 +277,33 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
 
     let type_name = &input.ident;
 
-    let (target_interner, result) = match kind {
-        DeriveKind::FromHasInternerAttr => (interner.clone(), quote! { #type_name }),
-        DeriveKind::FromHasInterner => {
-            let param = get_generic_param_name(input).unwrap();
-
-            s.add_impl_generic(parse_quote! { _U })
-                .add_impl_generic(parse_quote! { _TI })
-                .add_where_predicate(
-                    parse_quote! { #param: ::chalk_ir::fold::Fold<#interner, _TI, Result = _U> },
-                )
-                .add_where_predicate(
-                    parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = _TI> },
-                )
-                .add_where_predicate(
-                    parse_quote! { _TI: ::chalk_ir::interner::TargetInterner<#interner> },
-                );
-
-            (quote! { _TI }, quote! { #type_name<_U> })
-        }
-        DeriveKind::FromInterner => {
-            s.add_impl_generic(parse_quote! { _TI })
-                .add_where_predicate(
-                    parse_quote! { _TI: ::chalk_ir::interner::TargetInterner<#interner> },
-                );
-
-            (quote! { _TI }, quote! { #type_name<_TI> })
-        }
+    let result = if kind == DeriveKind::FromHasInterner {
+        let param = get_generic_param_name(input).unwrap();
+        s.add_impl_generic(parse_quote! { _U })
+            .add_where_predicate(
+                parse_quote! { #param: ::chalk_ir::fold::Fold<#interner, Result = _U> },
+            )
+            .add_where_predicate(
+                parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = #interner> },
+            );
+        quote! { #type_name <_U> }
+    } else {
+        quote! { #type_name < #interner > }
     };
 
     s.add_bounds(synstructure::AddBounds::None);
     s.bound_impl(
-        quote!(::chalk_ir::fold::Fold<#interner, #target_interner>),
+        quote!(::chalk_ir::fold::Fold<#interner>),
         quote! {
             type Result = #result;
 
             fn fold_with<'i>(
                 &self,
-                folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner, #target_interner >,
+                folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> ::chalk_ir::Fallible<Self::Result>
             where
                 #interner: 'i,
-                #target_interner: 'i,
             {
                 Ok(match *self { #body })
             }

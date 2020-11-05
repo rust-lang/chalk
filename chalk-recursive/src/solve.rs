@@ -183,7 +183,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         }
     }
 
-    fn new_inference_table<T: Fold<I, I, Result = T> + HasInterner<Interner = I> + Clone>(
+    fn new_inference_table<T: Fold<I, Result = T> + HasInterner<Interner = I> + Clone>(
         &self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
     ) -> (

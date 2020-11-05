@@ -12,11 +12,7 @@ pub struct Subst<'s, 'i, I: Interner> {
 
 impl<I: Interner> Subst<'_, '_, I> {
     /// Applies the substitution by folding
-    pub fn apply<T: Fold<I, I>>(
-        interner: &I,
-        parameters: &[GenericArg<I>],
-        value: &T,
-    ) -> T::Result {
+    pub fn apply<T: Fold<I>>(interner: &I, parameters: &[GenericArg<I>], value: &T) -> T::Result {
         value
             .fold_with(
                 &mut Subst {
@@ -115,9 +111,5 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
 
     fn interner(&self) -> &'i I {
         self.interner
-    }
-
-    fn target_interner(&self) -> &'i I {
-        self.interner()
     }
 }

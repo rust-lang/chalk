@@ -57,7 +57,7 @@ use std::cmp::min;
 use std::usize;
 
 use chalk_derive::{Fold, HasInterner, Visit};
-use chalk_ir::interner::{Interner, TargetInterner};
+use chalk_ir::interner::Interner;
 use chalk_ir::visit::VisitResult;
 use chalk_ir::{
     AnswerSubst, Canonical, ConstrainedSubst, Constraint, DebruijnIndex, Goal, InEnvironment,

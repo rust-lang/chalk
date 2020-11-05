@@ -3,19 +3,17 @@
 //!
 //! The more interesting impls of `Fold` remain in the `fold` module.
 
-use crate::interner::TargetInterner;
 use crate::*;
 
-impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FnPointer<I> {
-    type Result = FnPointer<TI>;
+impl<I: Interner> Fold<I> for FnPointer<I> {
+    type Result = FnPointer<I>;
     fn fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<'i, I, TI>,
+        folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
-        TI: 'i,
     {
         let FnPointer {
             num_binders,
@@ -26,7 +24,7 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FnPointer<I> {
             num_binders: *num_binders,
             substitution: substitution.fold_with(folder, outer_binder.shifted_in())?,
             sig: FnSig {
-                abi: TI::transfer_abi(sig.abi),
+                abi: sig.abi,
                 safety: sig.safety,
                 variadic: sig.variadic,
             },
@@ -34,21 +32,20 @@ impl<I: Interner, TI: TargetInterner<I>> Fold<I, TI> for FnPointer<I> {
     }
 }
 
-impl<T, I: Interner, TI: TargetInterner<I>> Fold<I, TI> for Binders<T>
+impl<T, I: Interner> Fold<I> for Binders<T>
 where
-    T: HasInterner<Interner = I> + Fold<I, TI>,
-    <T as Fold<I, TI>>::Result: HasInterner<Interner = TI>,
+    T: HasInterner<Interner = I> + Fold<I>,
+    <T as Fold<I>>::Result: HasInterner<Interner = I>,
     I: Interner,
 {
     type Result = Binders<T::Result>;
     fn fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<'i, I, TI>,
+        folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
-        TI: 'i,
     {
         let Binders {
             binders: self_binders,
@@ -56,28 +53,26 @@ where
         } = self;
         let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
         let binders = VariableKinds {
-            interned: TI::transfer_variable_kinds(self_binders.interned().clone()),
+            interned: self_binders.interned().clone(),
         };
         Ok(Binders::new(binders, value))
     }
 }
 
-impl<I, T, TI> Fold<I, TI> for Canonical<T>
+impl<I, T> Fold<I> for Canonical<T>
 where
     I: Interner,
-    T: HasInterner<Interner = I> + Fold<I, TI>,
-    <T as Fold<I, TI>>::Result: HasInterner<Interner = TI>,
-    TI: TargetInterner<I>,
+    T: HasInterner<Interner = I> + Fold<I>,
+    <T as Fold<I>>::Result: HasInterner<Interner = I>,
 {
     type Result = Canonical<T::Result>;
     fn fold_with<'i>(
         &self,
-        folder: &mut dyn Folder<'i, I, TI>,
+        folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
     where
         I: 'i,
-        TI: 'i,
     {
         let Canonical {
             binders: self_binders,
@@ -85,7 +80,7 @@ where
         } = self;
         let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
         let binders = CanonicalVarKinds {
-            interned: TI::transfer_canonical_var_kinds(self_binders.interned().clone()),
+            interned: self_binders.interned().clone(),
         };
         Ok(Canonical { binders, value })
     }

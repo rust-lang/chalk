@@ -240,8 +240,4 @@ where
     fn interner(&self) -> &'i I {
         self.interner
     }
-
-    fn target_interner(&self) -> &'i I {
-        self.interner()
-    }
 }

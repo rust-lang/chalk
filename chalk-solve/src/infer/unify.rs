@@ -794,8 +794,4 @@ where
     fn interner(&self) -> &'i I {
         self.unifier.interner
     }
-
-    fn target_interner(&self) -> &'i I {
-        self.interner()
-    }
 }
