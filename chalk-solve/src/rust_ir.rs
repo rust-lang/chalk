@@ -7,7 +7,8 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    visit::{Visit, VisitResult},
+    try_break,
+    visit::{ControlFlow, Visit},
     AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
     OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
     Ty, TyKind, VariableKind, WhereClause, WithKind,
@@ -141,19 +142,16 @@ pub struct FnDefDatum<I: Interner> {
 
 /// Avoids visiting `I::FnAbi`
 impl<I: Interner> Visit<I> for FnDefDatum<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, Result = R>,
+        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
-        let result = R::new().combine(self.id.visit_with(visitor, outer_binder));
-        if result.return_early() {
-            return result;
-        }
-        result.combine(self.binders.visit_with(visitor, outer_binder))
+        try_break!(self.id.visit_with(visitor, outer_binder));
+        self.binders.visit_with(visitor, outer_binder)
     }
 }
 
@@ -491,23 +489,17 @@ pub struct AssociatedTyDatum<I: Interner> {
 
 // Manual implementation to avoid I::Identifier type.
 impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
-    fn visit_with<'i, R: VisitResult>(
+    fn visit_with<'i>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, Result = R>,
+        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I>,
         outer_binder: DebruijnIndex,
-    ) -> R
+    ) -> ControlFlow<()>
     where
         I: 'i,
     {
-        let result = R::new().combine(self.trait_id.visit_with(visitor, outer_binder));
-        if result.return_early() {
-            return result;
-        }
-        let result = result.combine(self.id.visit_with(visitor, outer_binder));
-        if result.return_early() {
-            return result;
-        }
-        result.combine(self.binders.visit_with(visitor, outer_binder))
+        try_break!(self.trait_id.visit_with(visitor, outer_binder));
+        try_break!(self.id.visit_with(visitor, outer_binder));
+        self.binders.visit_with(visitor, outer_binder)
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::debug_span;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::{Visit, Visitor};
+use chalk_ir::visit::{ControlFlow, Visit, Visitor};
 use chalk_ir::*;
 
 use super::InferenceTable;
@@ -205,14 +205,17 @@ impl<'i, I: Interner> Visitor<'i, I> for UCollector<'_, 'i, I>
 where
     I: 'i,
 {
-    type Result = ();
-
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, Result = ()> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
         self
     }
 
-    fn visit_free_placeholder(&mut self, universe: PlaceholderIndex, _outer_binder: DebruijnIndex) {
+    fn visit_free_placeholder(
+        &mut self,
+        universe: PlaceholderIndex,
+        _outer_binder: DebruijnIndex,
+    ) -> ControlFlow<()> {
         self.universes.add(universe.ui);
+        ControlFlow::CONTINUE
     }
 
     fn forbid_inference_vars(&self) -> bool {
