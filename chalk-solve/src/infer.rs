@@ -119,6 +119,15 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     pub fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+        // An integer/float type variable will never normalize to another
+        // variable; but a general type variable might normalize to an
+        // integer/float variable. So we potentially need to normalize twice to
+        // get at the actual value.
+        self.normalize_ty_shallow_inner(interner, leaf)
+            .map(|ty| self.normalize_ty_shallow_inner(interner, &ty).unwrap_or(ty))
+    }
+
+    fn normalize_ty_shallow_inner(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_ty_ref(interner).clone())
     }
