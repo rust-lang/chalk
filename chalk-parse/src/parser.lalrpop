@@ -63,7 +63,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "fn_mut" ")" "]" => WellKnownTrait::FnMut,
      "#" "[" "lang" "(" "fn" ")" "]" => WellKnownTrait::Fn,
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
-     "#" "[" "lang" "(" "unpin" ")" "]" => WellKnownTrait::Unpin, 
+     "#" "[" "lang" "(" "unpin" ")" "]" => WellKnownTrait::Unpin,
      "#" "[" "lang" "(" "coerce_unsized" ")" "]" => WellKnownTrait::CoerceUnsized,
 };
 
@@ -432,6 +432,8 @@ RawMutability: Mutability = {
 Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
     "'static" => Lifetime::Static,
+    "'erased" => Lifetime::Erased,
+    "'empty" => Lifetime::Empty,
 };
 
 ConstWithoutId: Const = {

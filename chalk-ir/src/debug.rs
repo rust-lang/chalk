@@ -280,6 +280,9 @@ impl<I: Interner> Debug for LifetimeData<I> {
             LifetimeData::InferenceVar(var) => write!(fmt, "'{:?}", var),
             LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
             LifetimeData::Static => write!(fmt, "'static"),
+            LifetimeData::Empty(UniverseIndex::ROOT) => write!(fmt, "'<empty>"),
+            LifetimeData::Empty(universe) => write!(fmt, "'<empty:{:?}>", universe),
+            LifetimeData::Erased => write!(fmt, "'<erased>"),
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }

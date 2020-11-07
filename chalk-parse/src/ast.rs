@@ -370,6 +370,8 @@ impl Default for Safety {
 pub enum Lifetime {
     Id { name: Identifier },
     Static,
+    Erased,
+    Empty,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

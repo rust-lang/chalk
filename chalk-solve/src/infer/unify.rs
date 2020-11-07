@@ -360,27 +360,49 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 Ok(())
             }
 
-            (&LifetimeData::InferenceVar(a_var), &LifetimeData::Placeholder(b_idx)) => {
-                self.unify_lifetime_var(a, b, a_var, b, b_idx.ui)
+            (
+                &LifetimeData::InferenceVar(a_var),
+                &LifetimeData::Placeholder(PlaceholderIndex { ui, .. }),
+            )
+            | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Empty(ui)) => {
+                self.unify_lifetime_var(a, b, a_var, b, ui)
             }
 
-            (&LifetimeData::Placeholder(a_idx), &LifetimeData::InferenceVar(b_var)) => {
-                self.unify_lifetime_var(a, b, b_var, a, a_idx.ui)
+            (
+                &LifetimeData::Placeholder(PlaceholderIndex { ui, .. }),
+                &LifetimeData::InferenceVar(b_var),
+            )
+            | (&LifetimeData::Empty(ui), &LifetimeData::InferenceVar(b_var)) => {
+                self.unify_lifetime_var(a, b, b_var, a, ui)
             }
 
-            (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static) => {
+            (&LifetimeData::InferenceVar(a_var), &LifetimeData::Erased)
+            | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static) => {
                 self.unify_lifetime_var(a, b, a_var, b, UniverseIndex::root())
             }
 
-            (&LifetimeData::Static, &LifetimeData::InferenceVar(b_var)) => {
+            (&LifetimeData::Erased, &LifetimeData::InferenceVar(b_var))
+            | (&LifetimeData::Static, &LifetimeData::InferenceVar(b_var)) => {
                 self.unify_lifetime_var(a, b, b_var, a, UniverseIndex::root())
             }
 
-            (&LifetimeData::Static, &LifetimeData::Static) => Ok(()),
+            (&LifetimeData::Static, &LifetimeData::Static)
+            | (&LifetimeData::Erased, &LifetimeData::Erased) => Ok(()),
 
             (&LifetimeData::Static, &LifetimeData::Placeholder(_))
+            | (&LifetimeData::Static, &LifetimeData::Empty(_))
+            | (&LifetimeData::Static, &LifetimeData::Erased)
             | (&LifetimeData::Placeholder(_), &LifetimeData::Static)
-            | (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_)) => {
+            | (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_))
+            | (&LifetimeData::Placeholder(_), &LifetimeData::Empty(_))
+            | (&LifetimeData::Placeholder(_), &LifetimeData::Erased)
+            | (&LifetimeData::Empty(_), &LifetimeData::Static)
+            | (&LifetimeData::Empty(_), &LifetimeData::Placeholder(_))
+            | (&LifetimeData::Empty(_), &LifetimeData::Empty(_))
+            | (&LifetimeData::Empty(_), &LifetimeData::Erased)
+            | (&LifetimeData::Erased, &LifetimeData::Static)
+            | (&LifetimeData::Erased, &LifetimeData::Placeholder(_))
+            | (&LifetimeData::Erased, &LifetimeData::Empty(_)) => {
                 if a != b {
                     Ok(self.push_lifetime_eq_goals(a.clone(), b.clone()))
                 } else {
