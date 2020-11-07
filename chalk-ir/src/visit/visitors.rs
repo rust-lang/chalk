@@ -21,7 +21,9 @@ struct FindFreeVarsVisitor<'i, I: Interner> {
 }
 
 impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
+    type BreakTy = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
         self
     }
 

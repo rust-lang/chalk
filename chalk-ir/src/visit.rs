@@ -82,6 +82,10 @@ pub trait Visitor<'i, I: Interner>
 where
     I: 'i,
 {
+    /// The "break type" of the visitor, often `()`. It represents the result
+    /// the visitor yields when it stops visiting.
+    type BreakTy;
+
     /// Creates a `dyn` value from this visitor. Unfortunately, this
     /// must be added manually to each impl of visitor; it permits the
     /// default implements below to create a `&mut dyn Visitor` from
@@ -89,13 +93,13 @@ where
     /// method). Effectively, this limits impls of `visitor` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I>;
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when visiting. By default, invokes
     /// `super_visit_with`, which will in turn invoke the more
     /// specialized visiting methods below, like `visit_free_var`.
-    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
+    fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<Self::BreakTy> {
         ty.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -107,7 +111,7 @@ where
         &mut self,
         lifetime: &Lifetime<I>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         lifetime.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -115,7 +119,11 @@ where
     /// encountered when visiting. By default, invokes
     /// `super_visit_with`, which will in turn invoke the more
     /// specialized visiting methods below, like `visit_free_var`.
-    fn visit_const(&mut self, constant: &Const<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
+    fn visit_const(
+        &mut self,
+        constant: &Const<I>,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<Self::BreakTy> {
         constant.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -124,12 +132,16 @@ where
         &mut self,
         clause: &ProgramClause<I>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         clause.super_visit_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every goal. By default, recursively visits the goals contents.
-    fn visit_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
+    fn visit_goal(
+        &mut self,
+        goal: &Goal<I>,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<Self::BreakTy> {
         goal.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -138,7 +150,7 @@ where
         &mut self,
         domain_goal: &DomainGoal<I>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         domain_goal.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -155,7 +167,7 @@ where
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         if self.forbid_free_vars() {
             panic!(
                 "unexpected free variable `{:?}` with outer binder {:?}",
@@ -178,7 +190,7 @@ where
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
@@ -191,7 +203,7 @@ where
         &mut self,
         where_clause: &WhereClause<I>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         where_clause.super_visit_with(self.as_dyn(), outer_binder)
     }
 
@@ -208,7 +220,7 @@ where
         &mut self,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()> {
+    ) -> ControlFlow<Self::BreakTy> {
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
@@ -228,11 +240,11 @@ pub trait Visit<I: Interner>: Debug {
     /// visitor. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i;
 }
@@ -242,11 +254,11 @@ pub trait Visit<I: Interner>: Debug {
 /// the contents of the type.
 pub trait SuperVisit<I: Interner>: Visit<I> {
     /// Recursively visits the type contents.
-    fn super_visit_with<'i>(
+    fn super_visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i;
 }
@@ -255,11 +267,11 @@ pub trait SuperVisit<I: Interner>: Visit<I> {
 /// usually (in turn) invokes `super_visit_ty` to visit the individual
 /// parts.
 impl<I: Interner> Visit<I> for Ty<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -272,11 +284,11 @@ impl<I> SuperVisit<I> for Ty<I>
 where
     I: Interner,
 {
-    fn super_visit_with<'i>(
+    fn super_visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -346,11 +358,11 @@ where
 }
 
 impl<I: Interner> Visit<I> for Lifetime<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -359,11 +371,11 @@ impl<I: Interner> Visit<I> for Lifetime<I> {
 }
 
 impl<I: Interner> SuperVisit<I> for Lifetime<I> {
-    fn super_visit_with<'i>(
+    fn super_visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -387,11 +399,11 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
 }
 
 impl<I: Interner> Visit<I> for Const<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -400,11 +412,11 @@ impl<I: Interner> Visit<I> for Const<I> {
 }
 
 impl<I: Interner> SuperVisit<I> for Const<I> {
-    fn super_visit_with<'i>(
+    fn super_visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -427,11 +439,11 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
 }
 
 impl<I: Interner> Visit<I> for Goal<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -440,11 +452,11 @@ impl<I: Interner> Visit<I> for Goal<I> {
 }
 
 impl<I: Interner> SuperVisit<I> for Goal<I> {
-    fn super_visit_with<'i>(
+    fn super_visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -454,11 +466,11 @@ impl<I: Interner> SuperVisit<I> for Goal<I> {
 }
 
 impl<I: Interner> Visit<I> for ProgramClause<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -467,11 +479,11 @@ impl<I: Interner> Visit<I> for ProgramClause<I> {
 }
 
 impl<I: Interner> Visit<I> for WhereClause<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -480,11 +492,11 @@ impl<I: Interner> Visit<I> for WhereClause<I> {
 }
 
 impl<I: Interner> Visit<I> for DomainGoal<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {

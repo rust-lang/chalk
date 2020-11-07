@@ -19,7 +19,9 @@ struct UnsizeParameterCollector<'a, I: Interner> {
 }
 
 impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I> {
+    type BreakTy = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -74,7 +76,9 @@ struct ParameterOccurenceCheck<'a, 'p, I: Interner> {
 }
 
 impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> {
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I> {
+    type BreakTy = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I, BreakTy = Self::BreakTy> {
         self
     }
 
