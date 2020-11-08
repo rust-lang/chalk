@@ -271,3 +271,26 @@ fn shl_ice() {
         }
     }
 }
+
+/// Regression test for rust-analyzer#5495 ("var_universe invoked on bound
+/// variable" crash).
+#[test]
+fn unify_general_then_specific_ty() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Foo {}
+            struct Bar<T> {}
+
+            impl<T> Foo for Bar<(T, T, i32, i32)> {}
+        }
+
+        goal {
+            exists<T, int N> {
+                Bar<(N, T, T, T)>: Foo
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
