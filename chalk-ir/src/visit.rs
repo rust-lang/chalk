@@ -380,8 +380,10 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
             LifetimeData::Placeholder(universe) => {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
-            LifetimeData::Static => ControlFlow::CONTINUE,
-            LifetimeData::Phantom(..) => unreachable!(),
+            LifetimeData::Static | LifetimeData::Empty(_) | LifetimeData::Erased => {
+                ControlFlow::CONTINUE
+            }
+            LifetimeData::Phantom(void, ..) => match *void {},
         }
     }
 }
