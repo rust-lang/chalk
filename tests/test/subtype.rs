@@ -79,7 +79,7 @@ fn fn_lifetime_variance_args() {
 
         goal {
             for<'a, 'b> fn(&'a u32, &'b u32) = for<'a> fn(&'a u32, &'a u32)
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             "Unique; for<?U1,?U2,?U2> { substitution [], lifetime constraints [\
                 InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
                 InEnvironment { environment: Env([]), goal: '!1_1: '^0.0 }, \
@@ -306,7 +306,7 @@ fn multi_lifetime_invariant_struct() {
                     Subtype(Foo<&'b u32>, Foo<U>)
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             // Because A is invariant, we require the lifetimes to be equal
             "Unique; substitution [?0 := (&'!1_0 Uint(U32))], lifetime constraints [\
                 InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
@@ -327,7 +327,7 @@ fn multi_lifetime_invariant_struct() {
                     Subtype(Foo<U>, Foo<&'b u32>)
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             // Because A is invariant, we require the lifetimes to be equal
             "Unique; substitution [?0 := (&'!1_0 Uint(U32))], lifetime constraints [\
                 InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
@@ -524,7 +524,7 @@ fn generalize_invariant_struct() {
                     Subtype(Foo<&'b u32>, U)
                 }
             }
-        } yields[SolverChoice::recursive()] {
+        } yields[SolverChoice::recursive_default()] {
             // Because A is invariant, we require the lifetimes to be equal
             "Unique; substitution [?0 := Foo<(&'!1_0 Uint(U32))>], lifetime constraints [ \
                 InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
