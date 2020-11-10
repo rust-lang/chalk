@@ -1,7 +1,7 @@
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use chalk_ir::{cast::Cast, fold::Fold};
-use tracing::{debug, instrument};
+use tracing::debug;
 
 mod canonicalize;
 pub(crate) mod instantiate;
@@ -144,6 +144,17 @@ impl<I: Interner> InferenceTable<I> {
     pub fn normalize_const_shallow(&mut self, interner: &I, leaf: &Const<I>) -> Option<Const<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_const_ref(interner).clone())
+    }
+
+    /// Finds the root inference var for the given variable.
+    ///
+    /// The returned variable will be exactly equivalent to the given
+    /// variable except in name. All variables which have been unified to
+    /// eachother (but don't yet have a value) have the same "root".
+    ///
+    /// This is useful for `DeepNormalizer`.
+    pub fn inference_var_root(&mut self, var: InferenceVar) -> InferenceVar {
+        self.unify.find(var).into()
     }
 
     /// If type `leaf` is a free inference variable, and that variable has been

@@ -1,6 +1,7 @@
 use chalk_ir::fold::*;
 use chalk_ir::interner::HasInterner;
 use std::fmt::Debug;
+use tracing::instrument;
 
 use super::*;
 
@@ -58,10 +59,11 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
+    #[instrument(level = "debug", skip(self, interner))]
     pub fn instantiate_binders_existentially<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: impl IntoBindersAndValue<'a, I, Value = T>,
+        arg: impl IntoBindersAndValue<'a, I, Value = T> + Debug,
     ) -> T::Result
     where
         T: Fold<I>,
@@ -71,21 +73,29 @@ impl<I: Interner> InferenceTable<I> {
         self.instantiate_in(interner, max_universe, binders, &value)
     }
 
+    #[instrument(level = "debug", skip(self, interner))]
     pub fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: impl IntoBindersAndValue<'a, I, Value = T>,
+        arg: impl IntoBindersAndValue<'a, I, Value = T> + Debug,
     ) -> T::Result
     where
         T: Fold<I>,
     {
         let (binders, value) = arg.into_binders_and_value(interner);
-        let ui = self.new_universe();
+        let mut lazy_ui = None;
+        let mut ui = || {
+            lazy_ui.unwrap_or_else(|| {
+                let ui = self.new_universe();
+                lazy_ui = Some(ui);
+                ui
+            })
+        };
         let parameters: Vec<_> = binders
             .into_iter()
             .enumerate()
             .map(|(idx, pk)| {
-                let placeholder_idx = PlaceholderIndex { ui, idx };
+                let placeholder_idx = PlaceholderIndex { ui: ui(), idx };
                 match pk {
                     VariableKind::Lifetime => {
                         let lt = placeholder_idx.to_lifetime(interner);
@@ -128,7 +138,7 @@ where
     I: Interner,
 {
     type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::VariableKind<I>>;
-    type Value = &'a Substitution<I>;
+    type Value = &'a FnSubst<I>;
 
     fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
         let p: fn(usize) -> VariableKind<I> = make_lifetime;

@@ -354,7 +354,7 @@ pub fn program_clauses_for_goal<'db, I: Interner>(
                 .iter(interner)
                 .cloned(),
         )
-        .filter(|c| c.could_match(interner, goal))
+        .filter(|c| c.could_match(interner, db.unification_database(), goal))
         .collect();
 
     debug!(?clauses);

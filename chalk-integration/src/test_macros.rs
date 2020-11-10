@@ -19,10 +19,10 @@ macro_rules! ty {
     (function $n:tt $($arg:tt)*) => {
         chalk_ir::TyKind::Function(chalk_ir::FnPointer {
             num_binders: $n,
-            substitution: chalk_ir::Substitution::from_iter(
+            substitution: chalk_ir::FnSubst(chalk_ir::Substitution::from_iter(
                 &chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
-            ),
+            )),
             sig: chalk_ir::FnSig {
                 safety: chalk_ir::Safety::Safe,
                 abi: <chalk_integration::interner::ChalkIr as chalk_ir::interner::Interner>::FnAbi::Rust,

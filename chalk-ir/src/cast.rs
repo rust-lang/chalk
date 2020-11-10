@@ -154,6 +154,12 @@ impl<I: Interner> CastTo<Goal<I>> for EqGoal<I> {
     }
 }
 
+impl<I: Interner> CastTo<Goal<I>> for SubtypeGoal<I> {
+    fn cast_to(self, interner: &I) -> Goal<I> {
+        GoalData::SubtypeGoal(self).intern(interner)
+    }
+}
+
 impl<I: Interner, T: HasInterner<Interner = I> + CastTo<Goal<I>>> CastTo<Goal<I>> for Binders<T> {
     fn cast_to(self, interner: &I) -> Goal<I> {
         GoalData::Quantified(

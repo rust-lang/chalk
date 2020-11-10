@@ -1,11 +1,10 @@
 use crate::clauses::ClauseBuilder;
-use crate::infer::instantiate::IntoBindersAndValue;
 use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
     AliasTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty,
-    TyKind, VariableKinds,
+    TyKind,
 };
 
 fn push_clauses<I: Interner>(
@@ -134,13 +133,13 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             Ok(())
         }
         TyKind::Function(fn_val) if fn_val.sig.safety == Safety::Safe && !fn_val.sig.variadic => {
-            let (binders, orig_sub) = fn_val.into_binders_and_value(interner);
-            let bound_ref = Binders::new(VariableKinds::from_iter(interner, binders), orig_sub);
+            let bound_ref = fn_val.as_binders(interner);
             builder.push_binders(&bound_ref, |builder, orig_sub| {
                 // The last parameter represents the function return type
                 let (arg_sub, fn_output_ty) = orig_sub
+                    .0
                     .as_slice(interner)
-                    .split_at(orig_sub.len(interner) - 1);
+                    .split_at(orig_sub.0.len(interner) - 1);
                 let arg_sub = Substitution::from_iter(interner, arg_sub);
                 let output_ty = fn_output_ty[0].assert_ty_ref(interner).clone();
 

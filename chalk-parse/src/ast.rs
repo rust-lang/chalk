@@ -42,6 +42,7 @@ pub struct AdtDefn {
     pub variants: Vec<Variant>,
     pub flags: AdtFlags,
     pub repr: AdtRepr,
+    pub variances: Option<Vec<Variance>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -98,6 +99,7 @@ pub struct FnDefn {
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
     pub sig: FnSig,
+    pub variances: Option<Vec<Variance>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -448,6 +450,7 @@ pub enum DomainGoal {
 pub enum LeafGoal {
     DomainGoal { goal: DomainGoal },
     UnifyGenericArgs { a: GenericArg, b: GenericArg },
+    SubtypeGenericArgs { a: Ty, b: Ty },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -539,4 +542,11 @@ impl FnArgs {
             None => FnArgs::NonVariadic(tys),
         })
     }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum Variance {
+    Invariant,
+    Covariant,
+    Contravariant,
 }
