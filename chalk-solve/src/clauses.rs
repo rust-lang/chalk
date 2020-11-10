@@ -75,8 +75,10 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         TyKind::Alias(_) => panic!("this function should not be called for alias"),
         TyKind::Foreign(_) => panic!("constituent_types of foreign types are unknown!"),
         TyKind::Error => Vec::new(),
-        TyKind::OpaqueType(_, _) => unimplemented!(),
-        TyKind::AssociatedType(_, _) => unimplemented!(),
+        TyKind::OpaqueType(_, _) => panic!("constituent_types of opaque types are unknown!"),
+        TyKind::AssociatedType(_, _) => {
+            panic!("constituent_types of associated types are unknown!")
+        }
     }
 }
 
@@ -176,12 +178,16 @@ pub fn push_auto_trait_impls<I: Interner>(
             Ok(())
         }
 
-        // Unimplemented
-        TyKind::OpaqueType(_, _) => Ok(()),
-        TyKind::AssociatedType(_, _) => Ok(()),
+        TyKind::OpaqueType(opaque_ty_id, _) => {
+            push_auto_trait_impls_opaque(builder, auto_trait_id, *opaque_ty_id);
+            Ok(())
+        }
 
         // No auto traits
-        TyKind::Placeholder(_) | TyKind::Dyn(_) | TyKind::Alias(_) => Ok(()),
+        TyKind::AssociatedType(_, _)
+        | TyKind::Placeholder(_)
+        | TyKind::Dyn(_)
+        | TyKind::Alias(_) => Ok(()),
 
         // app_ty implements AutoTrait if all constituents of app_ty implement AutoTrait
         _ => {
@@ -383,20 +389,56 @@ fn program_clauses_that_could_match<I: Interner>(
 
     match goal {
         DomainGoal::Holds(WhereClause::Implemented(trait_ref)) => {
-            let trait_id = trait_ref.trait_id;
+            let self_ty = trait_ref.self_type_parameter(interner);
 
+            let trait_id = trait_ref.trait_id;
             let trait_datum = db.trait_datum(trait_id);
 
-            if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
-                let self_ty = trait_ref.self_type_parameter(interner);
-
-                if let TyKind::Alias(AliasTy::Opaque(opaque_ty)) = self_ty.kind(interner) {
-                    if trait_datum.is_auto_trait() {
-                        push_auto_trait_impls_opaque(builder, trait_id, opaque_ty.opaque_ty_id)
-                    }
-                } else if self_ty.is_general_var(interner, binders) {
-                    return Err(Floundered);
+            match self_ty.kind(interner) {
+                TyKind::Alias(alias) => {
+                    // An alias could normalize to anything, including `dyn trait`
+                    // or an opaque type, so push a clause that asks for the
+                    // self type to be normalized and return.
+                    push_alias_implemented_clause(builder, trait_ref, alias);
+                    return Ok(clauses);
                 }
+
+                _ if self_ty.is_general_var(interner, binders) => {
+                    if trait_datum.is_non_enumerable_trait() || trait_datum.is_auto_trait() {
+                        return Err(Floundered);
+                    }
+                }
+
+                TyKind::OpaqueType(opaque_ty_id, _) => {
+                    db.opaque_ty_data(*opaque_ty_id)
+                        .to_program_clauses(builder, environment);
+                }
+
+                TyKind::Dyn(_) => {
+                    // If the self type is a `dyn trait` type, generate program-clauses
+                    // that indicates that it implements its own traits.
+                    // FIXME: This is presently rather wasteful, in that we don't check that the
+                    // these program clauses we are generating are actually relevant to the goal
+                    // `goal` that we are actually *trying* to prove (though there is some later
+                    // code that will screen out irrelevant stuff).
+                    //
+                    // In other words, if we were trying to prove `Implemented(dyn
+                    // Fn(&u8): Clone)`, we would still generate two clauses that are
+                    // totally irrelevant to that goal, because they let us prove other
+                    // things but not `Clone`.
+                    dyn_ty::build_dyn_self_ty_clauses(db, builder, self_ty.clone())
+                }
+
+                // We don't actually do anything here, but we need to record the types when logging
+                TyKind::Adt(adt_id, _) => {
+                    let _ = db.adt_datum(*adt_id);
+                }
+
+                TyKind::FnDef(fn_def_id, _) => {
+                    let _ = db.fn_def_datum(*fn_def_id);
+                }
+
+                _ => {}
             }
 
             // This is needed for the coherence related impls, as well
@@ -423,42 +465,6 @@ fn program_clauses_that_could_match<I: Interner>(
                 })?;
             }
 
-            // If the self type is a `dyn trait` type, generate program-clauses
-            // that indicates that it implements its own traits.
-            // FIXME: This is presently rather wasteful, in that we don't check that the
-            // these program clauses we are generating are actually relevant to the goal
-            // `goal` that we are actually *trying* to prove (though there is some later
-            // code that will screen out irrelevant stuff).
-            //
-            // In other words, if we were trying to prove `Implemented(dyn
-            // Fn(&u8): Clone)`, we would still generate two clauses that are
-            // totally irrelevant to that goal, because they let us prove other
-            // things but not `Clone`.
-            let self_ty = trait_ref.self_type_parameter(interner);
-            if let TyKind::Dyn(_) = self_ty.kind(interner) {
-                dyn_ty::build_dyn_self_ty_clauses(db, builder, self_ty.clone())
-            }
-
-            match self_ty.kind(interner) {
-                TyKind::OpaqueType(opaque_ty_id, _)
-                | TyKind::Alias(AliasTy::Opaque(OpaqueTy { opaque_ty_id, .. })) => {
-                    db.opaque_ty_data(*opaque_ty_id)
-                        .to_program_clauses(builder, environment);
-                }
-                _ => {}
-            }
-
-            // We don't actually do anything here, but we need to record the types it when logging
-            match self_ty.kind(interner) {
-                TyKind::Adt(adt_id, _) => {
-                    let _ = db.adt_datum(*adt_id);
-                }
-                TyKind::FnDef(fn_def_id, _) => {
-                    let _ = db.fn_def_datum(*fn_def_id);
-                }
-                _ => {}
-            }
-
             if let Some(well_known) = trait_datum.well_known {
                 builtin_traits::add_builtin_program_clauses(
                     db, builder, well_known, trait_ref, binders,
@@ -472,19 +478,24 @@ fn program_clauses_that_could_match<I: Interner>(
                     .self_type_parameter(interner);
 
                 match trait_self_ty.kind(interner) {
-                    TyKind::OpaqueType(opaque_ty_id, _)
-                    | TyKind::Alias(AliasTy::Opaque(OpaqueTy { opaque_ty_id, .. })) => {
+                    TyKind::Alias(alias) => {
+                        // An alias could normalize to anything, including an
+                        // opaque type, so push a clause that asks for the self
+                        // type to be normalized and return.
+                        push_alias_alias_eq_clause(builder, proj, &alias_eq.ty, alias);
+                        return Ok(clauses);
+                    }
+                    TyKind::OpaqueType(opaque_ty_id, _) => {
                         db.opaque_ty_data(*opaque_ty_id)
                             .to_program_clauses(builder, environment);
                     }
+                    // If the self type is a `dyn trait` type, generate program-clauses
+                    // for any associated type bindings it contains.
+                    // FIXME: see the fixme for the analogous code for Implemented goals.
+                    TyKind::Dyn(_) => {
+                        dyn_ty::build_dyn_self_ty_clauses(db, builder, trait_self_ty.clone())
+                    }
                     _ => {}
-                }
-
-                // If the self type is a `dyn trait` type, generate program-clauses
-                // for any associated type bindings it contains.
-                // FIXME: see the fixme for the analogous code for Implemented goals.
-                if let TyKind::Dyn(_) = trait_self_ty.kind(interner) {
-                    dyn_ty::build_dyn_self_ty_clauses(db, builder, trait_self_ty.clone())
                 }
 
                 db.associated_ty_data(proj.associated_ty_id)
@@ -702,6 +713,97 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     }
 }
 
+fn push_alias_implemented_clause<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    trait_ref: &TraitRef<I>,
+    alias: &AliasTy<I>,
+) {
+    let interner = builder.interner();
+    assert_eq!(
+        *trait_ref.self_type_parameter(interner).kind(interner),
+        TyKind::Alias(alias.clone())
+    );
+
+    let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
+
+    // forall<..., T> {
+    //      <X as Y>::Z: Trait :- T: Trait, <X as Y>::Z == T
+    // }
+    builder.push_binders(&binders, |builder, bound_var| {
+        let fresh_self_subst = Substitution::from_iter(
+            interner,
+            std::iter::once(bound_var.clone().cast(interner)).chain(
+                trait_ref.substitution.as_slice(interner)[1..]
+                    .iter()
+                    .cloned(),
+            ),
+        );
+        let fresh_self_trait_ref = TraitRef {
+            trait_id: trait_ref.trait_id,
+            substitution: fresh_self_subst,
+        };
+        builder.push_clause(
+            DomainGoal::Holds(WhereClause::Implemented(trait_ref.clone())),
+            &[
+                DomainGoal::Holds(WhereClause::Implemented(fresh_self_trait_ref)),
+                DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                    alias: alias.clone(),
+                    ty: bound_var,
+                })),
+            ],
+        );
+    });
+}
+
+fn push_alias_alias_eq_clause<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    projection_ty: &ProjectionTy<I>,
+    ty: &Ty<I>,
+    alias: &AliasTy<I>,
+) {
+    let interner = builder.interner();
+    assert_eq!(
+        *projection_ty.self_type_parameter(interner).kind(interner),
+        TyKind::Alias(alias.clone())
+    );
+
+    let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
+
+    // forall<..., T> {
+    //      <<X as Y>::A as Z>::B == U :- <T as Z>::B == U, <X as Y>::A == T
+    // }
+    builder.push_binders(&binders, |builder, bound_var| {
+        let fresh_self_subst = Substitution::from_iter(
+            interner,
+            std::iter::once(bound_var.clone().cast(interner)).chain(
+                projection_ty.substitution.as_slice(interner)[1..]
+                    .iter()
+                    .cloned(),
+            ),
+        );
+        let fresh_alias = AliasTy::Projection(ProjectionTy {
+            associated_ty_id: projection_ty.associated_ty_id,
+            substitution: fresh_self_subst,
+        });
+        builder.push_clause(
+            DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                alias: AliasTy::Projection(projection_ty.clone()),
+                ty: ty.clone(),
+            })),
+            &[
+                DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                    alias: fresh_alias,
+                    ty: ty.clone(),
+                })),
+                DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                    alias: alias.clone(),
+                    ty: bound_var,
+                })),
+            ],
+        );
+    });
+}
+
 /// Examine `T` and push clauses that may be relevant to proving the
 /// following sorts of goals (and maybe others):
 ///
@@ -764,7 +866,37 @@ fn match_ty<I: Interner>(
             builder.push_fact(WellFormed::Ty(ty.clone()));
         }
         TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => return Err(Floundered),
-        TyKind::Dyn(_) => {}
+        TyKind::Dyn(dyn_ty) => {
+            // FIXME(#203)
+            // - Object safety? (not needed with RFC 2027)
+            // - Implied bounds
+            // - Bounds on the associated types
+            // - Checking that all associated types are specified, including
+            //   those on supertraits.
+            // - For trait objects with GATs, check that the bounds are fully
+            //   general (`dyn for<'a> StreamingIterator<Item<'a> = &'a ()>` is OK,
+            //   `dyn StreamingIterator<Item<'static> = &'static ()>` is not).
+            let bounds = dyn_ty
+                .bounds
+                .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
+
+            let mut wf_goals = Vec::new();
+
+            wf_goals.extend(bounds.iter(interner).flat_map(|bound| {
+                bound.map_ref(|bound| -> Vec<_> {
+                    match bound {
+                        WhereClause::Implemented(trait_ref) => {
+                            vec![DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()))]
+                        }
+                        WhereClause::AliasEq(_)
+                        | WhereClause::LifetimeOutlives(_)
+                        | WhereClause::TypeOutlives(_) => vec![],
+                    }
+                })
+            }));
+
+            builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
+        }
     })
 }
 

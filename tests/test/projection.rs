@@ -1043,3 +1043,67 @@ fn guidance_for_projection_on_flounder() {
         }
     }
 }
+
+#[test]
+fn projection_to_dyn() {
+    test! {
+        program {
+            trait AsDyn {
+                type Dyn;
+            }
+
+            #[object_safe]
+            trait Debug {}
+
+            impl AsDyn for () {
+                type Dyn = dyn Debug + 'static;
+            }
+        }
+
+        goal {
+            <() as AsDyn>::Dyn: Debug
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn projection_to_opaque() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Debug {
+                type Output;
+            }
+
+            impl Debug for () {
+                type Output = ();
+            }
+
+            opaque type OpaqueDebug: Debug<Output = ()> = ();
+
+            struct A {}
+
+            trait AsProj {
+                type Proj;
+            }
+
+            impl AsProj for A {
+                type Proj = OpaqueDebug;
+            }
+        }
+
+        goal {
+            <A as AsProj>::Proj: Debug
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            <<A as AsProj>::Proj as Debug>::Output = ()
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}

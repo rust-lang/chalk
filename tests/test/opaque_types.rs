@@ -205,3 +205,40 @@ fn opaque_auto_traits() {
         }
     }
 }
+
+#[test]
+fn opaque_auto_traits_indirect() {
+    test! {
+        program {
+            struct Bar { }
+            struct Baz { }
+            trait Trait { }
+
+            impl Trait for Bar { }
+            impl Trait for Baz { }
+
+            #[auto]
+            trait Send { }
+            trait SendDerived where Self: Send { }
+
+            impl<T> SendDerived for T where T: Send { }
+
+            impl !Send for Baz { }
+
+            opaque type Opaque1: Trait = Bar;
+            opaque type Opaque2: Trait = Baz;
+        }
+
+        goal {
+            Opaque1: SendDerived
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Opaque2: SendDerived
+        } yields {
+            "No possible solution"
+        }
+    }
+}

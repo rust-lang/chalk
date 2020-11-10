@@ -1468,12 +1468,7 @@ impl<I: Interner> AliasTy<I> {
     /// Gets the type parameters of the `Self` type in this alias type.
     pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
         match self {
-            AliasTy::Projection(projection_ty) => projection_ty
-                .substitution
-                .iter(interner)
-                .find_map(move |p| p.ty(interner))
-                .unwrap()
-                .clone(),
+            AliasTy::Projection(projection_ty) => projection_ty.self_type_parameter(interner),
             _ => todo!(),
         }
     }
@@ -1489,6 +1484,17 @@ pub struct ProjectionTy<I: Interner> {
 }
 
 impl<I: Interner> Copy for ProjectionTy<I> where I::InternedSubstitution: Copy {}
+
+impl<I: Interner> ProjectionTy<I> {
+    /// Gets the type parameters of the `Self` type in this alias type.
+    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
+        self.substitution
+            .iter(interner)
+            .find_map(move |p| p.ty(interner))
+            .unwrap()
+            .clone()
+    }
+}
 
 /// An opaque type `opaque type T<..>: Trait = HiddenTy`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
