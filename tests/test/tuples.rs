@@ -230,3 +230,67 @@ fn tuples_are_clone() {
         }
     }
 }
+
+#[test]
+fn tuples_are_wf() {
+    test! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+        }
+
+        goal {
+            WellFormed(())
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed((u8,))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed((u8, u8))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed(([u8],))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed((u8, [u8]))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed(([u8], u8))
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            exists<T> { WellFormed((T, u8)) }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+
+        goal {
+            forall<T> { WellFormed((T, u8)) }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> { if (T: Sized) { WellFormed((T, u8)) } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}

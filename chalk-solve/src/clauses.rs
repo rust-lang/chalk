@@ -11,6 +11,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use rustc_hash::FxHashSet;
 use std::iter;
+use std::marker::PhantomData;
 use tracing::{debug, instrument};
 
 pub mod builder;
@@ -583,7 +584,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::DownstreamType(ty)
         | DomainGoal::IsFullyVisible(ty)
-        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, &ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {
@@ -885,43 +886,150 @@ fn match_ty<I: Interner>(
             .db
             .fn_def_datum(*fn_def_id)
             .to_program_clauses(builder, environment),
-        TyKind::Str | TyKind::Never | TyKind::Scalar(_) | TyKind::Foreign(_) => {
+        TyKind::Str
+        | TyKind::Never
+        | TyKind::Scalar(_)
+        | TyKind::Foreign(_)
+        | TyKind::Tuple(0, _) => {
             // These have no substitutions, so they are trivially WF
             builder.push_fact(WellFormed::Ty(ty.clone()));
         }
         TyKind::Raw(mutbl, _) => {
+            // forall<T> WF(*const T) :- WF(T);
             builder.push_bound_ty(|builder, ty| {
-                builder.push_fact(WellFormed::Ty(
-                    TyKind::Raw(*mutbl, ty).intern(builder.interner()),
-                ));
+                builder.push_clause(
+                    WellFormed::Ty(TyKind::Raw(*mutbl, ty.clone()).intern(builder.interner())),
+                    Some(WellFormed::Ty(ty)),
+                );
             });
         }
         TyKind::Ref(mutbl, _, _) => {
+            // forall<'a, T> WF(&'a T) :- WF(T), T: 'a
             builder.push_bound_ty(|builder, ty| {
                 builder.push_bound_lifetime(|builder, lifetime| {
-                    builder.push_fact(WellFormed::Ty(
-                        TyKind::Ref(*mutbl, lifetime, ty).intern(builder.interner()),
-                    ));
+                    let ref_ty = TyKind::Ref(*mutbl, lifetime.clone(), ty.clone())
+                        .intern(builder.interner());
+                    builder.push_clause(
+                        WellFormed::Ty(ref_ty),
+                        [
+                            DomainGoal::WellFormed(WellFormed::Ty(ty.clone())),
+                            DomainGoal::Holds(WhereClause::TypeOutlives(TypeOutlives {
+                                ty,
+                                lifetime,
+                            })),
+                        ],
+                    );
                 })
             });
         }
         TyKind::Slice(_) => {
+            // forall<T> WF([T]) :- T: Sized, WF(T)
             builder.push_bound_ty(|builder, ty| {
-                builder.push_fact(WellFormed::Ty(TyKind::Slice(ty).intern(builder.interner())));
+                let sized = builder.db.well_known_trait_id(WellKnownTrait::Sized);
+                builder.push_clause(
+                    WellFormed::Ty(TyKind::Slice(ty.clone()).intern(builder.interner())),
+                    sized
+                        .map(|id| {
+                            DomainGoal::Holds(WhereClause::Implemented(TraitRef {
+                                trait_id: id,
+                                substitution: Substitution::from1(interner, ty.clone()),
+                            }))
+                        })
+                        .into_iter()
+                        .chain(Some(DomainGoal::WellFormed(WellFormed::Ty(ty)))),
+                );
             });
         }
-        TyKind::Tuple(_, _)
-        | TyKind::Array(_, _)
-        | TyKind::Closure(_, _)
-        | TyKind::Generator(_, _)
-        | TyKind::GeneratorWitness(_, _) => {
+        TyKind::Array(..) => {
+            // forall<T. const N: usize> WF([T, N]) :- T: Sized
+            let interner = builder.interner();
+            let binders = Binders::new(
+                VariableKinds::from_iter(
+                    interner,
+                    [
+                        VariableKind::Ty(TyVariableKind::General),
+                        VariableKind::Const(
+                            TyKind::Scalar(Scalar::Uint(UintTy::Usize)).intern(interner),
+                        ),
+                    ],
+                ),
+                PhantomData::<I>,
+            );
+            builder.push_binders(binders, |builder, PhantomData| {
+                let placeholders_in_scope = builder.placeholders_in_scope();
+                let placeholder_count = placeholders_in_scope.len();
+                let ty = placeholders_in_scope[placeholder_count - 2]
+                    .assert_ty_ref(interner)
+                    .clone();
+                let size = placeholders_in_scope[placeholder_count - 1]
+                    .assert_const_ref(interner)
+                    .clone();
+
+                let sized = builder.db.well_known_trait_id(WellKnownTrait::Sized);
+                let array_ty = TyKind::Array(ty.clone(), size).intern(interner);
+                builder.push_clause(
+                    WellFormed::Ty(array_ty),
+                    sized
+                        .map(|id| {
+                            DomainGoal::Holds(WhereClause::Implemented(TraitRef {
+                                trait_id: id,
+                                substitution: Substitution::from1(interner, ty.clone()),
+                            }))
+                        })
+                        .into_iter()
+                        .chain(Some(DomainGoal::WellFormed(WellFormed::Ty(ty)))),
+                );
+            });
+        }
+        TyKind::Tuple(len, _) => {
+            // WF((T0, ..., Tn, U)) :- T0: Sized, ..., Tn: Sized, WF(T0), ..., WF(Tn), WF(U)
+            let interner = builder.interner();
+            let binders = Binders::new(
+                VariableKinds::from_iter(
+                    interner,
+                    iter::repeat_with(|| VariableKind::Ty(TyVariableKind::General)).take(*len),
+                ),
+                PhantomData::<I>,
+            );
+            builder.push_binders(binders, |builder, PhantomData| {
+                let placeholders_in_scope = builder.placeholders_in_scope();
+
+                let substs = Substitution::from_iter(
+                    builder.interner(),
+                    &placeholders_in_scope[placeholders_in_scope.len() - len..],
+                );
+
+                let tuple_ty = TyKind::Tuple(*len, substs.clone()).intern(interner);
+                let sized = builder.db.well_known_trait_id(WellKnownTrait::Sized);
+                builder.push_clause(
+                    WellFormed::Ty(tuple_ty),
+                    substs.as_slice(interner)[..*len - 1]
+                        .iter()
+                        .filter_map(|s| {
+                            let ty_var = s.assert_ty_ref(interner).clone();
+                            sized.map(|id| {
+                                DomainGoal::Holds(WhereClause::Implemented(TraitRef {
+                                    trait_id: id,
+                                    substitution: Substitution::from1(interner, ty_var),
+                                }))
+                            })
+                        })
+                        .chain(substs.iter(interner).map(|subst| {
+                            DomainGoal::WellFormed(WellFormed::Ty(
+                                subst.assert_ty_ref(interner).clone(),
+                            ))
+                        })),
+                );
+            });
+        }
+        TyKind::Closure(_, _) | TyKind::Generator(_, _) | TyKind::GeneratorWitness(_, _) => {
             let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
             builder.push_binders(ty, |builder, ty| {
                 builder.push_fact(WellFormed::Ty(ty.clone()));
             });
         }
         TyKind::Placeholder(_) => {
-            builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
+            builder.push_fact(WellFormed::Ty(ty.clone()));
         }
         TyKind::Alias(AliasTy::Projection(proj)) => builder
             .db
@@ -945,30 +1053,35 @@ fn match_ty<I: Interner>(
             // - Bounds on the associated types
             // - Checking that all associated types are specified, including
             //   those on supertraits.
-            // - For trait objects with GATs, check that the bounds are fully
-            //   general (`dyn for<'a> StreamingIterator<Item<'a> = &'a ()>` is OK,
+            // - For trait objects with GATs, if we allow them in the future,
+            //   check that the bounds are fully general (
+            //   `dyn for<'a> StreamingIterator<Item<'a> = &'a ()>` is OK,
             //   `dyn StreamingIterator<Item<'static> = &'static ()>` is not).
-            let bounds = dyn_ty
-                .bounds
-                .clone()
-                .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
+            let generalized_ty =
+                generalize::Generalize::apply(builder.db.interner(), dyn_ty.clone());
+            builder.push_binders(generalized_ty, |builder, dyn_ty| {
+                let bounds = dyn_ty
+                    .bounds
+                    .clone()
+                    .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
 
-            let mut wf_goals = Vec::new();
+                let mut wf_goals = Vec::new();
 
-            wf_goals.extend(bounds.iter(interner).flat_map(|bound| {
-                bound.map_ref(|bound| -> Vec<_> {
-                    match bound {
-                        WhereClause::Implemented(trait_ref) => {
-                            vec![DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()))]
+                wf_goals.extend(bounds.iter(interner).flat_map(|bound| {
+                    bound.map_ref(|bound| -> Vec<_> {
+                        match bound {
+                            WhereClause::Implemented(trait_ref) => {
+                                vec![DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()))]
+                            }
+                            WhereClause::AliasEq(_)
+                            | WhereClause::LifetimeOutlives(_)
+                            | WhereClause::TypeOutlives(_) => vec![],
                         }
-                        WhereClause::AliasEq(_)
-                        | WhereClause::LifetimeOutlives(_)
-                        | WhereClause::TypeOutlives(_) => vec![],
-                    }
-                })
-            }));
+                    })
+                }));
 
-            builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
+                builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
+            });
         }
     })
 }
