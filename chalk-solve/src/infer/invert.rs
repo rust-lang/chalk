@@ -21,7 +21,7 @@ impl<I: Interner> InferenceTable<I> {
     /// negation-as-failure paper [1], where negative goals are only
     /// permitted if they contain no free (existential) variables.
     ///
-    /// [1] http://www.doc.ic.ac.uk/~klc/NegAsFailure.pdf
+    /// [1] https://www.doc.ic.ac.uk/~klc/NegAsFailure.pdf
     ///
     /// Restricting free existential variables is done because the
     /// semantics of such queries is not what you expect: it basically

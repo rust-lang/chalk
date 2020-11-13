@@ -5,7 +5,7 @@ chalk-ir and make a copy of it, possibly making small substitutions or
 alterations along the way. Folding also allows copying a term from one
 interner to another.
 
-[`Fold`]: http://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html
+[`Fold`]: https://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html
 
 To use the [`Fold`] trait, one invokes the [`Fold::fold_with`] method, supplying some
 "folder" as well as the number of "in scope binders" for that term (typically `0`
@@ -15,14 +15,14 @@ to start):
 let output_ty = input_ty.fold_with(&mut folder, 0);
 ```
 
-[`Fold::fold_with`]: http://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html#tymethod.fold_with
+[`Fold::fold_with`]: https://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html#tymethod.fold_with
 
 The folder is some instance of the [`Folder`] trait. This trait
 defines a few key callbacks that allow you to substitute different
 values as the fold proceeds. For example, when a type is folded, the
 folder can substitute a new type in its place.
 
-[`Folder`]: http://rust-lang.github.io/chalk/chalk_ir/fold/trait.Folder.html
+[`Folder`]: https://rust-lang.github.io/chalk/chalk_ir/fold/trait.Folder.html
 
 ## Uses for folders
 
@@ -69,7 +69,7 @@ XXX explain with examples and in more detail
 The `Fold` trait defines a [`Result`] associated type, indicating the
 type that will result from folding.
 
-[`Result`]: http://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html#associatedtype.Result
+[`Result`]: https://rust-lang.github.io/chalk/chalk_ir/fold/trait.Fold.html#associatedtype.Result
 
 ## When to implement the Fold and SuperFold traits
 

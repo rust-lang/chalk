@@ -24,23 +24,23 @@ suitable reference.
 [Prolog]: https://en.wikipedia.org/wiki/Prolog
 [Chalkidiki]: https://en.wikipedia.org/wiki/Chalkidiki
 [Aristotle]: https://en.wikipedia.org/wiki/Aristotle
-[chalk-lowering-details]: http://rust-lang.github.io/chalk/book/#chalk-works-by-converting-rust-goals-into-logical-inference-rules
+[chalk-lowering-details]: https://rust-lang.github.io/chalk/book/#chalk-works-by-converting-rust-goals-into-logical-inference-rules
 
 ## Blog posts
 [blog-posts]: #blog-posts
 Here are some blog posts talking about chalk:
 
-- [Lowering Rust Traits to Logic](http://smallcultfollowing.com/babysteps/blog/2017/01/26/lowering-rust-traits-to-logic/)
+- [Lowering Rust Traits to Logic](https://smallcultfollowing.com/babysteps/blog/2017/01/26/lowering-rust-traits-to-logic/)
     - Explains the basic concepts at play
-- [Unification in Chalk, Part 1](http://smallcultfollowing.com/babysteps/blog/2017/03/25/unification-in-chalk-part-1/)
+- [Unification in Chalk, Part 1](https://smallcultfollowing.com/babysteps/blog/2017/03/25/unification-in-chalk-part-1/)
     - An introduction to unification
-- [Unification in Chalk, Part 2](http://smallcultfollowing.com/babysteps/blog/2017/04/23/unification-in-chalk-part-2/)
+- [Unification in Chalk, Part 2](https://smallcultfollowing.com/babysteps/blog/2017/04/23/unification-in-chalk-part-2/)
     - Extending the system for associated types
-- [Negative reasoning in Chalk](http://aturon.github.io/blog/2017/04/24/negative-chalk/)
+- [Negative reasoning in Chalk](https://aturon.github.io/blog/2017/04/24/negative-chalk/)
     - How to prove that something is not true
-- [Query structure in chalk](http://smallcultfollowing.com/babysteps/blog/2017/05/25/query-structure-in-chalk/)
+- [Query structure in chalk](https://smallcultfollowing.com/babysteps/blog/2017/05/25/query-structure-in-chalk/)
     - The basic chalk query structure, with pointers into the chalk implementation
-- [Cyclic queries in chalk](http://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
+- [Cyclic queries in chalk](https://smallcultfollowing.com/babysteps/blog/2017/09/12/tabling-handling-cyclic-queries-in-chalk/)
     - Handling cyclic relations and enabling the implementation of implied bounds and other long-desired features in an elegant way
 
 ## REPL

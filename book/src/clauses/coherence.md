@@ -7,7 +7,7 @@ This document was previously prepared for the initial design of coherence rules 
 > 
 > The role of the orphan rules in particular is basically to prevent you from implementing external traits for external types. So continuing our simple example of `Show`, if you are defining your own library, you could not implement `Show` for `Vec<T>`, because both `Show` and `Vec` are defined in the standard library. But you can implement `Show` for `MyType`, because you defined `MyType`. However, if you define your own trait `MyTrait`, then you can implement `MyTrait` for any type you like, including external types like `Vec<T>`. To this end, the orphan rule intuitively says “either the trait must be local or the self-type must be local”.
 > 
-> -- [Little Orphan Impls](http://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/) by Niko Matsakis
+> -- [Little Orphan Impls](https://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/) by Niko Matsakis
 
 To check for coherence, the Rust compiler completes two separate but related checks:
 
@@ -17,9 +17,9 @@ To check for coherence, the Rust compiler completes two separate but related che
     - **compatible** - any semver compatible world
 # Resources About Coherence
 - [Coherence - talk by withoutboats](https://air.mozilla.org/rust-meetup-march-2017/)
-- [Little Orphan Impls](http://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/)
+- [Little Orphan Impls](https://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/)
 - [RFC 1023 Rebalancing Coherence](https://rust-lang.github.io/rfcs/1023-rebalancing-coherence.html)
-- [Type classes: confluence, coherence and global uniqueness](http://blog.ezyang.com/2014/07/type-classes-confluence-coherence-global-uniqueness/)
+- [Type classes: confluence, coherence and global uniqueness](https://blog.ezyang.com/2014/07/type-classes-confluence-coherence-global-uniqueness/)
 ## Axioms & Properties of Coherence
 > Historical Note: We used to use the term “external” instead of “upstream”.
 
@@ -44,7 +44,7 @@ There are several resources which can be used to figure out the orphan rules in 
 - [RFC 1023: Rebalancing Coherence](https://rust-lang.github.io/rfcs/1023-rebalancing-coherence.html)
 - [*Trait Implementation Coherence*](https://doc.rust-lang.org/reference/items/implementations.html#trait-implementation-coherence) [in the](https://doc.rust-lang.org/reference/items/implementations.html#trait-implementation-coherence) [*Rust Reference*](https://doc.rust-lang.org/reference/items/implementations.html#trait-implementation-coherence)
 - [E0210: A violation of the orphan rules in the](https://doc.rust-lang.org/error-index.html#E0210) [*Rust Error Index*](https://doc.rust-lang.org/error-index.html#E0210)
-- [*Little Orphan Impls*](http://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/) [by Niko Matsakis](http://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/)
+- [*Little Orphan Impls*](https://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/) [by Niko Matsakis](https://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/)
 
 Of all of these, RFC 1023 is probably considered the most authoritative source on the orphan rules. The orphan rules as proposed in that RFC are as follows:
 
@@ -168,7 +168,7 @@ The conclusion from all of this is that it is perfectly safe to rule out impls t
 
 ## Discussion: Modelling the Overlap Check
 
-[Aaron’s excellent blog post](http://aturon.github.io/blog/2017/04/24/negative-chalk/) talks about this exact problem from the point of view of negative reasoning. It also describes a potential solution which we will apply here to solve our problem.
+[Aaron’s excellent blog post](https://aturon.github.io/blog/2017/04/24/negative-chalk/) talks about this exact problem from the point of view of negative reasoning. It also describes a potential solution which we will apply here to solve our problem.
 
 The **compatible modality** (`compat` in Aaron’s blog post) is necessary because we don’t always want to assume that all compatible impls exist. In particular, there are certain phases of compilation (e.g. trans) where the closed-world assumption is entirely necessary and sufficient.
 

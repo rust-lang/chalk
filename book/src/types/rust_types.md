@@ -6,10 +6,10 @@ what sort of type you have, you invoke the [`kind`] method, which
 returns a [`TyKind`]. As described earlier, the actual in-memory
 representation of types is controlled by the [`Interner`] trait.
 
-[`Interner`]: http://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html
-[`Ty`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
-[`TyKind`]: http://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
-[`kind`]: http://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.kind
+[`Interner`]: https://rust-lang.github.io/chalk/chalk_ir/interner/trait.Interner.html
+[`Ty`]: https://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html
+[`TyKind`]: https://rust-lang.github.io/chalk/chalk_ir/enum.TyKind.html
+[`kind`]: https://rust-lang.github.io/chalk/chalk_ir/struct.Ty.html#method.kind
 
 ## The `TyKind` variants and how they map to Rust syntax
 
