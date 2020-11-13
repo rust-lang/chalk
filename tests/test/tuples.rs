@@ -39,10 +39,6 @@ fn tuple_trait_impl() {
 fn tuples_are_copy() {
     test! {
         program {
-            // FIXME: If we don't declare Copy non-enumerable, `exists<T> { T:
-            // Copy }` gives wrong results, because it doesn't consider the
-            // built-in impls.
-            #[non_enumerable]
             #[lang(copy)]
             trait Copy { }
 
@@ -107,8 +103,6 @@ fn tuples_are_sized() {
         program {
             #[lang(sized)]
             trait Sized { }
-
-            trait Foo {}
         }
 
         goal {
@@ -179,7 +173,6 @@ fn tuples_are_sized() {
 fn tuples_are_clone() {
     test! {
         program {
-            #[non_enumerable] // see above
             #[lang(clone)]
             trait Clone { }
 
