@@ -69,7 +69,8 @@ impl<'i, I: Interner> InputTypeCollector<'i, I> {
 }
 
 impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
+    type BreakTy = ();
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
         self
     }
 

@@ -54,7 +54,9 @@ impl<'me, I: Interner> EnvElaborator<'me, I> {
 }
 
 impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I> {
+    type BreakTy = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I, BreakTy = Self::BreakTy> {
         self
     }
 

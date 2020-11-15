@@ -14,11 +14,11 @@ use crate::{
 use std::{marker::PhantomData, sync::Arc};
 
 /// Convenience function to visit all the items in the iterator it.
-pub fn visit_iter<'i, T, I>(
+pub fn visit_iter<'i, T, I, B>(
     it: impl Iterator<Item = T>,
-    visitor: &mut dyn Visitor<'i, I>,
+    visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
     outer_binder: DebruijnIndex,
-) -> ControlFlow<()>
+) -> ControlFlow<B>
 where
     T: Visit<I>,
     I: 'i + Interner,
@@ -30,11 +30,11 @@ where
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for &T {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -43,11 +43,11 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &T {
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -56,11 +56,11 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for &[T] {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -69,11 +69,11 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &[T] {
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for Box<T> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -82,11 +82,11 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Box<T> {
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for Arc<T> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -97,7 +97,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Arc<T> {
 macro_rules! tuple_visit {
     ($($n:ident),*) => {
         impl<$($n: Visit<I>,)* I: Interner> Visit<I> for ($($n,)*) {
-            fn visit_with<'i>(&self, visitor: &mut dyn Visitor<'i, I>, outer_binder: DebruijnIndex) -> ControlFlow<()> where I: 'i
+            fn visit_with<'i, BT>(&self, visitor: &mut dyn Visitor<'i, I, BreakTy = BT>, outer_binder: DebruijnIndex) -> ControlFlow<BT> where I: 'i
             {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
@@ -116,11 +116,11 @@ tuple_visit!(A, B, C, D);
 tuple_visit!(A, B, C, D, E);
 
 impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -132,11 +132,11 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
 }
 
 impl<I: Interner> Visit<I> for GenericArg<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -146,11 +146,11 @@ impl<I: Interner> Visit<I> for GenericArg<I> {
 }
 
 impl<I: Interner> Visit<I> for Substitution<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -160,11 +160,11 @@ impl<I: Interner> Visit<I> for Substitution<I> {
 }
 
 impl<I: Interner> Visit<I> for Goals<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -178,11 +178,11 @@ impl<I: Interner> Visit<I> for Goals<I> {
 macro_rules! const_visit {
     ($t:ty) => {
         impl<I: Interner> $crate::visit::Visit<I> for $t {
-            fn visit_with<'i>(
+            fn visit_with<'i, B>(
                 &self,
-                _visitor: &mut dyn ($crate::visit::Visitor<'i, I>),
+                _visitor: &mut dyn ($crate::visit::Visitor<'i, I, BreakTy = B>),
                 _outer_binder: DebruijnIndex,
-            ) -> ControlFlow<()>
+            ) -> ControlFlow<B>
             where
                 I: 'i,
             {
@@ -212,11 +212,11 @@ const_visit!(Safety);
 macro_rules! id_visit {
     ($t:ident) => {
         impl<I: Interner> $crate::visit::Visit<I> for $t<I> {
-            fn visit_with<'i>(
+            fn visit_with<'i, B>(
                 &self,
-                _visitor: &mut dyn ($crate::visit::Visitor<'i, I>),
+                _visitor: &mut dyn ($crate::visit::Visitor<'i, I, BreakTy = B>),
                 _outer_binder: DebruijnIndex,
-            ) -> ControlFlow<()>
+            ) -> ControlFlow<B>
             where
                 I: 'i,
             {
@@ -237,11 +237,11 @@ id_visit!(GeneratorId);
 id_visit!(ForeignDefId);
 
 impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
-    fn super_visit_with<'i>(
+    fn super_visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -252,11 +252,11 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
 }
 
 impl<I: Interner> Visit<I> for ProgramClauses<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -267,11 +267,11 @@ impl<I: Interner> Visit<I> for ProgramClauses<I> {
 }
 
 impl<I: Interner> Visit<I> for Constraints<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -282,11 +282,11 @@ impl<I: Interner> Visit<I> for Constraints<I> {
 }
 
 impl<I: Interner> Visit<I> for QuantifiedWhereClauses<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -297,11 +297,11 @@ impl<I: Interner> Visit<I> for QuantifiedWhereClauses<I> {
 }
 
 impl<I: Interner> Visit<I> for PhantomData<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        _visitor: &mut dyn Visitor<'i, I>,
+        _visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         _outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {

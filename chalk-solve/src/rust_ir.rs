@@ -142,11 +142,11 @@ pub struct FnDefDatum<I: Interner> {
 
 /// Avoids visiting `I::FnAbi`
 impl<I: Interner> Visit<I> for FnDefDatum<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I>,
+        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -489,11 +489,11 @@ pub struct AssociatedTyDatum<I: Interner> {
 
 // Manual implementation to avoid I::Identifier type.
 impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I>,
+        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {

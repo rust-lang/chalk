@@ -39,7 +39,9 @@ impl<'infer, 'i, I: Interner> TySizeVisitor<'infer, 'i, I> {
 }
 
 impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I> {
+    type BreakTy = ();
+
+    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
         self
     }
 

@@ -7,11 +7,11 @@ use crate::interner::HasInterner;
 use crate::{Binders, Canonical, ControlFlow, DebruijnIndex, FnPointer, Interner, Visit, Visitor};
 
 impl<I: Interner> Visit<I> for FnPointer<I> {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -24,11 +24,11 @@ impl<T, I: Interner> Visit<I> for Binders<T>
 where
     T: HasInterner + Visit<I>,
 {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {
@@ -41,11 +41,11 @@ where
     I: Interner,
     T: HasInterner<Interner = I> + Visit<I>,
 {
-    fn visit_with<'i>(
+    fn visit_with<'i, B>(
         &self,
-        visitor: &mut dyn Visitor<'i, I>,
+        visitor: &mut dyn Visitor<'i, I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<()>
+    ) -> ControlFlow<B>
     where
         I: 'i,
     {

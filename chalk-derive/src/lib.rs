@@ -175,11 +175,11 @@ fn derive_any_visit(
     s.bound_impl(
         quote!(::chalk_ir::visit:: #trait_name <#interner>),
         quote! {
-            fn #method_name <'i>(
+            fn #method_name <'i, B>(
                 &self,
-                visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner >,
+                visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner, BreakTy = B >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> ::chalk_ir::visit::ControlFlow<()>
+            ) -> ::chalk_ir::visit::ControlFlow<B>
             where
                 #interner: 'i
             {
