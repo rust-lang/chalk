@@ -7,10 +7,10 @@ actually implement this? That's where the [`SearchGraph`] comes into play.
 [cycles]: ./inductive_cycles.md
 [coinduction]: ./coinduction.md
 [stack]: ./stack.md
-[`SearchGraph`]: http://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.SearchGraph.html
-[`DepthFirstNumber`]: http://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.DepthFirstNumber.html
-[`Node`]: http://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.Node.html
-[`stack_depth`]: http://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.Node.html#structfield.stack_depth
+[`SearchGraph`]: https://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.SearchGraph.html
+[`DepthFirstNumber`]: https://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.DepthFirstNumber.html
+[`Node`]: https://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.Node.html
+[`stack_depth`]: https://rust-lang.github.io/chalk/chalk_recursive/search_graph/struct.Node.html#structfield.stack_depth
 
 The role of the [`SearchGraph`] is to store information about each goal that we
 are currently solving. Typically, these are goals on the stack -- but other
@@ -183,7 +183,7 @@ recursively invoking some goal G2 that is in the search graph but *not* present
 on the stack, then we update the current [`Minimums`] with the values stored in
 the search graph.
 
-[`Minimums`]: http://rust-lang.github.io/chalk/chalk_recursive/struct.Minimums.html
+[`Minimums`]: https://rust-lang.github.io/chalk/chalk_recursive/struct.Minimums.html
 
 ## Removing nodes from the graph
 

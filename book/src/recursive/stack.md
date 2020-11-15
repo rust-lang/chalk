@@ -5,13 +5,13 @@ what it sounds like: a stack that stores each thing that the recursive solver is
 solving. Initially, it contains only one item, the root goal that was given by
 the user.
 
-[`Stack`]: http://rust-lang.github.io/chalk/chalk_recursive/stack/struct.Stack.html
+[`Stack`]: https://rust-lang.github.io/chalk/chalk_recursive/stack/struct.Stack.html
 
 Each frame on the stack has an associated [`StackDepth`], which is basically an
 index that increases (so 0 is the top of the stack, 1 is the next thing pushed,
 etc).
 
-[`StackDepth`]: http://rust-lang.github.io/chalk/chalk_recursive/stack/struct.StackDepth.html
+[`StackDepth`]: https://rust-lang.github.io/chalk/chalk_recursive/stack/struct.StackDepth.html
 
 ## How the recursive solver works at the highest level
 
@@ -74,4 +74,4 @@ detect a cycle by checking in the [search graph] to see whether G has an associa
 to learn more about that).
 
 [search graph]: ./search_graph.md
-[`cycle`]: http://rust-lang.github.io/chalk/chalk_recursive/stack/struct.StackEntry.html#structfield.cycle
+[`cycle`]: https://rust-lang.github.io/chalk/chalk_recursive/stack/struct.StackEntry.html#structfield.cycle

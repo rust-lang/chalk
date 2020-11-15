@@ -182,4 +182,4 @@ rule for generic functions like `foo` in our logic.
 This page is a lightly adapted version of a
 [blog post by Nicholas Matsakis][lrtl].
 
-[lrtl]: http://smallcultfollowing.com/babysteps/blog/2017/01/26/lowering-rust-traits-to-logic/
+[lrtl]: https://smallcultfollowing.com/babysteps/blog/2017/01/26/lowering-rust-traits-to-logic/
