@@ -724,34 +724,38 @@ fn push_alias_implemented_clause<I: Interner>(
         TyKind::Alias(alias.clone())
     );
 
-    let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
+    // TODO: instead generate clauses without reference to the specific type parameters of the goal?
+    let generalized = generalize::Generalize::apply(interner, &(trait_ref, alias));
+    builder.push_binders(&generalized, |builder, (trait_ref, alias)| {
+        let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
 
-    // forall<..., T> {
-    //      <X as Y>::Z: Trait :- T: Trait, <X as Y>::Z == T
-    // }
-    builder.push_binders(&binders, |builder, bound_var| {
-        let fresh_self_subst = Substitution::from_iter(
-            interner,
-            std::iter::once(bound_var.clone().cast(interner)).chain(
-                trait_ref.substitution.as_slice(interner)[1..]
-                    .iter()
-                    .cloned(),
-            ),
-        );
-        let fresh_self_trait_ref = TraitRef {
-            trait_id: trait_ref.trait_id,
-            substitution: fresh_self_subst,
-        };
-        builder.push_clause(
-            DomainGoal::Holds(WhereClause::Implemented(trait_ref.clone())),
-            &[
-                DomainGoal::Holds(WhereClause::Implemented(fresh_self_trait_ref)),
-                DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                    alias: alias.clone(),
-                    ty: bound_var,
-                })),
-            ],
-        );
+        // forall<..., T> {
+        //      <X as Y>::Z: Trait :- T: Trait, <X as Y>::Z == T
+        // }
+        builder.push_binders(&binders, |builder, bound_var| {
+            let fresh_self_subst = Substitution::from_iter(
+                interner,
+                std::iter::once(bound_var.clone().cast(interner)).chain(
+                    trait_ref.substitution.as_slice(interner)[1..]
+                        .iter()
+                        .cloned(),
+                ),
+            );
+            let fresh_self_trait_ref = TraitRef {
+                trait_id: trait_ref.trait_id,
+                substitution: fresh_self_subst,
+            };
+            builder.push_clause(
+                DomainGoal::Holds(WhereClause::Implemented(trait_ref.clone())),
+                &[
+                    DomainGoal::Holds(WhereClause::Implemented(fresh_self_trait_ref)),
+                    DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                        alias: alias.clone(),
+                        ty: bound_var,
+                    })),
+                ],
+            );
+        });
     });
 }
 
@@ -767,40 +771,44 @@ fn push_alias_alias_eq_clause<I: Interner>(
         TyKind::Alias(alias.clone())
     );
 
-    let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
+    // TODO: instead generate clauses without reference to the specific type parameters of the goal?
+    let generalized = generalize::Generalize::apply(interner, &(projection_ty, ty, alias));
+    builder.push_binders(&generalized, |builder, (projection_ty, ty, alias)| {
+        let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
 
-    // forall<..., T> {
-    //      <<X as Y>::A as Z>::B == U :- <T as Z>::B == U, <X as Y>::A == T
-    // }
-    builder.push_binders(&binders, |builder, bound_var| {
-        let fresh_self_subst = Substitution::from_iter(
-            interner,
-            std::iter::once(bound_var.clone().cast(interner)).chain(
-                projection_ty.substitution.as_slice(interner)[1..]
-                    .iter()
-                    .cloned(),
-            ),
-        );
-        let fresh_alias = AliasTy::Projection(ProjectionTy {
-            associated_ty_id: projection_ty.associated_ty_id,
-            substitution: fresh_self_subst,
-        });
-        builder.push_clause(
-            DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                alias: AliasTy::Projection(projection_ty.clone()),
-                ty: ty.clone(),
-            })),
-            &[
+        // forall<..., T> {
+        //      <<X as Y>::A as Z>::B == U :- <T as Z>::B == U, <X as Y>::A == T
+        // }
+        builder.push_binders(&binders, |builder, bound_var| {
+            let fresh_self_subst = Substitution::from_iter(
+                interner,
+                std::iter::once(bound_var.clone().cast(interner)).chain(
+                    projection_ty.substitution.as_slice(interner)[1..]
+                        .iter()
+                        .cloned(),
+                ),
+            );
+            let fresh_alias = AliasTy::Projection(ProjectionTy {
+                associated_ty_id: projection_ty.associated_ty_id,
+                substitution: fresh_self_subst,
+            });
+            builder.push_clause(
                 DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                    alias: fresh_alias,
+                    alias: AliasTy::Projection(projection_ty.clone()),
                     ty: ty.clone(),
                 })),
-                DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                    alias: alias.clone(),
-                    ty: bound_var,
-                })),
-            ],
-        );
+                &[
+                    DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                        alias: fresh_alias,
+                        ty: ty.clone(),
+                    })),
+                    DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                        alias: alias.clone(),
+                        ty: bound_var,
+                    })),
+                ],
+            );
+        });
     });
 }
 

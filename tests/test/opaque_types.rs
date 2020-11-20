@@ -173,6 +173,27 @@ fn opaque_generics() {
 }
 
 #[test]
+fn opaque_trait_generic() {
+    test! {
+        program {
+            trait Trait<T> {}
+            struct Foo {}
+            impl Trait<u32> for Foo {}
+
+            opaque type Bar: Trait<u32> = Foo;
+        }
+
+        goal {
+            exists<T> {
+                Bar: Trait<T>
+            }
+        } yields {
+            "Unique; substitution [?0 := Uint(U32)]"
+        }
+    }
+}
+
+#[test]
 fn opaque_auto_traits() {
     test! {
         program {
