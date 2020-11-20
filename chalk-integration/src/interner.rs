@@ -2,9 +2,9 @@ use crate::tls;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     AdtId, AliasTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData, Constraint,
-    FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, SeparatorTraitRef, Substitution, TraitId,
-    Ty, TyData, VariableKind, VariableKinds,
+    Constraints, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
+    SeparatorTraitRef, Substitution, TraitId, Ty, TyData, VariableKind, VariableKinds, Variances,
 };
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
@@ -204,6 +204,20 @@ impl Interner for ChalkIr {
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| Some(prog?.debug_quantified_where_clauses(clauses, fmt)))
+    }
+
+    fn debug_constraints(
+        constraints: &Constraints<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_constraints(constraints, fmt)))
+    }
+
+    fn debug_variances(
+        variances: &Variances<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        tls::with_current_program(|prog| Some(prog?.debug_variances(variances, fmt)))
     }
 
     fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
