@@ -977,3 +977,9 @@ impl<I: Interner> Debug for Substitution<I> {
         Display::fmt(self, fmt)
     }
 }
+
+impl<I: Interner> Debug for Variances<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_variances(self, fmt).unwrap_or_else(|| write!(fmt, "{:?}", self.interned))
+    }
+}

@@ -1,8 +1,9 @@
 use crate::interner::ChalkIr;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, FnDefId, GenericArg,
-    Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication,
-    ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution, TraitId, Ty, VariableKinds,
+    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, Constraints, FnDefId,
+    GenericArg, Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
+    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution,
+    TraitId, Ty, VariableKinds, Variances,
 };
 use std::cell::RefCell;
 use std::fmt;
@@ -138,6 +139,18 @@ pub trait DebugContext {
     fn debug_quantified_where_clauses(
         &self,
         clauses: &QuantifiedWhereClauses<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_constraints(
+        &self,
+        constraints: &Constraints<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_variances(
+        &self,
+        variances: &Variances<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 }

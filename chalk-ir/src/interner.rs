@@ -35,6 +35,7 @@ use crate::TyData;
 use crate::VariableKind;
 use crate::VariableKinds;
 use crate::Variance;
+use crate::Variances;
 use crate::{Const, ConstData};
 use std::fmt::{self, Debug};
 use std::hash::Hash;
@@ -451,6 +452,16 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     #[allow(unused_variables)]
     fn debug_constraints(
         clauses: &Constraints<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of a Variances.
+    /// Returns `None` to fallback to the default debug output.
+    #[allow(unused_variables)]
+    fn debug_variances(
+        variances: &Variances<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None

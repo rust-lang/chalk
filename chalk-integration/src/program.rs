@@ -346,6 +346,24 @@ impl tls::DebugContext for Program {
         let interner = self.interner();
         write!(fmt, "{:?}", clauses.as_slice(interner))
     }
+
+    fn debug_constraints(
+        &self,
+        constraints: &chalk_ir::Constraints<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", constraints.as_slice(interner))
+    }
+
+    fn debug_variances(
+        &self,
+        variances: &chalk_ir::Variances<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        let interner = self.interner();
+        write!(fmt, "{:?}", variances.as_slice(interner))
+    }
 }
 
 impl UnificationDatabase<ChalkIr> for Program {
