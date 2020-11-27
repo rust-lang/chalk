@@ -1071,9 +1071,23 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
     /// Pushes a goal of `a` being a subtype of `b`.
     fn push_subtype_goal(&mut self, a: Ty<I>, b: Ty<I>) {
-        let subtype_goal = GoalData::SubtypeGoal(SubtypeGoal { a, b }).intern(self.interner());
-        self.goals
-            .push(InEnvironment::new(self.environment, subtype_goal));
+        let inverse = self.goals.iter().position(|g| {
+            if g.environment != *self.environment {
+                return false;
+            }
+            match g.goal.data(self.interner()) {
+                GoalData::SubtypeGoal(SubtypeGoal { a: a1, b: b1 }) => a == *b1 && b == *a1,
+                _ => false,
+            }
+        });
+        if let Some(inverse) = inverse {
+            self.goals.remove(inverse);
+            self.relate_ty_ty(Variance::Invariant, &a, &b).unwrap();
+        } else {
+            let subtype_goal = GoalData::SubtypeGoal(SubtypeGoal { a, b }).intern(self.interner());
+            self.goals
+                .push(InEnvironment::new(self.environment, subtype_goal));
+        }
     }
 }
 
