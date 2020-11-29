@@ -1575,9 +1575,14 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
     /// would be true, since `Send` is an auto trait, which yields a
     /// coinductive goal. But `top_of_stack_is_coinductive_from(0)` is
     /// false, since `XXX` is not an auto trait.
+    #[instrument(level = "debug", skip(self))]
     pub(super) fn top_of_stack_is_coinductive_from(&self, depth: StackIndex) -> bool {
         StackIndex::iterate_range(self.stack.top_of_stack_from(depth)).all(|d| {
             let table = self.stack[d].table;
+            debug!(
+                "d = {:?}, table = {:?}",
+                d, self.forest.tables[table].table_goal
+            );
             self.forest.tables[table].coinductive_goal
         })
     }
