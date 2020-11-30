@@ -764,14 +764,18 @@ fn empty_definite_guidance() {
 fn ambiguous_unification_in_fn() {
     test! {
         program {
-            trait FnOnce<Args> {}
+            trait FnOnce<Args> {
+                type Output;
+            }
 
             struct MyClosure<T> {}
-            impl<T> FnOnce<T> for MyClosure<fn(T) -> ()> {}
+            impl<T> FnOnce<(T,)> for MyClosure<fn(T) -> ()> {
+                type Output = ();
+            }
         }
         goal {
-            exists<T, U> {
-                MyClosure<fn(U) -> ()>: FnOnce<T>
+            exists<int T, U> {
+                MyClosure<fn(&'static U) -> ()>: FnOnce<(&'static T,)>
             }
         } yields {
             "Unique"
