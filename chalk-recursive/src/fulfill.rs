@@ -12,9 +12,9 @@ use chalk_ir::{
     UnificationDatabase, UniverseMap, Variance,
 };
 use chalk_solve::debug_span;
-use chalk_solve::{Guidance, Solution};
 use chalk_solve::infer::{InferenceTable, ParameterEnaVariableExt};
 use chalk_solve::solve::truncate;
+use chalk_solve::{Guidance, Solution};
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
 use tracing::{debug, instrument};
@@ -547,7 +547,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        let canonical_subst = canonicalize(&mut self.infer, self.solver.interner(), self.subst.clone());
+        let canonical_subst =
+            canonicalize(&mut self.infer, self.solver.interner(), self.subst.clone());
 
         if canonical_subst
             .0

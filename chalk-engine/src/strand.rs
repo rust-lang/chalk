@@ -1,10 +1,11 @@
-use crate::slg::TruncatingInferenceTable;
 use crate::table::AnswerIndex;
 use crate::{ExClause, TableIndex, TimeStamp};
 use std::fmt::{Debug, Error, Formatter};
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, UniverseMap};
+
+use chalk_solve::infer::InferenceTable;
 
 #[derive(Debug)]
 pub(crate) struct CanonicalStrand<I: Interner> {
@@ -17,7 +18,7 @@ pub(crate) struct CanonicalStrand<I: Interner> {
 }
 
 pub(crate) struct Strand<I: Interner> {
-    pub(super) infer: TruncatingInferenceTable<I>,
+    pub(super) infer: InferenceTable<I>,
 
     pub(super) ex_clause: ExClause<I>,
 

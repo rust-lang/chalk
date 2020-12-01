@@ -1,7 +1,6 @@
 use crate::forest::Forest;
-use crate::slg::{
-    ResolventOps, SlgContext, SlgContextOps, TruncateOps, TruncatingInferenceTable, UnificationOps,
-};
+use crate::normalize_deep::DeepNormalizer;
+use crate::slg::{ResolventOps, SlgContext, SlgContextOps};
 use crate::stack::{Stack, StackIndex};
 use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{AnswerIndex, Table};
@@ -12,11 +11,14 @@ use crate::{
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    AnswerSubst, Canonical, ConstrainedSubst, FallibleOrFloundered, Floundered, Goal, GoalData,
-    InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
+    AnswerSubst, Canonical, ConstrainedSubst, Constraints, FallibleOrFloundered, Floundered, Goal,
+    GoalData, InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
 };
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::coinductive_goal::IsCoinductive;
+use chalk_solve::infer::ucanonicalize::UCanonicalized;
+use chalk_solve::infer::InferenceTable;
+use chalk_solve::solve::truncate;
 use tracing::{debug, debug_span, info, instrument};
 
 type RootSearchResult<T> = Result<T, RootSearchFail>;
@@ -157,13 +159,14 @@ impl<I: Interner> Forest<I> {
 
     fn canonicalize_strand_from(
         context: &SlgContextOps<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        infer: &mut InferenceTable<I>,
         ex_clause: ExClause<I>,
         selected_subgoal: Option<SelectedSubgoal>,
         last_pursued_time: TimeStamp,
     ) -> CanonicalStrand<I> {
-        let canonical_ex_clause =
-            infer.canonicalize_ex_clause(context.program().interner(), ex_clause);
+        let canonical_ex_clause = infer
+            .canonicalize(context.program().interner(), ex_clause)
+            .quantified;
         CanonicalStrand {
             canonical_ex_clause,
             selected_subgoal,
@@ -188,7 +191,7 @@ impl<I: Interner> Forest<I> {
     fn get_or_create_table_for_subgoal(
         &mut self,
         context: &SlgContextOps<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        infer: &mut InferenceTable<I>,
         subgoal: &Literal<I>,
     ) -> Option<(TableIndex, UniverseMap)> {
         // Subgoal abstraction:
@@ -276,7 +279,6 @@ impl<I: Interner> Forest<I> {
                         canon_domain_goal.universes,
                         canon_domain_goal.canonical,
                     );
-                let infer = TruncatingInferenceTable::new(context.max_size(), infer);
 
                 match clauses {
                     Ok(clauses) => {
@@ -315,13 +317,12 @@ impl<I: Interner> Forest<I> {
             }
 
             _ => {
-                let (infer, subst, InEnvironment { environment, goal }) =
+                let (mut infer, subst, InEnvironment { environment, goal }) =
                     chalk_solve::infer::InferenceTable::from_canonical(
                         context.program().interner(),
                         goal.universes,
                         goal.canonical,
                     );
-                let mut infer = TruncatingInferenceTable::new(context.max_size(), infer);
                 // The goal for this table is not a domain goal, so we instead
                 // simplify it into a series of *literals*, all of which must be
                 // true. Thus, in EWFS terms, we are effectively creating a
@@ -332,7 +333,11 @@ impl<I: Interner> Forest<I> {
                 match Self::simplify_goal(context, &mut infer, subst, environment, goal) {
                     FallibleOrFloundered::Ok(ex_clause) => {
                         info!(
-                            ex_clause = ?infer.debug_ex_clause(context.program().interner(), &ex_clause),
+                            ex_clause = ?DeepNormalizer::normalize_deep(
+                                &mut infer,
+                                context.program().interner(),
+                                ex_clause.clone(),
+                            ),
                             "pushing initial strand"
                         );
                         let strand = Strand {
@@ -361,13 +366,25 @@ impl<I: Interner> Forest<I> {
     /// `None`, which causes the subgoal to flounder.
     fn abstract_positive_literal(
         context: &SlgContextOps<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        infer: &mut InferenceTable<I>,
         subgoal: InEnvironment<Goal<I>>,
     ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, UniverseMap)> {
-        if infer.goal_needs_truncation(context.program().interner(), &subgoal) {
+        if truncate::needs_truncation(
+            context.program().interner(),
+            infer,
+            context.max_size(),
+            &subgoal,
+        ) {
             None
         } else {
-            Some(infer.fully_canonicalize_goal(context.program().interner(), subgoal))
+            let canonicalized_goal = infer
+                .canonicalize(context.program().interner(), subgoal)
+                .quantified;
+            let UCanonicalized {
+                quantified,
+                universes,
+            } = infer.u_canonicalize(context.program().interner(), &canonicalized_goal);
+            Some((quantified, universes))
         }
     }
 
@@ -380,7 +397,7 @@ impl<I: Interner> Forest<I> {
     /// said to "flounder").
     fn abstract_negative_literal(
         context: &SlgContextOps<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        infer: &mut InferenceTable<I>,
         subgoal: InEnvironment<Goal<I>>,
     ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, UniverseMap)> {
         // First, we have to check that the selected negative literal
@@ -420,12 +437,24 @@ impl<I: Interner> Forest<I> {
         // could instead generate an (imprecise) result). As you can
         // see a bit later, we also diverge in some other aspects that
         // affect completeness when it comes to subgoal abstraction.
-        let inverted_subgoal = infer.invert_goal(context.program().interner(), subgoal)?;
+        let inverted_subgoal = infer.invert(context.program().interner(), subgoal)?;
 
-        if infer.goal_needs_truncation(context.program().interner(), &inverted_subgoal) {
+        if truncate::needs_truncation(
+            context.program().interner(),
+            infer,
+            context.max_size(),
+            &inverted_subgoal,
+        ) {
             None
         } else {
-            Some(infer.fully_canonicalize_goal(context.program().interner(), inverted_subgoal))
+            let canonicalized_goal = infer
+                .canonicalize(context.program().interner(), inverted_subgoal)
+                .quantified;
+            let UCanonicalized {
+                quantified,
+                universes,
+            } = infer.u_canonicalize(context.program().interner(), &canonicalized_goal);
+            Some((quantified, universes))
         }
     }
 }
@@ -529,7 +558,6 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                                 num_universes,
                                 canonical_ex_clause,
                             );
-                        let infer = TruncatingInferenceTable::new(context.max_size(), infer);
                         Strand {
                             infer,
                             ex_clause,
@@ -1092,7 +1120,6 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             num_universes,
             answer.subst.clone(),
         );
-        let table = TruncatingInferenceTable::new(self.context.max_size(), infer);
 
         let delayed_subgoals = delayed_subgoals
             .into_iter()
@@ -1100,7 +1127,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             .collect();
 
         let strand = Strand {
-            infer: table,
+            infer,
             ex_clause: ExClause {
                 subst,
                 ambiguous: answer.ambiguous,
@@ -1415,7 +1442,12 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         // Ultimately, the current decision to flounder the entire table mostly boils
         // down to "it works as we expect for the current tests". And, we likely don't
         // even *need* the added complexity just for potentially more answers.
-        if infer.answer_needs_truncation(self.context.program().interner(), &subst) {
+        if truncate::needs_truncation(
+            self.context.program().interner(),
+            &mut infer,
+            self.context.max_size(),
+            &subst,
+        ) {
             self.forest.tables[table].mark_floundered();
             return None;
         }
@@ -1426,20 +1458,29 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         let filtered_delayed_subgoals = delayed_subgoals
             .into_iter()
             .filter(|delayed_subgoal| {
-                let (canonicalized, _) = infer.fully_canonicalize_goal(
-                    self.context.program().interner(),
-                    delayed_subgoal.clone(),
-                );
+                let canonicalized_goal = infer
+                    .canonicalize(self.context.program().interner(), delayed_subgoal.clone())
+                    .quantified;
+                let canonicalized = infer
+                    .u_canonicalize(self.context.program().interner(), &canonicalized_goal)
+                    .quantified;
                 *table_goal != canonicalized
             })
             .collect();
 
-        let subst = infer.canonicalize_answer_subst(
-            self.context.program().interner(),
-            subst,
-            constraints,
-            filtered_delayed_subgoals,
-        );
+        let subst = infer
+            .canonicalize(
+                self.context.program().interner(),
+                AnswerSubst {
+                    subst,
+                    constraints: Constraints::from_iter(
+                        self.context.program().interner(),
+                        constraints,
+                    ),
+                    delayed_subgoals: filtered_delayed_subgoals,
+                },
+            )
+            .quantified;
         debug!(?table, ?subst, ?floundered, "found answer");
 
         let answer = Answer { subst, ambiguous };

@@ -1,6 +1,7 @@
 use crate::normalize_deep::DeepNormalizer;
-use crate::slg::{self, ResolventOps, TruncatingInferenceTable};
+use crate::slg::ResolventOps;
 use crate::{ExClause, Literal, TimeStamp};
+use chalk_ir::cast::Caster;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -45,7 +46,7 @@ use tracing::{debug, instrument};
 //
 // is the SLG resolvent of G with C.
 
-impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
+impl<I: Interner> ResolventOps<I> for InferenceTable<I> {
     /// Applies the SLG resolvent algorithm to incorporate a program
     /// clause into the main X-clause, producing a new X-clause that
     /// must be solved.
@@ -81,13 +82,12 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
         } = {
             let ProgramClauseData(implication) = clause.data(interner);
 
-            self.infer
-                .instantiate_binders_existentially(interner, implication.clone())
+            self.instantiate_binders_existentially(interner, implication.clone())
         };
         debug!(?consequence, ?conditions, ?constraints);
 
         // Unify the selected literal Li with C'.
-        let unification_result = self.infer.relate(
+        let unification_result = self.relate(
             interner,
             db,
             environment,
@@ -108,7 +108,13 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
         };
 
         // Add the subgoals/region-constraints that unification gave us.
-        slg::into_ex_clause(interner, unification_result, &mut ex_clause);
+        ex_clause.subgoals.extend(
+            unification_result
+                .goals
+                .into_iter()
+                .casted(interner)
+                .map(Literal::Positive),
+        );
 
         ex_clause
             .constraints
@@ -215,7 +221,7 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
         canonical_answer_subst: Canonical<AnswerSubst<I>>,
     ) -> Fallible<()> {
-        debug!(selected_goal = ?DeepNormalizer::normalize_deep(&mut self.infer, interner, selected_goal.clone()));
+        debug!(selected_goal = ?DeepNormalizer::normalize_deep(self, interner, selected_goal.clone()));
 
         // C' is now `answer`. No variables in common with G.
         let AnswerSubst {
@@ -229,14 +235,12 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
             constraints: answer_constraints,
 
             delayed_subgoals,
-        } = self
-            .infer
-            .instantiate_canonical(interner, canonical_answer_subst);
+        } = self.instantiate_canonical(interner, canonical_answer_subst);
 
         AnswerSubstitutor::substitute(
             interner,
             unification_database,
-            &mut self.infer,
+            self,
             &selected_goal.environment,
             &answer_subst,
             ex_clause,
@@ -322,17 +326,21 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
             .shifted_out_to(interner, self.outer_binder)
             .expect("truncate extracted a pending value that references internal binder");
 
-        slg::into_ex_clause(
+        let result = self.table.relate(
             interner,
-            self.table.relate(
-                interner,
-                db,
-                &self.environment,
-                variance,
-                answer_param,
-                &GenericArg::new(interner, pending_shifted),
-            )?,
-            self.ex_clause,
+            db,
+            &self.environment,
+            variance,
+            answer_param,
+            &GenericArg::new(interner, pending_shifted),
+        )?;
+
+        self.ex_clause.subgoals.extend(
+            result
+                .goals
+                .into_iter()
+                .casted(interner)
+                .map(Literal::Positive),
         );
 
         Ok(true)
