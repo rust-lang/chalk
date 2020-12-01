@@ -92,7 +92,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
             }
         };
         let canonical = infer.canonicalize(interner, peeled_goal).quantified;
-        infer.u_canonicalize(interner, &canonical).quantified
+        InferenceTable::u_canonicalize(interner, &canonical).quantified
     }
 
     /// Given a goal with no free variables (a "closed" goal), creates
@@ -108,6 +108,6 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(interner), self);
         let canonical_goal = infer.canonicalize(interner, env_goal).quantified;
-        infer.u_canonicalize(interner, &canonical_goal).quantified
+        InferenceTable::u_canonicalize(interner, &canonical_goal).quantified
     }
 }

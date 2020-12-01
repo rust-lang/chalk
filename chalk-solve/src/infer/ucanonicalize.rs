@@ -7,11 +7,7 @@ use chalk_ir::*;
 use super::InferenceTable;
 
 impl<I: Interner> InferenceTable<I> {
-    pub fn u_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value0: &Canonical<T>,
-    ) -> UCanonicalized<T::Result>
+    pub fn u_canonicalize<T>(interner: &I, value0: &Canonical<T>) -> UCanonicalized<T::Result>
     where
         T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
         T::Result: HasInterner<Interner = I>,

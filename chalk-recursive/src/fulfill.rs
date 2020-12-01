@@ -81,7 +81,7 @@ where
 }
 
 fn u_canonicalize<I: Interner, T>(
-    infer: &mut InferenceTable<I>,
+    _infer: &mut InferenceTable<I>,
     interner: &I,
     value0: &Canonical<T>,
 ) -> (UCanonical<T::Result>, UniverseMap)
@@ -89,7 +89,7 @@ where
     T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
     T::Result: HasInterner<Interner = I>,
 {
-    let res = infer.u_canonicalize(interner, value0);
+    let res = InferenceTable::u_canonicalize(interner, value0);
     (res.quantified, res.universes)
 }
 
