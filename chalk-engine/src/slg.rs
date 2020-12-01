@@ -213,7 +213,7 @@ pub trait UnificationOps<I: Interner> {
         a: &Ty<I>,
         b: &Ty<I>,
         ex_clause: &mut ExClause<I>,
-    ) -> Fallible<()>;
+    ) -> FallibleOrFloundered<()>;
 }
 
 #[derive(Clone)]
@@ -349,11 +349,27 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
         a: &Ty<I>,
         b: &Ty<I>,
         ex_clause: &mut ExClause<I>,
-    ) -> Fallible<()> {
-        let result = self
-            .infer
-            .relate(interner, db, environment, variance, a, b)?;
-        Ok(into_ex_clause(interner, result, ex_clause))
+    ) -> FallibleOrFloundered<()> {
+        let a_norm = self.infer.normalize_ty_shallow(interner, a);
+        let a = a_norm.as_ref().unwrap_or(a);
+        let b_norm = self.infer.normalize_ty_shallow(interner, b);
+        let b = b_norm.as_ref().unwrap_or(b);
+
+        if matches!(
+            a.kind(interner),
+            TyKind::InferenceVar(_, TyVariableKind::General)
+        ) && matches!(
+            b.kind(interner),
+            TyKind::InferenceVar(_, TyVariableKind::General)
+        ) {
+            return FallibleOrFloundered::Floundered;
+        }
+        let result = match self.infer.relate(interner, db, environment, variance, a, b) {
+            Ok(r) => r,
+            Err(_) => return FallibleOrFloundered::Floundered,
+        };
+        into_ex_clause(interner, result, ex_clause);
+        FallibleOrFloundered::Ok(())
     }
 }
 

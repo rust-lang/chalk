@@ -8,8 +8,8 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, SubtypeGoal, UCanonical, UnificationDatabase, UniverseMap,
-    Variance,
+    QuantifierKind, Substitution, SubtypeGoal, Ty, TyKind, TyVariableKind, UCanonical,
+    UnificationDatabase, UniverseMap, Variance,
 };
 use chalk_solve::debug_span;
 use rustc_hash::FxHashSet;
@@ -119,6 +119,8 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
         T: Fold<I, Result = T> + HasInterner<Interner = I>;
 
     fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool;
+
+    fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>>;
 }
 
 /// A `Fulfill` is where we actually break down complex goals, instantiate
@@ -298,7 +300,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         environment: &Environment<I>,
         goal: Goal<I>,
     ) -> Fallible<()> {
-        let interner = self.interner();
+        let interner = self.solver.interner();
         match goal.data(interner) {
             GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                 let subgoal = self
@@ -334,9 +336,18 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                 self.unify(&environment, Variance::Invariant, &a, &b)?;
             }
             GoalData::SubtypeGoal(SubtypeGoal { a, b }) => {
-                if a.inference_var(self.interner()).is_some()
-                    && b.inference_var(self.interner()).is_some()
-                {
+                let a_norm = self.infer.normalize_ty_shallow(interner, a);
+                let a = a_norm.as_ref().unwrap_or(a);
+                let b_norm = self.infer.normalize_ty_shallow(interner, b);
+                let b = b_norm.as_ref().unwrap_or(b);
+
+                if matches!(
+                    a.kind(interner),
+                    TyKind::InferenceVar(_, TyVariableKind::General)
+                ) && matches!(
+                    b.kind(interner),
+                    TyKind::InferenceVar(_, TyVariableKind::General)
+                ) {
                     self.cannot_prove = true;
                 } else {
                     self.unify(&environment, Variance::Covariant, &a, &b)?;
