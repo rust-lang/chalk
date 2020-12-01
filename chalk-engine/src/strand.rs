@@ -1,16 +1,14 @@
 use crate::table::AnswerIndex;
 use crate::{ExClause, TableIndex, TimeStamp};
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 
 use chalk_derive::HasInterner;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, DebruijnIndex, Fallible, UniverseMap};
 
-use chalk_solve::infer::InferenceTable;
-
 #[derive(Clone, Debug, HasInterner)]
-pub(crate) struct InnerStrand<I: Interner> {
+pub(crate) struct Strand<I: Interner> {
     pub(super) ex_clause: ExClause<I>,
 
     /// Index into `ex_clause.subgoals`.
@@ -19,13 +17,7 @@ pub(crate) struct InnerStrand<I: Interner> {
     pub(crate) last_pursued_time: TimeStamp,
 }
 
-pub(crate) type CanonicalStrand<I> = Canonical<InnerStrand<I>>;
-
-#[derive(HasInterner)]
-pub(crate) struct InferringStrand<I: Interner> {
-    pub(crate) strand: InnerStrand<I>,
-    pub(crate) infer: InferenceTable<I>,
-}
+pub(crate) type CanonicalStrand<I> = Canonical<Strand<I>>;
 
 #[derive(Clone, Debug)]
 pub(crate) struct SelectedSubgoal {
@@ -43,16 +35,8 @@ pub(crate) struct SelectedSubgoal {
     pub(crate) universe_map: UniverseMap,
 }
 
-impl<I: Interner> Debug for InferringStrand<I> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("InferringStrand")
-            .field("strand", &self.strand)
-            .finish()
-    }
-}
-
-impl<I: Interner> Fold<I> for InnerStrand<I> {
-    type Result = InnerStrand<I>;
+impl<I: Interner> Fold<I> for Strand<I> {
+    type Result = Strand<I>;
     fn fold_with<'i>(
         self,
         folder: &mut dyn Folder<'i, I>,
@@ -61,7 +45,7 @@ impl<I: Interner> Fold<I> for InnerStrand<I> {
     where
         I: 'i,
     {
-        Ok(InnerStrand {
+        Ok(Strand {
             ex_clause: self.ex_clause.fold_with(folder, outer_binder)?,
             last_pursued_time: self.last_pursued_time,
             selected_subgoal: self.selected_subgoal.clone(),

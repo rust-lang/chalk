@@ -2,7 +2,7 @@ use crate::forest::Forest;
 use crate::normalize_deep::DeepNormalizer;
 use crate::slg::{ResolventOps, SlgContext, SlgContextOps};
 use crate::stack::{Stack, StackIndex};
-use crate::strand::{CanonicalStrand, InferringStrand, InnerStrand, SelectedSubgoal};
+use crate::strand::{CanonicalStrand, SelectedSubgoal, Strand};
 use crate::table::{AnswerIndex, Table};
 use crate::{
     Answer, AnswerMode, CompleteAnswer, ExClause, FlounderedSubgoal, Literal, Minimums, TableIndex,
@@ -141,17 +141,10 @@ impl<I: Interner> Forest<I> {
         self.tables[table].answer(answer).unwrap()
     }
 
-    fn canonicalize_strand(
-        context: &SlgContextOps<I>,
-        mut strand: InferringStrand<I>,
-    ) -> CanonicalStrand<I> {
-        Forest::canonicalize_strand_from(context, &mut strand.infer, &strand.strand)
-    }
-
     fn canonicalize_strand_from(
         context: &SlgContextOps<I>,
         infer: &mut InferenceTable<I>,
-        strand: &InnerStrand<I>,
+        strand: &Strand<I>,
     ) -> CanonicalStrand<I> {
         infer
             .canonicalize(context.program().interner(), strand.clone())
@@ -278,15 +271,13 @@ impl<I: Interner> Forest<I> {
                                 &clause,
                             ) {
                                 info!("pushing initial strand with ex-clause: {:#?}", &resolvent,);
-                                let strand = InferringStrand {
-                                    infer,
-                                    strand: InnerStrand {
-                                        ex_clause: resolvent,
-                                        selected_subgoal: None,
-                                        last_pursued_time: TimeStamp::default(),
-                                    },
+                                let strand = Strand {
+                                    ex_clause: resolvent,
+                                    selected_subgoal: None,
+                                    last_pursued_time: TimeStamp::default(),
                                 };
-                                let canonical_strand = Self::canonicalize_strand(context, strand);
+                                let canonical_strand =
+                                    Self::canonicalize_strand_from(context, &mut infer, &strand);
                                 table.enqueue_strand(canonical_strand);
                             }
                         }
@@ -326,15 +317,13 @@ impl<I: Interner> Forest<I> {
                             ),
                             "pushing initial strand"
                         );
-                        let strand = InferringStrand {
-                            infer,
-                            strand: InnerStrand {
-                                ex_clause,
-                                selected_subgoal: None,
-                                last_pursued_time: TimeStamp::default(),
-                            },
+                        let strand = Strand {
+                            ex_clause,
+                            selected_subgoal: None,
+                            last_pursued_time: TimeStamp::default(),
                         };
-                        let canonical_strand = Self::canonicalize_strand(context, strand);
+                        let canonical_strand =
+                            Self::canonicalize_strand_from(context, &mut infer, &strand);
                         table.enqueue_strand(canonical_strand);
                     }
                     FallibleOrFloundered::NoSolution => {}
@@ -563,7 +552,8 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
     /// On failure, `Err` is returned and the `Strand` should be discarded
     fn merge_answer_into_strand(
         &mut self,
-        strand: &mut InferringStrand<I>,
+        infer: &mut InferenceTable<I>,
+        strand: &mut Strand<I>,
     ) -> RootSearchResult<()> {
         // At this point, we know we have an answer for
         // the selected subgoal of the strand.
@@ -572,7 +562,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         // If this answer is ambiguous and we don't want ambiguous answers
         // yet, then we act like this is a floundered subgoal.
         let ambiguous = {
-            let selected_subgoal = strand.strand.selected_subgoal.as_ref().unwrap();
+            let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
             let answer = self.forest.answer(
                 selected_subgoal.subgoal_table,
                 selected_subgoal.answer_index,
@@ -596,8 +586,8 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
 
                 // The selected subgoal returned an ambiguous answer, but we don't want that.
                 // So, we treat this subgoal as floundered.
-                let selected_subgoal = strand.strand.selected_subgoal.take().unwrap();
-                self.flounder_subgoal(&mut strand.strand.ex_clause, selected_subgoal.subgoal_index);
+                let selected_subgoal = strand.selected_subgoal.take().unwrap();
+                self.flounder_subgoal(&mut strand.ex_clause, selected_subgoal.subgoal_index);
                 return Ok(());
             }
         }
@@ -608,10 +598,8 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         // Enqueue that alternative for later.
         // NOTE: this is separate from the match below because we `take` the selected_subgoal
         // below, but here we keep it for the new `Strand`.
-        let selected_subgoal = strand.strand.selected_subgoal.as_ref().unwrap();
-        if let Literal::Positive(_) =
-            strand.strand.ex_clause.subgoals[selected_subgoal.subgoal_index]
-        {
+        let selected_subgoal = strand.selected_subgoal.as_ref().unwrap();
+        if let Literal::Positive(_) = strand.ex_clause.subgoals[selected_subgoal.subgoal_index] {
             let answer = self.forest.answer(
                 selected_subgoal.subgoal_table,
                 selected_subgoal.answer_index,
@@ -622,24 +610,21 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             {
                 let mut next_subgoal = selected_subgoal.clone();
                 next_subgoal.answer_index.increment();
-                let next_strand = InferringStrand {
-                    infer: strand.infer.clone(),
-                    strand: InnerStrand {
-                        ex_clause: strand.strand.ex_clause.clone(),
-                        selected_subgoal: Some(next_subgoal),
-                        last_pursued_time: strand.strand.last_pursued_time,
-                    },
+                let next_strand = Strand {
+                    ex_clause: strand.ex_clause.clone(),
+                    selected_subgoal: Some(next_subgoal),
+                    last_pursued_time: strand.last_pursued_time,
                 };
                 let table = self.stack.top().table;
-                let canonical_next_strand = Forest::canonicalize_strand(self.context, next_strand);
+                let canonical_next_strand =
+                    Forest::canonicalize_strand_from(self.context, infer, &next_strand);
                 self.forest.tables[table].enqueue_strand(canonical_next_strand);
             }
         }
 
         // Deselect and remove the selected subgoal, now that we have an answer for it.
-        let selected_subgoal = strand.strand.selected_subgoal.take().unwrap();
+        let selected_subgoal = strand.selected_subgoal.take().unwrap();
         let subgoal = strand
-            .strand
             .ex_clause
             .subgoals
             .remove(selected_subgoal.subgoal_index);
@@ -660,16 +645,16 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                     self.context.program().interner(),
                     &self.forest.answer(subgoal_table, answer_index).subst,
                 );
-                match strand.infer.apply_answer_subst(
+                match infer.apply_answer_subst(
                     self.context.program().interner(),
                     self.context.unification_database(),
-                    &mut strand.strand.ex_clause,
+                    &mut strand.ex_clause,
                     &subgoal,
                     &table_goal,
                     answer_subst,
                 ) {
                     Ok(()) => {
-                        let ex_clause = &mut strand.strand.ex_clause;
+                        let ex_clause = &mut strand.ex_clause;
 
                         // If the answer had was ambiguous, we have to
                         // ensure that `ex_clause` is also ambiguous. This is
@@ -744,7 +729,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 // have an unconditional answer for the subgoal,
                 // therefore we have failed to disprove it.
                 debug!(?strand, "Marking Strand as ambiguous because answer to (negative) subgoal was ambiguous");
-                strand.strand.ex_clause.ambiguous = true;
+                strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
                 return Ok(());
@@ -935,13 +920,12 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             let num_universes = self.forest.tables[self.stack.top().table]
                 .table_goal
                 .universes;
-            let (infer, _, strand) = chalk_solve::infer::InferenceTable::from_canonical(
+            let (mut infer, _, mut strand) = chalk_solve::infer::InferenceTable::from_canonical(
                 self.context.program().interner(),
                 num_universes,
                 canonical_strand.clone(),
             );
-            let mut strand = InferringStrand { infer, strand };
-            match self.merge_answer_into_strand(&mut strand) {
+            match self.merge_answer_into_strand(&mut infer, &mut strand) {
                 Err(e) => {
                     debug!(?strand, "could not merge into current strand");
                     drop(strand);
@@ -949,11 +933,8 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 }
                 Ok(_) => {
                     debug!(?strand, "merged answer into current strand");
-                    canonical_strand = Forest::canonicalize_strand_from(
-                        &self.context,
-                        &mut strand.infer,
-                        &strand.strand,
-                    );
+                    canonical_strand =
+                        Forest::canonicalize_strand_from(&self.context, &mut infer, &strand);
                     self.stack.top().active_strand = Some(canonical_strand);
                     return Ok(());
                 }
@@ -1099,7 +1080,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
 
         let num_universes = self.forest.tables[table].table_goal.universes;
         let (
-            infer,
+            mut infer,
             _,
             AnswerSubst {
                 subst,
@@ -1117,26 +1098,27 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             .map(Literal::Positive)
             .collect();
 
-        let strand = InferringStrand {
-            infer,
-            strand: InnerStrand {
-                ex_clause: ExClause {
-                    subst,
-                    ambiguous: answer.ambiguous,
-                    constraints: constraints
-                        .as_slice(self.context.program().interner())
-                        .to_vec(),
-                    subgoals: delayed_subgoals,
-                    delayed_subgoals: Vec::new(),
-                    answer_time: TimeStamp::default(),
-                    floundered_subgoals: Vec::new(),
-                },
-                selected_subgoal: None,
-                last_pursued_time: TimeStamp::default(),
+        let strand = Strand {
+            ex_clause: ExClause {
+                subst,
+                ambiguous: answer.ambiguous,
+                constraints: constraints
+                    .as_slice(self.context.program().interner())
+                    .to_vec(),
+                subgoals: delayed_subgoals,
+                delayed_subgoals: Vec::new(),
+                answer_time: TimeStamp::default(),
+                floundered_subgoals: Vec::new(),
             },
+            selected_subgoal: None,
+            last_pursued_time: TimeStamp::default(),
         };
 
-        Some(Forest::canonicalize_strand(self.context, strand))
+        Some(Forest::canonicalize_strand_from(
+            self.context,
+            &mut infer,
+            &strand,
+        ))
     }
 
     fn on_no_strands_left(&mut self) -> Result<(), RootSearchFail> {
