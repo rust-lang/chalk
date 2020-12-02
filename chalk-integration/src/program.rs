@@ -368,14 +368,14 @@ impl tls::DebugContext for Program {
 
 impl UnificationDatabase<ChalkIr> for Program {
     fn fn_def_variance(&self, fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
-        Variances::from(
+        Variances::from_iter(
             self.interner(),
             self.fn_def_variances[&fn_def_id].iter().copied(),
         )
     }
 
     fn adt_variance(&self, adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
-        Variances::from(self.interner(), self.adt_variances[&adt_id].iter().copied())
+        Variances::from_iter(self.interner(), self.adt_variances[&adt_id].iter().copied())
     }
 }
 

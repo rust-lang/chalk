@@ -2420,70 +2420,6 @@ impl<I: Interner> ProgramClause<I> {
     }
 }
 
-/// List of variable kinds with universe index. Wraps `InternedCanonicalVarKinds`.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
-pub struct Variances<I: Interner> {
-    interned: I::InternedVariances,
-}
-
-impl<I: Interner> Variances<I> {
-    /// Creates an empty list of canonical variable kinds.
-    pub fn empty(interner: &I) -> Self {
-        Self::from(interner, None::<Variance>)
-    }
-
-    /// Get the interned canonical variable kinds.
-    pub fn interned(&self) -> &I::InternedVariances {
-        &self.interned
-    }
-
-    /// Creates a list of canonical variable kinds using an iterator.
-    pub fn from(interner: &I, variances: impl IntoIterator<Item = Variance>) -> Self {
-        Self::from_fallible(
-            interner,
-            variances
-                .into_iter()
-                .map(|p| -> Result<Variance, ()> { Ok(p) }),
-        )
-        .unwrap()
-    }
-
-    /// Tries to create a list of canonical variable kinds using an iterator.
-    pub fn from_fallible<E>(
-        interner: &I,
-        variances: impl IntoIterator<Item = Result<Variance, E>>,
-    ) -> Result<Self, E> {
-        Ok(Variances {
-            interned: I::intern_variances(interner, variances.into_iter())?,
-        })
-    }
-
-    /// Creates a list of canonical variable kinds from a single canonical variable kind.
-    pub fn from1(interner: &I, variance: Variance) -> Self {
-        Self::from(interner, Some(variance))
-    }
-
-    /// Get an iterator over the list of canonical variable kinds.
-    pub fn iter(&self, interner: &I) -> std::slice::Iter<'_, Variance> {
-        self.as_slice(interner).iter()
-    }
-
-    /// Checks whether the list of canonical variable kinds is empty.
-    pub fn is_empty(&self, interner: &I) -> bool {
-        self.as_slice(interner).is_empty()
-    }
-
-    /// Returns the number of canonical variable kinds.
-    pub fn len(&self, interner: &I) -> usize {
-        self.as_slice(interner).len()
-    }
-
-    /// Returns a slice containing the canonical variable kinds.
-    pub fn as_slice(&self, interner: &I) -> &[Variance] {
-        interner.variances_data(&self.interned)
-    }
-}
-
 /// Wraps a "canonicalized item". Items are canonicalized as follows:
 ///
 /// All unresolved existential variables are "renumbered" according to their
@@ -2947,7 +2883,7 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
     }
 }
 
-macro_rules! interned_slice {
+macro_rules! interned_slice_common {
     ($seq:ident, $data:ident => $elem:ty, $intern:ident => $interned:ident) => {
         /// List of interned elements.
         #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
@@ -2960,46 +2896,15 @@ macro_rules! interned_slice {
             pub fn interned(&self) -> &I::$interned {
                 &self.interned
             }
-        }
-
-        impl<I: Interner> $seq<I> {
-            /// Tries to create a sequence using an iterator of element-like things.
-            pub fn from_fallible<E>(
-                interner: &I,
-                elements: impl IntoIterator<Item = Result<impl CastTo<$elem>, E>>,
-            ) -> Result<Self, E> {
-                Ok(Self {
-                    interned: I::$intern(interner, elements.into_iter().casted(interner))?,
-                })
-            }
 
             /// Returns a slice containing the elements.
             pub fn as_slice(&self, interner: &I) -> &[$elem] {
                 Interner::$data(interner, &self.interned)
             }
 
-            /// Create a sequence from elements
-            pub fn from_iter(
-                interner: &I,
-                elements: impl IntoIterator<Item = impl CastTo<$elem>>,
-            ) -> Self {
-                Self::from_fallible(
-                    interner,
-                    elements
-                        .into_iter()
-                        .map(|el| -> Result<$elem, ()> { Ok(el.cast(interner)) }),
-                )
-                .unwrap()
-            }
-
             /// Index into the sequence.
             pub fn at(&self, interner: &I, index: usize) -> &$elem {
                 &self.as_slice(interner)[index]
-            }
-
-            /// Create a sequence from a single element.
-            pub fn from1(interner: &I, element: impl CastTo<$elem>) -> Self {
-                Self::from_iter(interner, Some(element))
             }
 
             /// Create an empty sequence.
@@ -3020,6 +2925,43 @@ macro_rules! interned_slice {
             /// Get the length of the sequence.
             pub fn len(&self, interner: &I) -> usize {
                 self.as_slice(interner).len()
+            }
+        }
+    };
+}
+
+macro_rules! interned_slice {
+    ($seq:ident, $data:ident => $elem:ty, $intern:ident => $interned:ident) => {
+        interned_slice_common!($seq, $data => $elem, $intern => $interned);
+
+        impl<I: Interner> $seq<I> {
+            /// Tries to create a sequence using an iterator of element-like things.
+            pub fn from_fallible<E>(
+                interner: &I,
+                elements: impl IntoIterator<Item = Result<impl CastTo<$elem>, E>>,
+            ) -> Result<Self, E> {
+                Ok(Self {
+                    interned: I::$intern(interner, elements.into_iter().casted(interner))?,
+                })
+            }
+
+            /// Create a sequence from elements
+            pub fn from_iter(
+                interner: &I,
+                elements: impl IntoIterator<Item = impl CastTo<$elem>>,
+            ) -> Self {
+                Self::from_fallible(
+                    interner,
+                    elements
+                        .into_iter()
+                        .map(|el| -> Result<$elem, ()> { Ok(el.cast(interner)) }),
+                )
+                .unwrap()
+            }
+
+            /// Create a sequence from a single element.
+            pub fn from1(interner: &I, element: impl CastTo<$elem>) -> Self {
+                Self::from_iter(interner, Some(element))
             }
         }
     };
@@ -3062,6 +3004,40 @@ interned_slice!(
     substitution_data => GenericArg<I>,
     intern_substitution => InternedSubstitution
 );
+
+interned_slice_common!(
+    Variances,
+    variances_data => Variance,
+    intern_variance => InternedVariances
+);
+
+impl<I: Interner> Variances<I> {
+    /// Tries to create a list of canonical variable kinds using an iterator.
+    pub fn from_fallible<E>(
+        interner: &I,
+        variances: impl IntoIterator<Item = Result<Variance, E>>,
+    ) -> Result<Self, E> {
+        Ok(Variances {
+            interned: I::intern_variances(interner, variances.into_iter())?,
+        })
+    }
+
+    /// Creates a list of canonical variable kinds using an iterator.
+    pub fn from_iter(interner: &I, variances: impl IntoIterator<Item = Variance>) -> Self {
+        Self::from_fallible(
+            interner,
+            variances
+                .into_iter()
+                .map(|p| -> Result<Variance, ()> { Ok(p) }),
+        )
+        .unwrap()
+    }
+
+    /// Creates a list of canonical variable kinds from a single canonical variable kind.
+    pub fn from1(interner: &I, variance: Variance) -> Self {
+        Self::from_iter(interner, Some(variance))
+    }
+}
 
 /// Combines a substitution (`subst`) with a set of region constraints
 /// (`constraints`). This represents the result of a query; the
