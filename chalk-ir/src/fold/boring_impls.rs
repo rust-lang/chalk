@@ -6,21 +6,7 @@
 
 use crate::*;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
-impl<'a, T: Fold<I>, I: Interner> Fold<I> for &'a T {
-    type Result = T::Result;
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-    {
-        (**self).fold_with(folder, outer_binder)
-    }
-}
 
 impl<T: Fold<I>, I: Interner> Fold<I> for Vec<T> {
     type Result = Vec<T::Result>;
@@ -49,20 +35,6 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Box<T> {
         I: 'i,
     {
         Ok(Box::new((**self).fold_with(folder, outer_binder)?))
-    }
-}
-
-impl<T: Fold<I>, I: Interner> Fold<I> for Arc<T> {
-    type Result = Arc<T::Result>;
-    fn fold_with<'i>(
-        &self,
-        folder: &mut dyn Folder<'i, I>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Self::Result>
-    where
-        I: 'i,
-    {
-        Ok(Arc::new((**self).fold_with(folder, outer_binder)?))
     }
 }
 
