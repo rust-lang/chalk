@@ -895,7 +895,7 @@ impl WfWellKnownConstraints {
     ///    and consider their types with both substitutes. We are looking to find
     ///    exactly one (non-phantom) field that has changed its type (from T to U), and
     ///    expect T to be unsizeable to U, i.e. T: CoerceUnsized<U>.
-    ///        
+    ///
     ///    As an example, consider a struct
     ///    ```rust
     ///    struct Foo<T, U> {
@@ -910,10 +910,10 @@ impl WfWellKnownConstraints {
     ///    impl<T, U: Unsize<V>, V> CoerceUnsized<Foo<T, V>> for Foo<T, U> {}
     ///    ```
     ///    In this case:
-    ///   
+    ///
     ///    - `extra` has type `T` before and type `T` after
     ///    - `ptr` has type `*mut U` before and type `*mut V` after
-    ///   
+    ///
     ///    Since just one field changed, we would then check that `*mut U: CoerceUnsized<*mut V>`
     ///    is implemented. This will work out because `U: Unsize<V>`, and we have a libcore rule
     ///    that `*mut U` can be coerced to `*mut V` if `U: Unsize<V>`.

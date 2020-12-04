@@ -169,7 +169,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     ///
     /// ```ignore (example)
     /// trait Foo<T> {
-    ///     type Assoc<'a>;   
+    ///     type Assoc<'a>;
     /// }
     /// ```
     ///
