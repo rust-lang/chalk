@@ -1,7 +1,6 @@
 use super::var::*;
 use super::*;
 use crate::debug_span;
-use crate::infer::instantiate::IntoBindersAndValue;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
@@ -367,11 +366,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn relate_binders<'a, T, R>(
         &mut self,
         variance: Variance,
-        a: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
-        b: impl IntoBindersAndValue<'a, I, Value = T> + Copy + Debug,
+        a: &Binders<T>,
+        b: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: Fold<I, Result = R>,
+        T: Fold<I, Result = R> + HasInterner<Interner = I>,
         R: Zip<I> + Fold<I, Result = R>,
         't: 'a,
     {

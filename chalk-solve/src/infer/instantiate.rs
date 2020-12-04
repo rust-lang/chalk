@@ -39,19 +39,17 @@ impl<I: Interner> InferenceTable<I> {
     /// `binders`. This is used to apply a universally quantified
     /// clause like `forall X, 'Y. P => Q`. Here the `binders`
     /// argument is referring to `X, 'Y`.
-    pub(crate) fn instantiate_in<U, T>(
+    pub(crate) fn instantiate_in<T>(
         &mut self,
         interner: &I,
         universe: UniverseIndex,
-        binders: U,
+        binders: impl Iterator<Item = VariableKind<I>>,
         arg: &T,
     ) -> T::Result
     where
         T: Fold<I>,
-        U: IntoIterator<Item = VariableKind<I>>,
     {
         let binders: Vec<_> = binders
-            .into_iter()
             .map(|pk| CanonicalVarKind::new(pk, universe))
             .collect();
         let subst = self.fresh_subst(interner, &binders);
@@ -63,26 +61,29 @@ impl<I: Interner> InferenceTable<I> {
     pub fn instantiate_binders_existentially<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: impl IntoBindersAndValue<'a, I, Value = T> + Debug,
+        arg: &Binders<T>,
     ) -> T::Result
     where
-        T: Fold<I>,
+        T: Fold<I> + HasInterner<Interner = I>,
     {
-        let (binders, value) = arg.into_binders_and_value(interner);
+        let value = arg.skip_binders();
+        let binders = arg.binders.iter(interner).cloned();
+
         let max_universe = self.max_universe;
-        self.instantiate_in(interner, max_universe, binders, &value)
+        self.instantiate_in(interner, max_universe, binders, value)
     }
 
     #[instrument(level = "debug", skip(self, interner))]
     pub fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: impl IntoBindersAndValue<'a, I, Value = T> + Debug,
+        arg: &Binders<T>,
     ) -> T::Result
     where
-        T: Fold<I>,
+        T: Fold<I> + HasInterner<Interner = I>,
     {
-        let (binders, value) = arg.into_binders_and_value(interner);
+        let value = arg.skip_binders();
+
         let mut lazy_ui = None;
         let mut ui = || {
             lazy_ui.unwrap_or_else(|| {
@@ -91,8 +92,10 @@ impl<I: Interner> InferenceTable<I> {
                 ui
             })
         };
-        let parameters: Vec<_> = binders
-            .into_iter()
+        let parameters: Vec<_> = arg
+            .binders
+            .iter(interner)
+            .cloned()
             .enumerate()
             .map(|(idx, pk)| {
                 let placeholder_idx = PlaceholderIndex { ui: ui(), idx };
@@ -108,53 +111,6 @@ impl<I: Interner> InferenceTable<I> {
                 }
             })
             .collect();
-        Subst::apply(interner, &parameters, &value)
-    }
-}
-
-pub trait IntoBindersAndValue<'a, I: Interner> {
-    type Binders: IntoIterator<Item = VariableKind<I>>;
-    type Value;
-
-    fn into_binders_and_value(self, interner: &'a I) -> (Self::Binders, Self::Value);
-}
-
-impl<'a, I, T> IntoBindersAndValue<'a, I> for &'a Binders<T>
-where
-    I: Interner,
-    T: HasInterner<Interner = I>,
-    I: 'a,
-{
-    type Binders = std::iter::Cloned<std::slice::Iter<'a, VariableKind<I>>>;
-    type Value = &'a T;
-
-    fn into_binders_and_value(self, interner: &'a I) -> (Self::Binders, Self::Value) {
-        (self.binders.iter(interner).cloned(), self.skip_binders())
-    }
-}
-
-impl<'a, I> IntoBindersAndValue<'a, I> for &'a FnPointer<I>
-where
-    I: Interner,
-{
-    type Binders = std::iter::Map<std::ops::Range<usize>, fn(usize) -> chalk_ir::VariableKind<I>>;
-    type Value = &'a FnSubst<I>;
-
-    fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
-        let p: fn(usize) -> VariableKind<I> = make_lifetime;
-        ((0..self.num_binders).map(p), &self.substitution)
-    }
-}
-
-fn make_lifetime<I: Interner>(_: usize) -> VariableKind<I> {
-    VariableKind::Lifetime
-}
-
-impl<'a, T, I: Interner> IntoBindersAndValue<'a, I> for (&'a Vec<VariableKind<I>>, &'a T) {
-    type Binders = std::iter::Cloned<std::slice::Iter<'a, VariableKind<I>>>;
-    type Value = &'a T;
-
-    fn into_binders_and_value(self, _interner: &'a I) -> (Self::Binders, Self::Value) {
-        (self.0.iter().cloned(), &self.1)
+        Subst::apply(interner, &parameters, value)
     }
 }
