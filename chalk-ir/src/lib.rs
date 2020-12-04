@@ -1915,6 +1915,13 @@ impl<T: HasInterner> HasInterner for Binders<T> {
     type Interner = T::Interner;
 }
 
+impl<T: Clone + HasInterner> Binders<&T> {
+    /// Converts a `Binders<&T>` to a `Binders<T>` by cloning `T`.
+    pub fn cloned(self) -> Binders<T> {
+        self.map(Clone::clone)
+    }
+}
+
 impl<T: HasInterner> Binders<T> {
     /// Create new binders.
     pub fn new(binders: VariableKinds<T::Interner>, value: T) -> Self {
