@@ -1951,6 +1951,12 @@ impl<T: HasInterner> Binders<T> {
         &self.value
     }
 
+    /// Skips the binder and returns the "bound" value as well as the skipped free variables. This
+    /// is just as risky as [`skip_binders`].
+    pub fn into_value_and_skipped_binders(self) -> (T, VariableKinds<T::Interner>) {
+        (self.value, self.binders)
+    }
+
     /// Converts `&Binders<T>` to `Binders<&T>`. Produces new `Binders`
     /// with cloned quantifiers containing a reference to the original
     /// value, leaving the original in place.
