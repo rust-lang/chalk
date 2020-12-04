@@ -296,14 +296,14 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
             type Result = #result;
 
             fn fold_with<'i>(
-                &self,
+                self,
                 folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> ::chalk_ir::Fallible<Self::Result>
             where
                 #interner: 'i,
             {
-                Ok(match *self { #body })
+                Ok(match self { #body })
             }
         },
     )
