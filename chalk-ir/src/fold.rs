@@ -387,19 +387,16 @@ where
                     TyKind::<I>::BoundVar(*bound_var).intern(folder.interner())
                 }
             }
-            TyKind::Dyn(clauses) => {
-                TyKind::Dyn(clauses.clone().fold_with(folder, outer_binder)?).intern(folder.interner())
-            }
+            TyKind::Dyn(clauses) => TyKind::Dyn(clauses.clone().fold_with(folder, outer_binder)?)
+                .intern(folder.interner()),
             TyKind::InferenceVar(var, kind) => {
                 folder.fold_inference_ty(*var, *kind, outer_binder)?
             }
             TyKind::Placeholder(ui) => folder.fold_free_placeholder_ty(*ui, outer_binder)?,
-            TyKind::Alias(proj) => {
-                TyKind::Alias(proj.clone().fold_with(folder, outer_binder)?).intern(folder.interner())
-            }
-            TyKind::Function(fun) => {
-                TyKind::Function(fun.clone().fold_with(folder, outer_binder)?).intern(folder.interner())
-            }
+            TyKind::Alias(proj) => TyKind::Alias(proj.clone().fold_with(folder, outer_binder)?)
+                .intern(folder.interner()),
+            TyKind::Function(fun) => TyKind::Function(fun.clone().fold_with(folder, outer_binder)?)
+                .intern(folder.interner()),
             TyKind::Adt(id, substitution) => TyKind::Adt(
                 id.fold_with(folder, outer_binder)?,
                 substitution.clone().fold_with(folder, outer_binder)?,
@@ -414,10 +411,11 @@ where
                 TyKind::Scalar(scalar.fold_with(folder, outer_binder)?).intern(folder.interner())
             }
             TyKind::Str => TyKind::Str.intern(folder.interner()),
-            TyKind::Tuple(arity, substitution) => {
-                TyKind::Tuple(*arity, substitution.clone().fold_with(folder, outer_binder)?)
-                    .intern(folder.interner())
-            }
+            TyKind::Tuple(arity, substitution) => TyKind::Tuple(
+                *arity,
+                substitution.clone().fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.interner()),
             TyKind::OpaqueType(opaque_ty, substitution) => TyKind::OpaqueType(
                 opaque_ty.fold_with(folder, outer_binder)?,
                 substitution.clone().fold_with(folder, outer_binder)?,
@@ -571,7 +569,9 @@ where
                     Ok(bound_var.to_const(interner, fold_ty()?))
                 }
             }
-            ConstValue::InferenceVar(var) => folder.fold_inference_const(ty.clone(), *var, outer_binder),
+            ConstValue::InferenceVar(var) => {
+                folder.fold_inference_const(ty.clone(), *var, outer_binder)
+            }
             ConstValue::Placeholder(universe) => {
                 folder.fold_free_placeholder_const(ty.clone(), *universe, outer_binder)
             }
@@ -616,7 +616,9 @@ impl<I: Interner> SuperFold<I> for Goal<I> {
         let interner = folder.interner();
         Ok(Goal::new(
             interner,
-            self.data(interner).clone().fold_with(folder, outer_binder)?,
+            self.data(interner)
+                .clone()
+                .fold_with(folder, outer_binder)?,
         ))
     }
 }

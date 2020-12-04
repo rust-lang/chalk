@@ -194,7 +194,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
             self.interner(),
             ucanonical_goal.universes,
-            &ucanonical_goal.canonical,
+            ucanonical_goal.canonical.clone(),
         );
         let infer = RecursiveInferenceTableImpl { infer };
         (infer, subst, canonical_goal)
@@ -228,7 +228,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: &'a Binders<T>,
+        arg: Binders<T>,
     ) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>,
@@ -239,7 +239,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn instantiate_binders_existentially<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: &'a Binders<T>,
+        arg: Binders<T>,
     ) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>,
@@ -250,7 +250,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn canonicalize<T>(
         &mut self,
         interner: &I,
-        value: &T,
+        value: T,
     ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
     where
         T: Fold<I>,
@@ -271,7 +271,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
         value0: &Canonical<T>,
     ) -> (UCanonical<T::Result>, UniverseMap)
     where
-        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
         T::Result: HasInterner<Interner = I>,
     {
         let res = self.infer.u_canonicalize(interner, value0);
@@ -296,7 +296,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
         Ok(res.goals)
     }
 
-    fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
+    fn instantiate_canonical<T>(&mut self, interner: &I, bound: Canonical<T>) -> T::Result
     where
         T: HasInterner<Interner = I> + Fold<I> + Debug,
     {
@@ -306,7 +306,7 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
     fn invert_then_canonicalize<T>(
         &mut self,
         interner: &I,
-        value: &T,
+        value: T,
     ) -> Option<Canonical<T::Result>>
     where
         T: Fold<I, Result = T> + HasInterner<Interner = I>,

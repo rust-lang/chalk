@@ -370,7 +370,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         b: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: Fold<I, Result = R> + HasInterner<Interner = I>,
+        T: Clone + Fold<I, Result = R> + HasInterner<Interner = I>,
         R: Zip<I> + Fold<I, Result = R>,
         't: 'a,
     {
@@ -390,14 +390,22 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let interner = self.interner;
 
         if let Variance::Invariant | Variance::Contravariant = variance {
-            let a_universal = self.table.instantiate_binders_universally(interner, a);
-            let b_existential = self.table.instantiate_binders_existentially(interner, b);
+            let a_universal = self
+                .table
+                .instantiate_binders_universally(interner, a.clone());
+            let b_existential = self
+                .table
+                .instantiate_binders_existentially(interner, b.clone());
             Zip::zip_with(self, Variance::Contravariant, &a_universal, &b_existential)?;
         }
 
         if let Variance::Invariant | Variance::Covariant = variance {
-            let b_universal = self.table.instantiate_binders_universally(interner, b);
-            let a_existential = self.table.instantiate_binders_existentially(interner, a);
+            let b_universal = self
+                .table
+                .instantiate_binders_universally(interner, b.clone());
+            let a_existential = self
+                .table
+                .instantiate_binders_existentially(interner, a.clone());
             Zip::zip_with(self, Variance::Covariant, &a_existential, &b_universal)?;
         }
 
@@ -774,6 +782,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         debug!("trying fold_with on {:?}", ty);
         let ty1 = ty
+            .clone()
             .fold_with(
                 &mut OccursCheck::new(self, var, universe_index),
                 DebruijnIndex::INNERMOST,
@@ -1029,7 +1038,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // as the variable is unified.
         let universe_index = self.table.universe_of_unbound_var(var);
 
-        let c1 = c.fold_with(
+        let c1 = c.clone().fold_with(
             &mut OccursCheck::new(self, var, universe_index),
             DebruijnIndex::INNERMOST,
         )?;
@@ -1097,7 +1106,7 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
+        T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.
@@ -1169,7 +1178,7 @@ where
 
     fn fold_free_placeholder_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -1228,7 +1237,9 @@ where
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_ty) => {
                 let normalized_ty = normalized_ty.assert_ty_ref(interner);
-                let normalized_ty = normalized_ty.fold_with(self, DebruijnIndex::INNERMOST)?;
+                let normalized_ty = normalized_ty
+                    .clone()
+                    .fold_with(self, DebruijnIndex::INNERMOST)?;
                 assert!(!normalized_ty.needs_shift(interner));
                 Ok(normalized_ty)
             }
@@ -1262,7 +1273,7 @@ where
 
     fn fold_inference_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -1272,8 +1283,9 @@ where
             // If this variable already has a value, fold over that value instead.
             InferenceValue::Bound(normalized_const) => {
                 let normalized_const = normalized_const.assert_const_ref(interner);
-                let normalized_const =
-                    normalized_const.fold_with(self, DebruijnIndex::INNERMOST)?;
+                let normalized_const = normalized_const
+                    .clone()
+                    .fold_with(self, DebruijnIndex::INNERMOST)?;
                 assert!(!normalized_const.needs_shift(interner));
                 Ok(normalized_const)
             }
@@ -1300,7 +1312,7 @@ where
                         .unwrap();
                 }
 
-                Ok(var.to_const(interner, ty.clone()))
+                Ok(var.to_const(interner, ty))
             }
         }
     }
@@ -1334,7 +1346,7 @@ where
 
             InferenceValue::Bound(l) => {
                 let l = l.assert_lifetime_ref(interner);
-                let l = l.fold_with(self, outer_binder)?;
+                let l = l.clone().fold_with(self, outer_binder)?;
                 assert!(!l.needs_shift(interner));
                 Ok(l)
             }

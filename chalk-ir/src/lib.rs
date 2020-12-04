@@ -2057,7 +2057,6 @@ where
                 .enumerate()
                 .map(|(i, pk)| (i + num_binders, pk).to_generic_arg(interner)),
         );
-        let value = self.value.substitute(interner, &subst);
         let binders = VariableKinds::from_iter(
             interner,
             self.binders
@@ -2065,6 +2064,7 @@ where
                 .chain(self.value.binders.iter(interner))
                 .cloned(),
         );
+        let value = self.value.substitute(interner, &subst);
         Binders { binders, value }
     }
 }
@@ -2085,13 +2085,13 @@ where
     /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
     /// B] T`.
     pub fn substitute(
-        &self,
+        self,
         interner: &I,
         parameters: &(impl AsParameters<I> + ?Sized),
     ) -> T::Result {
         let parameters = parameters.as_parameters(interner);
         assert_eq!(self.binders.len(interner), parameters.len());
-        Subst::apply(interner, parameters, &self.value)
+        Subst::apply(interner, parameters, self.value)
     }
 }
 
@@ -2619,7 +2619,7 @@ impl<I: Interner> Substitution<I> {
     }
 
     /// Apply the substitution to a value.
-    pub fn apply<T>(&self, value: &T, interner: &I) -> T::Result
+    pub fn apply<T>(&self, value: T, interner: &I) -> T::Result
     where
         T: Fold<I>,
     {
@@ -2731,7 +2731,7 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
         assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
         let ty = self.at(bound_var.index);
         let ty = ty.assert_ty_ref(self.interner());
-        Ok(ty.shifted_in_from(self.interner(), outer_binder))
+        Ok(ty.clone().shifted_in_from(self.interner(), outer_binder))
     }
 
     fn fold_free_var_lifetime(
@@ -2742,19 +2742,19 @@ impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
         assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
         let l = self.at(bound_var.index);
         let l = l.assert_lifetime_ref(self.interner());
-        Ok(l.shifted_in_from(self.interner(), outer_binder))
+        Ok(l.clone().shifted_in_from(self.interner(), outer_binder))
     }
 
     fn fold_free_var_const(
         &mut self,
-        _ty: &Ty<I>,
+        _ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
         assert_eq!(bound_var.debruijn, DebruijnIndex::INNERMOST);
         let c = self.at(bound_var.index);
         let c = c.assert_const_ref(self.interner());
-        Ok(c.shifted_in_from(self.interner(), outer_binder))
+        Ok(c.clone().shifted_in_from(self.interner(), outer_binder))
     }
 
     fn interner(&self) -> &'i I {

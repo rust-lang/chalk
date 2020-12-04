@@ -12,7 +12,7 @@ pub struct Subst<'s, 'i, I: Interner> {
 
 impl<I: Interner> Subst<'_, '_, I> {
     /// Applies the substitution by folding
-    pub fn apply<T: Fold<I>>(interner: &I, parameters: &[GenericArg<I>], value: &T) -> T::Result {
+    pub fn apply<T: Fold<I>>(interner: &I, parameters: &[GenericArg<I>], value: T) -> T::Result {
         value
             .fold_with(
                 &mut Subst {
@@ -56,7 +56,9 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     ) -> Fallible<Ty<I>> {
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                GenericArgData::Ty(t) => Ok(t.shifted_in_from(self.interner(), outer_binder)),
+                GenericArgData::Ty(t) => {
+                    Ok(t.clone().shifted_in_from(self.interner(), outer_binder))
+                }
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
@@ -76,7 +78,9 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     ) -> Fallible<Lifetime<I>> {
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                GenericArgData::Lifetime(l) => Ok(l.shifted_in_from(self.interner(), outer_binder)),
+                GenericArgData::Lifetime(l) => {
+                    Ok(l.clone().shifted_in_from(self.interner(), outer_binder))
+                }
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
@@ -91,13 +95,15 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
     /// see `fold_free_var_ty`
     fn fold_free_var_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
         if let Some(index) = bound_var.index_if_innermost() {
             match self.parameters[index].data(self.interner()) {
-                GenericArgData::Const(c) => Ok(c.shifted_in_from(self.interner(), outer_binder)),
+                GenericArgData::Const(c) => {
+                    Ok(c.clone().shifted_in_from(self.interner(), outer_binder))
+                }
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
@@ -105,7 +111,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
                 .shifted_out()
                 .unwrap()
                 .shifted_in_from(outer_binder)
-                .to_const(self.interner(), ty.clone()))
+                .to_const(self.interner(), ty))
         }
     }
 

@@ -163,8 +163,8 @@ fn auto_trait_ids<'a, I: Interner>(
 pub fn add_unsize_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
-    _ty: &TyKind<I>,
+    trait_ref: TraitRef<I>,
+    _ty: TyKind<I>,
 ) {
     let interner = db.interner();
 
@@ -172,7 +172,8 @@ pub fn add_unsize_program_clauses<I: Interner>(
     let target_ty = trait_ref
         .substitution
         .at(interner, 1)
-        .assert_ty_ref(interner);
+        .assert_ty_ref(interner)
+        .clone();
 
     let unsize_trait_id = trait_ref.trait_id;
 
@@ -271,7 +272,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             })
             .cast(interner);
 
-            builder.push_clause(trait_ref.clone(), [eq_goal, lifetime_outlives_goal].iter());
+            builder.push_clause(trait_ref, [eq_goal, lifetime_outlives_goal].iter());
         }
 
         // T -> dyn Trait + 'a
@@ -284,8 +285,9 @@ pub fn add_unsize_program_clauses<I: Interner>(
                 .map(|id| DomainGoal::ObjectSafe(id).cast(interner));
 
             // Check that T implements all traits of the trait object
-            let source_ty_bounds =
-                bounds.substitute(interner, &Substitution::from1(interner, source_ty.clone()));
+            let source_ty_bounds = bounds
+                .clone()
+                .substitute(interner, &Substitution::from1(interner, source_ty.clone()));
 
             // Check that T is sized because we can only make
             // a trait object from a sized type
@@ -305,7 +307,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             .cast(interner);
 
             builder.push_clause(
-                trait_ref.clone(),
+                trait_ref,
                 source_ty_bounds
                     .iter(interner)
                     .map(|bound| bound.clone().cast::<Goal<I>>(interner))
@@ -321,7 +323,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
                 b: slice_ty.clone().cast(interner),
             };
 
-            builder.push_clause(trait_ref.clone(), iter::once(eq_goal));
+            builder.push_clause(trait_ref, iter::once(eq_goal));
         }
 
         // Adt<T> -> Adt<U>
@@ -354,7 +356,8 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
             let adt_tail_field = adt_datum
                 .binders
-                .map_ref(|bound| bound.variants.last().unwrap().fields.last().unwrap());
+                .map_ref(|bound| bound.variants.last().unwrap().fields.last().unwrap())
+                .cloned();
 
             // Collect unsize parameters that last field contains and
             // ensure there at least one of them.
@@ -409,7 +412,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             .cast(interner);
 
             // Extract `TailField<T>` and `TailField<U>` from `Struct<T>` and `Struct<U>`.
-            let source_tail_field = adt_tail_field.substitute(interner, substitution_a);
+            let source_tail_field = adt_tail_field.clone().substitute(interner, substitution_a);
             let target_tail_field = adt_tail_field.substitute(interner, substitution_b);
 
             // Check that `TailField<T>: Unsize<TailField<U>>`
@@ -422,10 +425,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             }
             .cast(interner);
 
-            builder.push_clause(
-                trait_ref.clone(),
-                [eq_goal, last_field_unsizing_goal].iter(),
-            );
+            builder.push_clause(trait_ref, [eq_goal, last_field_unsizing_goal].iter());
         }
 
         // (.., T) -> (.., U)
@@ -469,10 +469,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             }
             .cast(interner);
 
-            builder.push_clause(
-                trait_ref.clone(),
-                [eq_goal, last_field_unsizing_goal].iter(),
-            );
+            builder.push_clause(trait_ref, [eq_goal, last_field_unsizing_goal].iter());
         }
 
         _ => (),

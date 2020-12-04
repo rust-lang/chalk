@@ -37,13 +37,17 @@ impl<I: Interner> Forest<I> {
         while let Some((environment, goal)) = pending_goals.pop() {
             match goal.data(context.program().interner()) {
                 GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
-                    let subgoal = infer
-                        .instantiate_binders_universally(context.program().interner(), &subgoal);
+                    let subgoal = infer.instantiate_binders_universally(
+                        context.program().interner(),
+                        subgoal.clone(),
+                    );
                     pending_goals.push((environment, subgoal.clone()));
                 }
                 GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
-                    let subgoal = infer
-                        .instantiate_binders_existentially(context.program().interner(), &subgoal);
+                    let subgoal = infer.instantiate_binders_existentially(
+                        context.program().interner(),
+                        subgoal.clone(),
+                    );
                     pending_goals.push((environment, subgoal.clone()));
                 }
                 GoalData::Implies(wc, subgoal) => {

@@ -34,10 +34,17 @@ impl<I: Interner> ToProgramClauses<I> for ImplDatum<I> {
         _environment: &Environment<I>,
     ) {
         if self.is_positive() {
-            let binders = self.binders.map_ref(|b| (&b.trait_ref, &b.where_clauses));
-            builder.push_binders(&binders, |builder, (trait_ref, where_clauses)| {
-                builder.push_clause(trait_ref, where_clauses);
-            });
+            let binders = self.binders.clone();
+            builder.push_binders(
+                binders,
+                |builder,
+                 ImplDatumBound {
+                     trait_ref,
+                     where_clauses,
+                 }| {
+                    builder.push_clause(trait_ref, where_clauses);
+                },
+            );
         }
     }
 }
@@ -76,7 +83,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
         let impl_datum = builder.db.impl_datum(self.impl_id);
         let associated_ty = builder.db.associated_ty_data(self.associated_ty_id);
 
-        builder.push_binders(&self.value, |builder, assoc_ty_value| {
+        builder.push_binders(self.value.clone(), |builder, assoc_ty_value| {
             let all_parameters = builder.placeholders_in_scope().to_vec();
 
             // Get the projection for this associated type:
@@ -96,7 +103,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
-                .map(|wc| wc.substitute(interner, impl_params));
+                .map(|wc| wc.cloned().substitute(interner, impl_params));
 
             // 2. any where-clauses from the `type` declaration in the trait: the
             //    parameters must be substituted with those of the impl
@@ -104,7 +111,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
-                .map(|wc| wc.substitute(interner, &projection.substitution));
+                .map(|wc| wc.cloned().substitute(interner, &projection.substitution));
 
             // Create the final program clause:
             //
@@ -144,7 +151,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
         builder: &mut ClauseBuilder<'_, I>,
         _environment: &Environment<I>,
     ) {
-        builder.push_binders(&self.bound, |builder, opaque_ty_bound| {
+        builder.push_binders(self.bound.clone(), |builder, opaque_ty_bound| {
             let interner = builder.interner();
             let substitution = builder.substitution_in_scope();
             let alias = AliasTy::Opaque(OpaqueTy {
@@ -177,7 +184,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             ));
 
             // WF(!T<..>) :- WF(WC).
-            builder.push_binders(&opaque_ty_bound.where_clauses, |builder, where_clauses| {
+            builder.push_binders(opaque_ty_bound.where_clauses, |builder, where_clauses| {
                 builder.push_clause(
                     WellFormed::Ty(alias_placeholder_ty.clone()),
                     where_clauses
@@ -190,7 +197,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             for bound in opaque_ty_bound.bounds {
                 // Implemented(!T<..>: Bound).
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
-                builder.push_binders(&bound_with_placeholder_ty, |builder, bound| {
+                builder.push_binders(bound_with_placeholder_ty, |builder, bound| {
                     builder.push_fact(bound);
                 });
             }
@@ -290,7 +297,7 @@ fn fully_visible_program_clauses<I>(
 /// - where_clauses -- the list of where clauses declared on the type (`T: Eq`, in our example).
 fn implied_bounds_program_clauses<'a, I, Wc>(
     builder: &'a mut ClauseBuilder<'_, I>,
-    ty: Ty<I>,
+    ty: &Ty<I>,
     where_clauses: Wc,
 ) where
     I: Interner,
@@ -299,7 +306,7 @@ fn implied_bounds_program_clauses<'a, I, Wc>(
     let interner = builder.interner();
 
     for qwc in where_clauses {
-        builder.push_binders(&qwc, |builder, wc| {
+        builder.push_binders(qwc.clone(), |builder, wc| {
             builder.push_clause(wc.into_from_env_goal(interner), Some(ty.clone().from_env()));
         });
     }
@@ -363,14 +370,14 @@ impl<I: Interner> ToProgramClauses<I> for AdtDatum<I> {
         _environment: &Environment<I>,
     ) {
         let interner = builder.interner();
-        let binders = self.binders.map_ref(|b| &b.where_clauses);
+        let binders = self.binders.map_ref(|b| &b.where_clauses).cloned();
 
-        builder.push_binders(&binders, |builder, where_clauses| {
+        builder.push_binders(binders, |builder, where_clauses| {
             let self_ty = TyKind::Adt(self.id, builder.substitution_in_scope()).intern(interner);
 
             well_formed_program_clauses(builder, self_ty.clone(), where_clauses.iter());
 
-            implied_bounds_program_clauses(builder, self_ty.clone(), where_clauses.iter());
+            implied_bounds_program_clauses(builder, &self_ty, where_clauses.iter());
 
             fully_visible_program_clauses(
                 builder,
@@ -450,14 +457,14 @@ impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
         _environment: &Environment<I>,
     ) {
         let interner = builder.interner();
-        let binders = self.binders.map_ref(|b| &b.where_clauses);
+        let binders = self.binders.map_ref(|b| &b.where_clauses).cloned();
 
-        builder.push_binders(&binders, |builder, where_clauses| {
+        builder.push_binders(binders, |builder, where_clauses| {
             let ty = TyKind::FnDef(self.id, builder.substitution_in_scope()).intern(interner);
 
             well_formed_program_clauses(builder, ty.clone(), where_clauses.iter());
 
-            implied_bounds_program_clauses(builder, ty.clone(), where_clauses.iter());
+            implied_bounds_program_clauses(builder, &ty, where_clauses.iter());
 
             fully_visible_program_clauses(builder, ty, &builder.substitution_in_scope());
         });
@@ -580,8 +587,8 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
     /// compatibly do that.
     fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>, environment: &Environment<I>) {
         let interner = builder.interner();
-        let binders = self.binders.map_ref(|b| &b.where_clauses);
-        builder.push_binders(&binders, |builder, where_clauses| {
+        let binders = self.binders.map_ref(|b| &b.where_clauses).cloned();
+        builder.push_binders(binders, |builder, where_clauses| {
             let trait_ref = chalk_ir::TraitRef {
                 trait_id: self.id,
                 substitution: builder.substitution_in_scope(),
@@ -686,7 +693,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
             // ```
             // FromEnv(T: Baz) :- FromEnv(T: Foo)
             // ```
-            for qwc in &where_clauses {
+            for qwc in where_clauses {
                 builder.push_binders(qwc, |builder, wc| {
                     builder.push_clause(
                         wc.into_from_env_goal(interner),
@@ -780,115 +787,125 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
         _environment: &Environment<I>,
     ) {
         let interner = builder.interner();
-        let binders = self.binders.map_ref(|b| (&b.where_clauses, &b.bounds));
-        builder.push_binders(&binders, |builder, (where_clauses, bounds)| {
-            let substitution = builder.substitution_in_scope();
+        let binders = self.binders.clone();
+        builder.push_binders(
+            binders,
+            |builder,
+             AssociatedTyDatumBound {
+                 where_clauses,
+                 bounds,
+             }| {
+                let substitution = builder.substitution_in_scope();
 
-            let projection = ProjectionTy {
-                associated_ty_id: self.id,
-                substitution: substitution.clone(),
-            };
-            let projection_ty = AliasTy::Projection(projection.clone()).intern(interner);
+                let projection = ProjectionTy {
+                    associated_ty_id: self.id,
+                    substitution: substitution.clone(),
+                };
+                let projection_ty = AliasTy::Projection(projection.clone()).intern(interner);
 
-            // Retrieve the trait ref embedding the associated type
-            let trait_ref = builder.db.trait_ref_from_projection(&projection);
+                // Retrieve the trait ref embedding the associated type
+                let trait_ref = builder.db.trait_ref_from_projection(&projection);
 
-            // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
-            // we would produce `(Iterator::Item)<T>`.
-            let ty = TyKind::AssociatedType(self.id, substitution).intern(interner);
+                // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
+                // we would produce `(Iterator::Item)<T>`.
+                let ty = TyKind::AssociatedType(self.id, substitution).intern(interner);
 
-            let projection_eq = AliasEq {
-                alias: AliasTy::Projection(projection.clone()),
-                ty: ty.clone(),
-            };
-
-            // Fallback rule. The solver uses this to move between the projection
-            // and placeholder type.
-            //
-            //    forall<Self> {
-            //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
-            //    }
-            builder.push_fact_with_priority(projection_eq, None, ClausePriority::Low);
-
-            // Well-formedness of projection type.
-            //
-            //    forall<Self> {
-            //        WellFormed((Foo::Assoc)<Self>) :- WellFormed(Self: Foo), WellFormed(WC).
-            //    }
-            builder.push_clause(
-                WellFormed::Ty(ty.clone()),
-                iter::once(WellFormed::Trait(trait_ref.clone()).cast::<Goal<_>>(interner)).chain(
-                    where_clauses
-                        .iter()
-                        .cloned()
-                        .map(|qwc| qwc.into_well_formed_goal(interner))
-                        .casted(interner),
-                ),
-            );
-
-            // Assuming well-formedness of projection type means we can assume
-            // the trait ref as well. Mostly used in function bodies.
-            //
-            //    forall<Self> {
-            //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
-            //    }
-            builder.push_clause(FromEnv::Trait(trait_ref.clone()), Some(ty.from_env()));
-
-            // Reverse rule for where clauses.
-            //
-            //    forall<Self> {
-            //        FromEnv(WC) :- FromEnv((Foo::Assoc)<Self>).
-            //    }
-            //
-            // This is really a family of clauses, one for each where clause.
-            for qwc in &where_clauses {
-                builder.push_binders(qwc, |builder, wc| {
-                    builder.push_clause(
-                        wc.into_from_env_goal(interner),
-                        Some(FromEnv::Ty(ty.clone())),
-                    );
-                });
-            }
-
-            // Reverse rule for implied bounds.
-            //
-            //    forall<Self> {
-            //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
-            //    }
-            for quantified_bound in &bounds {
-                builder.push_binders(quantified_bound, |builder, bound| {
-                    for wc in bound.into_where_clauses(interner, projection_ty.clone()) {
-                        builder.push_clause(
-                            wc.into_from_env_goal(interner),
-                            iter::once(FromEnv::Trait(trait_ref.clone()).cast::<Goal<_>>(interner))
-                                .chain(where_clauses.iter().cloned().casted(interner)),
-                        );
-                    }
-                });
-            }
-
-            // add new type parameter U
-            builder.push_bound_ty(|builder, ty| {
-                // `Normalize(<T as Foo>::Assoc -> U)`
-                let normalize = Normalize {
+                let projection_eq = AliasEq {
                     alias: AliasTy::Projection(projection.clone()),
                     ty: ty.clone(),
                 };
 
-                // `AliasEq(<T as Foo>::Assoc = U)`
-                let projection_eq = AliasEq {
-                    alias: AliasTy::Projection(projection),
-                    ty,
-                };
-
-                // Projection equality rule from above.
+                // Fallback rule. The solver uses this to move between the projection
+                // and placeholder type.
                 //
-                //    forall<T, U> {
-                //        AliasEq(<T as Foo>::Assoc = U) :-
-                //            Normalize(<T as Foo>::Assoc -> U).
+                //    forall<Self> {
+                //        AliasEq(<Self as Foo>::Assoc = (Foo::Assoc)<Self>).
                 //    }
-                builder.push_clause(projection_eq, Some(normalize));
-            });
-        });
+                builder.push_fact_with_priority(projection_eq, None, ClausePriority::Low);
+
+                // Well-formedness of projection type.
+                //
+                //    forall<Self> {
+                //        WellFormed((Foo::Assoc)<Self>) :- WellFormed(Self: Foo), WellFormed(WC).
+                //    }
+                builder.push_clause(
+                    WellFormed::Ty(ty.clone()),
+                    iter::once(WellFormed::Trait(trait_ref.clone()).cast::<Goal<_>>(interner))
+                        .chain(
+                            where_clauses
+                                .iter()
+                                .cloned()
+                                .map(|qwc| qwc.into_well_formed_goal(interner))
+                                .casted(interner),
+                        ),
+                );
+
+                // Assuming well-formedness of projection type means we can assume
+                // the trait ref as well. Mostly used in function bodies.
+                //
+                //    forall<Self> {
+                //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
+                //    }
+                builder.push_clause(FromEnv::Trait(trait_ref.clone()), Some(ty.from_env()));
+
+                // Reverse rule for where clauses.
+                //
+                //    forall<Self> {
+                //        FromEnv(WC) :- FromEnv((Foo::Assoc)<Self>).
+                //    }
+                //
+                // This is really a family of clauses, one for each where clause.
+                for qwc in &where_clauses {
+                    builder.push_binders(qwc.clone(), |builder, wc| {
+                        builder.push_clause(
+                            wc.into_from_env_goal(interner),
+                            Some(FromEnv::Ty(ty.clone())),
+                        );
+                    });
+                }
+
+                // Reverse rule for implied bounds.
+                //
+                //    forall<Self> {
+                //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
+                //    }
+                for quantified_bound in bounds {
+                    builder.push_binders(quantified_bound, |builder, bound| {
+                        for wc in bound.into_where_clauses(interner, projection_ty.clone()) {
+                            builder.push_clause(
+                                wc.into_from_env_goal(interner),
+                                iter::once(
+                                    FromEnv::Trait(trait_ref.clone()).cast::<Goal<_>>(interner),
+                                )
+                                .chain(where_clauses.iter().cloned().casted(interner)),
+                            );
+                        }
+                    });
+                }
+
+                // add new type parameter U
+                builder.push_bound_ty(|builder, ty| {
+                    // `Normalize(<T as Foo>::Assoc -> U)`
+                    let normalize = Normalize {
+                        alias: AliasTy::Projection(projection.clone()),
+                        ty: ty.clone(),
+                    };
+
+                    // `AliasEq(<T as Foo>::Assoc = U)`
+                    let projection_eq = AliasEq {
+                        alias: AliasTy::Projection(projection),
+                        ty,
+                    };
+
+                    // Projection equality rule from above.
+                    //
+                    //    forall<T, U> {
+                    //        AliasEq(<T as Foo>::Assoc = U) :-
+                    //            Normalize(<T as Foo>::Assoc -> U).
+                    //    }
+                    builder.push_clause(projection_eq, Some(normalize));
+                });
+            },
+        );
     }
 }

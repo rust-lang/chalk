@@ -82,7 +82,7 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
             let ProgramClauseData(implication) = clause.data(interner);
 
             self.infer
-                .instantiate_binders_existentially(interner, implication)
+                .instantiate_binders_existentially(interner, implication.clone())
         };
         debug!(?consequence, ?conditions, ?constraints);
 
@@ -213,9 +213,9 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
-        canonical_answer_subst: &Canonical<AnswerSubst<I>>,
+        canonical_answer_subst: Canonical<AnswerSubst<I>>,
     ) -> Fallible<()> {
-        debug!(selected_goal = ?DeepNormalizer::normalize_deep(&mut self.infer, interner, selected_goal));
+        debug!(selected_goal = ?DeepNormalizer::normalize_deep(&mut self.infer, interner, selected_goal.clone()));
 
         // C' is now `answer`. No variables in common with G.
         let AnswerSubst {
@@ -231,7 +231,7 @@ impl<I: Interner> ResolventOps<I> for TruncatingInferenceTable<I> {
             delayed_subgoals,
         } = self
             .infer
-            .instantiate_canonical(interner, &canonical_answer_subst);
+            .instantiate_canonical(interner, canonical_answer_subst);
 
         AnswerSubstitutor::substitute(
             interner,
@@ -320,12 +320,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
         let pending_shifted = pending
             .shifted_out_to(interner, self.outer_binder)
-            .unwrap_or_else(|_| {
-                panic!(
-                    "truncate extracted a pending value that references internal binder: {:?}",
-                    pending,
-                )
-            });
+            .expect("truncate extracted a pending value that references internal binder");
 
         slg::into_ex_clause(
             interner,

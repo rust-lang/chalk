@@ -42,9 +42,9 @@ where
         // `Canonical` type (indeed, its entire reason for existence).
         let mut infer = InferenceTable::new();
         let snapshot = infer.snapshot();
-        let instantiated_value = infer.instantiate_canonical(interner, &self);
+        let instantiated_value = infer.instantiate_canonical(interner, self);
         let mapped_value = op(instantiated_value);
-        let result = infer.canonicalize(interner, &mapped_value);
+        let result = infer.canonicalize(interner, mapped_value);
         infer.rollback_to(snapshot);
         result.quantified
     }
@@ -70,12 +70,14 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
                 let InEnvironment { environment, goal } = env_goal;
                 match goal.data(interner) {
                     GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
-                        let subgoal = infer.instantiate_binders_universally(interner, subgoal);
+                        let subgoal =
+                            infer.instantiate_binders_universally(interner, subgoal.clone());
                         env_goal = InEnvironment::new(&environment, subgoal);
                     }
 
                     GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
-                        let subgoal = infer.instantiate_binders_existentially(interner, subgoal);
+                        let subgoal =
+                            infer.instantiate_binders_existentially(interner, subgoal.clone());
                         env_goal = InEnvironment::new(&environment, subgoal);
                     }
 
@@ -89,7 +91,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
                 }
             }
         };
-        let canonical = infer.canonicalize(interner, &peeled_goal).quantified;
+        let canonical = infer.canonicalize(interner, peeled_goal).quantified;
         infer.u_canonicalize(interner, &canonical).quantified
     }
 
@@ -105,7 +107,7 @@ impl<I: Interner> GoalExt<I> for Goal<I> {
     fn into_closed_goal(self, interner: &I) -> UCanonical<InEnvironment<Goal<I>>> {
         let mut infer = InferenceTable::new();
         let env_goal = InEnvironment::new(&Environment::new(interner), self);
-        let canonical_goal = infer.canonicalize(interner, &env_goal).quantified;
+        let canonical_goal = infer.canonicalize(interner, env_goal).quantified;
         infer.u_canonicalize(interner, &canonical_goal).quantified
     }
 }

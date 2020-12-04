@@ -181,7 +181,7 @@ fn merge_into_guidance<I: Interner>(
 
     let aggr_subst = Substitution::from_iter(interner, aggr_generic_args);
 
-    infer.canonicalize(interner, &aggr_subst).quantified
+    infer.canonicalize(interner, aggr_subst).quantified
 }
 
 fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> bool {

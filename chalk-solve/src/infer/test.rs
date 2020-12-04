@@ -263,7 +263,7 @@ fn quantify_simple() {
 
     assert_eq!(
         table
-            .canonicalize(interner, &ty!(apply (item 0) (infer 2) (infer 1) (infer 0)))
+            .canonicalize(interner, ty!(apply (item 0) (infer 2) (infer 1) (infer 0)))
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (bound 0) (bound 1) (bound 2)),
@@ -305,7 +305,7 @@ fn quantify_bound() {
         table
             .canonicalize(
                 interner,
-                &ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))
+                ty!(apply (item 0) (expr v2b) (expr v2a) (expr v1) (expr v0))
             )
             .quantified,
         Canonical {
@@ -351,7 +351,7 @@ fn quantify_ty_under_binder() {
         table
             .canonicalize(
                 interner,
-                &ty!(function 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
+                ty!(function 3 (apply (item 0) (bound 1) (infer 0) (infer 1) (lifetime (infer 2))))
             )
             .quantified,
         Canonical {

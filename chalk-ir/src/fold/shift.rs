@@ -7,28 +7,28 @@ use crate::*;
 /// of binders.
 pub trait Shift<I: Interner>: Fold<I> {
     /// Shifts this term in one level of binders.
-    fn shifted_in(&self, interner: &I) -> Self::Result;
+    fn shifted_in(self, interner: &I) -> Self::Result;
 
     /// Shifts a term valid at `outer_binder` so that it is
     /// valid at the innermost binder. See [`DebruijnIndex::shifted_in_from`]
     /// for a detailed explanation.
-    fn shifted_in_from(&self, interner: &I, source_binder: DebruijnIndex) -> Self::Result;
+    fn shifted_in_from(self, interner: &I, source_binder: DebruijnIndex) -> Self::Result;
 
     /// Shifts this term out one level of binders.
-    fn shifted_out(&self, interner: &I) -> Fallible<Self::Result>;
+    fn shifted_out(self, interner: &I) -> Fallible<Self::Result>;
 
     /// Shifts a term valid at the innermost binder so that it is
     /// valid at `outer_binder`. See [`DebruijnIndex::shifted_out_to`]
     /// for a detailed explanation.
-    fn shifted_out_to(&self, interner: &I, target_binder: DebruijnIndex) -> Fallible<Self::Result>;
+    fn shifted_out_to(self, interner: &I, target_binder: DebruijnIndex) -> Fallible<Self::Result>;
 }
 
 impl<T: Fold<I>, I: Interner> Shift<I> for T {
-    fn shifted_in(&self, interner: &I) -> Self::Result {
+    fn shifted_in(self, interner: &I) -> Self::Result {
         self.shifted_in_from(interner, DebruijnIndex::ONE)
     }
 
-    fn shifted_in_from(&self, interner: &I, source_binder: DebruijnIndex) -> T::Result {
+    fn shifted_in_from(self, interner: &I, source_binder: DebruijnIndex) -> T::Result {
         self.fold_with(
             &mut Shifter {
                 source_binder,
@@ -39,7 +39,7 @@ impl<T: Fold<I>, I: Interner> Shift<I> for T {
         .unwrap()
     }
 
-    fn shifted_out_to(&self, interner: &I, target_binder: DebruijnIndex) -> Fallible<T::Result> {
+    fn shifted_out_to(self, interner: &I, target_binder: DebruijnIndex) -> Fallible<T::Result> {
         self.fold_with(
             &mut DownShifter {
                 target_binder,
@@ -49,7 +49,7 @@ impl<T: Fold<I>, I: Interner> Shift<I> for T {
         )
     }
 
-    fn shifted_out(&self, interner: &I) -> Fallible<Self::Result> {
+    fn shifted_out(self, interner: &I) -> Fallible<Self::Result> {
         self.shifted_out_to(interner, DebruijnIndex::ONE)
     }
 }
@@ -97,14 +97,14 @@ impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
 
     fn fold_free_var_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
         // const types don't have free variables, so we can skip folding `ty`
         Ok(self
             .adjust(bound_var, outer_binder)
-            .to_const(self.interner(), ty.clone()))
+            .to_const(self.interner(), ty))
     }
 
     fn interner(&self) -> &'i I {
@@ -165,14 +165,14 @@ impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
 
     fn fold_free_var_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
         // const types don't have free variables, so we can skip folding `ty`
         Ok(self
             .adjust(bound_var, outer_binder)?
-            .to_const(self.interner(), ty.clone()))
+            .to_const(self.interner(), ty))
     }
 
     fn interner(&self) -> &'i I {

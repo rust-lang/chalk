@@ -91,7 +91,10 @@ impl<I: Interner> Fold<I> for GenericArg<I> {
     {
         let interner = folder.interner();
 
-        let data = self.data(interner).clone().fold_with(folder, outer_binder)?;
+        let data = self
+            .data(interner)
+            .clone()
+            .fold_with(folder, outer_binder)?;
         Ok(GenericArg::new(interner, data))
     }
 }

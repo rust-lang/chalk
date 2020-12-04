@@ -131,7 +131,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     #[instrument(level = "debug", skip(self, op))]
     pub fn push_binders<R, V>(
         &mut self,
-        binders: &Binders<V>,
+        binders: Binders<V>,
         op: impl FnOnce(&mut Self, V::Result) -> R,
     ) -> R
     where
@@ -148,7 +148,6 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .zip(old_len..)
                 .map(|(pk, i)| (i, pk).to_generic_arg(interner)),
         );
-
         let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
         debug!(?value);
         let res = op(self, value);
@@ -169,7 +168,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
             VariableKinds::from1(interner, VariableKind::Ty(TyVariableKind::General)),
             PhantomData::<I>,
         );
-        self.push_binders(&binders, |this, PhantomData| {
+        self.push_binders(binders, |this, PhantomData| {
             let ty = this
                 .placeholders_in_scope()
                 .last()
@@ -191,7 +190,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
             VariableKinds::from1(interner, VariableKind::Lifetime),
             PhantomData::<I>,
         );
-        self.push_binders(&binders, |this, PhantomData| {
+        self.push_binders(binders, |this, PhantomData| {
             let lifetime = this
                 .placeholders_in_scope()
                 .last()

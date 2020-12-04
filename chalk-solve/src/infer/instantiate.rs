@@ -26,12 +26,12 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
+    pub fn instantiate_canonical<T>(&mut self, interner: &I, bound: Canonical<T>) -> T::Result
     where
         T: HasInterner<Interner = I> + Fold<I> + Debug,
     {
         let subst = self.fresh_subst(interner, &bound.binders.as_slice(interner));
-        subst.apply(&bound.value, interner)
+        subst.apply(bound.value, interner)
     }
 
     /// Instantiates `arg` with fresh existential variables in the
@@ -44,7 +44,7 @@ impl<I: Interner> InferenceTable<I> {
         interner: &I,
         universe: UniverseIndex,
         binders: impl Iterator<Item = VariableKind<I>>,
-        arg: &T,
+        arg: T,
     ) -> T::Result
     where
         T: Fold<I>,
@@ -53,7 +53,7 @@ impl<I: Interner> InferenceTable<I> {
             .map(|pk| CanonicalVarKind::new(pk, universe))
             .collect();
         let subst = self.fresh_subst(interner, &binders);
-        subst.apply(&arg, interner)
+        subst.apply(arg, interner)
     }
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
@@ -61,28 +61,32 @@ impl<I: Interner> InferenceTable<I> {
     pub fn instantiate_binders_existentially<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: &Binders<T>,
+        arg: Binders<T>,
     ) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>,
     {
-        let value = arg.skip_binders();
-        let binders = arg.binders.iter(interner).cloned();
+        let (value, binders) = arg.into_value_and_skipped_binders();
 
         let max_universe = self.max_universe;
-        self.instantiate_in(interner, max_universe, binders, value)
+        self.instantiate_in(
+            interner,
+            max_universe,
+            binders.iter(interner).cloned(),
+            value,
+        )
     }
 
     #[instrument(level = "debug", skip(self, interner))]
     pub fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: &Binders<T>,
+        arg: Binders<T>,
     ) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>,
     {
-        let value = arg.skip_binders();
+        let (value, binders) = arg.into_value_and_skipped_binders();
 
         let mut lazy_ui = None;
         let mut ui = || {
@@ -92,8 +96,7 @@ impl<I: Interner> InferenceTable<I> {
                 ui
             })
         };
-        let parameters: Vec<_> = arg
-            .binders
+        let parameters: Vec<_> = binders
             .iter(interner)
             .cloned()
             .enumerate()
