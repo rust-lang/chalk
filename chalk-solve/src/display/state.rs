@@ -243,7 +243,7 @@ impl<'a, I: Interner> InternalWriterState<'a, I> {
     ///
     /// If `self_binding` is `Some`, then it will introduce a new variable named
     /// `Self` with the within-debrujin index given within and the innermost
-    /// debrujian index after increasing debrujin index.  
+    /// debrujian index after increasing debrujin index.
     #[must_use = "this returns a new `InternalWriterState`, and does not modify the existing one"]
     pub(super) fn add_debrujin_index(&self, self_binding: Option<IndexWithinBinding>) -> Self {
         let mut new_state = self.clone();

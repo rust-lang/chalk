@@ -101,7 +101,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
             .substitution
             .as_slice(interner)
             .iter()
-            .map(|param| param.shifted_in(interner));
+            .map(|param| param.clone().shifted_in(interner));
 
         // Create an equality goal for every input type the trait, attempting
         // to unify the inputs to both impls with one another
@@ -114,7 +114,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
         let rhs_where_clauses = rhs_bound
             .where_clauses
             .iter()
-            .map(|wc| wc.shifted_in(interner));
+            .map(|wc| wc.clone().shifted_in(interner));
 
         // Create a goal for each clause in both where clauses
         let wc_goals = lhs_where_clauses
@@ -214,7 +214,7 @@ impl<I: Interner> CoherenceSolver<'_, I> {
                     // exists<Q0..Qn> { ... }
                     gb.exists(
                         &less_special.binders,
-                        &more_special_impl.trait_ref,
+                        more_special_impl.trait_ref.clone(),
                         |gb, _, less_special_impl, more_special_trait_ref| {
                             let interner = gb.interner();
 

@@ -134,7 +134,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         let (impl_parameters, atv_parameters) =
             self.split_associated_ty_value_parameters(&parameters, associated_ty_value);
         let trait_ref = {
-            let opaque_ty_ref = impl_datum.binders.map_ref(|b| &b.trait_ref);
+            let opaque_ty_ref = impl_datum.binders.map_ref(|b| &b.trait_ref).cloned();
             debug!(?opaque_ty_ref);
             opaque_ty_ref.substitute(interner, impl_parameters)
         };
@@ -169,7 +169,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     ///
     /// ```ignore (example)
     /// trait Foo<T> {
-    ///     type Assoc<'a>;   
+    ///     type Assoc<'a>;
     /// }
     /// ```
     ///

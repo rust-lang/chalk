@@ -61,12 +61,12 @@ impl<I: Interner> SlgContextOps<'_, I> {
         let (mut infer, subst, _) = InferenceTable::from_canonical(
             self.program.interner(),
             goal.universes,
-            &goal.canonical,
+            goal.canonical.clone(),
         );
         infer
             .canonicalize(
                 self.program.interner(),
-                &ConstrainedSubst {
+                ConstrainedSubst {
                     subst,
                     constraints: Constraints::empty(self.program.interner()),
                 },
@@ -130,21 +130,18 @@ pub trait ResolventOps<I: Interner> {
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
         answer_table_goal: &Canonical<InEnvironment<Goal<I>>>,
-        canonical_answer_subst: &Canonical<AnswerSubst<I>>,
+        canonical_answer_subst: Canonical<AnswerSubst<I>>,
     ) -> Fallible<()>;
 }
 
 /// Methods for unifying and manipulating terms and binders.
 pub trait UnificationOps<I: Interner> {
     // Used by: simplify
-    fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I>;
+    fn instantiate_binders_universally(&mut self, interner: &I, arg: Binders<Goal<I>>) -> Goal<I>;
 
     // Used by: simplify
-    fn instantiate_binders_existentially(
-        &mut self,
-        interner: &I,
-        arg: &Binders<Goal<I>>,
-    ) -> Goal<I>;
+    fn instantiate_binders_existentially(&mut self, interner: &I, arg: Binders<Goal<I>>)
+        -> Goal<I>;
 
     // Used by: logic (but for debugging only)
     fn debug_ex_clause<'v>(&mut self, interner: &I, value: &'v ExClause<I>) -> Box<dyn Debug + 'v>;
@@ -153,14 +150,14 @@ pub trait UnificationOps<I: Interner> {
     fn fully_canonicalize_goal(
         &mut self,
         interner: &I,
-        value: &InEnvironment<Goal<I>>,
+        value: InEnvironment<Goal<I>>,
     ) -> (UCanonical<InEnvironment<Goal<I>>>, UniverseMap);
 
     // Used by: logic
     fn canonicalize_ex_clause(
         &mut self,
         interner: &I,
-        value: &ExClause<I>,
+        value: ExClause<I>,
     ) -> Canonical<ExClause<I>>;
 
     // Used by: logic
@@ -184,7 +181,7 @@ pub trait UnificationOps<I: Interner> {
     fn invert_goal(
         &mut self,
         interner: &I,
-        value: &InEnvironment<Goal<I>>,
+        value: InEnvironment<Goal<I>>,
     ) -> Option<InEnvironment<Goal<I>>>;
 
     /// First unify the parameters, then add the residual subgoals
@@ -239,14 +236,14 @@ impl<I: Interner> TruncateOps<I> for TruncatingInferenceTable<I> {
 }
 
 impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
-    fn instantiate_binders_universally(&mut self, interner: &I, arg: &Binders<Goal<I>>) -> Goal<I> {
+    fn instantiate_binders_universally(&mut self, interner: &I, arg: Binders<Goal<I>>) -> Goal<I> {
         self.infer.instantiate_binders_universally(interner, arg)
     }
 
     fn instantiate_binders_existentially(
         &mut self,
         interner: &I,
-        arg: &Binders<Goal<I>>,
+        arg: Binders<Goal<I>>,
     ) -> Goal<I> {
         self.infer.instantiate_binders_existentially(interner, arg)
     }
@@ -255,14 +252,14 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
         Box::new(DeepNormalizer::normalize_deep(
             &mut self.infer,
             interner,
-            value,
+            value.clone(),
         ))
     }
 
     fn fully_canonicalize_goal(
         &mut self,
         interner: &I,
-        value: &InEnvironment<Goal<I>>,
+        value: InEnvironment<Goal<I>>,
     ) -> (UCanonical<InEnvironment<Goal<I>>>, UniverseMap) {
         let canonicalized_goal = self.infer.canonicalize(interner, value).quantified;
         let UCanonicalized {
@@ -275,7 +272,7 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
     fn canonicalize_ex_clause(
         &mut self,
         interner: &I,
-        value: &ExClause<I>,
+        value: ExClause<I>,
     ) -> Canonical<ExClause<I>> {
         self.infer.canonicalize(interner, value).quantified
     }
@@ -289,7 +286,7 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
         self.infer
             .canonicalize(
                 interner,
-                &ConstrainedSubst {
+                ConstrainedSubst {
                     subst,
                     constraints: Constraints::from_iter(interner, constraints),
                 },
@@ -307,7 +304,7 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
         self.infer
             .canonicalize(
                 interner,
-                &AnswerSubst {
+                AnswerSubst {
                     subst,
                     constraints: Constraints::from_iter(interner, constraints),
                     delayed_subgoals,
@@ -319,7 +316,7 @@ impl<I: Interner> UnificationOps<I> for TruncatingInferenceTable<I> {
     fn invert_goal(
         &mut self,
         interner: &I,
-        value: &InEnvironment<Goal<I>>,
+        value: InEnvironment<Goal<I>>,
     ) -> Option<InEnvironment<Goal<I>>> {
         self.infer.invert(interner, value)
     }
@@ -507,7 +504,7 @@ impl<I: Interner> MayInvalidate<'_, I> {
         }
     }
 
-    /// Returns true if the two consts could be unequal.    
+    /// Returns true if the two consts could be unequal.
     fn aggregate_lifetimes(&mut self, _: &Lifetime<I>, _: &Lifetime<I>) -> bool {
         true
     }

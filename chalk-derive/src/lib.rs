@@ -258,7 +258,7 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
 fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
-    let input = s.ast();
+    s.bind_with(|_| synstructure::BindStyle::Move);
 
     let (interner, kind) = find_interner(&mut s);
 
@@ -272,6 +272,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
         })
     });
 
+    let input = s.ast();
     let type_name = &input.ident;
 
     let result = if kind == DeriveKind::FromHasInterner {
@@ -295,14 +296,14 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
             type Result = #result;
 
             fn fold_with<'i>(
-                &self,
+                self,
                 folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> ::chalk_ir::Fallible<Self::Result>
             where
                 #interner: 'i,
             {
-                Ok(match *self { #body })
+                Ok(match self { #body })
             }
         },
     )

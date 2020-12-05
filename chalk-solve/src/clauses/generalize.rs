@@ -21,7 +21,7 @@ pub struct Generalize<'i, I: Interner> {
 }
 
 impl<I: Interner> Generalize<'_, I> {
-    pub fn apply<T>(interner: &I, value: &T) -> Binders<T::Result>
+    pub fn apply<T>(interner: &I, value: T) -> Binders<T::Result>
     where
         T: HasInterner<Interner = I> + Fold<I>,
         T::Result: HasInterner<Interner = I>,

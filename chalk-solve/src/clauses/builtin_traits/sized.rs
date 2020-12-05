@@ -9,7 +9,7 @@ use chalk_ir::{AdtId, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, V
 fn push_adt_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
+    trait_ref: TraitRef<I>,
     adt_id: AdtId<I>,
     substitution: &Substitution<I>,
 ) {
@@ -17,7 +17,7 @@ fn push_adt_sized_conditions<I: Interner>(
 
     // WF ensures that all enums are Sized, so we only have to consider structs.
     if adt_datum.kind != AdtKind::Struct {
-        builder.push_fact(trait_ref.clone());
+        builder.push_fact(trait_ref);
         return;
     }
 
@@ -27,7 +27,7 @@ fn push_adt_sized_conditions<I: Interner>(
     // This is because the WF checks for ADTs require that all the other fields must be Sized.
     let last_field_ty = adt_datum
         .binders
-        .map_ref(|b| &b.variants)
+        .map_ref(|b| b.variants.clone())
         .substitute(interner, substitution)
         .into_iter()
         .take(1) // We have a struct so we're guaranteed one variant
@@ -39,13 +39,13 @@ fn push_adt_sized_conditions<I: Interner>(
 fn push_tuple_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
+    trait_ref: TraitRef<I>,
     arity: usize,
     substitution: &Substitution<I>,
 ) {
     // Empty tuples are always Sized
     if arity == 0 {
-        builder.push_fact(trait_ref.clone());
+        builder.push_fact(trait_ref);
         return;
     }
 
@@ -67,16 +67,16 @@ fn push_tuple_sized_conditions<I: Interner>(
 pub fn add_sized_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
-    ty: &TyKind<I>,
+    trait_ref: TraitRef<I>,
+    ty: TyKind<I>,
     binders: &CanonicalVarKinds<I>,
 ) {
     match ty {
-        TyKind::Adt(adt_id, substitution) => {
-            push_adt_sized_conditions(db, builder, trait_ref, *adt_id, substitution)
+        TyKind::Adt(adt_id, ref substitution) => {
+            push_adt_sized_conditions(db, builder, trait_ref, adt_id, substitution)
         }
-        TyKind::Tuple(arity, substitution) => {
-            push_tuple_sized_conditions(db, builder, trait_ref, *arity, substitution)
+        TyKind::Tuple(arity, ref substitution) => {
+            push_tuple_sized_conditions(db, builder, trait_ref, arity, substitution)
         }
         TyKind::Array(_, _)
         | TyKind::Never
@@ -86,7 +86,7 @@ pub fn add_sized_program_clauses<I: Interner>(
         | TyKind::Raw(_, _)
         | TyKind::Generator(_, _)
         | TyKind::GeneratorWitness(_, _)
-        | TyKind::Ref(_, _, _) => builder.push_fact(trait_ref.clone()),
+        | TyKind::Ref(_, _, _) => builder.push_fact(trait_ref),
 
         TyKind::AssociatedType(_, _)
         | TyKind::Slice(_)
@@ -97,13 +97,13 @@ pub fn add_sized_program_clauses<I: Interner>(
 
         TyKind::Function(_)
         | TyKind::InferenceVar(_, TyVariableKind::Float)
-        | TyKind::InferenceVar(_, TyVariableKind::Integer) => builder.push_fact(trait_ref.clone()),
+        | TyKind::InferenceVar(_, TyVariableKind::Integer) => builder.push_fact(trait_ref),
 
         TyKind::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
                 VariableKind::Ty(TyVariableKind::Integer)
-                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref.clone()),
+                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref),
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }

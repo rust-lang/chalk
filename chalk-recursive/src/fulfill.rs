@@ -63,7 +63,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn instantiate_binders_universally<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: &'a Binders<T>,
+        arg: Binders<T>,
     ) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>;
@@ -71,7 +71,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn instantiate_binders_existentially<'a, T>(
         &mut self,
         interner: &'a I,
-        arg: &'a Binders<T>,
+        arg: Binders<T>,
     ) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>;
@@ -79,7 +79,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     fn canonicalize<T>(
         &mut self,
         interner: &I,
-        value: &T,
+        value: T,
     ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
     where
         T: Fold<I>,
@@ -91,7 +91,7 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
         value0: &Canonical<T>,
     ) -> (UCanonical<T::Result>, UniverseMap)
     where
-        T: HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
         T::Result: HasInterner<Interner = I>;
 
     fn unify<T>(
@@ -106,14 +106,14 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
     where
         T: ?Sized + Zip<I>;
 
-    fn instantiate_canonical<T>(&mut self, interner: &I, bound: &Canonical<T>) -> T::Result
+    fn instantiate_canonical<T>(&mut self, interner: &I, bound: Canonical<T>) -> T::Result
     where
         T: HasInterner<Interner = I> + Fold<I> + Debug;
 
     fn invert_then_canonicalize<T>(
         &mut self,
         interner: &I,
-        value: &T,
+        value: T,
     ) -> Option<Canonical<T::Result>>
     where
         T: Fold<I, Result = T> + HasInterner<Interner = I>;
@@ -181,7 +181,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             priority: _,
         } = fulfill
             .infer
-            .instantiate_binders_existentially(fulfill.solver.interner(), clause);
+            .instantiate_binders_existentially(fulfill.solver.interner(), clause.clone());
 
         debug!(?consequence, ?conditions, ?constraints);
         fulfill
@@ -303,13 +303,13 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             GoalData::Quantified(QuantifierKind::ForAll, subgoal) => {
                 let subgoal = self
                     .infer
-                    .instantiate_binders_universally(self.solver.interner(), subgoal);
+                    .instantiate_binders_universally(self.solver.interner(), subgoal.clone());
                 self.push_goal(environment, subgoal)?;
             }
             GoalData::Quantified(QuantifierKind::Exists, subgoal) => {
                 let subgoal = self
                     .infer
-                    .instantiate_binders_existentially(self.solver.interner(), subgoal);
+                    .instantiate_binders_existentially(self.solver.interner(), subgoal.clone());
                 self.push_goal(environment, subgoal)?;
             }
             GoalData::Implies(wc, subgoal) => {
@@ -353,11 +353,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     #[instrument(level = "debug", skip(self, minimums))]
     fn prove(
         &mut self,
-        wc: &InEnvironment<Goal<I>>,
+        wc: InEnvironment<Goal<I>>,
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.interner();
-        let (quantified, free_vars) = self.infer.canonicalize(interner, &wc);
+        let (quantified, free_vars) = self.infer.canonicalize(interner, wc);
         let (quantified, universes) = self.infer.u_canonicalize(interner, &quantified);
         let result = self.solver.solve_goal(quantified, minimums);
         Ok(PositiveSolution {
@@ -367,7 +367,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         })
     }
 
-    fn refute(&mut self, goal: &InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
+    fn refute(&mut self, goal: InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
         let canonicalized = match self
             .infer
             .invert_then_canonicalize(self.solver.interner(), goal)
@@ -414,7 +414,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         let subst = universes.map_from_canonical(self.interner(), &subst);
         let ConstrainedSubst { subst, constraints } = self
             .infer
-            .instantiate_canonical(self.solver.interner(), &subst);
+            .instantiate_canonical(self.solver.interner(), subst);
 
         debug!(
             "fulfill::apply_solution: adding constraints {:?}",
@@ -463,13 +463,13 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             // directly.
             assert!(obligations.is_empty());
             while let Some(obligation) = self.obligations.pop() {
-                let ambiguous = match obligation {
-                    Obligation::Prove(ref wc) => {
+                let ambiguous = match &obligation {
+                    Obligation::Prove(wc) => {
                         let PositiveSolution {
                             free_vars,
                             universes,
                             solution,
-                        } = self.prove(wc, minimums)?;
+                        } = self.prove(wc.clone(), minimums)?;
 
                         if let Some(constrained_subst) = solution.definite_subst(self.interner()) {
                             // If the substitution is empty, we won't actually make any progress by applying it!
@@ -490,8 +490,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
 
                         solution.is_ambig()
                     }
-                    Obligation::Refute(ref goal) => {
-                        let answer = self.refute(goal)?;
+                    Obligation::Refute(goal) => {
+                        let answer = self.refute(goal.clone())?;
                         answer == NegativeSolution::Ambiguous
                     }
                 };
@@ -539,7 +539,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             let constraints = Constraints::from_iter(self.interner(), self.constraints.clone());
             let constrained = self.infer.canonicalize(
                 self.solver.interner(),
-                &ConstrainedSubst {
+                ConstrainedSubst {
                     subst: self.subst,
                     constraints,
                 },
@@ -552,7 +552,9 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        let canonical_subst = self.infer.canonicalize(self.solver.interner(), &self.subst);
+        let canonical_subst = self
+            .infer
+            .canonicalize(self.solver.interner(), self.subst.clone());
 
         if canonical_subst
             .0
@@ -572,7 +574,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
                         free_vars,
                         universes,
                         solution,
-                    } = self.prove(&goal, minimums).unwrap();
+                    } = self.prove(goal, minimums).unwrap();
                     if let Some(constrained_subst) =
                         solution.constrained_subst(self.solver.interner())
                     {

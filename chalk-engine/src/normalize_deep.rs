@@ -24,7 +24,7 @@ impl<I: Interner> DeepNormalizer<'_, '_, I> {
     pub fn normalize_deep<T: Fold<I>>(
         table: &mut InferenceTable<I>,
         interner: &I,
-        value: &T,
+        value: T,
     ) -> T::Result {
         value
             .fold_with(
@@ -53,6 +53,7 @@ where
         match self.table.probe_var(var) {
             Some(ty) => Ok(ty
                 .assert_ty_ref(interner)
+                .clone()
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)), // FIXME shift
             None => {
@@ -72,6 +73,7 @@ where
         match self.table.probe_var(var) {
             Some(l) => Ok(l
                 .assert_lifetime_ref(interner)
+                .clone()
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)),
             None => Ok(var.to_lifetime(interner)), // FIXME shift
@@ -80,7 +82,7 @@ where
 
     fn fold_inference_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -88,9 +90,10 @@ where
         match self.table.probe_var(var) {
             Some(c) => Ok(c
                 .assert_const_ref(interner)
+                .clone()
                 .fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)),
-            None => Ok(var.to_const(interner, ty.clone())), // FIXME shift
+            None => Ok(var.to_const(interner, ty)), // FIXME shift
         }
     }
 
@@ -149,8 +152,8 @@ mod test {
         // _which_ of 'b' and 'c' becomes the root. We need to normalize
         // "b" too, then, to ensure we get a consistent result.
         assert_eq!(
-            DeepNormalizer::normalize_deep(&mut table, interner, &a),
-            ty!(apply (item 0) (expr DeepNormalizer::normalize_deep(&mut table, interner, &b))),
+            DeepNormalizer::normalize_deep(&mut table, interner, a.clone()),
+            ty!(apply (item 0) (expr DeepNormalizer::normalize_deep(&mut table, interner, b.clone()))),
         );
         table
             .relate(
@@ -163,7 +166,7 @@ mod test {
             )
             .unwrap();
         assert_eq!(
-            DeepNormalizer::normalize_deep(&mut table, interner, &a),
+            DeepNormalizer::normalize_deep(&mut table, interner, a),
             ty!(apply (item 0) (apply (item 1)))
         );
     }

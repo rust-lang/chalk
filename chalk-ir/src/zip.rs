@@ -44,7 +44,7 @@ pub trait Zipper<'i, I: Interner + 'i> {
         b: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>;
+        T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>;
 
     /// Zips two substs
     fn zip_substs(
@@ -98,7 +98,7 @@ where
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
+        T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
     {
         (**self).zip_binders(variance, a, b)
     }
@@ -278,8 +278,9 @@ impl<I: Interner> Zip<I> for Const<I> {
         zipper.zip_consts(variance, a, b)
     }
 }
-impl<I: Interner, T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>> Zip<I>
-    for Binders<T>
+impl<I: Interner, T> Zip<I> for Binders<T>
+where
+    T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
 {
     fn zip_with<'i, Z: Zipper<'i, I>>(
         zipper: &mut Z,

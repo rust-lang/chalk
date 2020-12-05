@@ -8,13 +8,13 @@ use tracing::instrument;
 fn push_tuple_copy_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
+    trait_ref: TraitRef<I>,
     arity: usize,
     substitution: &Substitution<I>,
 ) {
     // Empty tuples are always Copy
     if arity == 0 {
-        builder.push_fact(trait_ref.clone());
+        builder.push_fact(trait_ref);
         return;
     }
 
@@ -34,23 +34,23 @@ fn push_tuple_copy_conditions<I: Interner>(
 pub fn add_copy_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
-    ty: &TyKind<I>,
+    trait_ref: TraitRef<I>,
+    ty: TyKind<I>,
     binders: &CanonicalVarKinds<I>,
 ) {
     match ty {
-        TyKind::Tuple(arity, substitution) => {
-            push_tuple_copy_conditions(db, builder, trait_ref, *arity, substitution)
+        TyKind::Tuple(arity, ref substitution) => {
+            push_tuple_copy_conditions(db, builder, trait_ref, arity, substitution)
         }
         TyKind::Array(ty, _) => {
             needs_impl_for_tys(db, builder, trait_ref, iter::once(ty.clone()));
         }
         TyKind::FnDef(_, _) => {
-            builder.push_fact(trait_ref.clone());
+            builder.push_fact(trait_ref);
         }
-        TyKind::Closure(closure_id, substitution) => {
-            let closure_fn_substitution = db.closure_fn_substitution(*closure_id, substitution);
-            let upvars = db.closure_upvars(*closure_id, substitution);
+        TyKind::Closure(closure_id, ref substitution) => {
+            let closure_fn_substitution = db.closure_fn_substitution(closure_id, substitution);
+            let upvars = db.closure_upvars(closure_id, substitution);
             let upvars = upvars.substitute(db.interner(), &closure_fn_substitution);
             needs_impl_for_tys(db, builder, trait_ref, Some(upvars).into_iter());
         }
@@ -71,10 +71,10 @@ pub fn add_copy_program_clauses<I: Interner>(
         | TyKind::GeneratorWitness(_, _)
         | TyKind::Error => {}
 
-        TyKind::Function(_) => builder.push_fact(trait_ref.clone()),
+        TyKind::Function(_) => builder.push_fact(trait_ref),
 
         TyKind::InferenceVar(_, kind) => match kind {
-            TyVariableKind::Integer | TyVariableKind::Float => builder.push_fact(trait_ref.clone()),
+            TyVariableKind::Integer | TyVariableKind::Float => builder.push_fact(trait_ref),
             TyVariableKind::General => {}
         },
 
@@ -82,7 +82,7 @@ pub fn add_copy_program_clauses<I: Interner>(
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
             match var_kind {
                 VariableKind::Ty(TyVariableKind::Integer)
-                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref.clone()),
+                | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref),
                 VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }

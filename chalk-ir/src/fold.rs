@@ -70,7 +70,7 @@ where
     /// encountered when folding. By default, invokes
     /// `super_fold_with`, which will in turn invoke the more
     /// specialized folding methods below, like `fold_free_var_ty`.
-    fn fold_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> Fallible<Ty<I>> {
+    fn fold_ty(&mut self, ty: Ty<I>, outer_binder: DebruijnIndex) -> Fallible<Ty<I>> {
         ty.super_fold_with(self.as_dyn(), outer_binder)
     }
 
@@ -80,7 +80,7 @@ where
     /// specialized folding methods below, like `fold_free_var_lifetime`.
     fn fold_lifetime(
         &mut self,
-        lifetime: &Lifetime<I>,
+        lifetime: Lifetime<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>> {
         lifetime.super_fold_with(self.as_dyn(), outer_binder)
@@ -92,7 +92,7 @@ where
     /// specialized folding methods below, like `fold_free_var_const`.
     fn fold_const(
         &mut self,
-        constant: &Const<I>,
+        constant: Const<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
         constant.super_fold_with(self.as_dyn(), outer_binder)
@@ -101,14 +101,14 @@ where
     /// Invoked for every program clause. By default, recursively folds the goals contents.
     fn fold_program_clause(
         &mut self,
-        clause: &ProgramClause<I>,
+        clause: ProgramClause<I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<ProgramClause<I>> {
         clause.super_fold_with(self.as_dyn(), outer_binder)
     }
 
     /// Invoked for every goal. By default, recursively folds the goals contents.
-    fn fold_goal(&mut self, goal: &Goal<I>, outer_binder: DebruijnIndex) -> Fallible<Goal<I>> {
+    fn fold_goal(&mut self, goal: Goal<I>, outer_binder: DebruijnIndex) -> Fallible<Goal<I>> {
         goal.super_fold_with(self.as_dyn(), outer_binder)
     }
 
@@ -164,7 +164,7 @@ where
     /// As `fold_free_var_ty`, but for constants.
     fn fold_free_var_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -176,7 +176,7 @@ where
         } else {
             let bound_var = bound_var.shifted_in_from(outer_binder);
             Ok(ConstData {
-                ty: ty.fold_with(self.as_dyn(), outer_binder)?,
+                ty: ty.clone().fold_with(self.as_dyn(), outer_binder)?,
                 value: ConstValue::<I>::BoundVar(bound_var),
             }
             .intern(self.interner()))
@@ -227,7 +227,7 @@ where
     #[allow(unused_variables)]
     fn fold_free_placeholder_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         universe: PlaceholderIndex,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -284,7 +284,7 @@ where
     #[allow(unused_variables)]
     fn fold_inference_const(
         &mut self,
-        ty: &Ty<I>,
+        ty: Ty<I>,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>> {
@@ -318,7 +318,7 @@ pub trait Fold<I: Interner>: Debug {
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -332,7 +332,7 @@ pub trait Fold<I: Interner>: Debug {
 pub trait SuperFold<I: Interner>: Fold<I> {
     /// Recursively folds the value.
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -347,7 +347,7 @@ impl<I: Interner> Fold<I> for Ty<I> {
     type Result = Ty<I>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -364,7 +364,7 @@ where
     I: Interner,
 {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Ty<I>>
@@ -387,81 +387,79 @@ where
                     TyKind::<I>::BoundVar(*bound_var).intern(folder.interner())
                 }
             }
-            TyKind::Dyn(clauses) => {
-                TyKind::Dyn(clauses.fold_with(folder, outer_binder)?).intern(folder.interner())
-            }
+            TyKind::Dyn(clauses) => TyKind::Dyn(clauses.clone().fold_with(folder, outer_binder)?)
+                .intern(folder.interner()),
             TyKind::InferenceVar(var, kind) => {
                 folder.fold_inference_ty(*var, *kind, outer_binder)?
             }
             TyKind::Placeholder(ui) => folder.fold_free_placeholder_ty(*ui, outer_binder)?,
-            TyKind::Alias(proj) => {
-                TyKind::Alias(proj.fold_with(folder, outer_binder)?).intern(folder.interner())
-            }
-            TyKind::Function(fun) => {
-                TyKind::Function(fun.fold_with(folder, outer_binder)?).intern(folder.interner())
-            }
+            TyKind::Alias(proj) => TyKind::Alias(proj.clone().fold_with(folder, outer_binder)?)
+                .intern(folder.interner()),
+            TyKind::Function(fun) => TyKind::Function(fun.clone().fold_with(folder, outer_binder)?)
+                .intern(folder.interner()),
             TyKind::Adt(id, substitution) => TyKind::Adt(
                 id.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::AssociatedType(assoc_ty, substitution) => TyKind::AssociatedType(
                 assoc_ty.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Scalar(scalar) => {
                 TyKind::Scalar(scalar.fold_with(folder, outer_binder)?).intern(folder.interner())
             }
             TyKind::Str => TyKind::Str.intern(folder.interner()),
-            TyKind::Tuple(arity, substitution) => {
-                TyKind::Tuple(*arity, substitution.fold_with(folder, outer_binder)?)
-                    .intern(folder.interner())
-            }
+            TyKind::Tuple(arity, substitution) => TyKind::Tuple(
+                *arity,
+                substitution.clone().fold_with(folder, outer_binder)?,
+            )
+            .intern(folder.interner()),
             TyKind::OpaqueType(opaque_ty, substitution) => TyKind::OpaqueType(
                 opaque_ty.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Slice(substitution) => {
-                TyKind::Slice(substitution.fold_with(folder, outer_binder)?)
+                TyKind::Slice(substitution.clone().fold_with(folder, outer_binder)?)
                     .intern(folder.interner())
             }
             TyKind::FnDef(fn_def, substitution) => TyKind::FnDef(
                 fn_def.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Ref(mutability, lifetime, ty) => TyKind::Ref(
                 mutability.fold_with(folder, outer_binder)?,
-                lifetime.fold_with(folder, outer_binder)?,
-                ty.fold_with(folder, outer_binder)?,
+                lifetime.clone().fold_with(folder, outer_binder)?,
+                ty.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Raw(mutability, ty) => TyKind::Raw(
                 mutability.fold_with(folder, outer_binder)?,
-                ty.fold_with(folder, outer_binder)?,
+                ty.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Never => TyKind::Never.intern(folder.interner()),
             TyKind::Array(ty, const_) => TyKind::Array(
-                ty.fold_with(folder, outer_binder)?,
-                const_.fold_with(folder, outer_binder)?,
+                ty.clone().fold_with(folder, outer_binder)?,
+                const_.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Closure(id, substitution) => TyKind::Closure(
                 id.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Generator(id, substitution) => TyKind::Generator(
                 id.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::GeneratorWitness(id, substitution) => TyKind::GeneratorWitness(
                 id.fold_with(folder, outer_binder)?,
-                substitution.fold_with(folder, outer_binder)?,
+                substitution.clone().fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
             TyKind::Foreign(id) => {
@@ -479,7 +477,7 @@ impl<I: Interner> Fold<I> for Lifetime<I> {
     type Result = Lifetime<I>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -495,7 +493,7 @@ where
     I: Interner,
 {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Lifetime<I>>
@@ -537,7 +535,7 @@ impl<I: Interner> Fold<I> for Const<I> {
     type Result = Const<I>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -553,7 +551,7 @@ where
     I: Interner,
 {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Const<I>>
@@ -562,18 +560,20 @@ where
     {
         let interner = folder.interner();
         let ConstData { ref ty, ref value } = self.data(interner);
-        let mut fold_ty = || ty.fold_with(folder, outer_binder);
+        let mut fold_ty = || ty.clone().fold_with(folder, outer_binder);
         match value {
             ConstValue::BoundVar(bound_var) => {
                 if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
-                    folder.fold_free_var_const(ty, bound_var1, outer_binder)
+                    folder.fold_free_var_const(ty.clone(), bound_var1, outer_binder)
                 } else {
                     Ok(bound_var.to_const(interner, fold_ty()?))
                 }
             }
-            ConstValue::InferenceVar(var) => folder.fold_inference_const(ty, *var, outer_binder),
+            ConstValue::InferenceVar(var) => {
+                folder.fold_inference_const(ty.clone(), *var, outer_binder)
+            }
             ConstValue::Placeholder(universe) => {
-                folder.fold_free_placeholder_const(ty, *universe, outer_binder)
+                folder.fold_free_placeholder_const(ty.clone(), *universe, outer_binder)
             }
             ConstValue::Concrete(ev) => Ok(ConstData {
                 ty: fold_ty()?,
@@ -592,7 +592,7 @@ impl<I: Interner> Fold<I> for Goal<I> {
     type Result = Goal<I>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -606,7 +606,7 @@ impl<I: Interner> Fold<I> for Goal<I> {
 /// Superfold folds recursively.
 impl<I: Interner> SuperFold<I> for Goal<I> {
     fn super_fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -616,7 +616,9 @@ impl<I: Interner> SuperFold<I> for Goal<I> {
         let interner = folder.interner();
         Ok(Goal::new(
             interner,
-            self.data(interner).fold_with(folder, outer_binder)?,
+            self.data(interner)
+                .clone()
+                .fold_with(folder, outer_binder)?,
         ))
     }
 }
@@ -628,7 +630,7 @@ impl<I: Interner> Fold<I> for ProgramClause<I> {
     type Result = ProgramClause<I>;
 
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>

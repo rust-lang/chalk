@@ -27,7 +27,7 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         // For non-phantom_data adts we collect its variants/fields
         TyKind::Adt(adt_id, substitution) if !db.adt_datum(*adt_id).flags.phantom_data => {
             let adt_datum = &db.adt_datum(*adt_id);
-            let adt_datum_bound = adt_datum.binders.substitute(interner, substitution);
+            let adt_datum_bound = adt_datum.binders.clone().substitute(interner, substitution);
             adt_datum_bound
                 .variants
                 .into_iter()
@@ -53,6 +53,7 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
             let generator_datum = &db.generator_datum(*generator_id);
             let generator_datum_bound = generator_datum
                 .input_output
+                .clone()
                 .substitute(interner, &substitution);
 
             let mut tys = generator_datum_bound.upvars;
@@ -166,7 +167,7 @@ pub fn push_auto_trait_impls<I: Interner>(
             let binders = builder
                 .db
                 .closure_upvars(*closure_id, &Substitution::empty(interner));
-            builder.push_binders(&binders, |builder, upvar_ty| {
+            builder.push_binders(binders, |builder, upvar_ty| {
                 let conditions = iter::once(mk_ref(upvar_ty));
                 builder.push_clause(consequence, conditions);
             });
@@ -234,7 +235,7 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
 
     let hidden_ty = builder.db.hidden_opaque_type(opaque_id);
     let binders = opaque_ty_datum.bound.clone();
-    builder.push_binders(&binders, |builder, _| {
+    builder.push_binders(binders, |builder, _| {
         let self_ty =
             TyKind::OpaqueType(opaque_id, builder.substitution_in_scope()).intern(interner);
 
@@ -275,7 +276,7 @@ pub fn push_auto_trait_impls_generator_witness<I: Interner>(
 
     // Push binders for the generator generic parameters. These can be used by
     // both upvars and witness types
-    builder.push_binders(&witness_datum.inner_types, |builder, inner_types| {
+    builder.push_binders(witness_datum.inner_types.clone(), |builder, inner_types| {
         let witness_ty = TyKind::GeneratorWitness(generator_id, builder.substitution_in_scope())
             .intern(interner);
 
@@ -399,7 +400,7 @@ fn program_clauses_that_could_match<I: Interner>(
                     // An alias could normalize to anything, including `dyn trait`
                     // or an opaque type, so push a clause that asks for the
                     // self type to be normalized and return.
-                    push_alias_implemented_clause(builder, trait_ref, alias);
+                    push_alias_implemented_clause(builder, trait_ref.clone(), alias.clone());
                     return Ok(clauses);
                 }
 
@@ -458,8 +459,8 @@ fn program_clauses_that_could_match<I: Interner>(
             // the automatic impls for `Foo`.
             let trait_datum = db.trait_datum(trait_id);
             if trait_datum.is_auto_trait() {
-                let generalized = generalize::Generalize::apply(db.interner(), trait_ref);
-                builder.push_binders(&generalized, |builder, trait_ref| {
+                let generalized = generalize::Generalize::apply(db.interner(), trait_ref.clone());
+                builder.push_binders(generalized, |builder, trait_ref| {
                     let ty = trait_ref.self_type_parameter(interner);
                     push_auto_trait_impls(builder, trait_id, &ty.kind(interner))
                 })?;
@@ -467,7 +468,11 @@ fn program_clauses_that_could_match<I: Interner>(
 
             if let Some(well_known) = trait_datum.well_known {
                 builtin_traits::add_builtin_program_clauses(
-                    db, builder, well_known, trait_ref, binders,
+                    db,
+                    builder,
+                    well_known,
+                    trait_ref.clone(),
+                    binders,
                 )?;
             }
         }
@@ -482,7 +487,12 @@ fn program_clauses_that_could_match<I: Interner>(
                         // An alias could normalize to anything, including an
                         // opaque type, so push a clause that asks for the self
                         // type to be normalized and return.
-                        push_alias_alias_eq_clause(builder, proj, &alias_eq.ty, alias);
+                        push_alias_alias_eq_clause(
+                            builder,
+                            proj.clone(),
+                            alias_eq.ty.clone(),
+                            alias.clone(),
+                        );
                         return Ok(clauses);
                     }
                     TyKind::OpaqueType(opaque_ty_id, _) => {
@@ -632,8 +642,8 @@ fn push_clauses_for_compatible_normalize<I: Interner>(
     associated_ty_id: AssocTypeId<I>,
 ) {
     let trait_datum = db.trait_datum(trait_id);
-    let trait_binders = trait_datum.binders.map_ref(|b| &b.where_clauses);
-    builder.push_binders(&trait_binders, |builder, where_clauses| {
+    let trait_binders = trait_datum.binders.map_ref(|b| &b.where_clauses).cloned();
+    builder.push_binders(trait_binders, |builder, where_clauses| {
         let projection = ProjectionTy {
             associated_ty_id,
             substitution: builder.substitution_in_scope(),
@@ -715,8 +725,8 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
 
 fn push_alias_implemented_clause<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
-    trait_ref: &TraitRef<I>,
-    alias: &AliasTy<I>,
+    trait_ref: TraitRef<I>,
+    alias: AliasTy<I>,
 ) {
     let interner = builder.interner();
     assert_eq!(
@@ -725,14 +735,14 @@ fn push_alias_implemented_clause<I: Interner>(
     );
 
     // TODO: instead generate clauses without reference to the specific type parameters of the goal?
-    let generalized = generalize::Generalize::apply(interner, &(trait_ref, alias));
-    builder.push_binders(&generalized, |builder, (trait_ref, alias)| {
+    let generalized = generalize::Generalize::apply(interner, (trait_ref, alias));
+    builder.push_binders(generalized, |builder, (trait_ref, alias)| {
         let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
 
         // forall<..., T> {
         //      <X as Y>::Z: Trait :- T: Trait, <X as Y>::Z == T
         // }
-        builder.push_binders(&binders, |builder, bound_var| {
+        builder.push_binders(binders, |builder, bound_var| {
             let fresh_self_subst = Substitution::from_iter(
                 interner,
                 std::iter::once(bound_var.clone().cast(interner)).chain(
@@ -761,9 +771,9 @@ fn push_alias_implemented_clause<I: Interner>(
 
 fn push_alias_alias_eq_clause<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
-    projection_ty: &ProjectionTy<I>,
-    ty: &Ty<I>,
-    alias: &AliasTy<I>,
+    projection_ty: ProjectionTy<I>,
+    ty: Ty<I>,
+    alias: AliasTy<I>,
 ) {
     let interner = builder.interner();
     assert_eq!(
@@ -772,14 +782,14 @@ fn push_alias_alias_eq_clause<I: Interner>(
     );
 
     // TODO: instead generate clauses without reference to the specific type parameters of the goal?
-    let generalized = generalize::Generalize::apply(interner, &(projection_ty, ty, alias));
-    builder.push_binders(&generalized, |builder, (projection_ty, ty, alias)| {
+    let generalized = generalize::Generalize::apply(interner, (projection_ty, ty, alias));
+    builder.push_binders(generalized, |builder, (projection_ty, ty, alias)| {
         let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
 
         // forall<..., T> {
         //      <<X as Y>::A as Z>::B == U :- <T as Z>::B == U, <X as Y>::A == T
         // }
-        builder.push_binders(&binders, |builder, bound_var| {
+        builder.push_binders(binders, |builder, bound_var| {
             let fresh_self_subst = Substitution::from_iter(
                 interner,
                 std::iter::once(bound_var.clone().cast(interner)).chain(
@@ -886,6 +896,7 @@ fn match_ty<I: Interner>(
             //   `dyn StreamingIterator<Item<'static> = &'static ()>` is not).
             let bounds = dyn_ty
                 .bounds
+                .clone()
                 .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
 
             let mut wf_goals = Vec::new();

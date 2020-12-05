@@ -79,9 +79,8 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
     ) -> Goal<I>
     where
-        B: Fold<I> + HasInterner<Interner = I>,
+        B: HasInterner<Interner = I>,
         P: Fold<I>,
-        B::Result: std::fmt::Debug,
         G: CastTo<Goal<I>>,
     {
         self.quantified(QuantifierKind::ForAll, binders, passthru, body)
@@ -95,9 +94,8 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
     ) -> Goal<I>
     where
-        B: Fold<I> + HasInterner<Interner = I>,
+        B: HasInterner<Interner = I>,
         P: Fold<I>,
-        B::Result: std::fmt::Debug,
         G: CastTo<Goal<I>>,
     {
         self.quantified(QuantifierKind::Exists, binders, passthru, body)
@@ -118,9 +116,8 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
     ) -> Goal<I>
     where
-        B: Fold<I> + HasInterner<Interner = I>,
+        B: HasInterner<Interner = I>,
         P: Fold<I>,
-        B::Result: std::fmt::Debug,
         G: CastTo<Goal<I>>,
     {
         let interner = self.interner();

@@ -100,7 +100,7 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
 
         let mut push_ty = || {
             self.types
-                .push(ty.shifted_out_to(interner, outer_binder).unwrap())
+                .push(ty.clone().shifted_out_to(interner, outer_binder).unwrap())
         };
         match ty.kind(interner) {
             TyKind::Adt(id, substitution) => {
@@ -362,8 +362,8 @@ where
 
             let subst = Substitution::from1(interner, gb.db().hidden_opaque_type(opaque_ty_id));
 
-            let bounds = bound.bounds.substitute(interner, &subst);
-            let where_clauses = bound.where_clauses.substitute(interner, &subst);
+            let bounds = bound.bounds.clone().substitute(interner, &subst);
+            let where_clauses = bound.where_clauses.clone().substitute(interner, &subst);
 
             let clauses = where_clauses
                 .iter()
@@ -581,7 +581,10 @@ fn compute_assoc_ty_goal<I: Interner>(
             let ImplDatumBound {
                 trait_ref: impl_trait_ref,
                 where_clauses: impl_where_clauses,
-            } = impl_datum.binders.substitute(interner, impl_parameters);
+            } = impl_datum
+                .binders
+                .clone()
+                .substitute(interner, impl_parameters);
             let impl_wf_clauses =
                 impl_wf_environment(interner, &impl_where_clauses, &impl_trait_ref);
             gb.implies(impl_wf_clauses, |gb| {
@@ -604,6 +607,7 @@ fn compute_assoc_ty_goal<I: Interner>(
                     where_clauses: defn_where_clauses,
                 } = assoc_ty_datum
                     .binders
+                    .clone()
                     .substitute(interner, &projection.substitution);
 
                 // Create `if (/* where clauses on associated type value */) { .. }`
@@ -753,6 +757,7 @@ impl WfWellKnownConstraints {
                         let goals = adt_datum
                             .binders
                             .map_ref(|b| &b.variants)
+                            .cloned()
                             .substitute(interner, substitution)
                             .into_iter()
                             .flat_map(|v| {
@@ -895,7 +900,7 @@ impl WfWellKnownConstraints {
     ///    and consider their types with both substitutes. We are looking to find
     ///    exactly one (non-phantom) field that has changed its type (from T to U), and
     ///    expect T to be unsizeable to U, i.e. T: CoerceUnsized<U>.
-    ///        
+    ///
     ///    As an example, consider a struct
     ///    ```rust
     ///    struct Foo<T, U> {
@@ -910,10 +915,10 @@ impl WfWellKnownConstraints {
     ///    impl<T, U: Unsize<V>, V> CoerceUnsized<Foo<T, V>> for Foo<T, U> {}
     ///    ```
     ///    In this case:
-    ///   
+    ///
     ///    - `extra` has type `T` before and type `T` after
     ///    - `ptr` has type `*mut U` before and type `*mut V` after
-    ///   
+    ///
     ///    Since just one field changed, we would then check that `*mut U: CoerceUnsized<*mut V>`
     ///    is implemented. This will work out because `U: Unsize<V>`, and we have a libcore rule
     ///    that `*mut U` can be coerced to `*mut V` if `U: Unsize<V>`.
@@ -992,10 +997,11 @@ impl WfWellKnownConstraints {
 
                 let fields = adt_datum
                     .binders
-                    .map_ref(|bound| &bound.variants.last().unwrap().fields);
+                    .map_ref(|bound| &bound.variants.last().unwrap().fields)
+                    .cloned();
 
                 let (source_fields, target_fields) = (
-                    fields.substitute(interner, subst_a),
+                    fields.clone().substitute(interner, subst_a),
                     fields.substitute(interner, subst_b),
                 );
 

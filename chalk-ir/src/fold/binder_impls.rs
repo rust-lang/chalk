@@ -8,7 +8,7 @@ use crate::*;
 impl<I: Interner> Fold<I> for FnPointer<I> {
     type Result = FnPointer<I>;
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -21,7 +21,7 @@ impl<I: Interner> Fold<I> for FnPointer<I> {
             sig,
         } = self;
         Ok(FnPointer {
-            num_binders: *num_binders,
+            num_binders,
             substitution: substitution.fold_with(folder, outer_binder.shifted_in())?,
             sig: FnSig {
                 abi: sig.abi,
@@ -40,7 +40,7 @@ where
 {
     type Result = Binders<T::Result>;
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>
@@ -67,7 +67,7 @@ where
 {
     type Result = Canonical<T::Result>;
     fn fold_with<'i>(
-        &self,
+        self,
         folder: &mut dyn Folder<'i, I>,
         outer_binder: DebruijnIndex,
     ) -> Fallible<Self::Result>

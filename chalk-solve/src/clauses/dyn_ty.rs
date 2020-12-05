@@ -41,7 +41,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
 ) {
     let interner = db.interner();
     let dyn_ty = match self_ty.kind(interner) {
-        TyKind::Dyn(dyn_ty) => dyn_ty,
+        TyKind::Dyn(dyn_ty) => dyn_ty.clone(),
         _ => return,
     };
     let generalized_dyn_ty = generalize::Generalize::apply(db.interner(), dyn_ty);
@@ -55,7 +55,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
     // slightly more general clause by basically turning this into
     // `exists<A> dyn Foo<A>`.
 
-    builder.push_binders(&generalized_dyn_ty, |builder, dyn_ty| {
+    builder.push_binders(generalized_dyn_ty, |builder, dyn_ty| {
         for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
             // Replace the `T` from `exists<T> { .. }` with `self_ty`,
             // yielding clases like
@@ -63,9 +63,11 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
             // ```
             // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
             // ```
-            let qwc = exists_qwc.substitute(interner, &[self_ty.clone().cast(interner)]);
+            let qwc = exists_qwc
+                .cloned()
+                .substitute(interner, &[self_ty.clone().cast(interner)]);
 
-            builder.push_binders(&qwc, |builder, wc| match &wc {
+            builder.push_binders(qwc, |builder, wc| match &wc {
                 // For the implemented traits, we need to elaborate super traits and add where clauses from the trait
                 WhereClause::Implemented(trait_ref) => {
                     push_dyn_ty_impl_clauses(db, builder, trait_ref.clone())
@@ -97,10 +99,11 @@ fn push_dyn_ty_impl_clauses<I: Interner>(
         super_traits(db, trait_ref.trait_id).substitute(interner, &trait_ref.substitution);
 
     for q_super_trait_ref in super_trait_refs {
-        builder.push_binders(&q_super_trait_ref, |builder, super_trait_ref| {
+        builder.push_binders(q_super_trait_ref.clone(), |builder, super_trait_ref| {
             let trait_datum = db.trait_datum(super_trait_ref.trait_id);
             let wc = trait_datum
                 .where_clauses()
+                .cloned()
                 .substitute(interner, &super_trait_ref.substitution);
             builder.push_clause(super_trait_ref, wc);
         });

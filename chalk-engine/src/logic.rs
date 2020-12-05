@@ -149,7 +149,7 @@ impl<I: Interner> Forest<I> {
         Forest::canonicalize_strand_from(
             context,
             &mut infer,
-            &ex_clause,
+            ex_clause,
             selected_subgoal,
             last_pursued_time,
         )
@@ -158,12 +158,12 @@ impl<I: Interner> Forest<I> {
     fn canonicalize_strand_from(
         context: &SlgContextOps<I>,
         infer: &mut TruncatingInferenceTable<I>,
-        ex_clause: &ExClause<I>,
+        ex_clause: ExClause<I>,
         selected_subgoal: Option<SelectedSubgoal>,
         last_pursued_time: TimeStamp,
     ) -> CanonicalStrand<I> {
         let canonical_ex_clause =
-            infer.canonicalize_ex_clause(context.program().interner(), &ex_clause);
+            infer.canonicalize_ex_clause(context.program().interner(), ex_clause);
         CanonicalStrand {
             canonical_ex_clause,
             selected_subgoal,
@@ -194,10 +194,10 @@ impl<I: Interner> Forest<I> {
         // Subgoal abstraction:
         let (ucanonical_subgoal, universe_map) = match subgoal {
             Literal::Positive(subgoal) => {
-                Forest::abstract_positive_literal(context, infer, subgoal)?
+                Forest::abstract_positive_literal(context, infer, subgoal.clone())?
             }
             Literal::Negative(subgoal) => {
-                Forest::abstract_negative_literal(context, infer, subgoal)?
+                Forest::abstract_negative_literal(context, infer, subgoal.clone())?
             }
         };
 
@@ -257,7 +257,7 @@ impl<I: Interner> Forest<I> {
             chalk_solve::infer::InferenceTable::from_canonical(
                 context.program().interner(),
                 goal.universes,
-                &goal.canonical,
+                goal.canonical,
             );
         let mut infer = TruncatingInferenceTable::new(context.max_size(), infer);
         let goal_data = goal.data(context.program().interner());
@@ -350,9 +350,9 @@ impl<I: Interner> Forest<I> {
     fn abstract_positive_literal(
         context: &SlgContextOps<I>,
         infer: &mut TruncatingInferenceTable<I>,
-        subgoal: &InEnvironment<Goal<I>>,
+        subgoal: InEnvironment<Goal<I>>,
     ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, UniverseMap)> {
-        if infer.goal_needs_truncation(context.program().interner(), subgoal) {
+        if infer.goal_needs_truncation(context.program().interner(), &subgoal) {
             None
         } else {
             Some(infer.fully_canonicalize_goal(context.program().interner(), subgoal))
@@ -369,7 +369,7 @@ impl<I: Interner> Forest<I> {
     fn abstract_negative_literal(
         context: &SlgContextOps<I>,
         infer: &mut TruncatingInferenceTable<I>,
-        subgoal: &InEnvironment<Goal<I>>,
+        subgoal: InEnvironment<Goal<I>>,
     ) -> Option<(UCanonical<InEnvironment<Goal<I>>>, UniverseMap)> {
         // First, we have to check that the selected negative literal
         // is ground, and invert any universally quantified variables.
@@ -413,7 +413,7 @@ impl<I: Interner> Forest<I> {
         if infer.goal_needs_truncation(context.program().interner(), &inverted_subgoal) {
             None
         } else {
-            Some(infer.fully_canonicalize_goal(context.program().interner(), &inverted_subgoal))
+            Some(infer.fully_canonicalize_goal(context.program().interner(), inverted_subgoal))
         }
     }
 }
@@ -494,7 +494,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                         let (_, _, ex_clause) = chalk_solve::infer::InferenceTable::from_canonical(
                             context.program().interner(),
                             num_universes,
-                            &strand.canonical_ex_clause,
+                            strand.canonical_ex_clause.clone(),
                         );
                         let time_eligble = strand.last_pursued_time < clock;
                         let mode_eligble = match (table_answer_mode, ex_clause.ambiguous) {
@@ -515,7 +515,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                             chalk_solve::infer::InferenceTable::from_canonical(
                                 context.program().interner(),
                                 num_universes,
-                                &canonical_ex_clause,
+                                canonical_ex_clause,
                             );
                         let infer = TruncatingInferenceTable::new(context.max_size(), infer);
                         Strand {
@@ -660,7 +660,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                     &mut strand.ex_clause,
                     &subgoal,
                     &table_goal,
-                    &answer_subst,
+                    answer_subst,
                 ) {
                     Ok(()) => {
                         let Strand {
@@ -1078,7 +1078,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         ) = chalk_solve::infer::InferenceTable::from_canonical(
             self.context.program().interner(),
             num_universes,
-            &answer.subst,
+            answer.subst.clone(),
         );
         let table = TruncatingInferenceTable::new(self.context.max_size(), infer);
 
@@ -1414,8 +1414,10 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         let filtered_delayed_subgoals = delayed_subgoals
             .into_iter()
             .filter(|delayed_subgoal| {
-                let (canonicalized, _) = infer
-                    .fully_canonicalize_goal(self.context.program().interner(), delayed_subgoal);
+                let (canonicalized, _) = infer.fully_canonicalize_goal(
+                    self.context.program().interner(),
+                    delayed_subgoal.clone(),
+                );
                 *table_goal != canonicalized
             })
             .collect();

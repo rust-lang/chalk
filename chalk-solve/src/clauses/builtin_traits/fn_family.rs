@@ -54,7 +54,7 @@ fn push_clauses_for_apply<I: Interner>(
     well_known: WellKnownTrait,
     trait_id: TraitId<I>,
     self_ty: Ty<I>,
-    inputs_and_output: &Binders<FnDefInputsAndOutputDatum<I>>,
+    inputs_and_output: Binders<FnDefInputsAndOutputDatum<I>>,
 ) {
     let interner = db.interner();
     builder.push_binders(inputs_and_output, |builder, inputs_and_output| {
@@ -96,6 +96,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             if fn_def_datum.sig.safety == Safety::Safe && !fn_def_datum.sig.variadic {
                 let bound = fn_def_datum
                     .binders
+                    .clone()
                     .substitute(builder.interner(), &substitution);
                 push_clauses_for_apply(
                     db,
@@ -103,7 +104,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     well_known,
                     trait_id,
                     self_ty,
-                    &bound.inputs_and_output,
+                    bound.inputs_and_output,
                 );
             }
             Ok(())
@@ -128,13 +129,13 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 well_known,
                 trait_id,
                 self_ty,
-                &closure_inputs_and_output,
+                closure_inputs_and_output,
             );
             Ok(())
         }
         TyKind::Function(fn_val) if fn_val.sig.safety == Safety::Safe && !fn_val.sig.variadic => {
-            let bound_ref = fn_val.as_binders(interner);
-            builder.push_binders(&bound_ref, |builder, orig_sub| {
+            let bound_ref = fn_val.clone().into_binders(interner);
+            builder.push_binders(bound_ref, |builder, orig_sub| {
                 // The last parameter represents the function return type
                 let (arg_sub, fn_output_ty) = orig_sub
                     .0
