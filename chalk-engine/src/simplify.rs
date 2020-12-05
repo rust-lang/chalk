@@ -83,11 +83,6 @@ impl<I: Interner> Forest<I> {
                     Err(_) => return FallibleOrFloundered::NoSolution,
                 },
                 GoalData::SubtypeGoal(goal) => {
-                    if goal.a.inference_var(context.program().interner()).is_some()
-                        && goal.b.inference_var(context.program().interner()).is_some()
-                    {
-                        return FallibleOrFloundered::Floundered;
-                    }
                     match infer.relate_tys_into_ex_clause(
                         context.program().interner(),
                         context.unification_database(),
@@ -97,8 +92,13 @@ impl<I: Interner> Forest<I> {
                         &goal.b,
                         &mut ex_clause,
                     ) {
-                        Ok(()) => {}
-                        Err(_) => return FallibleOrFloundered::NoSolution,
+                        FallibleOrFloundered::Ok(_) => {}
+                        FallibleOrFloundered::Floundered => {
+                            return FallibleOrFloundered::Floundered
+                        }
+                        FallibleOrFloundered::NoSolution => {
+                            return FallibleOrFloundered::NoSolution
+                        }
                     }
                 }
                 GoalData::DomainGoal(domain_goal) => {

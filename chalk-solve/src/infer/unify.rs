@@ -95,33 +95,43 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
         match (a.kind(interner), b.kind(interner)) {
             // Relating two inference variables:
+            // First, if either variable is a float or int kind, then we always
+            // unify if they match. This is because float and ints don't have
+            // subtype relationships.
+            // If both kinds are general then:
             // If `Invariant`, unify them in the underlying ena table.
             // If `Covariant` or `Contravariant`, push `SubtypeGoal`
             (&TyKind::InferenceVar(var1, kind1), &TyKind::InferenceVar(var2, kind2)) => {
-                match variance {
-                    Variance::Invariant => {
-                        if kind1 == kind2 {
-                            self.unify_var_var(var1, var2)
-                        } else if kind1 == TyVariableKind::General {
-                            self.unify_general_var_specific_ty(var1, b.clone())
-                        } else if kind2 == TyVariableKind::General {
-                            self.unify_general_var_specific_ty(var2, a.clone())
-                        } else {
-                            debug!(
-                                "Tried to unify mis-matching inference variables: {:?} and {:?}",
-                                kind1, kind2
-                            );
-                            Err(NoSolution)
+                if matches!(kind1, TyVariableKind::General)
+                    && matches!(kind2, TyVariableKind::General)
+                {
+                    // Both variable kinds are general; so unify if invariant, otherwise push subtype goal
+                    match variance {
+                        Variance::Invariant => self.unify_var_var(var1, var2),
+                        Variance::Covariant => {
+                            self.push_subtype_goal(a.clone(), b.clone());
+                            Ok(())
+                        }
+                        Variance::Contravariant => {
+                            self.push_subtype_goal(b.clone(), a.clone());
+                            Ok(())
                         }
                     }
-                    Variance::Covariant => {
-                        self.push_subtype_goal(a.clone(), b.clone());
-                        Ok(())
-                    }
-                    Variance::Contravariant => {
-                        self.push_subtype_goal(b.clone(), a.clone());
-                        Ok(())
-                    }
+                } else if kind1 == kind2 {
+                    // At least one kind is not general, but they match, so unify
+                    self.unify_var_var(var1, var2)
+                } else if kind1 == TyVariableKind::General {
+                    // First kind is general, second isn't, unify
+                    self.unify_general_var_specific_ty(var1, b.clone())
+                } else if kind2 == TyVariableKind::General {
+                    // Second kind is general, first isn't, unify
+                    self.unify_general_var_specific_ty(var2, a.clone())
+                } else {
+                    debug!(
+                        "Tried to unify mis-matching inference variables: {:?} and {:?}",
+                        kind1, kind2
+                    );
+                    Err(NoSolution)
                 }
             }
 

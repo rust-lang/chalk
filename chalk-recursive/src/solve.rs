@@ -8,7 +8,8 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ClausePriority, DomainGoal, Environment, Fallible, Floundered, GenericArg,
     Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
-    ProgramClauseImplication, Substitution, UCanonical, UnificationDatabase, UniverseMap, Variance,
+    ProgramClauseImplication, Substitution, Ty, UCanonical, UnificationDatabase, UniverseMap,
+    Variance,
 };
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::debug_span;
@@ -316,5 +317,9 @@ impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> 
 
     fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool {
         truncate::needs_truncation(interner, &mut self.infer, max_size, value)
+    }
+
+    fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+        self.infer.normalize_ty_shallow(interner, leaf)
     }
 }

@@ -28,10 +28,23 @@ impl Debug for RawId {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ChalkFnAbi {
     Rust,
     C,
+}
+
+impl Debug for ChalkFnAbi {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            fmt,
+            "{}",
+            match self {
+                ChalkFnAbi::Rust => "\"rust\"",
+                ChalkFnAbi::C => "\"c\"",
+            },
+        )
+    }
 }
 
 /// The default "interner" and the only interner used by chalk
