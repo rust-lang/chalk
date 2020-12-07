@@ -5,6 +5,7 @@ use std::fmt::Debug;
 
 mod binder_impls;
 mod boring_impls;
+mod in_place;
 pub mod shift;
 mod subst;
 
