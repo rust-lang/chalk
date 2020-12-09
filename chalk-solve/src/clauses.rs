@@ -403,6 +403,9 @@ fn program_clauses_that_could_match<I: Interner>(
             let trait_datum = db.trait_datum(trait_id);
 
             match self_ty.kind(interner) {
+                TyKind::InferenceVar(_, _) => {
+                    panic!("Inference vars not allowed when getting program clauses")
+                }
                 TyKind::Alias(alias) => {
                     // An alias could normalize to anything, including `dyn trait`
                     // or an opaque type, so push a clause that asks for the
@@ -590,6 +593,9 @@ fn program_clauses_that_could_match<I: Interner>(
                 let trait_datum = db.trait_datum(trait_id);
 
                 let self_ty = alias.self_type_parameter(interner);
+                if let TyKind::InferenceVar(_, _) = self_ty.kind(interner) {
+                    panic!("Inference vars not allowed when getting program clauses");
+                }
 
                 // Flounder if the self-type is unknown and the trait is non-enumerable.
                 //
@@ -847,6 +853,9 @@ fn match_ty<I: Interner>(
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
     Ok(match ty.kind(interner) {
+        TyKind::InferenceVar(_, _) => {
+            panic!("Inference vars not allowed when getting program clauses")
+        }
         TyKind::Adt(adt_id, _) => builder
             .db
             .adt_datum(*adt_id)
@@ -890,7 +899,7 @@ fn match_ty<I: Interner>(
         TyKind::Function(_quantified_ty) => {
             builder.push_fact(WellFormed::Ty(ty.clone()));
         }
-        TyKind::BoundVar(_) | TyKind::InferenceVar(_, _) => return Err(Floundered),
+        TyKind::BoundVar(_) => return Err(Floundered),
         TyKind::Dyn(dyn_ty) => {
             // FIXME(#203)
             // - Object safety? (not needed with RFC 2027)

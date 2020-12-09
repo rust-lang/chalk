@@ -322,13 +322,12 @@ impl<I: Interner> Forest<I> {
                         goal.canonical,
                     );
                 let mut infer = TruncatingInferenceTable::new(context.max_size(), infer);
-                // `canonical_goal` is a goal. We can simplify it
-                // into a series of *literals*, all of which must be
-                // true. Thus, in EWFS terms, we are effectively
-                // creating a single child of the `A :- A` goal that
-                // is like `A :- B, C, D` where B, C, and D are the
-                // simplified subgoals. You can think of this as
-                // applying built-in "meta program clauses" that
+                // The goal for this table is not a domain goal, so we instead
+                // simplify it into a series of *literals*, all of which must be
+                // true. Thus, in EWFS terms, we are effectively creating a
+                // single child of the `A :- A` goal that is like `A :- B, C, D`
+                // where B, C, and D are the simplified subgoals. You can think
+                // of this as applying built-in "meta program clauses" that
                 // reduce goals into Domain goals.
                 match Self::simplify_goal(context, &mut infer, subst, environment, goal) {
                     FallibleOrFloundered::Ok(ex_clause) => {
