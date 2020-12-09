@@ -1,74 +1,64 @@
+use chalk_integration::interner::ChalkIr;
 use chalk_integration::{empty_substitution, lifetime, ty};
-use chalk_ir::{PlaceholderIndex, Ty, TyKind, UniverseIndex};
+use chalk_ir::cast::Cast;
+use chalk_ir::{PlaceholderIndex, TyKind, TypeFlags, UniverseIndex};
 
 #[test]
 fn placeholder_ty_flags_correct() {
     let placeholder_ty = ty!(placeholder 0);
     assert_eq!(
-        placeholder_ty
-            .data(&chalk_integration::interner::ChalkIr)
-            .flags,
-        chalk_ir::TypeFlags::HAS_TY_PLACEHOLDER
+        placeholder_ty.data(&ChalkIr).flags,
+        TypeFlags::HAS_TY_PLACEHOLDER
     );
 }
 
 #[test]
 fn opaque_ty_flags_correct() {
-    let x: Vec<chalk_ir::GenericArg<chalk_integration::interner::ChalkIr>> =
-        vec![chalk_ir::GenericArg::new(
-            &chalk_integration::interner::ChalkIr,
-            chalk_ir::GenericArgData::Const(chalk_ir::Const::new(
-                &chalk_integration::interner::ChalkIr,
-                chalk_ir::ConstData {
-                    ty: Ty::new(
-                        &chalk_integration::interner::ChalkIr,
-                        TyKind::Placeholder(PlaceholderIndex {
-                            ui: chalk_ir::UniverseIndex::ROOT,
-                            idx: 0,
-                        }),
-                    ),
-                    value: chalk_ir::ConstValue::InferenceVar(chalk_ir::InferenceVar::from(0)),
-                },
-            )),
-        )];
-    let opaque_ty_kind = TyKind::OpaqueType(
-        chalk_ir::OpaqueTyId {
+    let opaque_ty = TyKind::Alias(chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
+        opaque_ty_id: chalk_ir::OpaqueTyId {
             0: chalk_integration::interner::RawId { index: 0 },
         },
-        chalk_ir::Substitution::from_iter(&chalk_integration::interner::ChalkIr, x),
-    );
-    let opaque_ty = Ty::new(&chalk_integration::interner::ChalkIr, opaque_ty_kind);
+        substitution: chalk_ir::Substitution::from_iter(
+            &ChalkIr,
+            Some(
+                chalk_ir::ConstData {
+                    ty: TyKind::Placeholder(PlaceholderIndex {
+                        ui: chalk_ir::UniverseIndex::ROOT,
+                        idx: 0,
+                    })
+                    .intern(&ChalkIr),
+                    value: chalk_ir::ConstValue::InferenceVar(chalk_ir::InferenceVar::from(0)),
+                }
+                .intern(&ChalkIr)
+                .cast(&ChalkIr),
+            ),
+        ),
+    }))
+    .intern(&ChalkIr);
     assert_eq!(
-        opaque_ty.data(&chalk_integration::interner::ChalkIr).flags,
-        chalk_ir::TypeFlags::HAS_TY_OPAQUE
-            | chalk_ir::TypeFlags::HAS_CT_INFER
-            | chalk_ir::TypeFlags::STILL_FURTHER_SPECIALIZABLE
-            | chalk_ir::TypeFlags::HAS_TY_PLACEHOLDER
+        opaque_ty.data(&ChalkIr).flags,
+        TypeFlags::HAS_TY_OPAQUE
+            | TypeFlags::HAS_CT_INFER
+            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+            | TypeFlags::HAS_TY_PLACEHOLDER
     );
 }
 
 #[test]
 fn dyn_ty_flags_correct() {
-    let internal_ty = Ty::new(
-        &chalk_integration::interner::ChalkIr,
-        chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Bool),
-    );
+    let internal_ty = TyKind::Scalar(chalk_ir::Scalar::Bool).intern(&ChalkIr);
     let projection_ty = chalk_ir::ProjectionTy {
         associated_ty_id: chalk_ir::AssocTypeId {
             0: chalk_integration::interner::RawId { index: 0 },
         },
         substitution: empty_substitution!(),
     };
-    let bounds = chalk_ir::Binders::<
-        chalk_ir::QuantifiedWhereClauses<chalk_integration::interner::ChalkIr>,
-    >::empty(
-        &chalk_integration::interner::ChalkIr,
+    let bounds = chalk_ir::Binders::<chalk_ir::QuantifiedWhereClauses<ChalkIr>>::empty(
+        &ChalkIr,
         chalk_ir::QuantifiedWhereClauses::from_iter(
-            &chalk_integration::interner::ChalkIr,
-            vec![chalk_ir::Binders::<
-                chalk_ir::WhereClause<chalk_integration::interner::ChalkIr>,
-            >::empty(
-                &chalk_integration::interner::ChalkIr,
+            &ChalkIr,
+            vec![chalk_ir::Binders::<chalk_ir::WhereClause<ChalkIr>>::empty(
+                &ChalkIr,
                 chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
                     ty: internal_ty,
                     alias: chalk_ir::AliasTy::Projection(projection_ty),
@@ -78,75 +68,57 @@ fn dyn_ty_flags_correct() {
     );
     let dyn_ty = chalk_ir::DynTy {
         lifetime: lifetime!(placeholder 5),
-        bounds: bounds,
+        bounds,
     };
-    let ty = chalk_ir::Ty::new(&chalk_integration::interner::ChalkIr, TyKind::Dyn(dyn_ty));
+    let ty = TyKind::Dyn(dyn_ty).intern(&ChalkIr);
     assert_eq!(
-        ty.data(&chalk_integration::interner::ChalkIr).flags,
-        chalk_ir::TypeFlags::HAS_TY_PROJECTION
-            | chalk_ir::TypeFlags::HAS_RE_PLACEHOLDER
-            | chalk_ir::TypeFlags::HAS_FREE_LOCAL_REGIONS
-            | chalk_ir::TypeFlags::HAS_FREE_REGIONS
+        ty.data(&ChalkIr).flags,
+        TypeFlags::HAS_TY_PROJECTION
+            | TypeFlags::HAS_RE_PLACEHOLDER
+            | TypeFlags::HAS_FREE_LOCAL_REGIONS
+            | TypeFlags::HAS_FREE_REGIONS
     );
 }
 
 #[test]
 fn flagless_ty_has_no_flags() {
-    let ty = Ty::new(&chalk_integration::interner::ChalkIr, TyKind::Str);
-    assert_eq!(
-        ty.data(&chalk_integration::interner::ChalkIr).flags,
-        chalk_ir::TypeFlags::empty()
-    );
+    let ty = TyKind::Str.intern(&ChalkIr);
+    assert_eq!(ty.data(&ChalkIr).flags, TypeFlags::empty());
 
-    let fn_ty = Ty::new(
-        &chalk_integration::interner::ChalkIr,
-        TyKind::Function(chalk_ir::FnPointer {
-            num_binders: 0,
-            substitution: empty_substitution!(),
-            sig: chalk_ir::FnSig {
-                abi: chalk_integration::interner::ChalkFnAbi::Rust,
-                safety: chalk_ir::Safety::Safe,
-                variadic: false,
-            },
-        }),
-    );
-    assert_eq!(
-        fn_ty.data(&chalk_integration::interner::ChalkIr).flags,
-        chalk_ir::TypeFlags::empty()
-    );
+    let fn_ty = TyKind::Function(chalk_ir::FnPointer {
+        num_binders: 0,
+        substitution: chalk_ir::FnSubst(empty_substitution!()),
+        sig: chalk_ir::FnSig {
+            abi: chalk_integration::interner::ChalkFnAbi::Rust,
+            safety: chalk_ir::Safety::Safe,
+            variadic: false,
+        },
+    })
+    .intern(&ChalkIr);
+    assert_eq!(fn_ty.data(&ChalkIr).flags, TypeFlags::empty());
 }
 
 #[test]
-fn flagless_lifetime_contributes_no_flags() {
+fn static_and_bound_lifetimes() {
     let substitutions = chalk_ir::Substitution::from_iter(
-        &chalk_integration::interner::ChalkIr,
+        &ChalkIr,
         vec![
-            chalk_ir::GenericArg::new(
-                &chalk_integration::interner::ChalkIr,
-                chalk_ir::GenericArgData::Lifetime(chalk_ir::Lifetime::new(
-                    &chalk_integration::interner::ChalkIr,
-                    chalk_ir::LifetimeData::Static,
-                )),
-            ),
-            chalk_ir::GenericArg::new(
-                &chalk_integration::interner::ChalkIr,
-                chalk_ir::GenericArgData::Lifetime(lifetime!(bound 5)),
-            ),
+            chalk_ir::GenericArgData::Lifetime(chalk_ir::LifetimeData::Static.intern(&ChalkIr))
+                .intern(&ChalkIr),
+            chalk_ir::GenericArgData::Lifetime(lifetime!(bound 5)).intern(&ChalkIr),
         ],
     );
 
-    let ty = Ty::new(
-        &chalk_integration::interner::ChalkIr,
-        TyKind::Adt(
-            chalk_ir::AdtId {
-                0: chalk_integration::interner::RawId { index: 0 },
-            },
-            substitutions,
-        ),
-    );
+    let ty = TyKind::Adt(
+        chalk_ir::AdtId {
+            0: chalk_integration::interner::RawId { index: 0 },
+        },
+        substitutions,
+    )
+    .intern(&ChalkIr);
 
     assert_eq!(
-        ty.data(&chalk_integration::interner::ChalkIr).flags,
-        chalk_ir::TypeFlags::empty()
+        ty.data(&ChalkIr).flags,
+        TypeFlags::HAS_FREE_REGIONS | TypeFlags::HAS_RE_LATE_BOUND
     );
 }

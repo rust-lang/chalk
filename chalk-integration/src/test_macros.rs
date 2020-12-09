@@ -123,9 +123,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! empty_substitution {
     () => {
-        chalk_ir::Substitution::from_iter(
-            &chalk_integration::interner::ChalkIr,
-            Vec::<chalk_ir::GenericArg<chalk_integration::interner::ChalkIr>>::new(),
-        );
+        chalk_ir::Substitution::empty(&chalk_integration::interner::ChalkIr)
     };
 }

@@ -425,9 +425,10 @@ fn compute_lifetime_flags<I: Interner>(lifetime: &Lifetime<I>, interner: &I) -> 
                 | TypeFlags::HAS_FREE_LOCAL_REGIONS
                 | TypeFlags::HAS_FREE_REGIONS
         }
-        LifetimeData::Static | LifetimeData::Phantom(_, _) | LifetimeData::BoundVar(_) => {
-            TypeFlags::empty()
-        }
+        LifetimeData::Static | LifetimeData::Empty(_) => TypeFlags::HAS_FREE_REGIONS,
+        LifetimeData::Phantom(_, _) => TypeFlags::empty(),
+        LifetimeData::BoundVar(_) => TypeFlags::HAS_RE_LATE_BOUND,
+        LifetimeData::Erased => TypeFlags::HAS_RE_ERASED,
     }
 }
 
@@ -489,10 +490,11 @@ fn compute_flags<I: Interner>(kind: &TyKind<I>, interner: &I) -> TypeFlags {
         | TyKind::Generator(_, substitution)
         | TyKind::GeneratorWitness(_, substitution)
         | TyKind::FnDef(_, substitution) => compute_substitution_flags(substitution, interner),
-        TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => TypeFlags::empty(),
-        TyKind::OpaqueType(_, substitution) => {
-            TypeFlags::HAS_TY_OPAQUE | compute_substitution_flags(substitution, interner)
-        }
+        TyKind::Scalar(_)
+        | TyKind::Str
+        | TyKind::Never
+        | TyKind::Foreign(_)
+        | TyKind::OpaqueType(_, _) => TypeFlags::empty(),
         TyKind::Error => TypeFlags::HAS_ERROR,
         TyKind::Slice(ty) | TyKind::Raw(_, ty) => ty.data(interner).flags,
         TyKind::Ref(_, lifetime, ty) => {
@@ -542,7 +544,7 @@ fn compute_flags<I: Interner>(kind: &TyKind<I>, interner: &I) -> TypeFlags {
         TyKind::BoundVar(_) => TypeFlags::empty(),
         TyKind::InferenceVar(_, _) => TypeFlags::HAS_TY_INFER,
         TyKind::Function(fn_pointer) => {
-            compute_substitution_flags(&(fn_pointer.substitution), interner)
+            compute_substitution_flags(&fn_pointer.substitution.0, interner)
         }
     }
 }
