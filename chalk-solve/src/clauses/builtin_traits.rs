@@ -71,8 +71,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
             })
         }
         WellKnownTrait::DiscriminantKind => {
-            discriminant_kind::add_discriminant_clauses(db, builder, self_ty);
-            Ok(())
+            discriminant_kind::add_discriminant_clauses(db, builder, self_ty)
         }
         _ => Ok(()),
     }

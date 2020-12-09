@@ -160,7 +160,7 @@ fn discriminant_kind_assoc() {
                 }
             }
         } yields {
-            "No possible solution"
+            "Ambiguous"
         }
     }
 }

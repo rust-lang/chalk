@@ -1,12 +1,14 @@
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
-use chalk_ir::{AliasTy, Normalize, ProjectionTy, Substitution, Ty, TyKind, TyVariableKind};
+use chalk_ir::{
+    AliasTy, Floundered, Normalize, ProjectionTy, Substitution, Ty, TyKind, TyVariableKind,
+};
 
 pub fn add_discriminant_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     self_ty: Ty<I>,
-) {
+) -> Result<(), Floundered> {
     let interner = db.interner();
 
     let can_determine_discriminant = match self_ty.data(interner).kind {
@@ -38,7 +40,7 @@ pub fn add_discriminant_clauses<I: Interner>(
     };
 
     if !can_determine_discriminant {
-        return;
+        return Err(Floundered);
     }
 
     let disc_ty = db.discriminant_type(self_ty.clone());
@@ -66,4 +68,6 @@ pub fn add_discriminant_clauses<I: Interner>(
 
     builder.push_fact(trait_ref);
     builder.push_fact(normalize);
+
+    Ok(())
 }
