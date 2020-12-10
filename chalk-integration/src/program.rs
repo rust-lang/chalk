@@ -4,9 +4,9 @@ use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
 use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
-    FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals, ImplId, Lifetime, OpaqueTy,
-    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy,
-    Substitution, TraitId, Ty, TyKind, Variances,
+    FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals, ImplId, IntTy, Lifetime, OpaqueTy,
+    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, Scalar,
+    Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
@@ -59,7 +59,7 @@ pub struct Program {
     /// For each ADT:
     pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
-    pub adt_reprs: BTreeMap<AdtId<ChalkIr>, AdtRepr>,
+    pub adt_reprs: BTreeMap<AdtId<ChalkIr>, Arc<AdtRepr<ChalkIr>>>,
 
     pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
@@ -426,8 +426,8 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.generator_witness_data[&id].clone()
     }
 
-    fn adt_repr(&self, id: AdtId<ChalkIr>) -> AdtRepr {
-        self.adt_reprs[&id]
+    fn adt_repr(&self, id: AdtId<ChalkIr>) -> Arc<AdtRepr<ChalkIr>> {
+        self.adt_reprs[&id].clone()
     }
 
     fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {
@@ -588,5 +588,20 @@ impl RustIrDatabase<ChalkIr> for Program {
             .unwrap()
             .name
             .to_string()
+    }
+
+    // Mirrors current (07a63e6d1fabf3560e8e1e17c1d56b10a06152d9) implementation in rustc
+    fn discriminant_type(&self, ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
+        let interner = self.interner();
+        match ty.data(interner).kind {
+            TyKind::Adt(id, _) => {
+                let repr = self.adt_repr(id);
+                repr.int
+                    .clone()
+                    .unwrap_or(TyKind::Scalar(Scalar::Int(IntTy::Isize)).intern(interner))
+            }
+            TyKind::Generator(..) => TyKind::Scalar(Scalar::Uint(UintTy::U32)).intern(interner),
+            _ => TyKind::Scalar(Scalar::Uint(UintTy::U8)).intern(interner),
+        }
     }
 }

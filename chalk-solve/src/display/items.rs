@@ -91,14 +91,15 @@ impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
         // repr
         let repr = s.db().adt_repr(self.id);
 
-        write_flags!(
-            f,
-            repr,
-            AdtRepr {
-                repr_c: "repr(C)",
-                repr_packed: "repr(packed)"
-            }
-        );
+        if repr.c {
+            write!(f, "#[repr(C)]")?;
+        }
+        if repr.packed {
+            write!(f, "#[repr(packed)]")?;
+        }
+        if let Some(t) = &repr.int {
+            write!(f, "#[repr({})]", t.display(s))?;
+        }
 
         // name
         match self.kind {
@@ -201,6 +202,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Unsize => "unsize",
                 WellKnownTrait::Unpin => "unpin",
                 WellKnownTrait::CoerceUnsized => "coerce_unsized",
+                WellKnownTrait::DiscriminantKind => "discriminant_kind",
             };
             writeln!(f, "#[lang({})]", name)?;
         }

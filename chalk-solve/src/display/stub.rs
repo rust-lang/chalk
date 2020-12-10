@@ -11,8 +11,8 @@ use crate::{
     RustIrDatabase,
 };
 use chalk_ir::{
-    interner::Interner, Binders, CanonicalVarKinds, GeneratorId, Substitution, UnificationDatabase,
-    VariableKinds, Variances,
+    interner::Interner, Binders, CanonicalVarKinds, GeneratorId, Substitution, Ty,
+    UnificationDatabase, VariableKinds, Variances,
 };
 
 #[derive(Debug)]
@@ -86,7 +86,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         Arc::new(v)
     }
 
-    fn adt_repr(&self, id: chalk_ir::AdtId<I>) -> crate::rust_ir::AdtRepr {
+    fn adt_repr(&self, id: chalk_ir::AdtId<I>) -> std::sync::Arc<crate::rust_ir::AdtRepr<I>> {
         self.db.adt_repr(id)
     }
 
@@ -256,5 +256,9 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
 
     fn fn_def_name(&self, fn_def_id: chalk_ir::FnDefId<I>) -> String {
         self.db.fn_def_name(fn_def_id)
+    }
+
+    fn discriminant_type(&self, ty: Ty<I>) -> Ty<I> {
+        self.db.discriminant_type(ty)
     }
 }

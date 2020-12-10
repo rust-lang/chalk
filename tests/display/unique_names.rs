@@ -5,6 +5,7 @@ use chalk_solve::{
     RustIrDatabase,
 };
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use super::util::{program_item_ids, ReparseTestResult};
 
@@ -75,7 +76,7 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::AdtDatum<I>> {
         self.db.adt_datum(adt_id)
     }
-    fn adt_repr(&self, id: chalk_ir::AdtId<I>) -> chalk_solve::rust_ir::AdtRepr {
+    fn adt_repr(&self, id: chalk_ir::AdtId<I>) -> Arc<chalk_solve::rust_ir::AdtRepr<I>> {
         self.db.adt_repr(id)
     }
     fn fn_def_datum(
@@ -183,6 +184,10 @@ where
         substs: &chalk_ir::Substitution<I>,
     ) -> chalk_ir::Substitution<I> {
         self.db.closure_fn_substitution(closure_id, substs)
+    }
+
+    fn discriminant_type(&self, ty: chalk_ir::Ty<I>) -> chalk_ir::Ty<I> {
+        self.db.discriminant_type(ty)
     }
 
     fn unification_database(&self) -> &dyn UnificationDatabase<I> {

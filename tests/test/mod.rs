@@ -328,6 +328,7 @@ mod coherence_goals;
 mod coinduction;
 mod constants;
 mod cycle;
+mod discriminant_kind;
 mod existential_types;
 mod fn_def;
 mod foreign_types;

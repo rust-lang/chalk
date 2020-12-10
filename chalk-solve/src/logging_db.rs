@@ -151,7 +151,7 @@ where
         self.ws.db().borrow().generator_witness_datum(generator_id)
     }
 
-    fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
+    fn adt_repr(&self, id: AdtId<I>) -> Arc<AdtRepr<I>> {
         self.record(id);
         self.ws.db().adt_repr(id)
     }
@@ -283,6 +283,10 @@ where
         self.ws.db().closure_fn_substitution(closure_id, substs)
     }
 
+    fn discriminant_type(&self, ty: Ty<I>) -> Ty<I> {
+        self.ws.db().discriminant_type(ty)
+    }
+
     fn unification_database(&self) -> &dyn UnificationDatabase<I> {
         self
     }
@@ -411,7 +415,7 @@ where
         self.db.borrow().generator_witness_datum(generator_id)
     }
 
-    fn adt_repr(&self, id: AdtId<I>) -> AdtRepr {
+    fn adt_repr(&self, id: AdtId<I>) -> Arc<AdtRepr<I>> {
         self.db.adt_repr(id)
     }
 
@@ -524,6 +528,10 @@ where
         substs: &Substitution<I>,
     ) -> Substitution<I> {
         self.db.closure_fn_substitution(closure_id, substs)
+    }
+
+    fn discriminant_type(&self, ty: Ty<I>) -> Ty<I> {
+        self.db.discriminant_type(ty)
     }
 }
 

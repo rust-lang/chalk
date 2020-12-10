@@ -79,9 +79,17 @@ pub enum AdtKind {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub enum AdtReprAttr {
+    C,
+    Packed,
+    Int(Ty),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AdtRepr {
-    pub repr_c: bool,
-    pub repr_packed: bool,
+    pub c: bool,
+    pub packed: bool,
+    pub int: Option<Ty>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -143,6 +151,7 @@ pub enum WellKnownTrait {
     Unsize,
     Unpin,
     CoerceUnsized,
+    DiscriminantKind,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

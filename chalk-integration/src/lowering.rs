@@ -321,14 +321,15 @@ impl LowerWithEnv for (&AdtDefn, chalk_ir::AdtId<ChalkIr>) {
     }
 }
 
-impl Lower for AdtRepr {
-    type Lowered = rust_ir::AdtRepr;
+impl LowerWithEnv for AdtRepr {
+    type Lowered = rust_ir::AdtRepr<ChalkIr>;
 
-    fn lower(&self) -> Self::Lowered {
-        rust_ir::AdtRepr {
-            repr_c: self.repr_c,
-            repr_packed: self.repr_packed,
-        }
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
+        Ok(rust_ir::AdtRepr {
+            c: self.c,
+            packed: self.packed,
+            int: self.int.as_ref().map(|i| i.lower(env)).transpose()?,
+        })
     }
 }
 
@@ -1131,6 +1132,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::Unsize => rust_ir::WellKnownTrait::Unsize,
             WellKnownTrait::Unpin => rust_ir::WellKnownTrait::Unpin,
             WellKnownTrait::CoerceUnsized => rust_ir::WellKnownTrait::CoerceUnsized,
+            WellKnownTrait::DiscriminantKind => rust_ir::WellKnownTrait::DiscriminantKind,
         }
     }
 }
@@ -1160,31 +1162,55 @@ impl Kinded for chalk_ir::GenericArg<ChalkIr> {
     }
 }
 
+impl Lower for IntTy {
+    type Lowered = chalk_ir::IntTy;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            IntTy::I8 => chalk_ir::IntTy::I8,
+            IntTy::I16 => chalk_ir::IntTy::I16,
+            IntTy::I32 => chalk_ir::IntTy::I32,
+            IntTy::I64 => chalk_ir::IntTy::I64,
+            IntTy::I128 => chalk_ir::IntTy::I128,
+            IntTy::Isize => chalk_ir::IntTy::Isize,
+        }
+    }
+}
+
+impl Lower for UintTy {
+    type Lowered = chalk_ir::UintTy;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            UintTy::U8 => chalk_ir::UintTy::U8,
+            UintTy::U16 => chalk_ir::UintTy::U16,
+            UintTy::U32 => chalk_ir::UintTy::U32,
+            UintTy::U64 => chalk_ir::UintTy::U64,
+            UintTy::U128 => chalk_ir::UintTy::U128,
+            UintTy::Usize => chalk_ir::UintTy::Usize,
+        }
+    }
+}
+
+impl Lower for FloatTy {
+    type Lowered = chalk_ir::FloatTy;
+
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            FloatTy::F32 => chalk_ir::FloatTy::F32,
+            FloatTy::F64 => chalk_ir::FloatTy::F64,
+        }
+    }
+}
+
 impl Lower for ScalarType {
     type Lowered = chalk_ir::Scalar;
 
     fn lower(&self) -> Self::Lowered {
         match self {
-            ScalarType::Int(int) => chalk_ir::Scalar::Int(match int {
-                IntTy::I8 => chalk_ir::IntTy::I8,
-                IntTy::I16 => chalk_ir::IntTy::I16,
-                IntTy::I32 => chalk_ir::IntTy::I32,
-                IntTy::I64 => chalk_ir::IntTy::I64,
-                IntTy::I128 => chalk_ir::IntTy::I128,
-                IntTy::Isize => chalk_ir::IntTy::Isize,
-            }),
-            ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(match uint {
-                UintTy::U8 => chalk_ir::UintTy::U8,
-                UintTy::U16 => chalk_ir::UintTy::U16,
-                UintTy::U32 => chalk_ir::UintTy::U32,
-                UintTy::U64 => chalk_ir::UintTy::U64,
-                UintTy::U128 => chalk_ir::UintTy::U128,
-                UintTy::Usize => chalk_ir::UintTy::Usize,
-            }),
-            ScalarType::Float(float) => chalk_ir::Scalar::Float(match float {
-                FloatTy::F32 => chalk_ir::FloatTy::F32,
-                FloatTy::F64 => chalk_ir::FloatTy::F64,
-            }),
+            ScalarType::Int(int) => chalk_ir::Scalar::Int(int.lower()),
+            ScalarType::Uint(uint) => chalk_ir::Scalar::Uint(uint.lower()),
+            ScalarType::Float(float) => chalk_ir::Scalar::Float(float.lower()),
             ScalarType::Bool => chalk_ir::Scalar::Bool,
             ScalarType::Char => chalk_ir::Scalar::Char,
         }

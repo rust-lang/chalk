@@ -1,0 +1,166 @@
+use super::*;
+
+// Test that user-provided impls of `Discriminantkind` are prohibited
+#[test]
+fn no_discriminant_kind_impls() {
+    lowering_error! {
+        program {
+            #[lang(discriminant_kind)]
+            trait DiscriminantKind {
+                type Discriminant;
+            }
+
+            impl DiscriminantKind for u32 {
+                type Discriminant = u32;
+            }
+        } error_msg {
+            "trait impl for `DiscriminantKind` does not meet well-formedness requirements"
+        }
+    }
+}
+
+// Test that all types are implementing DiscriminantKind
+#[test]
+fn discriminant_kind_impl() {
+    test! {
+        program {
+            #[lang(discriminant_kind)]
+            trait DiscriminantKind {
+                type Discriminant;
+            }
+
+            #[object_safe]
+            trait Principal {}
+
+            struct A { }
+        }
+
+        goal {
+            A: DiscriminantKind
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            i32: DiscriminantKind
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            (i32, A): DiscriminantKind
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<'a> {
+                dyn Principal + 'a: DiscriminantKind
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
+
+#[test]
+fn discriminant_kind_assoc() {
+    test! {
+        program {
+            #[lang(discriminant_kind)]
+            trait DiscriminantKind {
+                type Discriminant;
+            }
+
+            #[object_safe]
+            trait Principal {}
+
+            enum A { }
+
+            #[repr(isize)]
+            enum B { }
+
+            #[repr(i32)]
+            enum C {}
+
+            #[repr(u32)]
+            enum D {}
+
+            #[repr(usize)]
+            enum E {}
+
+            generator empty_gen<>[resume = (), yield = ()] {
+                upvars []
+                witnesses []
+            }
+        }
+
+        // Discriminant for types with no discriminant should be u8
+        goal {
+            Normalize(<u32 as DiscriminantKind>::Discriminant -> u8)
+        } yields {
+            "Unique"
+        }
+
+        // Same as above
+        goal {
+            forall<'a> {
+                Normalize(<dyn Principal + 'a as DiscriminantKind>::Discriminant -> u8)
+            }
+        } yields {
+            "Unique"
+        }
+
+        // Discriminant for enums with unspecified discriminant should be isize
+        goal {
+            Normalize(<A as DiscriminantKind>::Discriminant -> isize)
+        } yields {
+            "Unique"
+        }
+
+        // Discriminant should be the same as specified in `repr`
+        // -----
+        goal {
+            Normalize(<B as DiscriminantKind>::Discriminant -> isize)
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Normalize(<C as DiscriminantKind>::Discriminant -> i32)
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Normalize(<D as DiscriminantKind>::Discriminant -> u32)
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            Normalize(<E as DiscriminantKind>::Discriminant -> usize)
+        } yields {
+            "Unique"
+        }
+        //--------
+
+        // Generators have u32 as the discriminant
+        goal {
+            Normalize(<empty_gen as DiscriminantKind>::Discriminant -> u32)
+        } yields {
+            "Unique"
+        }
+
+        // Placeholders don't have a determined discriminant
+        goal {
+            forall<T> {
+                exists<U> {
+                    Normalize(<T as DiscriminantKind>::Discriminant -> U)
+                }
+            }
+        } yields {
+            "Ambiguous"
+        }
+    }
+}

@@ -185,7 +185,7 @@ impl ProgramLowerer {
                     let identifier = d.name.clone();
                     let adt_id = AdtId(raw_id);
                     adt_data.insert(adt_id, Arc::new((d, adt_id).lower(&empty_env)?));
-                    adt_reprs.insert(adt_id, d.repr.lower());
+                    adt_reprs.insert(adt_id, Arc::new(d.repr.lower(&empty_env)?));
                     let n_params = d.all_parameters().len();
                     let variances = match d.variances.clone() {
                         Some(v) => {

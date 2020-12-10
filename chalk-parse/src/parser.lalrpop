@@ -65,12 +65,31 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
      "#" "[" "lang" "(" "unpin" ")" "]" => WellKnownTrait::Unpin,
      "#" "[" "lang" "(" "coerce_unsized" ")" "]" => WellKnownTrait::CoerceUnsized,
+     "#" "[" "lang" "(" "discriminant_kind" ")" "]" => WellKnownTrait::DiscriminantKind,
 };
 
-AdtRepr: Atom = "#" "[" "repr" "(" <name:Id> ")" "]" => name.str;
+AdtReprAttr: AdtReprAttr = {
+    "#" "[" "repr" "(" <t:ReprIntTy> ")" "]" => AdtReprAttr::Int(t),
+    "#" "[" "repr" "(" <attr:Id> ")" "]" =>? match &*attr.str {
+        "C" => Ok(AdtReprAttr::C),
+        "packed" => Ok(AdtReprAttr::Packed),
+        _ => Err(lalrpop_util::ParseError::User {
+            error: "unknown adt repr flag"
+        })
+    },
+};
+
+ReprIntTy: Ty = {
+    <i:IntTy> => Ty::Scalar {
+        ty: ScalarType::Int(i),
+    },
+    <u:UintTy> => Ty::Scalar {
+        ty: ScalarType::Uint(u),
+    },
+}
 
 AdtDefn: AdtDefn = {
-    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtRepr*>
+    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtReprAttr*>
         "enum" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <v:Variants> "}" => AdtDefn
     {
@@ -85,12 +104,17 @@ AdtDefn: AdtDefn = {
             kind: AdtKind::Enum,
         },
         repr: AdtRepr {
-            repr_c: repr.iter().any(|s| s == "C"),
-            repr_packed: repr.iter().any(|s| s == "packed"),
+            c: repr.iter().any(|s| s == &AdtReprAttr::C),
+            packed: repr.iter().any(|s| s == &AdtReprAttr::Packed),
+            int: repr.iter().find_map(|s| if let AdtReprAttr::Int(i) = s {
+                Some(i.clone())
+            } else {
+                None
+            })
         },
         variances,
     },
-    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtRepr*>
+    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtReprAttr*>
         "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => AdtDefn
     {
@@ -112,8 +136,9 @@ AdtDefn: AdtDefn = {
             kind: AdtKind::Struct,
         },
         repr: AdtRepr {
-            repr_c: repr.iter().any(|s| s == "C"),
-            repr_packed: repr.iter().any(|s| s == "packed"),
+            c: repr.iter().any(|s| s == &AdtReprAttr::C),
+            packed: repr.iter().any(|s| s == &AdtReprAttr::Packed),
+            int: None
         },
         variances,
     }
@@ -405,23 +430,35 @@ TyWithoutId: Ty = {
 ExistsLifetimes: Vec<Identifier> = "exists" "<" <Comma<LifetimeId>> ">" => <>;
 ForLifetimes: Vec<Identifier> = "for" "<" <Comma<LifetimeId>> ">" => <>;
 
+IntTy: IntTy = {
+    "i8" => IntTy::I8,
+    "i16" => IntTy::I16,
+    "i32" => IntTy::I32,
+    "i64" => IntTy::I64,
+    "i128" => IntTy::I128,
+    "isize" => IntTy::Isize,
+};
+
+UintTy: UintTy = {
+    "u8" => UintTy::U8,
+    "u16" => UintTy::U16,
+    "u32" => UintTy::U32,
+    "u64" => UintTy::U64,
+    "u128" => UintTy::U128,
+    "usize" => UintTy::Usize,
+};
+
+FloatTy: FloatTy = {
+    "f32" => FloatTy::F32,
+    "f64" => FloatTy::F64,
+};
+
 ScalarType: ScalarType = {
-   "u8" => ScalarType::Uint(UintTy::U8),
-   "u16" => ScalarType::Uint(UintTy::U16),
-   "u32" => ScalarType::Uint(UintTy::U32),
-   "u64" => ScalarType::Uint(UintTy::U64),
-   "u128" => ScalarType::Uint(UintTy::U128),
-   "usize" => ScalarType::Uint(UintTy::Usize),
-   "i8" => ScalarType::Int(IntTy::I8),
-   "i16" => ScalarType::Int(IntTy::I16),
-   "i32" => ScalarType::Int(IntTy::I32),
-   "i64" => ScalarType::Int(IntTy::I64),
-   "i128" => ScalarType::Int(IntTy::I128),
-   "isize" => ScalarType::Int(IntTy::Isize),
-   "f32" => ScalarType::Float(FloatTy::F32),
-   "f64" => ScalarType::Float(FloatTy::F64),
-   "bool" => ScalarType::Bool,
-   "char" => ScalarType::Char,
+    <i:IntTy> => ScalarType::Int(i),
+    <u:UintTy> => ScalarType::Uint(u),
+    <f:FloatTy> => ScalarType::Float(f), 
+    "bool" => ScalarType::Bool,
+    "char" => ScalarType::Char,
 };
 
 TupleOrParensInner: Ty = {
