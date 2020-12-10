@@ -12,8 +12,8 @@ use crate::{
 
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    AnswerSubst, Canonical, CanonicalVarKinds, ConstrainedSubst, FallibleOrFloundered, Floundered,
-    Goal, GoalData, InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
+    AnswerSubst, Canonical, ConstrainedSubst, FallibleOrFloundered, Floundered, Goal, GoalData,
+    InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
 };
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::coinductive_goal::IsCoinductive;
@@ -253,24 +253,30 @@ impl<I: Interner> Forest<I> {
     ) -> Table<I> {
         let coinductive = goal.is_coinductive(context.program());
         let mut table = Table::new(goal.clone(), coinductive);
-        let (infer, subst, InEnvironment { environment, goal }) =
-            chalk_solve::infer::InferenceTable::from_canonical(
-                context.program().interner(),
-                goal.universes,
-                goal.canonical,
-            );
-        let mut infer = TruncatingInferenceTable::new(context.max_size(), infer);
-        let goal_data = goal.data(context.program().interner());
 
+        let goal_data = goal.canonical.value.goal.data(context.program().interner());
         match goal_data {
             GoalData::DomainGoal(domain_goal) => {
                 let program = context.program();
-                let clauses = program_clauses_for_goal(
-                    program,
-                    &environment,
-                    &domain_goal,
-                    &CanonicalVarKinds::empty(program.interner()),
-                );
+
+                let canon_domain_goal = UCanonical {
+                    canonical: Canonical {
+                        binders: goal.canonical.binders,
+                        value: InEnvironment::new(
+                            &goal.canonical.value.environment,
+                            domain_goal.clone(),
+                        ),
+                    },
+                    universes: goal.universes,
+                };
+                let clauses = program_clauses_for_goal(program, &canon_domain_goal);
+                let (infer, subst, InEnvironment { environment, goal }) =
+                    chalk_solve::infer::InferenceTable::from_canonical(
+                        context.program().interner(),
+                        canon_domain_goal.universes,
+                        canon_domain_goal.canonical,
+                    );
+                let infer = TruncatingInferenceTable::new(context.max_size(), infer);
 
                 match clauses {
                     Ok(clauses) => {
@@ -281,7 +287,7 @@ impl<I: Interner> Forest<I> {
                                 context.unification_database(),
                                 context.program().interner(),
                                 &environment,
-                                &domain_goal,
+                                &goal,
                                 &subst,
                                 &clause,
                             ) {
@@ -309,13 +315,19 @@ impl<I: Interner> Forest<I> {
             }
 
             _ => {
-                // `canonical_goal` is a goal. We can simplify it
-                // into a series of *literals*, all of which must be
-                // true. Thus, in EWFS terms, we are effectively
-                // creating a single child of the `A :- A` goal that
-                // is like `A :- B, C, D` where B, C, and D are the
-                // simplified subgoals. You can think of this as
-                // applying built-in "meta program clauses" that
+                let (infer, subst, InEnvironment { environment, goal }) =
+                    chalk_solve::infer::InferenceTable::from_canonical(
+                        context.program().interner(),
+                        goal.universes,
+                        goal.canonical,
+                    );
+                let mut infer = TruncatingInferenceTable::new(context.max_size(), infer);
+                // The goal for this table is not a domain goal, so we instead
+                // simplify it into a series of *literals*, all of which must be
+                // true. Thus, in EWFS terms, we are effectively creating a
+                // single child of the `A :- A` goal that is like `A :- B, C, D`
+                // where B, C, and D are the simplified subgoals. You can think
+                // of this as applying built-in "meta program clauses" that
                 // reduce goals into Domain goals.
                 match Self::simplify_goal(context, &mut infer, subst, environment, goal) {
                     FallibleOrFloundered::Ok(ex_clause) => {
