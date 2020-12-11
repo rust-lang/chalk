@@ -119,3 +119,10 @@ macro_rules! lifetime {
         lifetime!($($b)*)
     };
 }
+
+#[macro_export]
+macro_rules! empty_substitution {
+    () => {
+        chalk_ir::Substitution::empty(&chalk_integration::interner::ChalkIr)
+    };
+}

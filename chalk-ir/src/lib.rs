@@ -14,7 +14,8 @@ use chalk_derive::{Fold, HasInterner, SuperVisit, Visit, Zip};
 use std::marker::PhantomData;
 
 pub use crate::debug::SeparatorTraitRef;
-
+#[macro_use(bitflags)]
+extern crate bitflags;
 /// Uninhabited (empty) type, used in combination with `PhantomData`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Void {}
@@ -411,11 +412,147 @@ pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
 
+///compute type flags for Lifetime
+fn compute_lifetime_flags<I: Interner>(lifetime: &Lifetime<I>, interner: &I) -> TypeFlags {
+    match lifetime.data(&interner) {
+        LifetimeData::InferenceVar(_) => {
+            TypeFlags::HAS_RE_INFER
+                | TypeFlags::HAS_FREE_LOCAL_REGIONS
+                | TypeFlags::HAS_FREE_REGIONS
+        }
+        LifetimeData::Placeholder(_) => {
+            TypeFlags::HAS_RE_PLACEHOLDER
+                | TypeFlags::HAS_FREE_LOCAL_REGIONS
+                | TypeFlags::HAS_FREE_REGIONS
+        }
+        LifetimeData::Static | LifetimeData::Empty(_) => TypeFlags::HAS_FREE_REGIONS,
+        LifetimeData::Phantom(_, _) => TypeFlags::empty(),
+        LifetimeData::BoundVar(_) => TypeFlags::HAS_RE_LATE_BOUND,
+        LifetimeData::Erased => TypeFlags::HAS_RE_ERASED,
+    }
+}
+
+/// Compute type flags for Substitution<I>
+fn compute_substitution_flags<I: Interner>(
+    substitution: &Substitution<I>,
+    interner: &I,
+) -> TypeFlags {
+    let mut flags = TypeFlags::empty();
+    for generic_arg in substitution.iter(&interner) {
+        flags |= compute_generic_arg_flags(generic_arg, &interner);
+    }
+    flags
+}
+
+/// Compute type flags for GenericArg<I>
+fn compute_generic_arg_flags<I: Interner>(generic_arg: &GenericArg<I>, interner: &I) -> TypeFlags {
+    match generic_arg.data(&interner) {
+        GenericArgData::Ty(ty) => ty.data(interner).flags,
+        GenericArgData::Lifetime(lifetime) => compute_lifetime_flags(lifetime, interner),
+        GenericArgData::Const(constant) => {
+            let data = constant.data(&interner);
+            let flags = data.ty.data(interner).flags;
+            match data.value {
+                ConstValue::BoundVar(_) => flags,
+                ConstValue::InferenceVar(_) => {
+                    flags | TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                }
+                ConstValue::Placeholder(_) => {
+                    flags | TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                }
+                ConstValue::Concrete(_) => flags,
+            }
+        }
+    }
+}
+
+/// Compute type flags for aliases
+fn compute_alias_flags<I: Interner>(alias_ty: &AliasTy<I>, interner: &I) -> TypeFlags {
+    match alias_ty {
+        AliasTy::Projection(projection_ty) => {
+            TypeFlags::HAS_TY_PROJECTION
+                | compute_substitution_flags(&(projection_ty.substitution), interner)
+        }
+        AliasTy::Opaque(opaque_ty) => {
+            TypeFlags::HAS_TY_OPAQUE
+                | compute_substitution_flags(&(opaque_ty.substitution), interner)
+        }
+    }
+}
+
+/// Compute type flags for a TyKind
+fn compute_flags<I: Interner>(kind: &TyKind<I>, interner: &I) -> TypeFlags {
+    match kind {
+        TyKind::Adt(_, substitution)
+        | TyKind::AssociatedType(_, substitution)
+        | TyKind::Tuple(_, substitution)
+        | TyKind::Closure(_, substitution)
+        | TyKind::Generator(_, substitution)
+        | TyKind::GeneratorWitness(_, substitution)
+        | TyKind::FnDef(_, substitution)
+        | TyKind::OpaqueType(_, substitution) => compute_substitution_flags(substitution, interner),
+        TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => TypeFlags::empty(),
+        TyKind::Error => TypeFlags::HAS_ERROR,
+        TyKind::Slice(ty) | TyKind::Raw(_, ty) => ty.data(interner).flags,
+        TyKind::Ref(_, lifetime, ty) => {
+            compute_lifetime_flags(lifetime, interner) | ty.data(interner).flags
+        }
+        TyKind::Array(ty, const_ty) => {
+            let flags = ty.data(interner).flags;
+            let const_data = const_ty.data(interner);
+            flags
+                | const_data.ty.data(interner).flags
+                | match const_data.value {
+                    ConstValue::BoundVar(_) | ConstValue::Concrete(_) => TypeFlags::empty(),
+                    ConstValue::InferenceVar(_) => {
+                        TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                    }
+                    ConstValue::Placeholder(_) => {
+                        TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                    }
+                }
+        }
+        TyKind::Placeholder(_) => TypeFlags::HAS_TY_PLACEHOLDER,
+        TyKind::Dyn(dyn_ty) => {
+            let lifetime_flags = compute_lifetime_flags(&(dyn_ty.lifetime), &interner);
+            let mut dyn_flags = TypeFlags::empty();
+            for var_kind in dyn_ty.bounds.value.iter(&interner) {
+                match &(var_kind.value) {
+                    WhereClause::Implemented(trait_ref) => {
+                        dyn_flags |= compute_substitution_flags(&(trait_ref.substitution), interner)
+                    }
+                    WhereClause::AliasEq(alias_eq) => {
+                        dyn_flags |= compute_alias_flags(&(alias_eq.alias), &interner);
+                        dyn_flags |= alias_eq.ty.data(&interner).flags;
+                    }
+                    WhereClause::LifetimeOutlives(lifetime_outlives) => {
+                        dyn_flags |= compute_lifetime_flags(&(lifetime_outlives.a), &interner)
+                            | compute_lifetime_flags(&(lifetime_outlives.b), &interner);
+                    }
+                    WhereClause::TypeOutlives(type_outlives) => {
+                        dyn_flags |= type_outlives.ty.data(&interner).flags;
+                        dyn_flags |= compute_lifetime_flags(&(type_outlives.lifetime), &interner);
+                    }
+                }
+            }
+            lifetime_flags | dyn_flags
+        }
+        TyKind::Alias(alias_ty) => compute_alias_flags(&alias_ty, &interner),
+        TyKind::BoundVar(_) => TypeFlags::empty(),
+        TyKind::InferenceVar(_, _) => TypeFlags::HAS_TY_INFER,
+        TyKind::Function(fn_pointer) => {
+            compute_substitution_flags(&fn_pointer.substitution.0, interner)
+        }
+    }
+}
+
 impl<I: Interner> Ty<I> {
     /// Creates a type from `TyKind`.
     pub fn new(interner: &I, data: impl CastTo<TyKind<I>>) -> Self {
+        let ty_kind = data.cast(&interner);
         let data = TyData {
-            kind: data.cast(interner),
+            flags: compute_flags(&ty_kind, &interner),
+            kind: ty_kind,
         };
         Ty {
             interned: I::intern_ty(interner, data),
@@ -530,8 +667,57 @@ impl<I: Interner> Ty<I> {
 pub struct TyData<I: Interner> {
     /// The kind
     pub kind: TyKind<I>,
+    /// Type flags
+    pub flags: TypeFlags,
 }
 
+bitflags! {
+    /// Contains flags indicating various properties of a Ty
+    pub struct TypeFlags : u16 {
+        /// Does the type contain an InferenceVar
+        const HAS_TY_INFER                = 1;
+        /// Does the type contain a lifetime with an InferenceVar
+        const HAS_RE_INFER                = 1 << 1;
+        /// Does the type contain a ConstValue with an InferenceVar
+        const HAS_CT_INFER                = 1 << 2;
+        /// Does the type contain a Placeholder TyKind
+        const HAS_TY_PLACEHOLDER          = 1 << 3;
+        /// Does the type contain a lifetime with a Placeholder
+        const HAS_RE_PLACEHOLDER          = 1 << 4;
+        /// Does the type contain a ConstValue Placeholder
+        const HAS_CT_PLACEHOLDER          = 1 << 5;
+        /// True when the type has free lifetimes related to a local context
+        const HAS_FREE_LOCAL_REGIONS      = 1 << 6;
+        /// Does the type contain a projection of an associated type
+        const HAS_TY_PROJECTION           = 1 << 7;
+        /// Does the type contain an opaque type
+        const HAS_TY_OPAQUE               = 1 << 8;
+        /// Does the type contain an unevaluated const projection
+        const HAS_CT_PROJECTION           = 1 << 9;
+        /// Does the type contain an error
+        const HAS_ERROR                   = 1 << 10;
+        /// Does the type contain any free lifetimes
+        const HAS_FREE_REGIONS            = 1 << 11;
+        /// True when the type contains lifetimes that will be substituted when function is called
+        const HAS_RE_LATE_BOUND           = 1 << 12;
+        /// True when the type contains an erased lifetime
+        const HAS_RE_ERASED               = 1 << 13;
+        /// Does the type contain placeholders or inference variables that could be replaced later
+        const STILL_FURTHER_SPECIALIZABLE = 1 << 14;
+
+        /// True when the type contains free names local to a particular context
+        const HAS_FREE_LOCAL_NAMES        = TypeFlags::HAS_TY_INFER.bits
+                                          | TypeFlags::HAS_CT_INFER.bits
+                                          | TypeFlags::HAS_TY_PLACEHOLDER.bits
+                                          | TypeFlags::HAS_CT_PLACEHOLDER.bits
+                                          | TypeFlags::HAS_FREE_LOCAL_REGIONS.bits;
+
+        /// Does the type contain any form of projection
+        const HAS_PROJECTION              = TypeFlags::HAS_TY_PROJECTION.bits
+                                          | TypeFlags::HAS_TY_OPAQUE.bits
+                                          | TypeFlags::HAS_CT_PROJECTION.bits;
+    }
+}
 /// Type data, which holds the actual type information.
 #[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
 pub enum TyKind<I: Interner> {
