@@ -489,12 +489,9 @@ fn compute_flags<I: Interner>(kind: &TyKind<I>, interner: &I) -> TypeFlags {
         | TyKind::Closure(_, substitution)
         | TyKind::Generator(_, substitution)
         | TyKind::GeneratorWitness(_, substitution)
-        | TyKind::FnDef(_, substitution) => compute_substitution_flags(substitution, interner),
-        TyKind::Scalar(_)
-        | TyKind::Str
-        | TyKind::Never
-        | TyKind::Foreign(_)
-        | TyKind::OpaqueType(_, _) => TypeFlags::empty(),
+        | TyKind::FnDef(_, substitution)
+        | TyKind::OpaqueType(_, substitution) => compute_substitution_flags(substitution, interner),
+        TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => TypeFlags::empty(),
         TyKind::Error => TypeFlags::HAS_ERROR,
         TyKind::Slice(ty) | TyKind::Raw(_, ty) => ty.data(interner).flags,
         TyKind::Ref(_, lifetime, ty) => {
