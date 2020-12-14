@@ -70,7 +70,7 @@ pub(super) fn fallible_map_vec<T, U, E>(
     }
 }
 
-/// Takes ownership of a `Vec` that is being mapped in place.
+/// Takes ownership of a `Vec` that is being mapped in place, cleaning up if the map fails.
 struct VecMappedInPlace<T, U> {
     ptr: *mut T,
     len: usize,
@@ -100,6 +100,7 @@ impl<T, U> VecMappedInPlace<T, U> {
         }
     }
 
+    /// Converts back into a `Vec` once the map is complete.
     unsafe fn finish(self) -> Vec<U> {
         let this = mem::ManuallyDrop::new(self);
         Vec::from_raw_parts(this.ptr as *mut U, this.len, this.cap)
@@ -120,14 +121,14 @@ impl<T, U> VecMappedInPlace<T, U> {
 /// ```
 impl<T, U> Drop for VecMappedInPlace<T, U> {
     fn drop(&mut self) {
-        // Drop mapped elements (of type `U`)
+        // Drop mapped elements of type `U`.
         for i in 0..self.map_in_progress {
             unsafe {
                 ptr::drop_in_place(self.ptr.add(i) as *mut U);
             }
         }
 
-        // Drop unmapped elements (of type `T`)
+        // Drop unmapped elements of type `T`.
         for i in (self.map_in_progress + 1)..self.len {
             unsafe {
                 ptr::drop_in_place(self.ptr.add(i));
@@ -139,5 +140,124 @@ impl<T, U> Drop for VecMappedInPlace<T, U> {
         unsafe {
             Vec::from_raw_parts(self.ptr, 0, self.cap);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fmt;
+    use std::sync::{Arc, Mutex};
+
+    /// A wrapper around `T` that records when it is dropped.
+    struct RecordDrop<T: fmt::Display> {
+        id: T,
+        drops: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl<T: fmt::Display> RecordDrop<T> {
+        fn new(id: T, drops: &Arc<Mutex<Vec<String>>>) -> Self {
+            RecordDrop {
+                id,
+                drops: drops.clone(),
+            }
+        }
+    }
+
+    impl RecordDrop<u8> {
+        fn map_to_char(self) -> RecordDrop<char> {
+            let this = std::mem::ManuallyDrop::new(self);
+            RecordDrop {
+                id: (this.id + b'A') as char,
+                drops: this.drops.clone(),
+            }
+        }
+    }
+
+    impl<T: fmt::Display> Drop for RecordDrop<T> {
+        fn drop(&mut self) {
+            self.drops.lock().unwrap().push(format!("{}", self.id));
+        }
+    }
+
+    #[test]
+    fn vec_no_cleanup_after_success() {
+        let drops = Arc::new(Mutex::new(Vec::new()));
+        let to_fold = (0u8..5).map(|i| RecordDrop::new(i, &drops)).collect();
+
+        let res: Result<_, ()> = super::fallible_map_vec(to_fold, |x| Ok(x.map_to_char()));
+
+        assert!(res.is_ok());
+        assert!(drops.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn vec_cleanup_after_panic() {
+        let drops = Arc::new(Mutex::new(Vec::new()));
+        let to_fold = (0u8..5).map(|i| RecordDrop::new(i, &drops)).collect();
+
+        let res = std::panic::catch_unwind(|| {
+            let _: Result<_, ()> = super::fallible_map_vec(to_fold, |x| {
+                if x.id == 3 {
+                    panic!();
+                }
+
+                Ok(x.map_to_char())
+            });
+        });
+
+        assert!(res.is_err());
+        assert_eq!(*drops.lock().unwrap(), &["3", "A", "B", "C", "4"]);
+    }
+
+    #[test]
+    fn vec_cleanup_after_early_return() {
+        let drops = Arc::new(Mutex::new(Vec::new()));
+        let to_fold = (0u8..5).map(|i| RecordDrop::new(i, &drops)).collect();
+
+        let res = super::fallible_map_vec(to_fold, |x| {
+            if x.id == 2 {
+                return Err(());
+            }
+
+            Ok(x.map_to_char())
+        });
+
+        assert!(res.is_err());
+        assert_eq!(*drops.lock().unwrap(), &["2", "A", "B", "3", "4"]);
+    }
+
+    #[test]
+    fn box_no_cleanup_after_success() {
+        let drops = Arc::new(Mutex::new(Vec::new()));
+        let to_fold = Box::new(RecordDrop::new(0, &drops));
+
+        let res: Result<Box<_>, ()> = super::fallible_map_box(to_fold, |x| Ok(x.map_to_char()));
+
+        assert!(res.is_ok());
+        assert!(drops.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn box_cleanup_after_panic() {
+        let drops = Arc::new(Mutex::new(Vec::new()));
+        let to_fold = Box::new(RecordDrop::new(0, &drops));
+
+        let res = std::panic::catch_unwind(|| {
+            let _: Result<Box<()>, ()> = super::fallible_map_box(to_fold, |_| panic!());
+        });
+
+        assert!(res.is_err());
+        assert_eq!(*drops.lock().unwrap(), &["0"]);
+    }
+
+    #[test]
+    fn box_cleanup_after_early_return() {
+        let drops = Arc::new(Mutex::new(Vec::new()));
+        let to_fold = Box::new(RecordDrop::new(0, &drops));
+
+        let res: Result<Box<()>, _> = super::fallible_map_box(to_fold, |_| Err(()));
+
+        assert!(res.is_err());
+        assert_eq!(*drops.lock().unwrap(), &["0"]);
     }
 }
