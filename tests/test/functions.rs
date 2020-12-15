@@ -238,11 +238,11 @@ fn function_implement_fn_traits() {
             "Floundered"
         }
 
-        // Tests that we flounder for alias type (opaque)
+        // No solution for alias type
         goal {
             MyOpaque: FnOnce<()>
-        } yields_first[SolverChoice::slg(3, None)] {
-            "Floundered"
+        } yields {
+            "No possible solution"
         }
     }
 }

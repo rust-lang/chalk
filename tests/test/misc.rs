@@ -537,23 +537,29 @@ fn builtin_impl_enumeration() {
 
         goal {
             exists<T> { T: Copy }
-        } yields {
+        } yields[SolverChoice::recursive_default()] {
             // FIXME: wrong, e.g. &u8 is also Copy
             "Unique; substitution [?0 := Uint(U8)]"
+        } yields[SolverChoice::slg_default()] {
+            "Ambiguous; no inference guidance"
         }
 
         goal {
             exists<T> { T: Clone }
-        } yields {
+        } yields[SolverChoice::recursive_default()] {
             // FIXME: wrong, e.g. &u8 is also Clone
             "Unique; substitution [?0 := Uint(U8)]"
+        } yields[SolverChoice::slg_default()] {
+            "Ambiguous; no inference guidance"
         }
 
         goal {
             exists<T> { T: Sized }
-        } yields {
+        } yields[SolverChoice::recursive_default()] {
             // FIXME: wrong, most of the built-in types are Sized
             "No possible solution"
+        } yields[SolverChoice::slg_default()] {
+            "Ambiguous; no inference guidance"
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{CanonicalVarKinds, Substitution, TyKind, TyVariableKind, VariableKind};
+use chalk_ir::{CanonicalVarKinds, Floundered, Substitution, TyKind, TyVariableKind, VariableKind};
 use std::iter;
 use tracing::instrument;
 
@@ -37,7 +37,7 @@ pub fn add_copy_program_clauses<I: Interner>(
     trait_ref: TraitRef<I>,
     ty: TyKind<I>,
     binders: &CanonicalVarKinds<I>,
-) {
+) -> Result<(), Floundered> {
     match ty {
         TyKind::Tuple(arity, ref substitution) => {
             push_tuple_copy_conditions(db, builder, trait_ref, arity, substitution)
@@ -73,10 +73,8 @@ pub fn add_copy_program_clauses<I: Interner>(
 
         TyKind::Function(_) => builder.push_fact(trait_ref),
 
-        TyKind::InferenceVar(_, kind) => match kind {
-            TyVariableKind::Integer | TyVariableKind::Float => builder.push_fact(trait_ref),
-            TyVariableKind::General => {}
-        },
+        TyKind::InferenceVar(_, TyVariableKind::Float)
+        | TyKind::InferenceVar(_, TyVariableKind::Integer) => builder.push_fact(trait_ref),
 
         TyKind::BoundVar(bound_var) => {
             let var_kind = &binders.at(db.interner(), bound_var.index).kind;
@@ -87,6 +85,11 @@ pub fn add_copy_program_clauses<I: Interner>(
             }
         }
 
+        // Don't know enough
+        TyKind::InferenceVar(_, TyVariableKind::General) => return Err(Floundered),
+
+        // These should be handled elsewhere
         TyKind::Alias(_) | TyKind::Dyn(_) | TyKind::Placeholder(_) => {}
     };
+    Ok(())
 }

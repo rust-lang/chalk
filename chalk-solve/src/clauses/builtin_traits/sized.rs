@@ -4,7 +4,9 @@ use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
-use chalk_ir::{AdtId, CanonicalVarKinds, Substitution, TyKind, TyVariableKind, VariableKind};
+use chalk_ir::{
+    AdtId, CanonicalVarKinds, Floundered, Substitution, TyKind, TyVariableKind, VariableKind,
+};
 
 fn push_adt_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
@@ -70,7 +72,7 @@ pub fn add_sized_program_clauses<I: Interner>(
     trait_ref: TraitRef<I>,
     ty: TyKind<I>,
     binders: &CanonicalVarKinds<I>,
-) {
+) -> Result<(), Floundered> {
     match ty {
         TyKind::Adt(adt_id, ref substitution) => {
             push_adt_sized_conditions(db, builder, trait_ref, adt_id, substitution)
@@ -108,9 +110,11 @@ pub fn add_sized_program_clauses<I: Interner>(
             }
         }
 
-        TyKind::InferenceVar(_, TyVariableKind::General)
-        | TyKind::Placeholder(_)
-        | TyKind::Dyn(_)
-        | TyKind::Alias(_) => {}
+        // We don't know enough here
+        TyKind::InferenceVar(_, TyVariableKind::General) => return Err(Floundered),
+
+        // These would be handled elsewhere
+        TyKind::Placeholder(_) | TyKind::Dyn(_) | TyKind::Alias(_) => {}
     }
+    Ok(())
 }
