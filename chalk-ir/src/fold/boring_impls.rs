@@ -4,12 +4,9 @@
 //!
 //! The more interesting impls of `Fold` remain in the `fold` module.
 
+use super::in_place;
 use crate::*;
 use std::marker::PhantomData;
-
-// FIXME: Reuse memory owned by `Box`, `Vec` and others when `T` has the same layout as
-// `T::Result`.
-// See <https://github.com/rust-lang/rust/blob/5be3f9f10e9fd59ea03816840a6051413fbdefae/compiler/rustc_data_structures/src/functor.rs#L13>
 
 impl<T: Fold<I>, I: Interner> Fold<I> for Vec<T> {
     type Result = Vec<T::Result>;
@@ -21,9 +18,7 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Vec<T> {
     where
         I: 'i,
     {
-        self.into_iter()
-            .map(|e| e.fold_with(folder, outer_binder))
-            .collect()
+        in_place::fallible_map_vec(self, |e| e.fold_with(folder, outer_binder))
     }
 }
 
@@ -37,7 +32,7 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Box<T> {
     where
         I: 'i,
     {
-        Ok(Box::new((*self).fold_with(folder, outer_binder)?))
+        in_place::fallible_map_box(self, |e| e.fold_with(folder, outer_binder))
     }
 }
 
