@@ -332,6 +332,7 @@ mod discriminant_kind;
 mod existential_types;
 mod fn_def;
 mod foreign_types;
+mod functions;
 mod generators;
 mod implied_bounds;
 mod impls;

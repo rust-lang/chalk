@@ -22,6 +22,7 @@ fn functions_are_sized() {
     }
 }
 
+#[test]
 fn functions_are_copy() {
     test! {
         program {
@@ -61,6 +62,9 @@ fn function_implement_fn_traits() {
             struct Ty { }
 
             trait Clone { }
+
+            impl Clone for Ty { }
+
             opaque type MyOpaque: Clone = Ty;
 
         }
