@@ -81,7 +81,11 @@ pub fn add_copy_program_clauses<I: Interner>(
             match var_kind {
                 VariableKind::Ty(TyVariableKind::Integer)
                 | VariableKind::Ty(TyVariableKind::Float) => builder.push_fact(trait_ref),
-                VariableKind::Ty(_) | VariableKind::Const(_) | VariableKind::Lifetime => {}
+
+                // Don't know enough
+                VariableKind::Ty(TyVariableKind::General) => return Err(Floundered),
+
+                VariableKind::Const(_) | VariableKind::Lifetime => {}
             }
         }
 
