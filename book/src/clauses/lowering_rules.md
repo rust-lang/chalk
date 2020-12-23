@@ -44,7 +44,7 @@ the `Holds` variant of [domain goals][dg], as follows:
 - `'a: 'b` maps to `Outlives('a, 'b)`
 - `A0: Foo<A1..An, Item = T>` is a bit special and expands to two distinct
   goals, namely `Implemented(A0: Foo<A1..An>)` and
-  `ProjectionEq(<A0 as Foo<A1..An>>::Item = T)`
+  `AliasEq(<A0 as Foo<A1..An>>::Item = T)`
 
 In the rules below, we will use `WC` to indicate where clauses that
 appear in Rust syntax; we will then use the same `WC` to indicate
@@ -271,27 +271,27 @@ where WC
 ```
 
 We will produce a number of program clauses. The first two define
-the rules by which `ProjectionEq` can succeed; these two clauses are discussed
+the rules by which `AliasEq` for associated type projections can succeed; these two clauses are discussed
 in detail in the [section on associated types](./type_equality.html),
 but reproduced here for reference:
 
 ```text
-// Rule ProjectionEq-Normalize
+// Rule AliasEq-Normalize
 //
-// ProjectionEq can succeed by normalizing:
+// AliasEq can succeed by normalizing:
 forall<Self, P1..Pn, Pn+1..Pm, U> {
-  ProjectionEq(<Self as Trait<P1..Pn>>::AssocType<Pn+1..Pm> = U) :-
+  AliasEq(<Self as Trait<P1..Pn>>::AssocType<Pn+1..Pm> = U) :-
       Normalize(<Self as Trait<P1..Pn>>::AssocType<Pn+1..Pm> -> U)
 }
 ```
 
 ```text
-// Rule ProjectionEq-Placeholder
+// Rule AliasEq-Placeholder
 //
-// ProjectionEq can succeed through the placeholder associated type,
+// AliasEq can succeed through the placeholder associated type,
 // see "associated type" chapter for more:
 forall<Self, P1..Pn, Pn+1..Pm> {
-  ProjectionEq(
+  AliasEq(
     <Self as Trait<P1..Pn>>::AssocType<Pn+1..Pm> =
     (Trait::AssocType)<Self, P1..Pn, Pn+1..Pm>
   )
