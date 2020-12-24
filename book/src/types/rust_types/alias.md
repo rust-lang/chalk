@@ -20,12 +20,12 @@ equivalent type is not always known:
   where we *can't* normalize, because we don't know what `T` is. Even in that
   case, though, we still know that `T::Item: Sized`, because that bound is
   [declared in the `Iterator` trait][Iterator::Item] (by default, as it
-  happens).
+  happens). We describe how both cases are handled in more detail in the [section on associated types](../../clauses/type_equality.html).
 * In an opaque type like `type Foo = impl Iterator<Item = u32>`, the user might
   write `Foo` (which indirectly references the opaque type) but they never get
   to rely on the precise underlying type. However, when generating code, the
   *compiler* does need to be able to normalize `Foo` to the precise underlying
-  type, so normalization still does occur.
+  type, so normalization still does occur. We describe this in more detail in the [opaque types](../../clauses/opaque_types.html) section.
 
 [Iterator::Item]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#associatedtype.Item
 

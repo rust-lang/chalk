@@ -6,7 +6,7 @@ which we will introduce one by one:
 
 - Projection and the `Normalize` predicate
 - Placeholder associated type projections
-- The `ProjectionEq` predicate
+- The `AliasEq` predicate
 - Integration with unification
 
 ## Associated type projection and normalization
@@ -109,29 +109,30 @@ consider an associated type projection equal to another type?":
 - **placeholder** associated types can be used when we don't. This is also
   known as **lazy normalization**.
 
-We now introduce the `ProjectionEq` predicate to bring those two cases
-together. The `ProjectionEq` predicate looks like so:
+These two cases are brought together by the `AliasEq` predicate introduced 
+[before](../types/rust_types/alias.html) (where the [`AliasTy`](https://rust-lang.github.io/chalk/chalk_ir/enum.AliasTy.html) is `Projection`). The instantiated predicate for projection 
+equality looks then like so:
 
 ```text
-ProjectionEq(<T as IntoIterator>::Item = U)
+AliasEq(<T as IntoIterator>::Item = U)
 ```
 
 and we will see that it can be proven *either* via normalization or
 via the placeholder type. As part of lowering an associated type declaration from
-some trait, we create two program clauses for `ProjectionEq`:
+some trait, we create two program clauses for `AliasEq`:
 
 ```text
 forall<T, U> {
-    ProjectionEq(<T as IntoIterator>::Item = U) :-
+    AliasEq(<T as IntoIterator>::Item = U) :-
         Normalize(<T as IntoIterator>::Item -> U)
 }
 
 forall<T> {
-    ProjectionEq(<T as IntoIterator>::Item = (IntoIterator::Item)<T>)
+    AliasEq(<T as IntoIterator>::Item = (IntoIterator::Item)<T>)
 }
 ```
 
-These are the only two `ProjectionEq` program clauses we ever make for
+These are the only two `AliasEq` program clauses we ever make for
 any given associated item.
 
 ## Integration with unification
@@ -154,11 +155,11 @@ us a set of subgoals that still remain to be proven.
 
 Whenever unification encounters a non-placeholder associated type
 projection P being equated with some other type T, it always succeeds,
-but it produces a subgoal `ProjectionEq(P = T)` that is propagated
+but it produces a subgoal `AliasEq(P = T)` that is propagated
 back up. Thus it falls to the ordinary workings of the trait system
 to process that constraint.
 
 > If we unify two projections P1 and P2, then unification produces a
-> variable X and asks us to prove that `ProjectionEq(P1 = X)` and
-> `ProjectionEq(P2 = X)`. (That used to be needed in an older system to
+> variable X and asks us to prove that `AliasEq(P1 = X)` and
+> `AliasEq(P2 = X)`. (That used to be needed in an older system to
 > prevent cycles; I rather doubt it still is. -nmatsakis)

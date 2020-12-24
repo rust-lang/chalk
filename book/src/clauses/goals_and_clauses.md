@@ -96,7 +96,7 @@ DomainGoal = Holds(WhereClause)
             | Normalize(Projection -> Type)
 
 WhereClause = Implemented(TraitRef)
-            | ProjectionEq(Projection = Type)
+            | AliasEq(Projection = Type)
             | Outlives(Type: Region)
             | Outlives(Region: Region)
 ```
@@ -113,25 +113,25 @@ e.g. `Implemented(i32: Copy)`
 
 True if the given trait is implemented for the given input types and lifetimes.
 
-#### ProjectionEq(Projection = Type)
-e.g. `ProjectionEq<T as Iterator>::Item = u8`
+#### AliasEq(Projection = Type)
+e.g. `AliasEq<T as Iterator>::Item = u8`
 
 The given associated type `Projection` is equal to `Type`; this can be proved
-with either normalization or using placeholder associated types. See
+with either normalization or using placeholder associated types and is handled
+as a special kind of type aliases. See
 [the section on associated types](./type_equality.html).
 
 #### Normalize(Projection -> Type)
-e.g. `ProjectionEq<T as Iterator>::Item -> u8`
+e.g. `Normalize<T as Iterator>::Item -> u8`
 
 The given associated type `Projection` can be [normalized][n] to `Type`.
 
 As discussed in [the section on associated
-types](./type_equality.html), `Normalize` implies `ProjectionEq`,
+types](./type_equality.html), `Normalize` implies `AliasEq`,
 but not vice versa. In general, proving `Normalize(<T as Trait>::Item -> U)`
 also requires proving `Implemented(T: Trait)`.
 
 [n]: ./type_equality.html#normalize
-[at]: ./type_equality.html
 
 #### FromEnv(TraitRef)
 e.g. `FromEnv(Self: Add<i32>)`
