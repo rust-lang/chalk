@@ -16,7 +16,7 @@ into `HHGoal`s.
 
 There are three types of completely opaque `HhGoal`s that Chalk can solve:
 `Unify`, `DomainGoal`, and `CannotProve`. Unlike the other types of goals,
-these three cannot be simiplified any further. `Unify` is the goal of unifying
+these three cannot be simplified any further. `Unify` is the goal of unifying
 any two types. `DomainGoal` is any goal that can solve by applying a
 [`ProgramClause`]. To solve this, more `Goal`s may generated. Finally,
 `CannotProve` is a special goal that *cannot* be proven true or false.
