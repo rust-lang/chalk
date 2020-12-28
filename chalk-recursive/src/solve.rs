@@ -174,7 +174,8 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         minimums: &mut Minimums,
     ) -> (Fallible<Solution<I>>, ClausePriority) {
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
-        match Fulfill::new_with_clause(self, infer, subst, goal, clause) {
+        let clause = subst.apply(clause.clone(), self.interner());
+        match Fulfill::new_with_clause(self, infer, subst, goal, &clause) {
             Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
             Err(e) => (Err(e), ClausePriority::High),
         }

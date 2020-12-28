@@ -259,6 +259,7 @@ impl<I: Interner> Forest<I> {
 
                 match clauses {
                     Ok(clauses) => {
+                        let clauses = subst.apply(clauses, context.program().interner());
                         for clause in clauses {
                             info!("program clause = {:#?}", clause);
                             let mut infer = infer.clone();

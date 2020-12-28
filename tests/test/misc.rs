@@ -803,3 +803,19 @@ fn endless_loop() {
         }
     }
 }
+
+#[test]
+fn env_bound_vars() {
+    test! {
+        program {}
+        goal {
+            exists<'a> {
+                if (WellFormed(&'a ())) {
+                    WellFormed(&'a ())
+                }
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
