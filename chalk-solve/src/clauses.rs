@@ -949,6 +949,7 @@ fn match_alias_ty<I: Interner>(
     }
 }
 
+#[instrument(level = "debug", skip(db))]
 pub fn program_clauses_for_env<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,

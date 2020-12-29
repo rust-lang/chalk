@@ -16,6 +16,7 @@ pub struct ClauseBuilder<'me, I: Interner> {
     clauses: &'me mut Vec<ProgramClause<I>>,
     binders: Vec<VariableKind<I>>,
     parameters: Vec<GenericArg<I>>,
+    binder_depth: usize,
 }
 
 impl<'me, I: Interner> ClauseBuilder<'me, I> {
@@ -25,6 +26,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
             clauses,
             binders: vec![],
             parameters: vec![],
+            binder_depth: 0,
         }
     }
 
@@ -89,7 +91,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
             priority,
         };
 
-        let clause = if self.binders.is_empty() {
+        let clause = if self.binder_depth == 0 {
             // Compensate for the added empty binder
             clause.shifted_in(interner)
         } else {
@@ -148,12 +150,14 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .zip(old_len..)
                 .map(|(pk, i)| (i, pk).to_generic_arg(interner)),
         );
+        self.binder_depth += 1;
         let value = binders.substitute(self.interner(), &self.parameters[old_len..]);
         debug!(?value);
         let res = op(self, value);
 
         self.binders.truncate(old_len);
         self.parameters.truncate(old_len);
+        self.binder_depth -= 1;
         res
     }
 

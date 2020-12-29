@@ -817,5 +817,14 @@ fn env_bound_vars() {
         } yields {
             "Unique"
         }
+        goal {
+            exists<'a> {
+                if (FromEnv(&'a ())) {
+                    WellFormed(&'a ())
+                }
+            }
+        } yields {
+            "Unique"
+        }
     }
 }
