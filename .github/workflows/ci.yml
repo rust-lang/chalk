@@ -42,15 +42,12 @@ jobs:
       - name: Install mdbook
         run: |
           cd book
-          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.4.5/mdbook-v0.4.5-x86_64-unknown-linux-gnu.tar.gz | tar xz
           # Add the book directory to the $PATH
           echo "$GITHUB_WORKSPACE/book" >> $GITHUB_PATH
 
-      - name: Install mdbook-toc
-        run: cd book && curl -L https://github.com/badboy/mdbook-toc/releases/download/0.2.4/mdbook-toc-0.2.4-x86_64-unknown-linux-gnu.tar.gz | tar xz
-
       - name: Install mdbook-mermaid
-        run: cd book && curl -L https://github.com/badboy/mdbook-mermaid/releases/download/0.2.2/mdbook-mermaid-0.2.2-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        run: cargo install mdbook-mermaid --locked --version 0.6.1
 
       - name: Execute tests for Chalk book
         run: cd book && ./mdbook test
@@ -104,12 +101,12 @@ jobs:
       - name: Install mdbook
         run: |
           cd book
-          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.3.7/mdbook-v0.3.7-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          curl -L https://github.com/rust-lang/mdBook/releases/download/v0.4.5/mdbook-v0.4.5-x86_64-unknown-linux-gnu.tar.gz | tar xz
           # Add the book directory to the $PATH
           echo "$GITHUB_WORKSPACE/book" >> $GITHUB_PATH
 
       - name: Install mdbook-linkcheck
-        run: cd book && curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.5.0/mdbook-linkcheck-v0.5.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+        run: cd book && curl -L https://github.com/Michael-F-Bryan/mdbook-linkcheck/releases/download/v0.7.0/mdbook-linkcheck-v0.7.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
 
       - name: Build Chalk book
         run: cd book && ./mdbook build
