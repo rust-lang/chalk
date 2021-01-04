@@ -15,6 +15,4 @@ additional-js = ["mermaid.min.js", "mermaid-init.js"]
 [output.linkcheck]
 follow-web-links = true
 warning-policy = "error"
-
-[preprocessor.toc]
-command = "mdbook-toc"
+optional = true
