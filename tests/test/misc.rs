@@ -782,3 +782,27 @@ fn ambiguous_unification_in_fn() {
         }
     }
 }
+
+#[test]
+fn endless_loop() {
+    test! {
+        disable_coherence;
+        program {
+            trait FnOnce {
+                type Output;
+            }
+
+            struct MyClosure<F> {}
+            impl<T> FnOnce for MyClosure<fn() -> T> {
+                type Output = T;
+            }
+        }
+        goal {
+            exists<T> {
+                <MyClosure<fn() -> T> as FnOnce>::Output = T
+            }
+        } yields {
+            "Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"
+        }
+    }
+}
