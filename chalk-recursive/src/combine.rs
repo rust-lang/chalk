@@ -1,4 +1,4 @@
-use crate::Solution;
+use chalk_solve::Solution;
 use tracing::debug;
 
 use chalk_ir::interner::Interner;
