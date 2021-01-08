@@ -6,7 +6,7 @@ use crate::{combine, Minimums, UCanonicalGoal};
 use chalk_ir::interner::Interner;
 use chalk_ir::Fallible;
 use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, UCanonical};
-use chalk_solve::{coinductive_goal::IsCoinductive, Guidance, RustIrDatabase, Solution};
+use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
 use rustc_hash::FxHashMap;
 use std::fmt;
 use tracing::debug;
@@ -311,18 +311,7 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> Option<chalk_solve::Solution<I>> {
-        self.ctx
-            .solver(program)
-            .solve_root_goal(goal)
-            .ok()
-            .map(|s| match s {
-                Solution::Unique(c) => chalk_solve::Solution::Unique(c),
-                Solution::Ambig(g) => chalk_solve::Solution::Ambig(match g {
-                    Guidance::Definite(g) => chalk_solve::Guidance::Definite(g),
-                    Guidance::Suggested(g) => chalk_solve::Guidance::Suggested(g),
-                    Guidance::Unknown => chalk_solve::Guidance::Unknown,
-                }),
-            })
+        self.ctx.solver(program).solve_root_goal(goal).ok()
     }
 
     fn solve_limited(
@@ -332,18 +321,7 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         _should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<chalk_solve::Solution<I>> {
         // TODO support should_continue in recursive solver
-        self.ctx
-            .solver(program)
-            .solve_root_goal(goal)
-            .ok()
-            .map(|s| match s {
-                Solution::Unique(c) => chalk_solve::Solution::Unique(c),
-                Solution::Ambig(g) => chalk_solve::Solution::Ambig(match g {
-                    Guidance::Definite(g) => chalk_solve::Guidance::Definite(g),
-                    Guidance::Suggested(g) => chalk_solve::Guidance::Suggested(g),
-                    Guidance::Unknown => chalk_solve::Guidance::Unknown,
-                }),
-            })
+        self.ctx.solver(program).solve_root_goal(goal).ok()
     }
 
     fn solve_multiple(
