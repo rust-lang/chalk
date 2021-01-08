@@ -1,5 +1,5 @@
 use crate::solve::SolveDatabase;
-use crate::{Guidance, Minimums, Solution};
+use crate::Minimums;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -12,6 +12,7 @@ use chalk_ir::{
     UnificationDatabase, UniverseMap, Variance,
 };
 use chalk_solve::debug_span;
+use chalk_solve::{Guidance, Solution};
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
 use tracing::{debug, instrument};

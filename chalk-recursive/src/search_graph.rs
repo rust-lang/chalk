@@ -4,8 +4,9 @@ use std::ops::IndexMut;
 use std::usize;
 
 use super::stack::StackDepth;
-use crate::{Minimums, Solution, UCanonicalGoal};
+use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
+use chalk_solve::Solution;
 use rustc_hash::FxHashMap;
 use tracing::{debug, instrument};
 

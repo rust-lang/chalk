@@ -1,6 +1,6 @@
 use super::combine;
 use super::fulfill::{Fulfill, RecursiveInferenceTable};
-use crate::{Guidance, Minimums, Solution, UCanonicalGoal};
+use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
@@ -14,7 +14,7 @@ use chalk_ir::{
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::debug_span;
 use chalk_solve::infer::{InferenceTable, ParameterEnaVariableExt};
-use chalk_solve::{solve::truncate, RustIrDatabase};
+use chalk_solve::{solve::truncate, Guidance, RustIrDatabase, Solution};
 use std::fmt::Debug;
 use tracing::{debug, instrument};
 
