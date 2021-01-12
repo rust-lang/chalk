@@ -320,7 +320,7 @@ type to be well-formed...
 // Rule WellFormed-AssocTy
 forall<Self, P1..Pn, Pn+1..Pm> {
     WellFormed((Trait::AssocType)<Self, P1..Pn, Pn+1..Pm>) :-
-      Implemented(Self: Trait<P1..Pn>) && WC1
+      WellFormed(Self: Trait<P1..Pn>) && WellFormed(WC1)
 }
 ```
 
