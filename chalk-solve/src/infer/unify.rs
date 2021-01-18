@@ -764,8 +764,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 return lifetime.clone();
             }
             _ => {
-                let ena_var = self.table.new_variable(universe_index);
-                ena_var.to_lifetime(interner)
+                if matches!(variance, Variance::Invariant) {
+                    lifetime.clone()
+                } else {
+                    let ena_var = self.table.new_variable(universe_index);
+                    ena_var.to_lifetime(interner)
+                }
             }
         }
     }

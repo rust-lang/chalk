@@ -337,8 +337,8 @@ fn dyn_binders_reverse() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints [\
-                InEnvironment { environment: Env([]), goal: '!9_0: '!9_1 }, \
-                InEnvironment { environment: Env([]), goal: '!9_1: '!9_0 }\
+                InEnvironment { environment: Env([]), goal: '!5_0: '!5_1 }, \
+                InEnvironment { environment: Env([]), goal: '!5_1: '!5_0 }\
             ]"
         }
 
@@ -352,8 +352,8 @@ fn dyn_binders_reverse() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints [\
-                InEnvironment { environment: Env([]), goal: '!7_0: '!7_1 }, \
-                InEnvironment { environment: Env([]), goal: '!7_1: '!7_0 }\
+                InEnvironment { environment: Env([]), goal: '!3_0: '!3_1 }, \
+                InEnvironment { environment: Env([]), goal: '!3_1: '!3_0 }\
             ]"
         }
 
