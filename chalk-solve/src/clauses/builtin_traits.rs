@@ -28,13 +28,13 @@ pub fn add_builtin_program_clauses<I: Interner>(
 
         match well_known {
             WellKnownTrait::Sized => {
-                sized::add_sized_program_clauses(db, builder, trait_ref, ty, binders)
+                sized::add_sized_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
             WellKnownTrait::Copy => {
-                copy::add_copy_program_clauses(db, builder, trait_ref, ty, binders)
+                copy::add_copy_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
             WellKnownTrait::Clone => {
-                clone::add_clone_program_clauses(db, builder, trait_ref, ty, binders)
+                clone::add_clone_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
                 fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?
