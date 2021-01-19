@@ -146,6 +146,22 @@ impl<I: Interner> InferenceTable<I> {
             .map(|p| p.assert_const_ref(interner).clone())
     }
 
+    pub fn ty_root(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+        Some(
+            self.unify
+                .find(leaf.inference_var(interner)?)
+                .to_ty(interner),
+        )
+    }
+
+    pub fn lifetime_root(&mut self, interner: &I, leaf: &Lifetime<I>) -> Option<Lifetime<I>> {
+        Some(
+            self.unify
+                .find(leaf.inference_var(interner)?)
+                .to_lifetime(interner),
+        )
+    }
+
     /// Finds the root inference var for the given variable.
     ///
     /// The returned variable will be exactly equivalent to the given
