@@ -1,21 +1,17 @@
 use super::combine;
-use super::fulfill::{Fulfill, RecursiveInferenceTable};
+use super::fulfill::Fulfill;
 use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::Visit;
-use chalk_ir::zip::Zip;
 use chalk_ir::{
-    Binders, Canonical, ClausePriority, DomainGoal, Environment, Fallible, Floundered, GenericArg,
-    Goal, GoalData, InEnvironment, NoSolution, ProgramClause, ProgramClauseData,
-    ProgramClauseImplication, Substitution, Ty, UCanonical, UnificationDatabase, UniverseMap,
-    Variance,
+    Binders, Canonical, ClausePriority, DomainGoal, Fallible, Floundered, Goal, GoalData,
+    InEnvironment, NoSolution, ProgramClause, ProgramClauseData, ProgramClauseImplication,
+    Substitution, UCanonical,
 };
 use chalk_solve::clauses::program_clauses_for_goal;
 use chalk_solve::debug_span;
-use chalk_solve::infer::{InferenceTable, ParameterEnaVariableExt};
-use chalk_solve::{solve::truncate, Guidance, RustIrDatabase, Solution};
-use std::fmt::Debug;
+use chalk_solve::infer::InferenceTable;
+use chalk_solve::{Guidance, RustIrDatabase, Solution};
 use tracing::{debug, instrument};
 
 pub(super) trait SolveDatabase<I: Interner>: Sized {
@@ -187,17 +183,12 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     fn new_inference_table<T: Fold<I, Result = T> + HasInterner<Interner = I> + Clone>(
         &self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (
-        RecursiveInferenceTableImpl<I>,
-        Substitution<I>,
-        InEnvironment<T::Result>,
-    ) {
+    ) -> (InferenceTable<I>, Substitution<I>, InEnvironment<T::Result>) {
         let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
             self.interner(),
             ucanonical_goal.universes,
             ucanonical_goal.canonical.clone(),
         );
-        let infer = RecursiveInferenceTableImpl { infer };
         (infer, subst, canonical_goal)
     }
 
@@ -214,107 +205,4 @@ where
     S: SolveDatabase<I>,
     I: Interner,
 {
-}
-
-struct RecursiveInferenceTableImpl<I: Interner> {
-    infer: InferenceTable<I>,
-}
-
-impl<I: Interner> RecursiveInferenceTable<I> for RecursiveInferenceTableImpl<I> {
-    fn instantiate_binders_universally<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: Binders<T>,
-    ) -> T::Result
-    where
-        T: Fold<I> + HasInterner<Interner = I>,
-    {
-        self.infer.instantiate_binders_universally(interner, arg)
-    }
-
-    fn instantiate_binders_existentially<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: Binders<T>,
-    ) -> T::Result
-    where
-        T: Fold<I> + HasInterner<Interner = I>,
-    {
-        self.infer.instantiate_binders_existentially(interner, arg)
-    }
-
-    fn canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value: T,
-    ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
-    where
-        T: Fold<I>,
-        T::Result: HasInterner<Interner = I>,
-    {
-        let res = self.infer.canonicalize(interner, value);
-        let free_vars = res
-            .free_vars
-            .into_iter()
-            .map(|free_var| free_var.to_generic_arg(interner))
-            .collect();
-        (res.quantified, free_vars)
-    }
-
-    fn u_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value0: &Canonical<T>,
-    ) -> (UCanonical<T::Result>, UniverseMap)
-    where
-        T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
-        T::Result: HasInterner<Interner = I>,
-    {
-        let res = self.infer.u_canonicalize(interner, value0);
-        (res.quantified, res.universes)
-    }
-
-    fn unify<T>(
-        &mut self,
-        interner: &I,
-        db: &dyn UnificationDatabase<I>,
-        environment: &Environment<I>,
-        variance: Variance,
-        a: &T,
-        b: &T,
-    ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
-    where
-        T: ?Sized + Zip<I>,
-    {
-        let res = self
-            .infer
-            .relate(interner, db, environment, variance, a, b)?;
-        Ok(res.goals)
-    }
-
-    fn instantiate_canonical<T>(&mut self, interner: &I, bound: Canonical<T>) -> T::Result
-    where
-        T: HasInterner<Interner = I> + Fold<I> + Debug,
-    {
-        self.infer.instantiate_canonical(interner, bound)
-    }
-
-    fn invert_then_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value: T,
-    ) -> Option<Canonical<T::Result>>
-    where
-        T: Fold<I, Result = T> + HasInterner<Interner = I>,
-    {
-        self.infer.invert_then_canonicalize(interner, value)
-    }
-
-    fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool {
-        truncate::needs_truncation(interner, &mut self.infer, max_size, value)
-    }
-
-    fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
-        self.infer.normalize_ty_shallow(interner, leaf)
-    }
 }

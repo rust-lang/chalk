@@ -6,6 +6,18 @@ use chalk_ir::visit::{ControlFlow, SuperVisit, Visit, Visitor};
 use chalk_ir::*;
 use std::cmp::max;
 
+/// "Truncation" (called "abstraction" in the papers referenced below)
+/// refers to the act of modifying a goal or answer that has become
+/// too large in order to guarantee termination.
+///
+/// Currently we don't perform truncation (but it might me readded later).
+///
+/// Citations:
+///
+/// - Terminating Evaluation of Logic Programs with Finite Three-Valued Models
+///   - Riguzzi and Swift; ACM Transactions on Computational Logic 2013
+/// - Radial Restraint
+///   - Grosof and Swift; 2013
 pub fn needs_truncation<I: Interner>(
     interner: &I,
     infer: &mut InferenceTable<I>,

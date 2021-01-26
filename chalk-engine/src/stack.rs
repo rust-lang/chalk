@@ -1,5 +1,5 @@
 use crate::index_struct;
-use crate::strand::Strand;
+use crate::strand::CanonicalStrand;
 use crate::tables::Tables;
 use crate::{Minimums, TableIndex, TimeStamp};
 use std::fmt;
@@ -81,7 +81,7 @@ pub(crate) struct StackEntry<I: Interner> {
     // FIXME: should store this as an index.
     // This would mean that if we unwind,
     // we don't need to worry about losing a strand
-    pub(super) active_strand: Option<Strand<I>>,
+    pub(super) active_strand: Option<CanonicalStrand<I>>,
 }
 
 impl<I: Interner> Stack<I> {
@@ -136,7 +136,7 @@ impl<I: Interner> Stack<I> {
     /// Pops the top-most entry from the stack, which should have the depth `*depth`:
     /// * If the stack is now empty, returns None.
     /// * Otherwise, `take`s the active strand from the new top and returns it.
-    pub(super) fn pop_and_take_caller_strand(&mut self) -> Option<Strand<I>> {
+    pub(super) fn pop_and_take_caller_strand(&mut self) -> Option<CanonicalStrand<I>> {
         if self.pop_and_adjust_depth() {
             Some(self.top().active_strand.take().unwrap())
         } else {
@@ -147,7 +147,7 @@ impl<I: Interner> Stack<I> {
     /// Pops the top-most entry from the stack, which should have the depth `*depth`:
     /// * If the stack is now empty, returns None.
     /// * Otherwise, borrows the active strand (mutably) from the new top and returns it.
-    pub(super) fn pop_and_borrow_caller_strand(&mut self) -> Option<&mut Strand<I>> {
+    pub(super) fn pop_and_borrow_caller_strand(&mut self) -> Option<&mut CanonicalStrand<I>> {
         if self.pop_and_adjust_depth() {
             Some(self.top().active_strand.as_mut().unwrap())
         } else {

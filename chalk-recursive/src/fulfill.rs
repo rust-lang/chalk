@@ -8,10 +8,12 @@ use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
     Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, SubtypeGoal, Ty, TyKind, TyVariableKind, UCanonical,
+    QuantifierKind, Substitution, SubtypeGoal, TyKind, TyVariableKind, UCanonical,
     UnificationDatabase, UniverseMap, Variance,
 };
 use chalk_solve::debug_span;
+use chalk_solve::infer::{InferenceTable, ParameterEnaVariableExt};
+use chalk_solve::solve::truncate;
 use chalk_solve::{Guidance, Solution};
 use rustc_hash::FxHashSet;
 use std::fmt::Debug;
@@ -60,68 +62,51 @@ enum NegativeSolution {
     Ambiguous,
 }
 
-pub(super) trait RecursiveInferenceTable<I: Interner> {
-    fn instantiate_binders_universally<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: Binders<T>,
-    ) -> T::Result
-    where
-        T: Fold<I> + HasInterner<Interner = I>;
+fn canonicalize<I: Interner, T>(
+    infer: &mut InferenceTable<I>,
+    interner: &I,
+    value: T,
+) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
+where
+    T: Fold<I>,
+    T::Result: HasInterner<Interner = I>,
+{
+    let res = infer.canonicalize(interner, value);
+    let free_vars = res
+        .free_vars
+        .into_iter()
+        .map(|free_var| free_var.to_generic_arg(interner))
+        .collect();
+    (res.quantified, free_vars)
+}
 
-    fn instantiate_binders_existentially<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: Binders<T>,
-    ) -> T::Result
-    where
-        T: Fold<I> + HasInterner<Interner = I>;
+fn u_canonicalize<I: Interner, T>(
+    _infer: &mut InferenceTable<I>,
+    interner: &I,
+    value0: &Canonical<T>,
+) -> (UCanonical<T::Result>, UniverseMap)
+where
+    T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
+    T::Result: HasInterner<Interner = I>,
+{
+    let res = InferenceTable::u_canonicalize(interner, value0);
+    (res.quantified, res.universes)
+}
 
-    fn canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value: T,
-    ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
-    where
-        T: Fold<I>,
-        T::Result: HasInterner<Interner = I>;
-
-    fn u_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value0: &Canonical<T>,
-    ) -> (UCanonical<T::Result>, UniverseMap)
-    where
-        T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
-        T::Result: HasInterner<Interner = I>;
-
-    fn unify<T>(
-        &mut self,
-        interner: &I,
-        db: &dyn UnificationDatabase<I>,
-        environment: &Environment<I>,
-        variance: Variance,
-        a: &T,
-        b: &T,
-    ) -> Fallible<Vec<InEnvironment<Goal<I>>>>
-    where
-        T: ?Sized + Zip<I>;
-
-    fn instantiate_canonical<T>(&mut self, interner: &I, bound: Canonical<T>) -> T::Result
-    where
-        T: HasInterner<Interner = I> + Fold<I> + Debug;
-
-    fn invert_then_canonicalize<T>(
-        &mut self,
-        interner: &I,
-        value: T,
-    ) -> Option<Canonical<T::Result>>
-    where
-        T: Fold<I, Result = T> + HasInterner<Interner = I>;
-
-    fn needs_truncation(&mut self, interner: &I, max_size: usize, value: impl Visit<I>) -> bool;
-
-    fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>>;
+fn unify<I: Interner, T>(
+    infer: &mut InferenceTable<I>,
+    interner: &I,
+    db: &dyn UnificationDatabase<I>,
+    environment: &Environment<I>,
+    variance: Variance,
+    a: &T,
+    b: &T,
+) -> Fallible<Vec<InEnvironment<Goal<I>>>>
+where
+    T: ?Sized + Zip<I>,
+{
+    let res = infer.relate(interner, db, environment, variance, a, b)?;
+    Ok(res.goals)
 }
 
 /// A `Fulfill` is where we actually break down complex goals, instantiate
@@ -134,15 +119,10 @@ pub(super) trait RecursiveInferenceTable<I: Interner> {
 /// of type inference in general. But when solving trait constraints, *fresh*
 /// `Fulfill` instances will be created to solve canonicalized, free-standing
 /// goals, and transport what was learned back to the outer context.
-pub(super) struct Fulfill<
-    's,
-    I: Interner,
-    Solver: SolveDatabase<I>,
-    Infer: RecursiveInferenceTable<I>,
-> {
+pub(super) struct Fulfill<'s, I: Interner, Solver: SolveDatabase<I>> {
     solver: &'s mut Solver,
     subst: Substitution<I>,
-    infer: Infer,
+    infer: InferenceTable<I>,
 
     /// The remaining goals to prove or refute
     obligations: Vec<Obligation<I>>,
@@ -157,13 +137,11 @@ pub(super) struct Fulfill<
     cannot_prove: bool,
 }
 
-impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I>>
-    Fulfill<'s, I, Solver, Infer>
-{
+impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
     #[instrument(level = "debug", skip(solver, infer))]
     pub(super) fn new_with_clause(
         solver: &'s mut Solver,
-        infer: Infer,
+        infer: InferenceTable<I>,
         subst: Substitution<I>,
         canonical_goal: InEnvironment<DomainGoal<I>>,
         clause: &Binders<ProgramClauseImplication<I>>,
@@ -214,7 +192,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
 
     pub(super) fn new_with_simplification(
         solver: &'s mut Solver,
-        infer: Infer,
+        infer: InferenceTable<I>,
         subst: Substitution<I>,
         canonical_goal: InEnvironment<Goal<I>>,
     ) -> Fallible<Self> {
@@ -239,20 +217,24 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         // truncate to avoid overflows
         match &obligation {
             Obligation::Prove(goal) => {
-                if self
-                    .infer
-                    .needs_truncation(self.solver.interner(), self.solver.max_size(), goal)
-                {
+                if truncate::needs_truncation(
+                    self.solver.interner(),
+                    &mut self.infer,
+                    self.solver.max_size(),
+                    goal,
+                ) {
                     // the goal is too big. Record that we should return Ambiguous
                     self.cannot_prove = true;
                     return;
                 }
             }
             Obligation::Refute(goal) => {
-                if self
-                    .infer
-                    .needs_truncation(self.solver.interner(), self.solver.max_size(), goal)
-                {
+                if truncate::needs_truncation(
+                    self.solver.interner(),
+                    &mut self.infer,
+                    self.solver.max_size(),
+                    goal,
+                ) {
                     // the goal is too big. Record that we should return Ambiguous
                     self.cannot_prove = true;
                     return;
@@ -276,7 +258,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
     where
         T: ?Sized + Zip<I> + Debug,
     {
-        let goals = self.infer.unify(
+        let goals = unify(
+            &mut self.infer,
             self.solver.interner(),
             self.solver.db().unification_database(),
             environment,
@@ -369,8 +352,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         minimums: &mut Minimums,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.interner();
-        let (quantified, free_vars) = self.infer.canonicalize(interner, wc);
-        let (quantified, universes) = self.infer.u_canonicalize(interner, &quantified);
+        let (quantified, free_vars) = canonicalize(&mut self.infer, interner, wc);
+        let (quantified, universes) = u_canonicalize(&mut self.infer, interner, &quantified);
         let result = self.solver.solve_goal(quantified, minimums);
         Ok(PositiveSolution {
             free_vars,
@@ -393,9 +376,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         };
 
         // Negate the result
-        let (quantified, _) = self
-            .infer
-            .u_canonicalize(self.solver.interner(), &canonicalized);
+        let (quantified, _) =
+            u_canonicalize(&mut self.infer, self.solver.interner(), &canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
         if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
             if solution.is_unique() {
@@ -549,7 +531,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
             // and the current inference state is the unique way to solve them.
 
             let constraints = Constraints::from_iter(self.interner(), self.constraints.clone());
-            let constrained = self.infer.canonicalize(
+            let constrained = canonicalize(
+                &mut self.infer,
                 self.solver.interner(),
                 ConstrainedSubst {
                     subst: self.subst,
@@ -564,9 +547,8 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>, Infer: RecursiveInferenceTable<I
         // need to determine how to package up what we learned about type
         // inference as an ambiguous solution.
 
-        let canonical_subst = self
-            .infer
-            .canonicalize(self.solver.interner(), self.subst.clone());
+        let canonical_subst =
+            canonicalize(&mut self.infer, self.solver.interner(), self.subst.clone());
 
         if canonical_subst
             .0

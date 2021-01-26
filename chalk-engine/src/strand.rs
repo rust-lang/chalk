@@ -1,24 +1,14 @@
-use crate::slg::TruncatingInferenceTable;
 use crate::table::AnswerIndex;
 use crate::{ExClause, TableIndex, TimeStamp};
-use std::fmt::{Debug, Error, Formatter};
+use std::fmt::Debug;
 
+use chalk_derive::HasInterner;
+use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::Interner;
-use chalk_ir::{Canonical, UniverseMap};
+use chalk_ir::{Canonical, DebruijnIndex, Fallible, UniverseMap};
 
-#[derive(Debug)]
-pub(crate) struct CanonicalStrand<I: Interner> {
-    pub(super) canonical_ex_clause: Canonical<ExClause<I>>,
-
-    /// Index into `ex_clause.subgoals`.
-    pub(crate) selected_subgoal: Option<SelectedSubgoal>,
-
-    pub(crate) last_pursued_time: TimeStamp,
-}
-
+#[derive(Clone, Debug, HasInterner)]
 pub(crate) struct Strand<I: Interner> {
-    pub(super) infer: TruncatingInferenceTable<I>,
-
     pub(super) ex_clause: ExClause<I>,
 
     /// Index into `ex_clause.subgoals`.
@@ -26,6 +16,8 @@ pub(crate) struct Strand<I: Interner> {
 
     pub(crate) last_pursued_time: TimeStamp,
 }
+
+pub(crate) type CanonicalStrand<I> = Canonical<Strand<I>>;
 
 #[derive(Clone, Debug)]
 pub(crate) struct SelectedSubgoal {
@@ -43,11 +35,20 @@ pub(crate) struct SelectedSubgoal {
     pub(crate) universe_map: UniverseMap,
 }
 
-impl<I: Interner> Debug for Strand<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        fmt.debug_struct("Strand")
-            .field("ex_clause", &self.ex_clause)
-            .field("selected_subgoal", &self.selected_subgoal)
-            .finish()
+impl<I: Interner> Fold<I> for Strand<I> {
+    type Result = Strand<I>;
+    fn fold_with<'i>(
+        self,
+        folder: &mut dyn Folder<'i, I>,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Self::Result>
+    where
+        I: 'i,
+    {
+        Ok(Strand {
+            ex_clause: self.ex_clause.fold_with(folder, outer_binder)?,
+            last_pursued_time: self.last_pursued_time,
+            selected_subgoal: self.selected_subgoal.clone(),
+        })
     }
 }

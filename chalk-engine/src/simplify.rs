@@ -1,13 +1,14 @@
 use crate::forest::Forest;
-use crate::slg::{SlgContextOps, TruncatingInferenceTable, UnificationOps};
+use crate::slg::SlgContextOps;
 use crate::{ExClause, Literal, TimeStamp};
 
-use chalk_ir::cast::Cast;
+use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     Environment, FallibleOrFloundered, Goal, GoalData, InEnvironment, QuantifierKind, Substitution,
-    Variance,
+    TyKind, TyVariableKind, Variance,
 };
+use chalk_solve::infer::InferenceTable;
 use tracing::debug;
 
 impl<I: Interner> Forest<I> {
@@ -16,7 +17,7 @@ impl<I: Interner> Forest<I> {
     /// includes unifications that cannot be completed.
     pub(super) fn simplify_goal(
         context: &SlgContextOps<I>,
-        infer: &mut TruncatingInferenceTable<I>,
+        infer: &mut InferenceTable<I>,
         subst: Substitution<I>,
         initial_environment: Environment<I>,
         initial_goal: Goal<I>,
@@ -70,36 +71,55 @@ impl<I: Interner> Forest<I> {
                             subgoal.clone(),
                         )));
                 }
-                GoalData::EqGoal(goal) => match infer.relate_generic_args_into_ex_clause(
-                    context.program().interner(),
-                    context.unification_database(),
-                    &environment,
-                    Variance::Invariant,
-                    &goal.a,
-                    &goal.b,
-                    &mut ex_clause,
-                ) {
-                    Ok(()) => {}
-                    Err(_) => return FallibleOrFloundered::NoSolution,
-                },
+                GoalData::EqGoal(goal) => {
+                    let interner = context.program().interner();
+                    let db = context.unification_database();
+                    let a = &goal.a;
+                    let b = &goal.b;
+
+                    let result =
+                        match infer.relate(interner, db, &environment, Variance::Invariant, a, b) {
+                            Ok(r) => r,
+                            Err(_) => return FallibleOrFloundered::NoSolution,
+                        };
+                    ex_clause.subgoals.extend(
+                        result
+                            .goals
+                            .into_iter()
+                            .casted(interner)
+                            .map(Literal::Positive),
+                    );
+                }
                 GoalData::SubtypeGoal(goal) => {
-                    match infer.relate_tys_into_ex_clause(
-                        context.program().interner(),
-                        context.unification_database(),
-                        &environment,
-                        Variance::Covariant,
-                        &goal.a,
-                        &goal.b,
-                        &mut ex_clause,
+                    let interner = context.program().interner();
+                    let db = context.unification_database();
+                    let a_norm = infer.normalize_ty_shallow(interner, &goal.a);
+                    let a = a_norm.as_ref().unwrap_or(&goal.a);
+                    let b_norm = infer.normalize_ty_shallow(interner, &goal.b);
+                    let b = b_norm.as_ref().unwrap_or(&goal.b);
+
+                    if matches!(
+                        a.kind(interner),
+                        TyKind::InferenceVar(_, TyVariableKind::General)
+                    ) && matches!(
+                        b.kind(interner),
+                        TyKind::InferenceVar(_, TyVariableKind::General)
                     ) {
-                        FallibleOrFloundered::Ok(_) => {}
-                        FallibleOrFloundered::Floundered => {
-                            return FallibleOrFloundered::Floundered
-                        }
-                        FallibleOrFloundered::NoSolution => {
-                            return FallibleOrFloundered::NoSolution
-                        }
+                        return FallibleOrFloundered::Floundered;
                     }
+
+                    let result =
+                        match infer.relate(interner, db, &environment, Variance::Covariant, a, b) {
+                            Ok(r) => r,
+                            Err(_) => return FallibleOrFloundered::Floundered,
+                        };
+                    ex_clause.subgoals.extend(
+                        result
+                            .goals
+                            .into_iter()
+                            .casted(interner)
+                            .map(Literal::Positive),
+                    );
                 }
                 GoalData::DomainGoal(domain_goal) => {
                     ex_clause
