@@ -9,12 +9,13 @@ use crate::{
     TimeStamp,
 };
 
+use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     AnswerSubst, Canonical, ConstrainedSubst, Constraints, FallibleOrFloundered, Floundered, Goal,
-    GoalData, InEnvironment, NoSolution, Substitution, UCanonical, UniverseMap,
+    GoalData, InEnvironment, NoSolution, ProgramClause, Substitution, UCanonical, UniverseMap,
 };
-use chalk_solve::clauses::program_clauses_for_goal;
+use chalk_solve::clauses::program_clauses_that_could_match;
 use chalk_solve::coinductive_goal::IsCoinductive;
 use chalk_solve::infer::ucanonicalize::UCanonicalized;
 use chalk_solve::infer::InferenceTable;
@@ -237,8 +238,6 @@ impl<I: Interner> Forest<I> {
         let goal_data = goal.canonical.value.goal.data(context.program().interner());
         match goal_data {
             GoalData::DomainGoal(domain_goal) => {
-                let program = context.program();
-
                 let canon_domain_goal = UCanonical {
                     canonical: Canonical {
                         binders: goal.canonical.binders,
@@ -249,17 +248,34 @@ impl<I: Interner> Forest<I> {
                     },
                     universes: goal.universes,
                 };
-                let clauses = program_clauses_for_goal(program, &canon_domain_goal);
-                let (infer, subst, InEnvironment { environment, goal }) =
-                    chalk_solve::infer::InferenceTable::from_canonical(
-                        context.program().interner(),
-                        canon_domain_goal.universes,
-                        canon_domain_goal.canonical,
-                    );
 
-                match clauses {
-                    Ok(clauses) => {
-                        let clauses = subst.apply(clauses, context.program().interner());
+                let db = context.program();
+                let canon_goal = canon_domain_goal.canonical.value.goal.clone();
+                let could_match = |c: &ProgramClause<I>| {
+                    c.could_match(db.interner(), db.unification_database(), &canon_goal)
+                };
+
+                match program_clauses_that_could_match(db, &canon_domain_goal) {
+                    Ok(mut clauses) => {
+                        clauses.retain(could_match);
+                        clauses.extend(db.custom_clauses().into_iter().filter(could_match));
+
+                        let (infer, subst, goal) =
+                            chalk_solve::infer::InferenceTable::from_canonical(
+                                context.program().interner(),
+                                canon_domain_goal.universes,
+                                canon_domain_goal.canonical,
+                            );
+
+                        clauses.extend(
+                            db.program_clauses_for_env(&goal.environment)
+                                .iter(db.interner())
+                                .cloned()
+                                .filter(could_match),
+                        );
+
+                        let InEnvironment { environment, goal } = goal;
+
                         for clause in clauses {
                             info!("program clause = {:#?}", clause);
                             let mut infer = infer.clone();

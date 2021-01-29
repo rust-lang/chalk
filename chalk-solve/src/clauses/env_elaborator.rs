@@ -9,7 +9,7 @@ use crate::Ty;
 use crate::{debug_span, TyKind};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{ControlFlow, Visit, Visitor};
-use chalk_ir::{Binders, DebruijnIndex, Environment};
+use chalk_ir::{DebruijnIndex, Environment};
 use rustc_hash::FxHashSet;
 use tracing::instrument;
 
@@ -26,19 +26,13 @@ pub(super) fn elaborate_env_clauses<I: Interner>(
     environment: &Environment<I>,
 ) {
     let mut this_round = vec![];
-    let mut builder = ClauseBuilder::new(db, &mut this_round);
-    // There's an implicit binders around the environment (from Canonical)
-    builder.push_binders(
-        Binders::empty(db.interner(), chalk_ir::Substitution::empty(db.interner())),
-        |builder, _| {
-            let mut elaborater = EnvElaborator {
-                db,
-                builder,
-                environment,
-            };
-            in_clauses.visit_with(&mut elaborater, DebruijnIndex::INNERMOST);
-        },
-    );
+    let builder = &mut ClauseBuilder::new(db, &mut this_round);
+    let mut elaborater = EnvElaborator {
+        db,
+        builder,
+        environment,
+    };
+    in_clauses.visit_with(&mut elaborater, DebruijnIndex::INNERMOST);
     out.extend(this_round);
 }
 

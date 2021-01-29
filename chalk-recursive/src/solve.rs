@@ -1,14 +1,14 @@
 use super::combine;
 use super::fulfill::Fulfill;
 use crate::{Minimums, UCanonicalGoal};
+use chalk_ir::could_match::CouldMatch;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
-    Binders, Canonical, ClausePriority, DomainGoal, Fallible, Floundered, Goal, GoalData,
-    InEnvironment, NoSolution, ProgramClause, ProgramClauseData, ProgramClauseImplication,
-    Substitution, UCanonical,
+    Canonical, ClausePriority, DomainGoal, Fallible, Floundered, Goal, GoalData, InEnvironment,
+    NoSolution, ProgramClause, ProgramClauseData, Substitution, UCanonical,
 };
-use chalk_solve::clauses::program_clauses_for_goal;
+use chalk_solve::clauses::program_clauses_that_could_match;
 use chalk_solve::debug_span;
 use chalk_solve::infer::InferenceTable;
 use chalk_solve::{Guidance, RustIrDatabase, Solution};
@@ -71,13 +71,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                 let (prog_solution, prog_prio) = {
                     debug_span!("prog_clauses");
 
-                    let prog_clauses = self.program_clauses_for_goal(&canonical_goal);
-                    match prog_clauses {
-                        Ok(clauses) => self.solve_from_clauses(&canonical_goal, clauses, minimums),
-                        Err(Floundered) => {
-                            (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High)
-                        }
-                    }
+                    self.solve_from_clauses(&canonical_goal, minimums)
                 };
                 debug!(?prog_solution);
 
@@ -124,15 +118,37 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
     /// See whether we can solve a goal by implication on any of the given
     /// clauses. If multiple such solutions are possible, we attempt to combine
     /// them.
-    fn solve_from_clauses<C>(
+    fn solve_from_clauses(
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-        clauses: C,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority)
-    where
-        C: IntoIterator<Item = ProgramClause<I>>,
-    {
+    ) -> (Fallible<Solution<I>>, ClausePriority) {
+        let mut clauses = vec![];
+
+        let db = self.db();
+        let could_match = |c: &ProgramClause<I>| {
+            c.could_match(
+                db.interner(),
+                db.unification_database(),
+                &canonical_goal.canonical.value.goal,
+            )
+        };
+        clauses.extend(db.custom_clauses().into_iter().filter(could_match));
+        match program_clauses_that_could_match(db, canonical_goal) {
+            Ok(goal_clauses) => clauses.extend(goal_clauses.into_iter().filter(could_match)),
+            Err(Floundered) => {
+                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
+            }
+        }
+
+        let (infer, subst, goal) = self.new_inference_table(&canonical_goal);
+        clauses.extend(
+            db.program_clauses_for_env(&goal.environment)
+                .iter(db.interner())
+                .cloned()
+                .filter(could_match),
+        );
+
         let mut cur_solution = None;
         for program_clause in clauses {
             debug_span!("solve_from_clauses", clause = ?program_clause);
@@ -143,7 +159,13 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             }
 
             let ProgramClauseData(implication) = program_clause.data(self.interner());
-            let res = self.solve_via_implication(canonical_goal, implication, minimums);
+            let infer = infer.clone();
+            let subst = subst.clone();
+            let goal = goal.clone();
+            let res = match Fulfill::new_with_clause(self, infer, subst, goal, &implication) {
+                Ok(fulfill) => (fulfill.solve(minimums), implication.skip_binders().priority),
+                Err(e) => (Err(e), ClausePriority::High),
+            };
 
             if let (Ok(solution), priority) = res {
                 debug!(?solution, ?priority, "Ok");
@@ -165,22 +187,6 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))
     }
 
-    /// Modus ponens! That is: try to apply an implication by proving its premises.
-    #[instrument(level = "info", skip(self, minimums))]
-    fn solve_via_implication(
-        &mut self,
-        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-        clause: &Binders<ProgramClauseImplication<I>>,
-        minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
-        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
-        let clause = subst.apply(clause.clone(), self.interner());
-        match Fulfill::new_with_clause(self, infer, subst, goal, &clause) {
-            Ok(fulfill) => (fulfill.solve(minimums), clause.skip_binders().priority),
-            Err(e) => (Err(e), ClausePriority::High),
-        }
-    }
-
     fn new_inference_table<T: Fold<I, Result = T> + HasInterner<Interner = I> + Clone>(
         &self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
@@ -191,13 +197,6 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             ucanonical_goal.canonical.clone(),
         );
         (infer, subst, canonical_goal)
-    }
-
-    fn program_clauses_for_goal(
-        &self,
-        canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
-    ) -> Result<Vec<ProgramClause<I>>, Floundered> {
-        program_clauses_for_goal(self.db(), &canonical_goal)
     }
 }
 
