@@ -2744,15 +2744,7 @@ impl<I: Interner> Substitution<I> {
     where
         T: Fold<I>,
     {
-        value
-            .fold_with(
-                &mut &SubstFolder {
-                    interner,
-                    subst: self,
-                },
-                DebruijnIndex::INNERMOST,
-            )
-            .unwrap()
+        Substitute::apply(self, value, interner)
     }
 
     /// Gets an iterator of all type parameters.
@@ -2763,16 +2755,16 @@ impl<I: Interner> Substitution<I> {
     }
 }
 
-struct SubstFolder<'i, I: Interner> {
+struct SubstFolder<'i, I: Interner, A: AsParameters<I>> {
     interner: &'i I,
-    subst: &'i Substitution<I>,
+    subst: &'i A,
 }
 
-impl<I: Interner> SubstFolder<'_, I> {
+impl<I: Interner, A: AsParameters<I>> SubstFolder<'_, I, A> {
     /// Index into the list of parameters.
     pub fn at(&self, index: usize) -> &GenericArg<I> {
         let interner = self.interner;
-        &self.subst.as_slice(interner)[index]
+        &self.subst.as_parameters(interner)[index]
     }
 }
 
@@ -2816,6 +2808,30 @@ where
     }
 }
 
+/// An extension trait to anything that can be represented as list of `GenericArg`s that signifies
+/// that it can applied as a substituion to a value
+pub trait Substitute<I: Interner>: AsParameters<I> {
+    /// Apply the substitution to a value.
+    fn apply<T: Fold<I>>(&self, value: T, interner: &I) -> T::Result;
+}
+
+impl<I: Interner, A: AsParameters<I>> Substitute<I> for A {
+    fn apply<T>(&self, value: T, interner: &I) -> T::Result
+    where
+        T: Fold<I>,
+    {
+        value
+            .fold_with(
+                &mut &SubstFolder {
+                    interner,
+                    subst: self,
+                },
+                DebruijnIndex::INNERMOST,
+            )
+            .unwrap()
+    }
+}
+
 /// Utility for converting a list of all the binders into scope
 /// into references to those binders. Simply pair the binders with
 /// the indices, and invoke `to_generic_arg()` on the `(binder,
@@ -2839,7 +2855,7 @@ impl<'a, I: Interner> ToGenericArg<I> for (usize, &'a VariableKind<I>) {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for &SubstFolder<'i, I> {
+impl<'i, I: Interner, A: AsParameters<I>> Folder<'i, I> for &SubstFolder<'i, I, A> {
     fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
         self
     }
