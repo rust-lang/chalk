@@ -84,7 +84,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
 /// Generate `Implemented` clauses for a `dyn Trait` type. We need to generate
 /// `Implemented` clauses for all super traits, and for each trait we require
 /// its where clauses. (See #203.)
-fn push_dyn_ty_impl_clauses<I: Interner>(
+pub(super) fn push_dyn_ty_impl_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: TraitRef<I>,

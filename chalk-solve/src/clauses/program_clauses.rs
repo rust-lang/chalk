@@ -195,10 +195,19 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
 
             let substitution = Substitution::from1(interner, alias_placeholder_ty);
             for bound in opaque_ty_bound.bounds {
-                // Implemented(!T<..>: Bound).
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
                 builder.push_binders(bound_with_placeholder_ty, |builder, bound| {
-                    builder.push_fact(bound);
+                    match bound {
+                        WhereClause::Implemented(trait_ref) => {
+                            super::dyn_ty::push_dyn_ty_impl_clauses(builder.db, builder, trait_ref)
+                        }
+                        WhereClause::AliasEq(_) => {
+                            // Implemented(!T<..>: Bound).
+                            builder.push_fact(bound);
+                        }
+                        WhereClause::LifetimeOutlives(_) => {}
+                        WhereClause::TypeOutlives(_) => {}
+                    }
                 });
             }
         });

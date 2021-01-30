@@ -263,3 +263,23 @@ fn opaque_auto_traits_indirect() {
         }
     }
 }
+
+#[test]
+fn opaque_super_trait() {
+    test! {
+        program {
+            trait Base {}
+            trait Super where Self: Base {}
+            impl Base for () {}
+            impl Super for () {}
+
+            opaque type Opaque: Super = ();
+        }
+
+        goal {
+            Opaque: Base
+        } yields {
+            "Unique"
+        }
+    }
+}
