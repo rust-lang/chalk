@@ -7,6 +7,8 @@ use chalk_ir::*;
 use std::iter;
 use tracing::instrument;
 
+use super::super_traits::push_alias_ty_impl_clauses;
+
 /// Trait for lowering a given piece of rust-ir source (e.g., an impl
 /// or struct definition) into its associated "program clauses" --
 /// that is, into the lowered, logical rules that it defines.
@@ -199,7 +201,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 builder.push_binders(bound_with_placeholder_ty, |builder, bound| {
                     match bound {
                         WhereClause::Implemented(trait_ref) => {
-                            super::dyn_ty::push_dyn_ty_impl_clauses(builder.db, builder, trait_ref)
+                            push_alias_ty_impl_clauses(builder.db, builder, trait_ref)
                         }
                         WhereClause::AliasEq(_) => {
                             // Implemented(!T<..>: Bound).
