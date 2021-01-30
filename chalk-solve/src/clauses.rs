@@ -378,7 +378,7 @@ pub fn program_clauses_for_goal<'db, I: Interner>(
 /// more precise you can make it, the more efficient solving will
 /// be.
 #[instrument(level = "debug", skip(db))]
-fn program_clauses_that_could_match<I: Interner>(
+pub fn program_clauses_that_could_match<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
 ) -> Result<Vec<ProgramClause<I>>, Floundered> {
@@ -873,18 +873,41 @@ fn match_ty<I: Interner>(
             .db
             .fn_def_datum(*fn_def_id)
             .to_program_clauses(builder, environment),
+        TyKind::Str | TyKind::Never | TyKind::Scalar(_) | TyKind::Foreign(_) => {
+            // These have no substitutions, so they are trivially WF
+            builder.push_fact(WellFormed::Ty(ty.clone()));
+        }
+        TyKind::Raw(mutbl, _) => {
+            builder.push_bound_ty(|builder, ty| {
+                builder.push_fact(WellFormed::Ty(
+                    TyKind::Raw(*mutbl, ty).intern(builder.interner()),
+                ));
+            });
+        }
+        TyKind::Ref(mutbl, _, _) => {
+            builder.push_bound_ty(|builder, ty| {
+                builder.push_bound_lifetime(|builder, lifetime| {
+                    builder.push_fact(WellFormed::Ty(
+                        TyKind::Ref(*mutbl, lifetime, ty).intern(builder.interner()),
+                    ));
+                })
+            });
+        }
+        TyKind::Slice(_) => {
+            builder.push_bound_ty(|builder, ty| {
+                builder.push_fact(WellFormed::Ty(TyKind::Slice(ty).intern(builder.interner())));
+            });
+        }
         TyKind::Tuple(_, _)
-        | TyKind::Scalar(_)
-        | TyKind::Str
-        | TyKind::Slice(_)
-        | TyKind::Raw(_, _)
-        | TyKind::Ref(_, _, _)
         | TyKind::Array(_, _)
-        | TyKind::Never
         | TyKind::Closure(_, _)
-        | TyKind::Foreign(_)
         | TyKind::Generator(_, _)
-        | TyKind::GeneratorWitness(_, _) => builder.push_fact(WellFormed::Ty(ty.clone())),
+        | TyKind::GeneratorWitness(_, _) => {
+            let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
+            builder.push_binders(ty, |builder, ty| {
+                builder.push_fact(WellFormed::Ty(ty.clone()));
+            });
+        }
         TyKind::Placeholder(_) => {
             builder.push_clause(WellFormed::Ty(ty.clone()), Some(FromEnv::Ty(ty.clone())));
         }
@@ -897,7 +920,10 @@ fn match_ty<I: Interner>(
             .opaque_ty_data(opaque_ty.opaque_ty_id)
             .to_program_clauses(builder, environment),
         TyKind::Function(_quantified_ty) => {
-            builder.push_fact(WellFormed::Ty(ty.clone()));
+            let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
+            builder.push_binders(ty, |builder, ty| {
+                builder.push_fact(WellFormed::Ty(ty.clone()))
+            });
         }
         TyKind::BoundVar(_) => return Err(Floundered),
         TyKind::Dyn(dyn_ty) => {
@@ -949,6 +975,7 @@ fn match_alias_ty<I: Interner>(
     }
 }
 
+#[instrument(level = "debug", skip(db))]
 pub fn program_clauses_for_env<'db, I: Interner>(
     db: &'db dyn RustIrDatabase<I>,
     environment: &Environment<I>,

@@ -26,34 +26,23 @@ pub(super) fn elaborate_env_clauses<I: Interner>(
     environment: &Environment<I>,
 ) {
     let mut this_round = vec![];
-    in_clauses.visit_with(
-        &mut EnvElaborator::new(db, &mut this_round, environment),
-        DebruijnIndex::INNERMOST,
-    );
+    let builder = &mut ClauseBuilder::new(db, &mut this_round);
+    let mut elaborater = EnvElaborator {
+        db,
+        builder,
+        environment,
+    };
+    in_clauses.visit_with(&mut elaborater, DebruijnIndex::INNERMOST);
     out.extend(this_round);
 }
 
-struct EnvElaborator<'me, I: Interner> {
+struct EnvElaborator<'me, 'builder, I: Interner> {
     db: &'me dyn RustIrDatabase<I>,
-    builder: ClauseBuilder<'me, I>,
+    builder: &'builder mut ClauseBuilder<'me, I>,
     environment: &'me Environment<I>,
 }
 
-impl<'me, I: Interner> EnvElaborator<'me, I> {
-    fn new(
-        db: &'me dyn RustIrDatabase<I>,
-        out: &'me mut Vec<ProgramClause<I>>,
-        environment: &'me Environment<I>,
-    ) -> Self {
-        EnvElaborator {
-            db,
-            builder: ClauseBuilder::new(db, out),
-            environment,
-        }
-    }
-}
-
-impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
+impl<'me, 'builder, I: Interner> Visitor<'me, I> for EnvElaborator<'me, 'builder, I> {
     type BreakTy = ();
 
     fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I, BreakTy = Self::BreakTy> {
@@ -66,9 +55,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
     #[instrument(level = "debug", skip(self, _outer_binder))]
     fn visit_ty(&mut self, ty: &Ty<I>, _outer_binder: DebruijnIndex) -> ControlFlow<()> {
         match ty.kind(self.interner()) {
-            TyKind::Alias(alias_ty) => {
-                match_alias_ty(&mut self.builder, self.environment, alias_ty)
-            }
+            TyKind::Alias(alias_ty) => match_alias_ty(self.builder, self.environment, alias_ty),
             TyKind::Placeholder(_) => {}
 
             // FIXME(#203) -- We haven't fully figured out the implied
@@ -79,7 +66,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
 
             _ => {
                 // This shouldn't fail because of the above clauses
-                match_ty(&mut self.builder, self.environment, &ty)
+                match_ty(self.builder, self.environment, &ty)
                     .map_err(|_| ())
                     .unwrap()
             }
@@ -98,7 +85,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
                 FromEnv::Trait(trait_ref) => {
                     let trait_datum = self.db.trait_datum(trait_ref.trait_id);
 
-                    trait_datum.to_program_clauses(&mut self.builder, self.environment);
+                    trait_datum.to_program_clauses(self.builder, self.environment);
 
                     // If we know that `T: Iterator`, then we also know
                     // things about `<T as Iterator>::Item`, so push those
@@ -106,7 +93,7 @@ impl<'me, I: Interner> Visitor<'me, I> for EnvElaborator<'me, I> {
                     for &associated_ty_id in &trait_datum.associated_ty_ids {
                         self.db
                             .associated_ty_data(associated_ty_id)
-                            .to_program_clauses(&mut self.builder, self.environment);
+                            .to_program_clauses(self.builder, self.environment);
                     }
                     ControlFlow::CONTINUE
                 }

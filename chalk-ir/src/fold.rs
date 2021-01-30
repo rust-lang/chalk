@@ -385,7 +385,7 @@ where
                     // This variable was bound within the binders that
                     // we folded over, so just return a bound
                     // variable.
-                    TyKind::<I>::BoundVar(*bound_var).intern(folder.interner())
+                    self
                 }
             }
             TyKind::Dyn(clauses) => TyKind::Dyn(clauses.clone().fold_with(folder, outer_binder)?)
@@ -514,7 +514,7 @@ where
                     // This variable was bound within the binders that
                     // we folded over, so just return a bound
                     // variable.
-                    Ok(LifetimeData::<I>::BoundVar(*bound_var).intern(folder.interner()))
+                    Ok(self)
                 }
             }
             LifetimeData::InferenceVar(var) => folder.fold_inference_lifetime(*var, outer_binder),
@@ -567,7 +567,7 @@ where
                 if let Some(bound_var1) = bound_var.shifted_out_to(outer_binder) {
                     folder.fold_free_var_const(ty.clone(), bound_var1, outer_binder)
                 } else {
-                    Ok(bound_var.to_const(interner, fold_ty()?))
+                    Ok(self)
                 }
             }
             ConstValue::InferenceVar(var) => {
