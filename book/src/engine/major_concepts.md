@@ -59,7 +59,7 @@ An [`ExClause`] is described in literature as `A :- D | G` or
 `A holds given that G holds with D delayed goals`. In `chalk-engine`, an
 `ExClause` stores the current state of proving a goal, including existing
 substitutions already found, subgoals yet to be proven, or delayed subgoals. A
-[`Strand`] wraps both an [`ExClause`] and an [`TruncatingInferenceTable`] together. 
+[`Strand`] wraps both an [`ExClause`] and an [`InferenceTable`] together.
 
 ## Tables and Forests
 
@@ -78,7 +78,7 @@ stack).
 
 [`Context`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.Context.html
 [`ContextOps`]: https://rust-lang.github.io/chalk/chalk_engine/context/trait.ContextOps.html
-[`TruncatingInferenceTable`]: https://rust-lang.github.io/chalk/chalk_engine/slg/struct.TruncatingInferenceTable.html
+[`InferenceTable`]: https://rust-lang.github.io/chalk/chalk_solve/infer/struct.InferenceTable.html
 [`Solution`]: https://rust-lang.github.io/chalk/chalk_solve/solve/enum.Solution.html
 [`ExClause`]: https://rust-lang.github.io/chalk/chalk_engine/struct.ExClause.html
 [`Strand`]: https://rust-lang.github.io/chalk/chalk_engine/strand/struct.Strand.html
