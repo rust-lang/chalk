@@ -67,7 +67,7 @@ fn generator_test() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([for<> FromEnv(!1_0: Send)]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([for<> FromEnv(!1_0: Send)]), goal: '!2_1: '!2_0 }]"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
         }
 
         goal {

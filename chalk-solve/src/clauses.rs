@@ -534,7 +534,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                             b: b.clone(),
                         })),
                         Some(InEnvironment::new(
-                            environment,
+                            &Environment::new(interner),
                             Constraint::LifetimeOutlives(a, b),
                         )),
                     );
@@ -550,7 +550,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                             lifetime: lifetime.clone(),
                         })),
                         Some(InEnvironment::new(
-                            environment,
+                            &Environment::new(interner),
                             Constraint::TypeOutlives(ty, lifetime),
                         )),
                     )
