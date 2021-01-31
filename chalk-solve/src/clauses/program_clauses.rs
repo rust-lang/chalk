@@ -196,7 +196,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             let substitution = Substitution::from1(interner, alias_placeholder_ty);
             for bound in opaque_ty_bound.bounds {
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
-                super::super_traits::push_alias_binders(builder, bound_with_placeholder_ty);
+                super::super_traits::push_where_clause_binders(builder, bound_with_placeholder_ty);
             }
         });
     }

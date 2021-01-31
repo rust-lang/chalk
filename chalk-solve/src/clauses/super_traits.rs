@@ -7,14 +7,14 @@ use chalk_ir::{
     WhereClause,
 };
 
-pub(super) fn push_alias_binders<I: Interner>(
+pub(super) fn push_where_clause_binders<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     binders: Binders<WhereClause<I>>,
 ) {
     builder.push_binders(binders, |builder, bound| match &bound {
         // For the implemented traits, we need to elaborate super traits and add where clauses from the trait
         WhereClause::Implemented(trait_ref) => {
-            push_alias_ty_impl_clauses(builder.db, builder, trait_ref.clone())
+            push_trait_super_clauses(builder.db, builder, trait_ref.clone())
         }
         WhereClause::AliasEq(_) => builder.push_fact(bound),
         WhereClause::LifetimeOutlives(..) => {}
@@ -25,7 +25,7 @@ pub(super) fn push_alias_binders<I: Interner>(
 /// Generate `Implemented` clauses for `dyn Trait` and opaque types. We need to generate
 /// `Implemented` clauses for all super traits, and for each trait we require
 /// its where clauses. (See #203.)
-fn push_alias_ty_impl_clauses<I: Interner>(
+fn push_trait_super_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
     trait_ref: TraitRef<I>,

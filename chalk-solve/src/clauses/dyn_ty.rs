@@ -62,7 +62,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
                 .cloned()
                 .substitute(interner, &[self_ty.clone().cast(interner)]);
 
-            super::super_traits::push_alias_binders(builder, qwc);
+            super::super_traits::push_where_clause_binders(builder, qwc);
         }
     });
 }
