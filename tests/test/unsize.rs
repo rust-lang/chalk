@@ -309,7 +309,7 @@ fn ty_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([for<> FromEnv(!2_0:Sized)]), goal: FooNotSized<!2_0>: '!1_0 }]"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: FooNotSized<!2_0>: '!1_0 }]"
         }
     }
 }
