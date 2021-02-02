@@ -224,20 +224,33 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // Check if this table is still on the stack.
             if let Some(depth) = self.context.search_graph[dfn].stack_depth {
                 // Is this a coinductive goal? If so, that is success,
-                // so we can return normally. Note that this return is
-                // not tabled.
-                //
-                // XXX how does caching with coinduction work?
+                // so we can return and set the minimum to its DFN.
+                // Note that this return is not tabled. And so are
+                // all other solutions in the cycle until the cycle
+                // start is finished. This avoids prematurely cached
+                // false positives.
                 if self.context.stack.coinductive_cycle_from(depth) {
                     let value = ConstrainedSubst {
                         subst: goal.trivial_substitution(self.program.interner()),
                         constraints: Constraints::empty(self.program.interner()),
                     };
-                    debug!("applying coinductive semantics");
-                    return Ok(Solution::Unique(Canonical {
+                    let trivial_solution = Ok(Solution::Unique(Canonical {
                         value,
                         binders: goal.canonical.binders,
                     }));
+
+                    debug!("applying coinductive semantics");
+
+                    // Set minimum to first occurrence of cyclic goal to prevent premature caching of possibly false solutions
+                    minimums.update_from(self.context.search_graph[dfn].links);
+
+                    // Store trivial solution to start coinductive reasoning from this node
+                    self.context.search_graph[dfn].solution = trivial_solution.clone();
+                    self.context.search_graph[dfn].solution_priority =
+                        chalk_ir::ClausePriority::Low;
+                    self.context.search_graph[dfn].coinductive_start = true;
+
+                    return trivial_solution;
                 }
 
                 self.context.stack[depth].flag_cycle();
@@ -275,6 +288,11 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
                 if self.context.caching_enabled {
+                    // Remove possible false positives from coinductive cycle
+                    if self.context.search_graph[dfn].coinductive_start && result.is_err() {
+                        self.context.search_graph.remove_false_positives_after(dfn);
+                    }
+
                     self.context
                         .search_graph
                         .move_to_cache(dfn, &mut self.context.cache);

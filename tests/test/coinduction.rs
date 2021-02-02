@@ -213,15 +213,8 @@ fn coinductive_unsound1() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields[SolverChoice::slg(3, None)] {
+        } yields {
             "No possible solution"
-        }
-
-        goal {
-            forall<X> { X: C1orC2 }
-        } yields[SolverChoice::recursive_default()] {
-            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
-            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -450,14 +443,8 @@ fn coinductive_multicycle4() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::slg(3, None)] {
-        }
-
-        goal {
-            forall<X> { X: Any }
-        } yields[SolverChoice::recursive_default()] {
-            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
-            "Unique; substitution [], lifetime constraints []"
+        } yields {
+            "No possible solution"
         }
     }
 }

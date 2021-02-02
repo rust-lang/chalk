@@ -37,6 +37,11 @@ pub(super) struct Node<I: Interner> {
     /// from the stack, it contains the DFN of the minimal ancestor
     /// that the table reached (or MAX if no cycle was encountered).
     pub(crate) links: Minimums,
+
+    /// If this is true, the node is the start of coinductive cycle.
+    /// Thus, some cleanup has to be done before its result can be
+    /// cached to rule out false positives.
+    pub(crate) coinductive_start: bool,
 }
 
 impl<I: Interner> SearchGraph<I> {
@@ -71,6 +76,7 @@ impl<I: Interner> SearchGraph<I> {
             solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
             links: Minimums { positive: dfn },
+            coinductive_start: false,
         };
         self.nodes.push(node);
         let previous_index = self.indices.insert(goal.clone(), dfn);
@@ -99,6 +105,32 @@ impl<I: Interner> SearchGraph<I> {
             assert!(node.links.positive >= dfn);
             debug!("caching solution {:#?} for {:#?}", node.solution, node.goal);
             cache.insert(node.goal, node.solution);
+        }
+    }
+
+    /// Removes all nodes that are part of a coinductive cycle and
+    /// have a solution as they might be false positives due to
+    /// coinductive reasoning.
+    #[instrument(level = "debug", skip(self))]
+    pub(crate) fn remove_false_positives_after(&mut self, dfn: DepthFirstNumber) {
+        let mut false_positive_indices = vec![];
+
+        // Find all possible false positives in the graph below the
+        // start of the coinductive cycle
+        for (index, node) in self.nodes[dfn.index + 1..].iter().enumerate() {
+            if node.solution.is_ok() {
+                false_positive_indices.push(index + dfn.index + 1);
+            }
+        }
+
+        // Remove the potential false positives from the indices
+        self.indices
+            .retain(|_key, value| !false_positive_indices.contains(&value.index));
+
+        // Remove the potential false positives from the nodes
+        // in descending order to avoid unnecessary shifts
+        for false_positive_index in false_positive_indices.into_iter().rev() {
+            self.nodes.remove(false_positive_index);
         }
     }
 }
