@@ -261,6 +261,104 @@ fn coinductive_unsound2() {
     }
 }
 
+/// Same as the two before but needs to show T: C2 in both
+// branches of T: C1.
+#[test]
+fn coinductive_unsound3() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            forall<T> {
+                T: C3 if T: C2, T: C4
+            }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Tests whether a nested coinductive cycle
+/// that is also unsound is handled correctly.
+#[test]
+fn coinductive_unsound4() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            forall<T> {
+                T: C4 if T:C2, T: C3
+            }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1, T: C4
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
 #[test]
 fn coinductive_multicycle1() {
     test! {
