@@ -213,15 +213,8 @@ fn coinductive_unsound1() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields[SolverChoice::slg(3, None)] {
+        } yields {
             "No possible solution"
-        }
-
-        goal {
-            forall<X> { X: C1orC2 }
-        } yields[SolverChoice::recursive_default()] {
-            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
-            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -257,6 +250,104 @@ fn coinductive_unsound2() {
 
             forall<T> {
                 T: C1orC2 if T: C1
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Same as the two before but needs to show T: C2 in both
+// branches of T: C1.
+#[test]
+fn coinductive_unsound3() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            forall<T> {
+                T: C3 if T: C2, T: C4
+            }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Tests whether a nested coinductive cycle
+/// that is also unsound is handled correctly.
+#[test]
+fn coinductive_unsound4() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            forall<T> {
+                T: C4 if T:C2, T: C3
+            }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1, T: C4
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
             }
         }
 
@@ -450,14 +541,8 @@ fn coinductive_multicycle4() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::slg(3, None)] {
-        }
-
-        goal {
-            forall<X> { X: Any }
-        } yields[SolverChoice::recursive_default()] {
-            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
-            "Unique; substitution [], lifetime constraints []"
+        } yields {
+            "No possible solution"
         }
     }
 }
