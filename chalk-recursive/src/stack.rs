@@ -67,12 +67,20 @@ impl Stack {
         self.entries.pop();
     }
 
-    /// True if all the goals from the top of the stack down to (and
-    /// including) the given depth are coinductive.
-    pub(crate) fn coinductive_cycle_from(&self, depth: StackDepth) -> bool {
-        self.entries[depth.depth..]
-            .iter()
-            .all(|entry| entry.coinductive_goal)
+    /// True if either all the goals from the top of the stack down to (and
+    /// including) the given depth are  coinductive or if all goals are inductive
+    /// (i.e. not coinductive).
+    pub(crate) fn mixed_inductive_coinductive_cycle_from(&self, depth: StackDepth) -> bool {
+        let (inductive, coinductive) =
+            self.entries[depth.depth..]
+                .iter()
+                .fold((false, false), |(ind, coind), entry| {
+                    (
+                        ind || !entry.coinductive_goal,
+                        coind || entry.coinductive_goal,
+                    )
+                });
+        inductive && coinductive
     }
 }
 

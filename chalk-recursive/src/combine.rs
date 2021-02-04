@@ -2,33 +2,7 @@ use chalk_solve::Solution;
 use tracing::debug;
 
 use chalk_ir::interner::Interner;
-use chalk_ir::{ClausePriority, DomainGoal, Fallible, GenericArg, Goal, GoalData};
-
-pub(crate) fn with_priorities_for_goal<I: Interner>(
-    interner: &I,
-    goal: &Goal<I>,
-    a: Fallible<Solution<I>>,
-    prio_a: ClausePriority,
-    b: Fallible<Solution<I>>,
-    prio_b: ClausePriority,
-) -> (Fallible<Solution<I>>, ClausePriority) {
-    let domain_goal = match goal.data(interner) {
-        GoalData::DomainGoal(domain_goal) => domain_goal,
-        _ => {
-            // non-domain goals currently have no priorities, so we always take the new solution here
-            return (b, prio_b);
-        }
-    };
-    match (a, b) {
-        (Ok(a), Ok(b)) => {
-            let (solution, prio) = with_priorities(interner, domain_goal, a, prio_a, b, prio_b);
-            (Ok(solution), prio)
-        }
-        (Ok(solution), Err(_)) => (Ok(solution), prio_a),
-        (Err(_), Ok(solution)) => (Ok(solution), prio_b),
-        (Err(_), Err(e)) => (Err(e), prio_b),
-    }
-}
+use chalk_ir::{ClausePriority, DomainGoal, GenericArg};
 
 pub(super) fn with_priorities<I: Interner>(
     interner: &I,

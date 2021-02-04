@@ -261,59 +261,10 @@ fn coinductive_unsound2() {
     }
 }
 
-/// Same as the two before but needs to show T: C2 in both
-// branches of T: C1.
-#[test]
-fn coinductive_unsound3() {
-    test! {
-        program {
-            trait C1orC2 { }
-
-            #[coinductive]
-            trait C1 { }
-
-            #[coinductive]
-            trait C2 { }
-
-            #[coinductive]
-            trait C3 { }
-
-            #[coinductive]
-            trait C4 { }
-
-            forall<T> {
-                T: C3 if T: C2, T: C4
-            }
-
-            forall<T> {
-                T: C1 if T: C2, T: C3
-            }
-
-            forall<T> {
-                T: C2 if T: C1
-            }
-
-            forall<T> {
-                T: C1orC2 if T: C1
-            }
-
-            forall<T> {
-                T: C1orC2 if T: C2
-            }
-        }
-
-        goal {
-            forall<X> { X: C1orC2 }
-        } yields {
-            "No possible solution"
-        }
-    }
-}
-
 /// Tests whether a nested coinductive cycle
 /// that is also unsound is handled correctly.
 #[test]
-fn coinductive_unsound4() {
+fn coinductive_unsound_nested() {
     test! {
         program {
             trait C1orC2 { }
@@ -353,6 +304,147 @@ fn coinductive_unsound4() {
 
         goal {
             forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Test with two nested coinductive cycles where the inner fails
+/// whereas the outer holds. No false positives should be kept from
+/// the inner cycle.
+#[test]
+fn coinductive_unsound_nested2() {
+    test! {
+        program {
+            trait C1andC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            #[coinductive]
+            trait C5 { }
+
+            #[coinductive]
+            trait C6 { }
+
+            #[coinductive]
+            trait C7 { }
+
+            forall<T> {
+                T: C2 if T: C5
+            }
+
+            forall<T> {
+                T: C6 if T: C2, T: C7
+            }
+
+            forall<T> {
+                T: C5 if T:C6
+            }
+
+            forall<T> {
+                T: C4 if T: C1
+            }
+
+            forall<T> {
+                T: C3 if T: C5
+            }
+
+            forall<T> {
+                T: C3 if T: C4
+            }
+
+            forall<T> {
+                T: C1 if T: C3
+            }
+
+            forall<T> {
+                T: C1andC2 if T: C1, T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1andC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Another test with two nested coinductive cycles.
+/// Here the inner cycle is also dependent on the outer one.
+#[test]
+fn coinductive_unsound_inter_cycle_dependency() {
+    test! {
+        program {
+            trait C1andC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            #[coinductive]
+            trait C5 { }
+
+            #[coinductive]
+            trait C6 { }
+
+            #[coinductive]
+            trait C7 { }
+
+            forall<T> {
+                T: C2 if T: C5, T: C1
+            }
+
+            forall<T> {
+                T: C6 if T: C2, T: C7
+            }
+
+            forall<T> {
+                T: C5 if T:C6
+            }
+
+            forall<T> {
+                T: C4 if T: C1
+            }
+
+            forall<T> {
+                T: C3 if T: C5
+            }
+
+            forall<T> {
+                T: C3 if T: C4
+            }
+
+            forall<T> {
+                T: C1 if T: C3
+            }
+
+            forall<T> {
+                T: C1andC2 if T: C1, T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1andC2 }
         } yields {
             "No possible solution"
         }

@@ -2,10 +2,10 @@ use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
 use crate::stack::{Stack, StackDepth};
-use crate::{combine, Minimums, UCanonicalGoal};
-use chalk_ir::interner::Interner;
+use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::Fallible;
-use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, UCanonical};
+use chalk_ir::{interner::Interner, NoSolution};
+use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
 use rustc_hash::FxHashMap;
 use std::fmt;
@@ -163,18 +163,6 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return *minimums;
             }
 
-            let old_answer = &self.context.search_graph[dfn].solution;
-            let old_prio = self.context.search_graph[dfn].solution_priority;
-
-            let (current_answer, current_prio) = combine::with_priorities_for_goal(
-                self.program.interner(),
-                &canonical_goal.canonical.value.goal,
-                old_answer.clone(),
-                old_prio,
-                current_answer,
-                current_prio,
-            );
-
             // Some of our subgoals depended on us. We need to re-run
             // with the current answer.
             if self.context.search_graph[dfn].solution == current_answer {
@@ -223,37 +211,15 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         if let Some(dfn) = self.context.search_graph.lookup(&goal) {
             // Check if this table is still on the stack.
             if let Some(depth) = self.context.search_graph[dfn].stack_depth {
-                // Is this a coinductive goal? If so, that is success,
-                // so we can return and set the minimum to its DFN.
-                // Note that this return is not tabled. And so are
-                // all other solutions in the cycle until the cycle
-                // start is finished. This avoids prematurely cached
-                // false positives.
-                if self.context.stack.coinductive_cycle_from(depth) {
-                    let value = ConstrainedSubst {
-                        subst: goal.trivial_substitution(self.program.interner()),
-                        constraints: Constraints::empty(self.program.interner()),
-                    };
-                    let trivial_solution = Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
-
-                    debug!("applying coinductive semantics");
-
-                    // Set minimum to first occurrence of cyclic goal to prevent premature caching of possibly false solutions
-                    minimums.update_from(self.context.search_graph[dfn].links);
-
-                    // Store trivial solution to start coinductive reasoning from this node
-                    self.context.search_graph[dfn].solution = trivial_solution.clone();
-                    self.context.search_graph[dfn].solution_priority =
-                        chalk_ir::ClausePriority::Low;
-                    self.context.search_graph[dfn].coinductive_start = true;
-
-                    return trivial_solution;
-                }
-
                 self.context.stack[depth].flag_cycle();
+                // Mixed cycles are not allowed.
+                if self
+                    .context
+                    .stack
+                    .mixed_inductive_coinductive_cycle_from(depth)
+                {
+                    return Err(NoSolution);
+                }
             }
 
             minimums.update_from(self.context.search_graph[dfn].links);
@@ -268,10 +234,15 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             previous_solution
         } else {
             // Otherwise, push the goal onto the stack and create a table.
-            // The initial result for this table is error.
+            // The initial result for this table depends on whether the goal is coinductive.
             let coinductive_goal = goal.is_coinductive(self.program);
             let depth = self.context.stack.push(coinductive_goal);
-            let dfn = self.context.search_graph.insert(&goal, depth);
+            let dfn = self.context.search_graph.insert(
+                &goal,
+                depth,
+                coinductive_goal,
+                self.program.interner(),
+            );
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
@@ -288,11 +259,6 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
                 if self.context.caching_enabled {
-                    // Remove possible false positives from coinductive cycle
-                    if self.context.search_graph[dfn].coinductive_start && result.is_err() {
-                        self.context.search_graph.remove_false_positives_after(dfn);
-                    }
-
                     self.context
                         .search_graph
                         .move_to_cache(dfn, &mut self.context.cache);
