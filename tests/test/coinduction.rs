@@ -262,7 +262,7 @@ fn coinductive_unsound2() {
 }
 
 /// Same as the two before but needs to show T: C2 in both
-// branches of T: C1.
+// branches of T: C1 :- T: C2, T: C3.
 #[test]
 fn coinductive_unsound3() {
     test! {
@@ -313,7 +313,7 @@ fn coinductive_unsound3() {
 /// Tests whether a nested coinductive cycle
 /// that is also unsound is handled correctly.
 #[test]
-fn coinductive_unsound4() {
+fn coinductive_unsound_nested() {
     test! {
         program {
             trait C1orC2 { }

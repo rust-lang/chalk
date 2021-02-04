@@ -234,23 +234,19 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                         subst: goal.trivial_substitution(self.program.interner()),
                         constraints: Constraints::empty(self.program.interner()),
                     };
-                    let trivial_solution = Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
 
                     debug!("applying coinductive semantics");
 
-                    // Set minimum to first occurrence of cyclic goal to prevent premature caching of possibly false solutions
+                    // Set minimum to first occurrence of cyclic goal to prevent premature caching of possibly invalid solutions
                     minimums.update_from(self.context.search_graph[dfn].links);
 
-                    // Store trivial solution to start coinductive reasoning from this node
-                    self.context.search_graph[dfn].solution = trivial_solution.clone();
-                    self.context.search_graph[dfn].solution_priority =
-                        chalk_ir::ClausePriority::Low;
+                    // Mark the start of the coinductive cycle
                     self.context.search_graph[dfn].coinductive_start = true;
 
-                    return trivial_solution;
+                    return Ok(Solution::Unique(Canonical {
+                        value,
+                        binders: goal.canonical.binders,
+                    }));
                 }
 
                 self.context.stack[depth].flag_cycle();
