@@ -52,7 +52,7 @@ type [`InternedTy`] and two related methods, [`intern_ty`] and [`ty_data`]:
 trait Interner {
     type InternedTy;
 
-    fn intern_ty(&self, data: &TyData<Self>) -> Self::InternedTy;
+    fn intern_ty(&self, data: &TyKind<Self>) -> Self::InternedTy;
     fn ty_data(data: &Self::InternedTy) -> &TyData<Self>;
 }
 ```

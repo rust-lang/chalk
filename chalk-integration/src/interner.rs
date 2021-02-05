@@ -1,5 +1,8 @@
 use crate::tls;
-use chalk_ir::interner::{HasInterner, Interner};
+use chalk_ir::{
+    interner::{HasInterner, Interner},
+    TyKind,
+};
 use chalk_ir::{
     AdtId, AliasTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData, Constraint,
     Constraints, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
@@ -233,8 +236,9 @@ impl Interner for ChalkIr {
         tls::with_current_program(|prog| Some(prog?.debug_variances(variances, fmt)))
     }
 
-    fn intern_ty(&self, ty: TyData<ChalkIr>) -> Arc<TyData<ChalkIr>> {
-        Arc::new(ty)
+    fn intern_ty(&self, kind: TyKind<ChalkIr>) -> Arc<TyData<ChalkIr>> {
+        let flags = kind.compute_flags(self);
+        Arc::new(TyData { kind, flags })
     }
 
     fn ty_data<'a>(&self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {

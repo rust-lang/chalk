@@ -1,5 +1,4 @@
 //! Encapsulates the concrete representation of core types such as types and goals.
-use crate::AdtId;
 use crate::AliasTy;
 use crate::AssocTypeId;
 use crate::CanonicalVarKind;
@@ -36,6 +35,7 @@ use crate::VariableKind;
 use crate::VariableKinds;
 use crate::Variance;
 use crate::Variances;
+use crate::{AdtId, TyKind};
 use crate::{Const, ConstData};
 use std::fmt::{self, Debug};
 use std::hash::Hash;
@@ -470,7 +470,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyKind::intern` (which
     /// will ultimately call this method).
-    fn intern_ty(&self, ty: TyData<Self>) -> Self::InternedType;
+    fn intern_ty(&self, kind: TyKind<Self>) -> Self::InternedType;
 
     /// Lookup the `TyKind` from an interned type.
     fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyData<Self>;

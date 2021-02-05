@@ -411,150 +411,12 @@ pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
 
-///compute type flags for Lifetime
-fn compute_lifetime_flags<I: Interner>(lifetime: &Lifetime<I>, interner: &I) -> TypeFlags {
-    match lifetime.data(&interner) {
-        LifetimeData::InferenceVar(_) => {
-            TypeFlags::HAS_RE_INFER
-                | TypeFlags::HAS_FREE_LOCAL_REGIONS
-                | TypeFlags::HAS_FREE_REGIONS
-        }
-        LifetimeData::Placeholder(_) => {
-            TypeFlags::HAS_RE_PLACEHOLDER
-                | TypeFlags::HAS_FREE_LOCAL_REGIONS
-                | TypeFlags::HAS_FREE_REGIONS
-        }
-        LifetimeData::Static | LifetimeData::Empty(_) => TypeFlags::HAS_FREE_REGIONS,
-        LifetimeData::Phantom(_, _) => TypeFlags::empty(),
-        LifetimeData::BoundVar(_) => TypeFlags::HAS_RE_LATE_BOUND,
-        LifetimeData::Erased => TypeFlags::HAS_RE_ERASED,
-    }
-}
-
-/// Compute type flags for Substitution<I>
-fn compute_substitution_flags<I: Interner>(
-    substitution: &Substitution<I>,
-    interner: &I,
-) -> TypeFlags {
-    let mut flags = TypeFlags::empty();
-    for generic_arg in substitution.iter(&interner) {
-        flags |= compute_generic_arg_flags(generic_arg, &interner);
-    }
-    flags
-}
-
-/// Compute type flags for GenericArg<I>
-fn compute_generic_arg_flags<I: Interner>(generic_arg: &GenericArg<I>, interner: &I) -> TypeFlags {
-    match generic_arg.data(&interner) {
-        GenericArgData::Ty(ty) => ty.data(interner).flags,
-        GenericArgData::Lifetime(lifetime) => compute_lifetime_flags(lifetime, interner),
-        GenericArgData::Const(constant) => {
-            let data = constant.data(&interner);
-            let flags = data.ty.data(interner).flags;
-            match data.value {
-                ConstValue::BoundVar(_) => flags,
-                ConstValue::InferenceVar(_) => {
-                    flags | TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                }
-                ConstValue::Placeholder(_) => {
-                    flags | TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                }
-                ConstValue::Concrete(_) => flags,
-            }
-        }
-    }
-}
-
-/// Compute type flags for aliases
-fn compute_alias_flags<I: Interner>(alias_ty: &AliasTy<I>, interner: &I) -> TypeFlags {
-    match alias_ty {
-        AliasTy::Projection(projection_ty) => {
-            TypeFlags::HAS_TY_PROJECTION
-                | compute_substitution_flags(&(projection_ty.substitution), interner)
-        }
-        AliasTy::Opaque(opaque_ty) => {
-            TypeFlags::HAS_TY_OPAQUE
-                | compute_substitution_flags(&(opaque_ty.substitution), interner)
-        }
-    }
-}
-
-/// Compute type flags for a TyKind
-fn compute_flags<I: Interner>(kind: &TyKind<I>, interner: &I) -> TypeFlags {
-    match kind {
-        TyKind::Adt(_, substitution)
-        | TyKind::AssociatedType(_, substitution)
-        | TyKind::Tuple(_, substitution)
-        | TyKind::Closure(_, substitution)
-        | TyKind::Generator(_, substitution)
-        | TyKind::GeneratorWitness(_, substitution)
-        | TyKind::FnDef(_, substitution)
-        | TyKind::OpaqueType(_, substitution) => compute_substitution_flags(substitution, interner),
-        TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => TypeFlags::empty(),
-        TyKind::Error => TypeFlags::HAS_ERROR,
-        TyKind::Slice(ty) | TyKind::Raw(_, ty) => ty.data(interner).flags,
-        TyKind::Ref(_, lifetime, ty) => {
-            compute_lifetime_flags(lifetime, interner) | ty.data(interner).flags
-        }
-        TyKind::Array(ty, const_ty) => {
-            let flags = ty.data(interner).flags;
-            let const_data = const_ty.data(interner);
-            flags
-                | const_data.ty.data(interner).flags
-                | match const_data.value {
-                    ConstValue::BoundVar(_) | ConstValue::Concrete(_) => TypeFlags::empty(),
-                    ConstValue::InferenceVar(_) => {
-                        TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                    }
-                    ConstValue::Placeholder(_) => {
-                        TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                    }
-                }
-        }
-        TyKind::Placeholder(_) => TypeFlags::HAS_TY_PLACEHOLDER,
-        TyKind::Dyn(dyn_ty) => {
-            let lifetime_flags = compute_lifetime_flags(&(dyn_ty.lifetime), &interner);
-            let mut dyn_flags = TypeFlags::empty();
-            for var_kind in dyn_ty.bounds.value.iter(&interner) {
-                match &(var_kind.value) {
-                    WhereClause::Implemented(trait_ref) => {
-                        dyn_flags |= compute_substitution_flags(&(trait_ref.substitution), interner)
-                    }
-                    WhereClause::AliasEq(alias_eq) => {
-                        dyn_flags |= compute_alias_flags(&(alias_eq.alias), &interner);
-                        dyn_flags |= alias_eq.ty.data(&interner).flags;
-                    }
-                    WhereClause::LifetimeOutlives(lifetime_outlives) => {
-                        dyn_flags |= compute_lifetime_flags(&(lifetime_outlives.a), &interner)
-                            | compute_lifetime_flags(&(lifetime_outlives.b), &interner);
-                    }
-                    WhereClause::TypeOutlives(type_outlives) => {
-                        dyn_flags |= type_outlives.ty.data(&interner).flags;
-                        dyn_flags |= compute_lifetime_flags(&(type_outlives.lifetime), &interner);
-                    }
-                }
-            }
-            lifetime_flags | dyn_flags
-        }
-        TyKind::Alias(alias_ty) => compute_alias_flags(&alias_ty, &interner),
-        TyKind::BoundVar(_) => TypeFlags::empty(),
-        TyKind::InferenceVar(_, _) => TypeFlags::HAS_TY_INFER,
-        TyKind::Function(fn_pointer) => {
-            compute_substitution_flags(&fn_pointer.substitution.0, interner)
-        }
-    }
-}
-
 impl<I: Interner> Ty<I> {
     /// Creates a type from `TyKind`.
     pub fn new(interner: &I, data: impl CastTo<TyKind<I>>) -> Self {
         let ty_kind = data.cast(&interner);
-        let data = TyData {
-            flags: compute_flags(&ty_kind, &interner),
-            kind: ty_kind,
-        };
         Ty {
-            interned: I::intern_ty(interner, data),
+            interned: I::intern_ty(interner, ty_kind),
         }
     }
 
@@ -822,6 +684,72 @@ impl<I: Interner> TyKind<I> {
     /// Casts the type data to a type.
     pub fn intern(self, interner: &I) -> Ty<I> {
         Ty::new(interner, self)
+    }
+
+    /// Compute type flags for a TyKind
+    pub fn compute_flags(&self, interner: &I) -> TypeFlags {
+        match self {
+            TyKind::Adt(_, substitution)
+            | TyKind::AssociatedType(_, substitution)
+            | TyKind::Tuple(_, substitution)
+            | TyKind::Closure(_, substitution)
+            | TyKind::Generator(_, substitution)
+            | TyKind::GeneratorWitness(_, substitution)
+            | TyKind::FnDef(_, substitution)
+            | TyKind::OpaqueType(_, substitution) => substitution.compute_flags(interner),
+            TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => {
+                TypeFlags::empty()
+            }
+            TyKind::Error => TypeFlags::HAS_ERROR,
+            TyKind::Slice(ty) | TyKind::Raw(_, ty) => ty.data(interner).flags,
+            TyKind::Ref(_, lifetime, ty) => {
+                lifetime.compute_flags(interner) | ty.data(interner).flags
+            }
+            TyKind::Array(ty, const_ty) => {
+                let flags = ty.data(interner).flags;
+                let const_data = const_ty.data(interner);
+                flags
+                    | const_data.ty.data(interner).flags
+                    | match const_data.value {
+                        ConstValue::BoundVar(_) | ConstValue::Concrete(_) => TypeFlags::empty(),
+                        ConstValue::InferenceVar(_) => {
+                            TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                        }
+                        ConstValue::Placeholder(_) => {
+                            TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                        }
+                    }
+            }
+            TyKind::Placeholder(_) => TypeFlags::HAS_TY_PLACEHOLDER,
+            TyKind::Dyn(dyn_ty) => {
+                let lifetime_flags = dyn_ty.lifetime.compute_flags(interner);
+                let mut dyn_flags = TypeFlags::empty();
+                for var_kind in dyn_ty.bounds.skip_binders().iter(interner) {
+                    match &(var_kind.skip_binders()) {
+                        WhereClause::Implemented(trait_ref) => {
+                            dyn_flags |= trait_ref.substitution.compute_flags(interner)
+                        }
+                        WhereClause::AliasEq(alias_eq) => {
+                            dyn_flags |= alias_eq.alias.compute_flags(interner);
+                            dyn_flags |= alias_eq.ty.data(interner).flags;
+                        }
+                        WhereClause::LifetimeOutlives(lifetime_outlives) => {
+                            dyn_flags |= lifetime_outlives.a.compute_flags(interner)
+                                | lifetime_outlives.b.compute_flags(interner);
+                        }
+                        WhereClause::TypeOutlives(type_outlives) => {
+                            dyn_flags |= type_outlives.ty.data(interner).flags;
+                            dyn_flags |= type_outlives.lifetime.compute_flags(interner);
+                        }
+                    }
+                }
+                lifetime_flags | dyn_flags
+            }
+            TyKind::Alias(alias_ty) => alias_ty.compute_flags(&interner),
+            TyKind::BoundVar(_) => TypeFlags::empty(),
+            TyKind::InferenceVar(_, _) => TypeFlags::HAS_TY_INFER,
+            TyKind::Function(fn_pointer) => fn_pointer.substitution.0.compute_flags(interner),
+        }
     }
 }
 
@@ -1358,6 +1286,26 @@ impl<I: Interner> Lifetime<I> {
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }
+
+    ///compute type flags for Lifetime
+    fn compute_flags(&self, interner: &I) -> TypeFlags {
+        match self.data(&interner) {
+            LifetimeData::InferenceVar(_) => {
+                TypeFlags::HAS_RE_INFER
+                    | TypeFlags::HAS_FREE_LOCAL_REGIONS
+                    | TypeFlags::HAS_FREE_REGIONS
+            }
+            LifetimeData::Placeholder(_) => {
+                TypeFlags::HAS_RE_PLACEHOLDER
+                    | TypeFlags::HAS_FREE_LOCAL_REGIONS
+                    | TypeFlags::HAS_FREE_REGIONS
+            }
+            LifetimeData::Static | LifetimeData::Empty(_) => TypeFlags::HAS_FREE_REGIONS,
+            LifetimeData::Phantom(_, _) => TypeFlags::empty(),
+            LifetimeData::BoundVar(_) => TypeFlags::HAS_RE_LATE_BOUND,
+            LifetimeData::Erased => TypeFlags::HAS_RE_ERASED,
+        }
+    }
 }
 
 /// Lifetime data, including what kind of lifetime it is and what it points to.
@@ -1546,6 +1494,30 @@ impl<I: Interner> GenericArg<I> {
             _ => None,
         }
     }
+
+    /// Compute type flags for GenericArg<I>
+    fn compute_flags(&self, interner: &I) -> TypeFlags {
+        match self.data(&interner) {
+            GenericArgData::Ty(ty) => ty.data(interner).flags,
+            GenericArgData::Lifetime(lifetime) => lifetime.compute_flags(interner),
+            GenericArgData::Const(constant) => {
+                let data = constant.data(&interner);
+                let flags = data.ty.data(interner).flags;
+                match data.value {
+                    ConstValue::BoundVar(_) => flags,
+                    ConstValue::InferenceVar(_) => {
+                        flags | TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                    }
+                    ConstValue::Placeholder(_) => {
+                        flags
+                            | TypeFlags::HAS_CT_PLACEHOLDER
+                            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                    }
+                    ConstValue::Concrete(_) => flags,
+                }
+            }
+        }
+    }
 }
 
 /// Generic arguments data.
@@ -1655,6 +1627,18 @@ impl<I: Interner> AliasTy<I> {
         match self {
             AliasTy::Projection(projection_ty) => projection_ty.self_type_parameter(interner),
             _ => todo!(),
+        }
+    }
+
+    /// Compute type flags for aliases
+    fn compute_flags(&self, interner: &I) -> TypeFlags {
+        match self {
+            AliasTy::Projection(projection_ty) => {
+                TypeFlags::HAS_TY_PROJECTION | projection_ty.substitution.compute_flags(interner)
+            }
+            AliasTy::Opaque(opaque_ty) => {
+                TypeFlags::HAS_TY_OPAQUE | opaque_ty.substitution.compute_flags(interner)
+            }
         }
     }
 }
@@ -2752,6 +2736,15 @@ impl<I: Interner> Substitution<I> {
         self.iter(interner)
             .filter_map(move |p| p.ty(interner))
             .cloned()
+    }
+
+    /// Compute type flags for Substitution<I>
+    fn compute_flags(&self, interner: &I) -> TypeFlags {
+        let mut flags = TypeFlags::empty();
+        for generic_arg in self.iter(&interner) {
+            flags |= generic_arg.compute_flags(interner);
+        }
+        flags
     }
 }
 
