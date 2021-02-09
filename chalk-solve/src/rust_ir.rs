@@ -22,6 +22,13 @@ pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 chalk_ir::id_visit!(AssociatedTyValueId);
 chalk_ir::id_fold!(AssociatedTyValueId);
 
+/// Identifier for an "associated const value" found in some impl.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssociatedConstValueId<I: Interner>(pub I::DefId);
+
+chalk_ir::id_visit!(AssociatedConstValueId);
+chalk_ir::id_fold!(AssociatedConstValueId);
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,

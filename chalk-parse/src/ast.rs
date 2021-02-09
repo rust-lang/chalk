@@ -177,6 +177,16 @@ pub enum AssocItemDefn {
     Const(AssocConstDefn),
 }
 
+impl AssocItemDefn {
+    /// Returns the type value if it is one, `None` otherwise.
+    pub fn ty(&self) -> Option<&AssocTyDefn> {
+        match self {
+            AssocItemDefn::Ty(ty) => Some(ty),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyDefn {
     pub name: Identifier,
@@ -292,6 +302,16 @@ pub enum ImplType {
 pub enum AssocItemValue {
     Ty(AssocTyValue),
     Const(AssocConstValue),
+}
+
+impl AssocItemValue {
+    /// Returns the type value if it is one, `None` otherwise.
+    pub fn ty(&self) -> Option<&AssocTyValue> {
+        match self {
+            AssocItemValue::Ty(ty) => Some(ty),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

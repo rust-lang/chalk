@@ -5,7 +5,7 @@ use chalk_ir::{
 };
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
-use chalk_solve::rust_ir::AssociatedTyValueId;
+use chalk_solve::rust_ir::{AssociatedConstValueId, AssociatedTyValueId};
 use std::collections::BTreeMap;
 
 use crate::error::RustIrError;
@@ -28,6 +28,8 @@ pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
+pub type AssociatedConstValueIds =
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedConstValueId<ChalkIr>>;
 pub type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
 
 pub type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;

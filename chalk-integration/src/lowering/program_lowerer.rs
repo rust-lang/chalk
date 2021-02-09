@@ -58,25 +58,39 @@ impl ProgramLowerer {
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::TraitDefn(d) => {
-                    if d.flags.auto && !d.assoc_ty_defns.is_empty() {
+                    if d.flags.auto && !d.assoc_item_defns.is_empty() {
                         Err(RustIrError::AutoTraitAssociatedTypes(d.name.clone()))?;
                     }
-                    for defn in &d.assoc_ty_defns {
-                        let addl_variable_kinds = defn.all_parameters();
-                        let lookup = AssociatedTyLookup {
-                            id: AssocTypeId(self.next_item_id()),
-                            addl_variable_kinds: addl_variable_kinds.anonymize(),
-                        };
-                        self.associated_ty_lookups
-                            .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
+                    for defn in &d.assoc_item_defns {
+                        match defn {
+                            AssocItemDefn::Ty(defn) => {
+                                let addl_variable_kinds = defn.all_parameters();
+                                let lookup = AssociatedTyLookup {
+                                    id: AssocTypeId(self.next_item_id()),
+                                    addl_variable_kinds: addl_variable_kinds.anonymize(),
+                                };
+                                self.associated_ty_lookups
+                                    .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
+                            }
+                            AssocItemDefn::Const(_) => {
+                                todo!()
+                            }
+                        }
                     }
                 }
 
                 Item::Impl(d) => {
-                    for atv in &d.assoc_ty_values {
-                        let atv_id = AssociatedTyValueId(self.next_item_id());
-                        self.associated_ty_value_ids
-                            .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
+                    for aiv in &d.assoc_item_values {
+                        match aiv {
+                            AssocItemValue::Ty(atv) => {
+                                let atv_id = AssociatedTyValueId(self.next_item_id());
+                                self.associated_ty_value_ids
+                                    .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
+                            }
+                            AssocItemValue::Const(_) => {
+                                todo!()
+                            }
+                        }
                     }
                 }
 
@@ -265,49 +279,56 @@ impl ProgramLowerer {
 
                     trait_data.insert(trait_id, Arc::new(trait_datum));
 
-                    for assoc_ty_defn in &trait_defn.assoc_ty_defns {
-                        let lookup = &self.associated_ty_lookups
-                            [&(trait_id, assoc_ty_defn.name.str.clone())];
+                    for assoc_item_defn in &trait_defn.assoc_item_defns {
+                        match assoc_item_defn {
+                            AssocItemDefn::Ty(assoc_ty_defn) => {
+                                let lookup = &self.associated_ty_lookups
+                                    [&(trait_id, assoc_ty_defn.name.str.clone())];
 
-                        // The parameters in scope for the associated
-                        // type definitions are *both* those from the
-                        // trait *and* those from the associated type
-                        // itself.
-                        //
-                        // Insert the associated type parameters first
-                        // into the list so that they are given the
-                        // indices starting from 0. This corresponds
-                        // to the "de bruijn" convention where "more
-                        // inner" sets of parameters get the lower
-                        // indices:
-                        //
-                        // e.g., in this example, the indices would be
-                        // assigned `[A0, A1, T0, T1]`:
-                        //
-                        // ```
-                        // trait Foo<T0, T1> {
-                        //     type Bar<A0, A1>;
-                        // }
-                        // ```
-                        let mut variable_kinds = assoc_ty_defn.all_parameters();
-                        variable_kinds.extend(trait_defn.all_parameters());
+                                // The parameters in scope for the associated
+                                // type definitions are *both* those from the
+                                // trait *and* those from the associated type
+                                // itself.
+                                //
+                                // Insert the associated type parameters first
+                                // into the list so that they are given the
+                                // indices starting from 0. This corresponds
+                                // to the "de bruijn" convention where "more
+                                // inner" sets of parameters get the lower
+                                // indices:
+                                //
+                                // e.g., in this example, the indices would be
+                                // assigned `[A0, A1, T0, T1]`:
+                                //
+                                // ```
+                                // trait Foo<T0, T1> {
+                                //     type Bar<A0, A1>;
+                                // }
+                                // ```
+                                let mut variable_kinds = assoc_ty_defn.all_parameters();
+                                variable_kinds.extend(trait_defn.all_parameters());
 
-                        let binders = empty_env.in_binders(variable_kinds, |env| {
-                            Ok(rust_ir::AssociatedTyDatumBound {
-                                bounds: assoc_ty_defn.bounds.lower(&env)?,
-                                where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
-                            })
-                        })?;
+                                let binders = empty_env.in_binders(variable_kinds, |env| {
+                                    Ok(rust_ir::AssociatedTyDatumBound {
+                                        bounds: assoc_ty_defn.bounds.lower(&env)?,
+                                        where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
+                                    })
+                                })?;
 
-                        associated_ty_data.insert(
-                            lookup.id,
-                            Arc::new(rust_ir::AssociatedTyDatum {
-                                trait_id: TraitId(raw_id),
-                                id: lookup.id,
-                                name: assoc_ty_defn.name.str.clone(),
-                                binders,
-                            }),
-                        );
+                                associated_ty_data.insert(
+                                    lookup.id,
+                                    Arc::new(rust_ir::AssociatedTyDatum {
+                                        trait_id: TraitId(raw_id),
+                                        id: lookup.id,
+                                        name: assoc_ty_defn.name.str.clone(),
+                                        binders,
+                                    }),
+                                );
+                            }
+                            AssocItemDefn::Const(_) => {
+                                todo!()
+                            }
+                        }
                     }
                 }
                 Item::Impl(ref impl_defn) => {
@@ -318,32 +339,41 @@ impl ProgramLowerer {
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
 
-                    for atv in &impl_defn.assoc_ty_values {
-                        let atv_id = self.associated_ty_value_ids[&(impl_id, atv.name.str.clone())];
-                        let lookup = &self.associated_ty_lookups[&(trait_id, atv.name.str.clone())];
+                    for aiv in &impl_defn.assoc_item_values {
+                        match aiv {
+                            AssocItemValue::Ty(atv) => {
+                                let atv_id =
+                                    self.associated_ty_value_ids[&(impl_id, atv.name.str.clone())];
+                                let lookup =
+                                    &self.associated_ty_lookups[&(trait_id, atv.name.str.clone())];
 
-                        // The parameters in scope for the associated
-                        // type definitions are *both* those from the
-                        // impl *and* those from the associated type
-                        // itself. As in the "trait" case above, we begin
-                        // with the parameters from the impl.
-                        let mut variable_kinds = atv.all_parameters();
-                        variable_kinds.extend(impl_defn.all_parameters());
+                                // The parameters in scope for the associated
+                                // type definitions are *both* those from the
+                                // impl *and* those from the associated type
+                                // itself. As in the "trait" case above, we begin
+                                // with the parameters from the impl.
+                                let mut variable_kinds = atv.all_parameters();
+                                variable_kinds.extend(impl_defn.all_parameters());
 
-                        let value = empty_env.in_binders(variable_kinds, |env| {
-                            Ok(rust_ir::AssociatedTyValueBound {
-                                ty: atv.value.lower(env)?,
-                            })
-                        })?;
+                                let value = empty_env.in_binders(variable_kinds, |env| {
+                                    Ok(rust_ir::AssociatedTyValueBound {
+                                        ty: atv.value.lower(env)?,
+                                    })
+                                })?;
 
-                        associated_ty_values.insert(
-                            atv_id,
-                            Arc::new(rust_ir::AssociatedTyValue {
-                                impl_id,
-                                associated_ty_id: lookup.id,
-                                value,
-                            }),
-                        );
+                                associated_ty_values.insert(
+                                    atv_id,
+                                    Arc::new(rust_ir::AssociatedTyValue {
+                                        impl_id,
+                                        associated_ty_id: lookup.id,
+                                        value,
+                                    }),
+                                );
+                            }
+                            AssocItemValue::Const(_) => {
+                                todo!()
+                            }
+                        }
                     }
                 }
                 Item::Clause(ref clause) => {

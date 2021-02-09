@@ -895,7 +895,12 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
             let trait_ref = impl_.trait_ref.lower(env)?;
             debug!(?trait_ref);
 
-            if !polarity.is_positive() && !impl_.assoc_ty_values.is_empty() {
+            if !polarity.is_positive()
+                && impl_
+                    .assoc_item_values
+                    .iter()
+                    .all(|item| item.ty().is_none())
+            {
                 Err(RustIrError::NegativeImplAssociatedValues(
                     impl_.trait_ref.trait_name.clone(),
                 ))?;
@@ -913,8 +918,12 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
         // within the impl, which should have already assigned and
         // stored in the map
         let associated_ty_value_ids = impl_
-            .assoc_ty_values
+            .assoc_item_values
             .iter()
+            .filter_map(|item| match item {
+                AssocItemValue::Ty(ty) => Some(ty),
+                _ => None,
+            })
             .map(|atv| associated_ty_value_ids[&(*impl_id, atv.name.str.clone())])
             .collect();
 
@@ -993,8 +1002,9 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
         })?;
 
         let associated_ty_ids: Vec<_> = trait_defn
-            .assoc_ty_defns
+            .assoc_item_defns
             .iter()
+            .filter_map(|item| item.ty())
             .map(|defn| env.lookup_associated_ty(*trait_id, &defn.name).unwrap().id)
             .collect();
 
