@@ -140,7 +140,7 @@ pub struct TraitDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
-    pub assoc_ty_defns: Vec<AssocTyDefn>,
+    pub assoc_item_defns: Vec<AssocItemDefn>,
     pub flags: TraitFlags,
     pub well_known: Option<WellKnownTrait>,
 }
@@ -172,11 +172,24 @@ pub struct TraitFlags {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub enum AssocItemDefn {
+    Ty(AssocTyDefn),
+    Const(AssocConstDefn),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
     pub bounds: Vec<QuantifiedInlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssocConstDefn {
+    pub name: Identifier,
+    pub ty: Ty,
+    pub value: Option<Const>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -265,7 +278,7 @@ pub struct Impl {
     pub trait_ref: TraitRef,
     pub polarity: Polarity,
     pub where_clauses: Vec<QuantifiedWhereClause>,
-    pub assoc_ty_values: Vec<AssocTyValue>,
+    pub assoc_item_values: Vec<AssocItemValue>,
     pub impl_type: ImplType,
 }
 
@@ -276,11 +289,24 @@ pub enum ImplType {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub enum AssocItemValue {
+    Ty(AssocTyValue),
+    Const(AssocConstValue),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct AssocTyValue {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
     pub value: Ty,
     pub default: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssocConstValue {
+    pub name: Identifier,
+    pub ty: Ty,
+    pub value: Const,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
