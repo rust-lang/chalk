@@ -1,12 +1,13 @@
-use chalk_ir::cast::Cast;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
     GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
 };
+use chalk_ir::{cast::Cast, AssocConstId};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
-    self, Anonymize, AssociatedTyValueId, GeneratorDatum, GeneratorInputOutputDatum,
-    GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
+    self, Anonymize, AssociatedConstValueId, AssociatedTyValueId, GeneratorDatum,
+    GeneratorInputOutputDatum, GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum,
+    OpaqueTyDatumBound,
 };
 use rust_ir::IntoWhereClauses;
 use std::collections::{BTreeMap, HashSet};
@@ -74,8 +75,12 @@ impl ProgramLowerer {
                                 self.associated_ty_lookups
                                     .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                             }
-                            AssocItemDefn::Const(_) => {
-                                todo!()
+                            AssocItemDefn::Const(defn) => {
+                                let lookup = AssociatedConstLookup {
+                                    id: AssocConstId(self.next_item_id()),
+                                };
+                                self.associated_const_lookups
+                                    .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                             }
                         }
                     }
@@ -89,8 +94,11 @@ impl ProgramLowerer {
                                 self.associated_ty_value_ids
                                     .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
                             }
-                            AssocItemValue::Const(_) => {
-                                todo!()
+                            AssocItemValue::Const(acv) => {
+                                let acv_id = AssociatedConstValueId(self.next_item_id());
+
+                                self.associated_const_value_ids
+                                    .insert((ImplId(raw_id), acv.name.str.clone()), acv_id);
                             }
                         }
                     }
@@ -330,8 +338,23 @@ impl ProgramLowerer {
                                     }),
                                 );
                             }
-                            AssocItemDefn::Const(_) => {
-                                todo!()
+                            AssocItemDefn::Const(assoc_const_defn) => {
+                                let lookup = &self.associated_const_lookups
+                                    [&(trait_id, assoc_const_defn.name.str.clone())];
+                                associated_const_data.insert(
+                                    lookup.id,
+                                    Arc::new(rust_ir::AssociatedConstDatum {
+                                        trait_id: TraitId(raw_id),
+                                        id: lookup.id,
+                                        name: assoc_const_defn.name.str.clone(),
+                                        ty: assoc_const_defn.ty.lower(&empty_env)?,
+                                        value: assoc_const_defn
+                                            .value
+                                            .clone()
+                                            .map(|v| v.lower(&empty_env))
+                                            .transpose()?,
+                                    }),
+                                );
                             }
                         }
                     }
@@ -375,8 +398,21 @@ impl ProgramLowerer {
                                     }),
                                 );
                             }
-                            AssocItemValue::Const(_) => {
-                                todo!()
+                            AssocItemValue::Const(acv) => {
+                                let acv_id = self.associated_const_value_ids
+                                    [&(impl_id, acv.name.str.clone())];
+                                let lookup = &self.associated_const_lookups
+                                    [&(trait_id, acv.name.str.clone())];
+
+                                let value = acv.value.lower(&empty_env)?;
+                                associated_const_values.insert(
+                                    acv_id,
+                                    Arc::new(rust_ir::AssociatedConstValue {
+                                        impl_id,
+                                        associated_const_id: lookup.id,
+                                        value,
+                                    }),
+                                );
                             }
                         }
                     }

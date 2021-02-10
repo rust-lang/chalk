@@ -503,13 +503,16 @@ pub struct AssociatedConstDatum<I: Interner> {
     pub trait_id: TraitId<I>,
 
     /// The ID of this associated const.
-    pub id: AssocTypeId<I>,
+    pub id: AssocConstId<I>,
 
     /// Name of this associated const.
     pub name: I::Identifier,
 
     /// Type of this associated const.
     pub ty: Ty<I>,
+
+    /// Value of this associated const.
+    pub value: Option<Const<I>>,
 }
 
 // Manual implementation to avoid I::Identifier type.
