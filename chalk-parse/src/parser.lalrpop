@@ -192,13 +192,19 @@ FnDefn: FnDefn = {
     }
 };
 
+Movability: Movability = {
+    "static" => Movability::Static,
+     => Movability::Movable
+}
+
 GeneratorDefn: GeneratorDefn = {
-    "generator" <n:Id> <p:Angle<VariableKind>> "[" "resume" "=" <resume:Ty> "," "yield" "=" <yield_ty:Ty> "]" <ret_ty:FnReturn?>
+    "generator" <m:Movability> <n:Id> <p:Angle<VariableKind>> "[" "resume" "=" <resume:Ty> "," "yield" "=" <yield_ty:Ty> "]" <ret_ty:FnReturn?>
     "{"
        "upvars" "[" <upvars:SemiColon<Ty>> "]"
        "witnesses" <l:ExistsLifetimes?> "[" <witnesses:SemiColon<Ty>> "]"
     "}" => GeneratorDefn {
        name: n,
+       movability: m,
        variable_kinds: p,
        upvars: upvars,
        witness_lifetimes: l.unwrap_or_default(),

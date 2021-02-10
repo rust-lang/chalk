@@ -50,10 +50,16 @@ pub struct Variant {
     pub name: Identifier,
     pub fields: Vec<Field>,
 }
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Movability {
+    Static,
+    Movable,
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct GeneratorDefn {
     pub name: Identifier,
+    pub movability: Movability,
     pub variable_kinds: Vec<VariableKind>,
     pub upvars: Vec<Ty>,
     pub resume_ty: Ty,

@@ -453,7 +453,10 @@ impl ProgramLowerer {
                         Ok(GeneratorWitnessExistential { types: witnesses })
                     })?;
 
-                    let generator_datum = GeneratorDatum { input_output };
+                    let generator_datum = GeneratorDatum {
+                        movability: defn.movability.lower(),
+                        input_output,
+                    };
                     let generator_witness = GeneratorWitnessDatum { inner_types };
 
                     let id = self.generator_ids[&defn.name.str];
