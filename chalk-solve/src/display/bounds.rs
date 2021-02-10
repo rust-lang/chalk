@@ -148,7 +148,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
                     ),
                 )
             }
-            AliasTy::Opaque(_) => todo!("opaque types"),
+            AliasTy::Opaque(opaque) => write!(f, "{}", opaque.display(s)),
         }
     }
 }
