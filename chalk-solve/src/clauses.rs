@@ -592,7 +592,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
 
                 let trait_datum = db.trait_datum(trait_id);
 
-                let self_ty = alias.self_type_parameter(interner);
+                let self_ty = proj.self_type_parameter(interner);
                 if let TyKind::InferenceVar(_, _) = self_ty.kind(interner) {
                     panic!("Inference vars not allowed when getting program clauses");
                 }
