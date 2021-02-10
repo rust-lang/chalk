@@ -26,6 +26,8 @@ pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
 pub type OpaqueTyVariableKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
+pub type AssociatedConstLookups =
+    BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedConstLookup>;
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
 pub type AssociatedConstValueIds =
@@ -49,6 +51,7 @@ pub struct Env<'k> {
     pub opaque_ty_ids: &'k OpaqueTyIds,
     pub opaque_ty_kinds: &'k OpaqueTyVariableKinds,
     pub associated_ty_lookups: &'k AssociatedTyLookups,
+    pub associated_const_lookups: &'k AssociatedConstLookups,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,
     pub generator_ids: &'k GeneratorIds,
@@ -75,6 +78,11 @@ pub struct Env<'k> {
 pub struct AssociatedTyLookup {
     pub id: chalk_ir::AssocTypeId<ChalkIr>,
     pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct AssociatedConstLookup {
+    pub id: chalk_ir::AssocConstId<ChalkIr>,
 }
 
 pub enum TypeLookup<'k> {

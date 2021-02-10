@@ -1040,6 +1040,16 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
             ((datum.trait_id, datum.name.clone()), lookup)
         })
         .collect();
+    let associated_const_lookups: BTreeMap<_, _> = program
+        .associated_const_data
+        .iter()
+        .map(|(&associated_const_id, datum)| {
+            let lookup = AssociatedConstLookup {
+                id: associated_const_id,
+            };
+            ((datum.trait_id, datum.name.clone()), lookup)
+        })
+        .collect();
 
     let auto_traits = program
         .trait_data
@@ -1061,6 +1071,7 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         trait_kinds: &program.trait_kinds,
         opaque_ty_kinds: &program.opaque_ty_kinds,
         associated_ty_lookups: &associated_ty_lookups,
+        associated_const_lookups: &associated_const_lookups,
         foreign_ty_ids: &program.foreign_ty_ids,
         parameter_map: BTreeMap::new(),
         auto_traits: &auto_traits,

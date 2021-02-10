@@ -383,6 +383,10 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
+/// Id for the associated const of a trait.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssocConstId<I: Interner>(pub I::DefId);
+
 /// Id for an opaque type.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OpaqueTyId<I: Interner>(pub I::DefId);

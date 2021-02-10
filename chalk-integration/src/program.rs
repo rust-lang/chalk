@@ -1,6 +1,6 @@
 use crate::interner::ChalkIr;
 use crate::{tls, Identifier, TypeKind};
-use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
+use chalk_ir::{could_match::CouldMatch, AssocConstId, UnificationDatabase};
 use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
@@ -9,9 +9,10 @@ use chalk_ir::{
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
-    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
-    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedConstDatum, AssociatedConstValue, AssociatedConstValueId,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum, ImplType,
+    OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -76,6 +77,10 @@ pub struct Program {
     pub associated_ty_values:
         BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
 
+    /// For each associated ty value `const C: T = XXX` found in an impl:
+    pub associated_const_values:
+        BTreeMap<AssociatedConstValueId<ChalkIr>, Arc<AssociatedConstValue<ChalkIr>>>,
+
     // From opaque type name to item-id. Used during lowering only.
     pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
 
@@ -96,6 +101,9 @@ pub struct Program {
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+
+    /// For each associated const declaration `const C: T` found in a trait:
+    pub associated_const_data: BTreeMap<AssocConstId<ChalkIr>, Arc<AssociatedConstDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,

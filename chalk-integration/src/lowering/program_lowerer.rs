@@ -25,6 +25,8 @@ pub(super) struct ProgramLowerer {
 
     associated_ty_lookups: AssociatedTyLookups,
     associated_ty_value_ids: AssociatedTyValueIds,
+    associated_const_lookups: AssociatedConstLookups,
+    associated_const_value_ids: AssociatedConstValueIds,
     adt_ids: AdtIds,
     fn_def_ids: FnDefIds,
     closure_ids: ClosureIds,
@@ -168,6 +170,8 @@ impl ProgramLowerer {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
+        let mut associated_const_data = BTreeMap::new();
+        let mut associated_const_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
         let mut generator_data = BTreeMap::new();
         let mut generator_witness_data = BTreeMap::new();
@@ -189,6 +193,7 @@ impl ProgramLowerer {
                 generator_ids: &self.generator_ids,
                 generator_kinds: &self.generator_kinds,
                 associated_ty_lookups: &self.associated_ty_lookups,
+                associated_const_lookups: &self.associated_const_lookups,
                 parameter_map: BTreeMap::new(),
                 auto_traits: &self.auto_traits,
                 foreign_ty_ids: &self.foreign_ty_ids,
@@ -523,6 +528,8 @@ impl ProgramLowerer {
             impl_data,
             associated_ty_values,
             associated_ty_data,
+            associated_const_values,
+            associated_const_data,
             opaque_ty_ids: self.opaque_ty_ids,
             opaque_ty_kinds: self.opaque_ty_kinds,
             opaque_ty_data,
