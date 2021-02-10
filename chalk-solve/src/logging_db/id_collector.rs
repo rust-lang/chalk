@@ -102,6 +102,16 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {
     fn record(&mut self, id: impl Into<RecordedItemId<I>>) {
         self.found_identifiers.insert(id.into());
     }
+
+    fn visit_alias(&mut self, alias: &AliasTy<I>) {
+        match alias {
+            AliasTy::Projection(projection_ty) => {
+                let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
+                self.record(assoc_ty_datum.trait_id)
+            }
+            AliasTy::Opaque(opaque_ty) => self.record(opaque_ty.opaque_ty_id),
+        }
+    }
 }
 
 impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<'i, I> for IdCollector<'i, I, DB>
@@ -126,15 +136,7 @@ where
             TyKind::Adt(adt, _) => self.record(*adt),
             TyKind::FnDef(fn_def, _) => self.record(*fn_def),
             TyKind::OpaqueType(opaque, _) => self.record(*opaque),
-            TyKind::Alias(alias) => match alias {
-                AliasTy::Projection(projection_ty) => {
-                    let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
-                    self.record(assoc_ty_datum.trait_id)
-                }
-                AliasTy::Opaque(opaque_ty) => {
-                    self.record(opaque_ty.opaque_ty_id);
-                }
-            },
+            TyKind::Alias(alias) => self.visit_alias(&alias),
             TyKind::BoundVar(..) => (),
             TyKind::Dyn(..) => (),
             TyKind::Function(..) => (),
@@ -152,15 +154,7 @@ where
     ) -> ControlFlow<()> {
         match where_clause {
             WhereClause::Implemented(trait_ref) => self.record(trait_ref.trait_id),
-            WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
-                AliasTy::Projection(projection_ty) => {
-                    let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_ty_id);
-                    self.record(assoc_ty_datum.trait_id)
-                }
-                AliasTy::Opaque(opaque_ty) => {
-                    self.record(opaque_ty.opaque_ty_id);
-                }
-            },
+            WhereClause::AliasEq(alias_eq) => self.visit_alias(&alias_eq.alias),
             WhereClause::LifetimeOutlives(_lifetime_outlives) => (),
             WhereClause::TypeOutlives(_type_outlives) => (),
         }

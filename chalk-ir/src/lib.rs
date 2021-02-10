@@ -1622,14 +1622,6 @@ impl<I: Interner> AliasTy<I> {
         Ty::new(interner, self)
     }
 
-    /// Gets the type parameters of the `Self` type in this alias type.
-    pub fn self_type_parameter(&self, interner: &I) -> Ty<I> {
-        match self {
-            AliasTy::Projection(projection_ty) => projection_ty.self_type_parameter(interner),
-            _ => todo!(),
-        }
-    }
-
     /// Compute type flags for aliases
     fn compute_flags(&self, interner: &I) -> TypeFlags {
         match self {
