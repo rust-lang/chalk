@@ -638,12 +638,23 @@ pub struct OpaqueTyDatumBound<I: Interner> {
     pub where_clauses: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
 
+// The movability of a generator: whether a generator contains self-references,
+// causing it to be !Unpin
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Movability {
+    Static,
+    Movable,
+}
+chalk_ir::copy_fold!(Movability);
+
 /// Represents a generator type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
 pub struct GeneratorDatum<I: Interner> {
+    // Can the generator be moved (is Unpin or not)
+    pub movability: Movability,
     /// All of the nested types for this generator. The `Binder`
     /// represents the types and lifetimes that this generator is generic over -
-    /// this behaves in the same way as `AdtDatun.binders`
+    /// this behaves in the same way as `AdtDatum.binders`
     pub input_output: Binders<GeneratorInputOutputDatum<I>>,
 }
 

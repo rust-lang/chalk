@@ -84,3 +84,47 @@ fn unpin_overwrite() {
         }
     }
 }
+
+#[test]
+fn generator_unpin() {
+    test! {
+        program {
+            #[auto] #[lang(unpin)] trait Unpin { }
+            struct A { }
+            impl !Unpin for A {}
+
+            generator static static_gen<>[resume = (), yield = ()] {
+                upvars []
+                witnesses []
+            }
+
+            generator movable_gen<>[resume = (), yield = ()] {
+                upvars []
+                witnesses []
+            }
+
+            generator movable_with_pin<>[resume = (), yield = ()] {
+                upvars [A]
+                witnesses []
+            }
+        }
+
+        goal {
+            static_gen: Unpin
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            movable_gen: Unpin
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            movable_with_pin: Unpin
+        } yields {
+            "Unique"
+        }
+    }
+}

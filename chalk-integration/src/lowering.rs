@@ -1236,3 +1236,13 @@ impl Lower for Safety {
         }
     }
 }
+
+impl Lower for Movability {
+    type Lowered = rust_ir::Movability;
+    fn lower(&self) -> Self::Lowered {
+        match self {
+            Movability::Static => rust_ir::Movability::Static,
+            Movability::Movable => rust_ir::Movability::Movable,
+        }
+    }
+}

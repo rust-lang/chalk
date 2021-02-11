@@ -44,7 +44,7 @@ Some common examples of auto traits are `Send` and `Sync`.
 | slices          | ⚬     | ⚬    | ⚬     |   ✅    | ⚬            | ⚬    | ⚬   | ⚬      |  ⚬       |    ✅       |
 | arrays          | ✅     | ✅    | ✅     |   ❌    | ⚬            | ⚬    | ⚬   | ⚬      |  ⚬       |    ✅        |
 | closures        | ✅     | ✅    | ✅     | ⚬      | ⚬            | ⚬    | ✅   | ⚬      |  ⚬       |    ✅        |
-| generators      |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬            | ⚬     | ⚬  | ❌      |   ❌       |    ❌       |
+| generators      |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬            | ⚬     | ⚬  | ✅      |   ❌       |    ✅       |
 | gen. witness    |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
 | opaque          |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
 | foreign         |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |

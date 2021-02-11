@@ -32,7 +32,6 @@ fn generator_test() {
                 witnesses exists<'a, 'b> [SendAnyLifetime<'a, 'b, T>; u8]
             }
 
-
             generator not_send_resume_yield<>[resume = NotSend, yield = NotSend] {
                 upvars []
                 witnesses []
@@ -84,6 +83,14 @@ fn generator_test() {
             }
         } yields {
             "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            forall<T> {
+                send_any_lifetime<T>: Send
+            }
+        } yields {
+            "No possible solution"
         }
     }
 }

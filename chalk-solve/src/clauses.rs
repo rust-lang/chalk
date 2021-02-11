@@ -2,6 +2,7 @@ use self::builder::ClauseBuilder;
 use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
 use crate::goal_builder::GoalBuilder;
+use crate::rust_ir::{Movability, WellKnownTrait};
 use crate::split::Split;
 use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
@@ -149,12 +150,7 @@ pub fn push_auto_trait_impls<I: Interner>(
     match ty {
         // function-types implement auto traits unconditionally
         TyKind::Function(_) => {
-            let auto_trait_ref = TraitRef {
-                trait_id: auto_trait_id,
-                substitution: Substitution::from1(interner, ty.clone().intern(interner)),
-            };
-
-            builder.push_fact(auto_trait_ref);
+            builder.push_fact(consequence);
             Ok(())
         }
         TyKind::InferenceVar(_, _) | TyKind::BoundVar(_) => Err(Floundered),
@@ -171,6 +167,21 @@ pub fn push_auto_trait_impls<I: Interner>(
                 let conditions = iter::once(mk_ref(upvar_ty));
                 builder.push_clause(consequence, conditions);
             });
+            Ok(())
+        }
+        TyKind::Generator(generator_id, _) => {
+            if Some(auto_trait_id) == builder.db.well_known_trait_id(WellKnownTrait::Unpin) {
+                match builder.db.generator_datum(*generator_id).movability {
+                    // immovable generators are never `Unpin`
+                    Movability::Static => (),
+                    // movable generators are always `Unpin`
+                    Movability::Movable => builder.push_fact(consequence),
+                }
+            } else {
+                // if trait is not `Unpin`, use regular auto trait clause
+                let conditions = constituent_types(builder.db, ty).into_iter().map(mk_ref);
+                builder.push_clause(consequence, conditions);
+            }
             Ok(())
         }
 
