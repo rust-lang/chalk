@@ -195,10 +195,20 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
 
             let substitution = Substitution::from1(interner, alias_placeholder_ty);
             for bound in opaque_ty_bound.bounds {
-                // Implemented(!T<..>: Bound).
                 let bound_with_placeholder_ty = bound.substitute(interner, &substitution);
-                builder.push_binders(bound_with_placeholder_ty, |builder, bound| {
-                    builder.push_fact(bound);
+                builder.push_binders(bound_with_placeholder_ty, |builder, bound| match &bound {
+                    // For the implemented traits, we need to elaborate super traits and add where clauses from the trait
+                    WhereClause::Implemented(trait_ref) => {
+                        super::super_traits::push_trait_super_clauses(
+                            builder.db,
+                            builder,
+                            trait_ref.clone(),
+                        )
+                    }
+                    // FIXME: Associated item bindings are just taken as facts (?)
+                    WhereClause::AliasEq(_) => builder.push_fact(bound),
+                    WhereClause::LifetimeOutlives(..) => {}
+                    WhereClause::TypeOutlives(..) => {}
                 });
             }
         });

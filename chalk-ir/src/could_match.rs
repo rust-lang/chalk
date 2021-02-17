@@ -33,7 +33,7 @@ where
         struct MatchZipper<'i, I> {
             interner: &'i I,
             db: &'i dyn UnificationDatabase<I>,
-        };
+        }
 
         impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
             fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
