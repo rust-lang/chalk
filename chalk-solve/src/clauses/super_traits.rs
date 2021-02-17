@@ -16,10 +16,13 @@ pub(super) fn push_trait_super_clauses<I: Interner>(
     trait_ref: TraitRef<I>,
 ) {
     let interner = db.interner();
-    // We have some `dyn Trait`, and some `trait SuperTrait: WC`
-    // which is a super trait of `Trait` (including actually
-    // just being the same trait); then we want to push
-    // `Implemented(dyn Trait: SuperTrait) :- WC`.
+    // Given`trait SuperTrait: WC`, which is a super trait
+    // of `Trait` (including actually just being the same trait);
+    // then we want to push
+    // - for `dyn Trait`:
+    //     `Implemented(dyn Trait: SuperTrait) :- WC`.
+    // - for placeholder `!T` of `opaque type T: Trait = HiddenTy`:
+    //     `Implemented(!T: SuperTrait) :- WC`
 
     let super_trait_refs =
         super_traits(db, trait_ref.trait_id).substitute(interner, &trait_ref.substitution);
