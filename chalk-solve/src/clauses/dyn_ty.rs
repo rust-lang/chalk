@@ -1,6 +1,6 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::RustIrDatabase;
-use chalk_ir::{cast::Cast, interner::Interner, Ty, TyKind};
+use chalk_ir::{cast::Cast, interner::Interner, Ty, TyKind, WhereClause};
 
 /// If the self type `S` of an `Implemented` goal is a `dyn trait` type, we wish
 /// to generate program-clauses that indicates that it implements its own
@@ -62,7 +62,20 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
                 .cloned()
                 .substitute(interner, &[self_ty.clone().cast(interner)]);
 
-            super::super_traits::push_where_clause_binders(builder, qwc);
+            builder.push_binders(qwc, |builder, bound| match &bound {
+                // For the implemented traits, we need to elaborate super traits and add where clauses from the trait
+                WhereClause::Implemented(trait_ref) => {
+                    super::super_traits::push_trait_super_clauses(
+                        builder.db,
+                        builder,
+                        trait_ref.clone(),
+                    )
+                }
+                // FIXME: Associated item bindings are just taken as facts (?)
+                WhereClause::AliasEq(_) => builder.push_fact(bound),
+                WhereClause::LifetimeOutlives(..) => {}
+                WhereClause::TypeOutlives(..) => {}
+            });
         }
     });
 }
