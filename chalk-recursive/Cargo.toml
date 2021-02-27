@@ -9,9 +9,6 @@ readme = "README.md"
 keywords = ["compiler", "traits", "prolog"]
 edition = "2018"
 
-[features]
-default = []
-
 [dependencies]
 rustc-hash = { version = "1.1.0" }
 tracing = "0.1"
@@ -22,3 +19,8 @@ chalk-solve = { version = "0.59.0-dev.0", path = "../chalk-solve" }
 
 [dev-dependencies]
 chalk-integration = { path = "../chalk-integration" }
+
+[features]
+default = ["tracing-full"]
+
+tracing-full = ["chalk-solve/tracing-subscriber", "chalk-solve/tracing-tree"]
