@@ -396,6 +396,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.associated_ty_data[&ty].clone()
     }
 
+    fn associated_const_data(
+        &self,
+        ty: AssocConstId<ChalkIr>,
+    ) -> Arc<AssociatedConstDatum<ChalkIr>> {
+        self.associated_const_data[&ty].clone()
+    }
+
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
         self.trait_data[&id].clone()
     }

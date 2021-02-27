@@ -410,7 +410,6 @@ impl ProgramLowerer {
                                 let lookup = &self.associated_const_lookups
                                     [&(trait_id, acv.name.str.clone())];
 
-                                // TODO handle parameters in scope like for atv above
                                 let value = acv.value.lower(&empty_env)?;
                                 associated_const_values.insert(
                                     acv_id,

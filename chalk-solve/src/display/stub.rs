@@ -56,6 +56,14 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         Arc::new(v)
     }
 
+    fn associated_const_data(
+        &self,
+        ty: chalk_ir::AssocConstId<I>,
+    ) -> std::sync::Arc<crate::rust_ir::AssociatedConstDatum<I>> {
+        let v = (*self.db.associated_const_data(ty)).clone();
+        Arc::new(v)
+    }
+
     fn trait_datum(
         &self,
         trait_id: chalk_ir::TraitId<I>,

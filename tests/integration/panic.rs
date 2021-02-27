@@ -58,6 +58,13 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
+    fn associated_const_data(
+        &self,
+        ty: AssocConstId<ChalkIr>,
+    ) -> Arc<AssociatedConstDatum<ChalkIr>> {
+        unimplemented!()
+    }
+
     // `trait Bar`, id `0`
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
         if let PanickingMethod::TraitDatum = self.panicking_method {

@@ -49,6 +49,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: AssocTypeId<I>) -> Arc<AssociatedTyDatum<I>>;
 
+    /// Returns the datum for the associated conts with the given id.
+    fn associated_const_data(&self, ty: AssocConstId<I>) -> Arc<AssociatedConstDatum<I>>;
+
     /// Returns the datum for the definition with the given id.
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
 

@@ -7,15 +7,16 @@ use crate::{
     tls, SolverChoice,
 };
 use chalk_ir::{
-    AdtId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,
-    Environment, FnDefId, GeneratorId, GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId,
-    ProgramClause, ProgramClauses, Substitution, TraitId, Ty, TyKind, UCanonical,
+    AdtId, AssocConstId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId,
+    ConstrainedSubst, Environment, FnDefId, GeneratorId, GenericArg, Goal, ImplId, InEnvironment,
+    OpaqueTyId, ProgramClause, ProgramClauses, Substitution, TraitId, Ty, TyKind, UCanonical,
     UnificationDatabase, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AssociatedConstValue, AssociatedConstValueId, AssociatedTyDatum,
-    AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum,
-    GeneratorDatum, GeneratorWitnessDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedConstDatum, AssociatedConstValue, AssociatedConstValueId,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum, OpaqueTyDatum,
+    TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
 use salsa::Database;
@@ -89,6 +90,13 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_data(ty)
+    }
+
+    fn associated_const_data(
+        &self,
+        ty: AssocConstId<ChalkIr>,
+    ) -> Arc<AssociatedConstDatum<ChalkIr>> {
+        self.program_ir().unwrap().associated_const_data(ty)
     }
 
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {

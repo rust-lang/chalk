@@ -64,6 +64,12 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyDatum<I>> {
         self.db.associated_ty_data(ty)
     }
+    fn associated_const_data(
+        &self,
+        ty: chalk_ir::AssocConstId<I>,
+    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedConstDatum<I>> {
+        self.db.associated_const_data(ty)
+    }
     fn trait_datum(
         &self,
         trait_id: chalk_ir::TraitId<I>,
