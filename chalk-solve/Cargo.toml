@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 ena = "0.14.0"
-itertools = "0.9.0"
+itertools = "0.10.0"
 petgraph = "0.5.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.2", optional = true }
