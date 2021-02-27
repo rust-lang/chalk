@@ -362,7 +362,13 @@ impl ProgramLowerer {
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
                     let impl_datum = Arc::new(
-                        (impl_defn, impl_id, &self.associated_ty_value_ids).lower(&empty_env)?,
+                        (
+                            impl_defn,
+                            impl_id,
+                            &self.associated_ty_value_ids,
+                            &self.associated_const_value_ids,
+                        )
+                            .lower(&empty_env)?,
                     );
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
@@ -404,6 +410,7 @@ impl ProgramLowerer {
                                 let lookup = &self.associated_const_lookups
                                     [&(trait_id, acv.name.str.clone())];
 
+                                // TODO handle parameters in scope like for atv above
                                 let value = acv.value.lower(&empty_env)?;
                                 associated_const_values.insert(
                                     acv_id,

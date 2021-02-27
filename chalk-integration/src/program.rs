@@ -411,6 +411,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.associated_ty_values[&id].clone()
     }
 
+    fn associated_const_value(
+        &self,
+        id: AssociatedConstValueId<ChalkIr>,
+    ) -> Arc<AssociatedConstValue<ChalkIr>> {
+        self.associated_const_values[&id].clone()
+    }
+
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {
         self.opaque_ty_data[&id].clone()
     }

@@ -115,6 +115,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             binders,
             impl_type: ImplType::Local,
             associated_ty_value_ids: vec![],
+            associated_const_value_ids: vec![],
         })
     }
 
@@ -122,6 +123,13 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         &self,
         id: AssociatedTyValueId<ChalkIr>,
     ) -> Arc<AssociatedTyValue<ChalkIr>> {
+        unimplemented!()
+    }
+
+    fn associated_const_value(
+        &self,
+        id: AssociatedConstValueId<ChalkIr>,
+    ) -> Arc<AssociatedConstValue<ChalkIr>> {
         unimplemented!()
     }
 

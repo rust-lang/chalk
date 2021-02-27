@@ -175,6 +175,15 @@ where
         value
     }
 
+    fn associated_const_value(
+        &self,
+        id: crate::rust_ir::AssociatedConstValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedConstValue<I>> {
+        let value = self.ws.db().associated_const_value(id);
+        self.record(value.impl_id);
+        value
+    }
+
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {
         self.record(id);
         self.ws.db().opaque_ty_data(id)
@@ -428,6 +437,13 @@ where
         id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
         self.db.associated_ty_value(id)
+    }
+
+    fn associated_const_value(
+        &self,
+        id: crate::rust_ir::AssociatedConstValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedConstValue<I>> {
+        self.db.associated_const_value(id)
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {

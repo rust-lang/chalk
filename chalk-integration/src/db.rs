@@ -13,9 +13,9 @@ use chalk_ir::{
     UnificationDatabase, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
-    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
-    OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedConstValue, AssociatedConstValueId, AssociatedTyDatum,
+    AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum,
+    GeneratorDatum, GeneratorWitnessDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
 use salsa::Database;
@@ -104,6 +104,13 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         id: AssociatedTyValueId<ChalkIr>,
     ) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_values[&id].clone()
+    }
+
+    fn associated_const_value(
+        &self,
+        id: AssociatedConstValueId<ChalkIr>,
+    ) -> Arc<AssociatedConstValue<ChalkIr>> {
+        self.program_ir().unwrap().associated_const_values[&id].clone()
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {

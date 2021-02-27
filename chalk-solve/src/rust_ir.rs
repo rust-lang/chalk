@@ -35,6 +35,7 @@ pub struct ImplDatum<I: Interner> {
     pub binders: Binders<ImplDatumBound<I>>,
     pub impl_type: ImplType,
     pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
+    pub associated_const_value_ids: Vec<AssociatedConstValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {

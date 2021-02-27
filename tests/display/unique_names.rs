@@ -97,6 +97,12 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyValue<I>> {
         self.db.associated_ty_value(id)
     }
+    fn associated_const_value(
+        &self,
+        id: chalk_solve::rust_ir::AssociatedConstValueId<I>,
+    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedConstValue<I>> {
+        self.db.associated_const_value(id)
+    }
     fn generator_datum(
         &self,
         generator_id: chalk_ir::GeneratorId<I>,

@@ -119,6 +119,13 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         unreachable!("associated type values should never be stubbed")
     }
 
+    fn associated_const_value(
+        &self,
+        _id: crate::rust_ir::AssociatedConstValueId<I>,
+    ) -> std::sync::Arc<crate::rust_ir::AssociatedConstValue<I>> {
+        unreachable!("associated const values should never be stubbed")
+    }
+
     fn opaque_ty_data(
         &self,
         id: chalk_ir::OpaqueTyId<I>,

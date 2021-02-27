@@ -76,6 +76,10 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the `AssociatedTyValue` with the given id.
     fn associated_ty_value(&self, id: AssociatedTyValueId<I>) -> Arc<AssociatedTyValue<I>>;
 
+    /// Returns the `AssociatedConstValue` with the given id.
+    fn associated_const_value(&self, id: AssociatedConstValueId<I>)
+        -> Arc<AssociatedConstValue<I>>;
+
     /// Returns the `OpaqueTyDatum` with the given id.
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>>;
 
