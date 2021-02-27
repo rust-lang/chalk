@@ -134,12 +134,6 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
     }
 }
 
-impl<I: Interner> ToProgramClauses<I> for AssociatedConstValue<I> {
-    fn to_program_clauses(&self, builder: &mut ClauseBuilder<'_, I>, environment: &Environment<I>) {
-        todo!()
-    }
-}
-
 impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// Given `opaque type T<U>: A + B = HiddenTy where U: C;`, we generate:
     ///

@@ -242,11 +242,6 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
                 .iter()
                 .map(|&atv_id| db.associated_ty_value(atv_id))
                 .for_each(|atv| atv.to_program_clauses(builder, &env));
-            datum
-                .associated_const_value_ids
-                .iter()
-                .map(|&acv_id| db.associated_const_value(acv_id))
-                .for_each(|acv| acv.to_program_clauses(builder, &env));
         }
     }
 

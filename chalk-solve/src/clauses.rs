@@ -745,12 +745,6 @@ fn push_program_clauses_for_associated_values_in_impls_of<I: Interner>(
             debug!(?atv_id, ?atv);
             atv.to_program_clauses(builder, environment);
         }
-
-        for &acv_id in &impl_datum.associated_const_value_ids {
-            let acv = builder.db.associated_const_value(acv_id);
-            debug!(?acv_id, ?acv);
-            acv.to_program_clauses(builder, environment);
-        }
     }
 }
 
