@@ -7,7 +7,7 @@ use super::stack::StackDepth;
 use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use chalk_solve::Solution;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::{debug, instrument};
 
 /// The "search graph" stores in-progress goals that are still
@@ -70,7 +70,10 @@ impl<I: Interner> SearchGraph<I> {
             solution: Err(NoSolution),
             solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
-            links: Minimums { positive: dfn },
+            links: Minimums {
+                positive: dfn,
+                coinductive_cycle_starts: FxHashSet::default(),
+            },
         };
         self.nodes.push(node);
         let previous_index = self.indices.insert(goal.clone(), dfn);
@@ -87,18 +90,22 @@ impl<I: Interner> SearchGraph<I> {
 
     /// Removes all nodes with a depth-first-number greater than or
     /// equal to `dfn`, adding their final solutions into the cache.
-    #[instrument(level = "debug", skip(self))]
-    pub(crate) fn move_to_cache(
+    #[instrument(level = "debug", skip(self, f))]
+    pub(crate) fn move_to_cache<T, F>(
         &mut self,
         dfn: DepthFirstNumber,
-        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
-    ) {
+        cache: &mut FxHashMap<UCanonicalGoal<I>, T>,
+        f: F,
+    ) where
+        T: std::fmt::Debug,
+        F: Fn(Fallible<Solution<I>>) -> T,
+    {
         self.indices.retain(|_key, value| *value < dfn);
         for node in self.nodes.drain(dfn.index..) {
             assert!(node.stack_depth.is_none());
             assert!(node.links.positive >= dfn);
             debug!("caching solution {:#?} for {:#?}", node.solution, node.goal);
-            cache.insert(node.goal, node.solution);
+            cache.insert(node.goal, f(node.solution));
         }
     }
 }

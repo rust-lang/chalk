@@ -1,3 +1,4 @@
+use crate::coinduction::CoinductionHandler;
 use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
@@ -23,6 +24,9 @@ struct RecursiveContext<I: Interner> {
     /// Things are added to the cache when we have completely processed their
     /// result.
     cache: FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+
+    /// A handler for coinductive cycles.
+    coinduct_handler: CoinductionHandler<I>,
 
     /// The maximum size for goals.
     max_size: usize,
@@ -90,6 +94,7 @@ impl<I: Interner> RecursiveContext<I> {
             cache: FxHashMap::default(),
             max_size,
             caching_enabled,
+            coinduct_handler: CoinductionHandler::default(),
         }
     }
 
@@ -160,7 +165,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // We can return.
                 self.context.search_graph[dfn].solution = current_answer;
                 self.context.search_graph[dfn].solution_priority = current_prio;
-                return *minimums;
+                return minimums.clone();
             }
 
             let old_answer = &self.context.search_graph[dfn].solution;
@@ -179,7 +184,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // with the current answer.
             if self.context.search_graph[dfn].solution == current_answer {
                 // Reached a fixed point.
-                return *minimums;
+                return minimums.clone();
             }
 
             let current_answer_is_ambig = match &current_answer {
@@ -194,7 +199,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // in fact we *must* -- otherwise, we sometimes fail to reach a
             // fixed point. See `multiple_ambiguous_cycles` for more.
             if current_answer_is_ambig {
-                return *minimums;
+                return minimums.clone();
             }
 
             // Otherwise: rollback the search tree and try again.
@@ -215,8 +220,21 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     ) -> Fallible<Solution<I>> {
         // First check the cache.
         if let Some(value) = self.context.cache.get(&goal) {
-            debug!("solve_reduced_goal: cache hit, value={:?}", value);
+            debug!("solve_goal: cache hit, value={:?}", value);
             return value.clone();
+        }
+
+        // Second check the coinduction handler's cache.
+        if self.context.coinduct_handler.in_coinductive_cycle() {
+            if let Some(value) = self.context.coinduct_handler.get_assumption_or_cached(
+                &goal,
+                self.context.search_graph.lookup(&goal),
+                minimums,
+                self.program.interner(),
+            ) {
+                debug!("solve_goal: coinduction cache hit, value={:?}", value);
+                return value;
+            }
         }
 
         // Next, check if the goal is in the search tree already.
@@ -233,6 +251,9 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                         subst: goal.trivial_substitution(self.program.interner()),
                         constraints: Constraints::empty(self.program.interner()),
                     };
+                    self.context.coinduct_handler.start_cycle(dfn);
+                    minimums.add_cycle_start(dfn);
+
                     debug!("applying coinductive semantics");
                     return Ok(Solution::Unique(Canonical {
                         value,
@@ -243,7 +264,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                 self.context.stack[depth].flag_cycle();
             }
 
-            minimums.update_from(self.context.search_graph[dfn].links);
+            minimums.update_from(&self.context.search_graph[dfn].links);
 
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
@@ -259,11 +280,10 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             let coinductive_goal = goal.is_coinductive(self.program);
             let depth = self.context.stack.push(coinductive_goal);
             let dfn = self.context.search_graph.insert(&goal, depth);
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
-            self.context.search_graph[dfn].links = subgoal_minimums;
+            let mut subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
+            self.context.search_graph[dfn].links = subgoal_minimums.clone();
             self.context.search_graph[dfn].stack_depth = None;
             self.context.stack.pop(depth);
-            minimums.update_from(subgoal_minimums);
 
             // Read final result from table.
             let result = self.context.search_graph[dfn].solution.clone();
@@ -275,9 +295,20 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
                 if self.context.caching_enabled {
-                    self.context
-                        .search_graph
-                        .move_to_cache(dfn, &mut self.context.cache);
+                    if self.context.coinduct_handler.in_coinductive_cycle() {
+                        self.context.coinduct_handler.handle_coinductive_result(
+                            dfn,
+                            &mut self.context.cache,
+                            &mut self.context.search_graph,
+                            &mut subgoal_minimums,
+                        );
+                    } else {
+                        self.context.search_graph.move_to_cache(
+                            dfn,
+                            &mut self.context.cache,
+                            move |r| r,
+                        );
+                    };
                     debug!("solve_reduced_goal: SCC head encountered, moving to cache");
                 } else {
                     debug!(
@@ -288,6 +319,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             }
 
             info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            minimums.update_from(&subgoal_minimums);
             result
         }
     }

@@ -213,15 +213,8 @@ fn coinductive_unsound1() {
 
         goal {
             forall<X> { X: C1orC2 }
-        } yields[SolverChoice::slg(3, None)] {
+        } yields {
             "No possible solution"
-        }
-
-        goal {
-            forall<X> { X: C1orC2 }
-        } yields[SolverChoice::recursive_default()] {
-            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
-            "Unique; substitution [], lifetime constraints []"
         }
     }
 }
@@ -262,6 +255,172 @@ fn coinductive_unsound2() {
 
         goal {
             forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Same as the two before but needs to show T: C2 in both
+// branches of T: C1 :- T: C2, T: C3.
+#[test]
+fn coinductive_unsound3() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            forall<T> {
+                T: C3 if T: C2, T: C4
+            }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Tests whether a nested coinductive cycle
+/// that is also unsound is handled correctly.
+#[test]
+fn coinductive_unsound_nested() {
+    test! {
+        program {
+            trait C1orC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            forall<T> {
+                T: C4 if T:C2, T: C3
+            }
+
+            forall<T> {
+                T: C1 if T: C2, T: C3
+            }
+
+            forall<T> {
+                T: C2 if T: C1, T: C4
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C1
+            }
+
+            forall<T> {
+                T: C1orC2 if T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1orC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn coinductive_unsound_nested2() {
+    test! {
+        program {
+            trait C1andC7 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            #[coinductive]
+            trait C5 { }
+
+            #[coinductive]
+            trait C6 { }
+
+            #[coinductive]
+            trait C7 { }
+
+            forall<T> {
+                T: C7 if T: C3
+            }
+
+            forall<T> {
+                T: C4 if T: C7, T: C5
+            }
+
+            forall<T> {
+                T: C3 if T:C4
+            }
+
+            forall<T> {
+                T: C6 if T: C1
+            }
+
+            forall<T> {
+                T: C2 if T: C6
+            }
+
+            forall<T> {
+                T: C2 if T: C3
+            }
+
+            forall<T> {
+                T: C1 if T: C2
+            }
+
+            forall<T> {
+                T: C1andC7 if T: C1, T: C7
+            }
+        }
+
+        goal {
+            forall<X> { X: C1andC7 }
         } yields {
             "No possible solution"
         }
@@ -450,14 +609,8 @@ fn coinductive_multicycle4() {
 
         goal {
             forall<X> { X: Any }
-        } yields_all[SolverChoice::slg(3, None)] {
-        }
-
-        goal {
-            forall<X> { X: Any }
-        } yields[SolverChoice::recursive_default()] {
-            // FIXME(chalk#399) recursive solver doesn't handle coinduction correctly
-            "Unique; substitution [], lifetime constraints []"
+        } yields {
+            "No possible solution"
         }
     }
 }
