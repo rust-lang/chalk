@@ -359,11 +359,14 @@ fn coinductive_unsound_nested() {
     }
 }
 
+/// Test with two nested coinductive cycles where the inner fails
+/// whereas the outer holds. No false positives should be kept from
+/// the inner cycle.
 #[test]
 fn coinductive_unsound_nested2() {
     test! {
         program {
-            trait C1andC7 { }
+            trait C1andC2 { }
 
             #[coinductive]
             trait C1 { }
@@ -387,40 +390,110 @@ fn coinductive_unsound_nested2() {
             trait C7 { }
 
             forall<T> {
-                T: C7 if T: C3
+                T: C2 if T: C5
             }
 
             forall<T> {
-                T: C4 if T: C7, T: C5
+                T: C6 if T: C2, T: C7
             }
 
             forall<T> {
-                T: C3 if T:C4
+                T: C5 if T:C6
             }
 
             forall<T> {
-                T: C6 if T: C1
+                T: C4 if T: C1
             }
 
             forall<T> {
-                T: C2 if T: C6
+                T: C3 if T: C5
             }
 
             forall<T> {
-                T: C2 if T: C3
+                T: C3 if T: C4
             }
 
             forall<T> {
-                T: C1 if T: C2
+                T: C1 if T: C3
             }
 
             forall<T> {
-                T: C1andC7 if T: C1, T: C7
+                T: C1andC2 if T: C1, T: C2
             }
         }
 
         goal {
-            forall<X> { X: C1andC7 }
+            forall<X> { X: C1andC2 }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+/// Another test with two nested coinductive cycles.
+/// Here the inner cycle is also dependent on the outer one.
+#[test]
+fn coinductive_unsound_inter_cycle_dependency() {
+    test! {
+        program {
+            trait C1andC2 { }
+
+            #[coinductive]
+            trait C1 { }
+
+            #[coinductive]
+            trait C2 { }
+
+            #[coinductive]
+            trait C3 { }
+
+            #[coinductive]
+            trait C4 { }
+
+            #[coinductive]
+            trait C5 { }
+
+            #[coinductive]
+            trait C6 { }
+
+            #[coinductive]
+            trait C7 { }
+
+            forall<T> {
+                T: C2 if T: C5, T: C1
+            }
+
+            forall<T> {
+                T: C6 if T: C2, T: C7
+            }
+
+            forall<T> {
+                T: C5 if T:C6
+            }
+
+            forall<T> {
+                T: C4 if T: C1
+            }
+
+            forall<T> {
+                T: C3 if T: C5
+            }
+
+            forall<T> {
+                T: C3 if T: C4
+            }
+
+            forall<T> {
+                T: C1 if T: C3
+            }
+
+            forall<T> {
+                T: C1andC2 if T: C1, T: C2
+            }
+        }
+
+        goal {
+            forall<X> { X: C1andC2 }
         } yields {
             "No possible solution"
         }

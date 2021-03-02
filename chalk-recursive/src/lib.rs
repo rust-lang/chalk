@@ -3,7 +3,7 @@ use chalk_ir::{Goal, InEnvironment, UCanonical};
 
 pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
-mod coinduction;
+mod coinduction_handler;
 mod combine;
 mod fulfill;
 mod recursive;

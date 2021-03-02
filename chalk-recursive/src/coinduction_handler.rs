@@ -49,22 +49,29 @@ impl<I: Interner> CoinductionHandler<I> {
         minimums: &mut Minimums,
         interner: &I,
     ) -> Option<Fallible<Solution<I>>> {
-        if dfn.is_some() && self.cycle_start_dfns.contains(&dfn.unwrap()) {
-            minimums.add_cycle_start(dfn.unwrap());
-            Some(Ok(Self::generate_assumption(goal, interner)))
-        } else {
-            self.temp_cache.get(goal).map(
-                |PrematureResult {
-                     result,
-                     dependencies,
-                 }| {
-                    minimums.add_cycle_starts(dependencies);
-                    result.clone()
-                },
-            )
+        if let Some(dfn) = dfn {
+            if self.cycle_start_dfns.contains(&dfn) {
+                minimums.add_cycle_start(dfn);
+                return Some(Ok(Self::generate_assumption(goal, interner)));
+            }
         }
+
+        self.temp_cache.get(goal).map(
+            |PrematureResult {
+                 result,
+                 dependencies,
+             }| {
+                minimums.add_cycle_starts(dependencies);
+                result.clone()
+            },
+        )
     }
 
+    /// Handles results inside coinductive cycles.
+    /// If the result is mature, it is moved to the standard cache.
+    /// Else if the result belongs to a coinductive cycle start
+    /// the cycle is finished. If neither of these apply,
+    /// the result is stored in the temporary cache.
     pub fn handle_coinductive_result(
         &mut self,
         dfn: DepthFirstNumber,
@@ -73,11 +80,11 @@ impl<I: Interner> CoinductionHandler<I> {
         minimums: &mut Minimums,
     ) {
         if minimums.is_mature() {
-            // If the result is mature, it can be directly cached in the standard cache.
+            // If the result is mature, it can be cached directly in the standard cache.
             search_graph.move_to_cache(dfn, cache, move |result| result);
         } else if let Some(start_dfn) = self.get_current_cycle_start() {
             if dfn == start_dfn {
-                // If the handled result belongs to the current innermost cycle
+                // If the handled result belongs to the current innermost cycle start
                 // this cycle can be finished.
                 minimums.coinductive_cycle_starts.remove(&dfn);
                 self.finish_cycle(cache, search_graph, minimums);
@@ -92,6 +99,9 @@ impl<I: Interner> CoinductionHandler<I> {
         }
     }
 
+    /// Finish a cycle by either moving all dependent premature results to
+    /// the standard cache or dropping them. Caches also the result for the start
+    /// goal of the cycle.
     fn finish_cycle(
         &mut self,
         cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
@@ -99,25 +109,33 @@ impl<I: Interner> CoinductionHandler<I> {
         minimums: &Minimums,
     ) {
         if let Some(start_dfn) = self.cycle_start_dfns.pop() {
-            if search_graph[start_dfn].solution.is_ok() {
-                for (
-                    goal,
-                    PrematureResult {
-                        result,
-                        dependencies,
-                    },
-                ) in self.temp_cache.iter_mut()
-                {
-                    dependencies.remove(&start_dfn);
-                    if dependencies.is_empty() {
-                        // The result has no pending dependencies anymore and can be moved to the standard cache.
-                        cache.insert(goal.clone(), result.clone());
+            if minimums.is_mature() {
+                // The temporarily cached results from inside the current coinductive cycle
+                // can be moved to the standard cache iff the assumption at the cycle start
+                // holds and is itself not dependent on any assumption.
+                if search_graph[start_dfn].solution.is_ok() {
+                    for (
+                        goal,
+                        PrematureResult {
+                            result,
+                            dependencies,
+                        },
+                    ) in self.temp_cache.iter_mut()
+                    {
+                        dependencies.remove(&start_dfn);
+                        if dependencies.is_empty() {
+                            // The result has no pending dependencies anymore and can be moved to the standard cache.
+                            cache.insert(goal.clone(), result.clone());
+                        }
                     }
                 }
-            }
-            if minimums.is_mature() {
+
                 search_graph.move_to_cache(start_dfn, cache, |result| result);
             } else {
+                // If the cycle start is itself dependent on another coinductive cycle assumption
+                // its result is also premature and needs to be put in the temporary cache.
+                // All results from inside th current cycle are invalidated as the concrete
+                // dependency on the outer cycle is not tracked.
                 search_graph.move_to_cache(start_dfn, &mut self.temp_cache, move |result| {
                     PrematureResult {
                         result,
@@ -126,18 +144,20 @@ impl<I: Interner> CoinductionHandler<I> {
                 });
             }
 
+            // Remove all moved or invalidated results (i.e. still dependent on the finished cycle).
             self.temp_cache.retain(
                 |_k,
                  PrematureResult {
                      result: _,
                      dependencies,
-                 }| !(dependencies.is_empty() || dependencies.contains(&start_dfn)), // Remove all moved or invalidated results.
+                 }| !(dependencies.is_empty() || dependencies.contains(&start_dfn)),
+            );
+
+            debug!(
+                "Coinductive cycle finished. Remaining temporary cache: {:?}",
+                self.temp_cache
             );
         }
-        debug!(
-            "Coinductive cycle finished. Caches: {:?} {:?}",
-            cache, self.temp_cache
-        );
     }
 
     fn generate_assumption(goal: &UCanonicalGoal<I>, interner: &I) -> Solution<I> {

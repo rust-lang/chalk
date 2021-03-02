@@ -1,4 +1,4 @@
-use crate::coinduction::CoinductionHandler;
+use crate::coinduction_handler::CoinductionHandler;
 use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
@@ -241,11 +241,9 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         if let Some(dfn) = self.context.search_graph.lookup(&goal) {
             // Check if this table is still on the stack.
             if let Some(depth) = self.context.search_graph[dfn].stack_depth {
-                // Is this a coinductive goal? If so, that is success,
-                // so we can return normally. Note that this return is
-                // not tabled.
-                //
-                // XXX how does caching with coinduction work?
+                // Is this a coinductive goal? If so, start the handling of
+                // a new coinductive cycle with this goal as its start.
+                // Return the coinductive assumption as a result.
                 if self.context.stack.coinductive_cycle_from(depth) {
                     let value = ConstrainedSubst {
                         subst: goal.trivial_substitution(self.program.interner()),
@@ -295,6 +293,8 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
                 if self.context.caching_enabled {
+                    // If the finished goal was part of a coinductive cycle
+                    // its result needs to be handled by the coinduction handler.
                     if self.context.coinduct_handler.in_coinductive_cycle() {
                         self.context.coinduct_handler.handle_coinductive_result(
                             dfn,
