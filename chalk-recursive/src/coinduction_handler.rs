@@ -1,6 +1,8 @@
+use ::std::cmp::{max, min};
 use chalk_ir::{interner::Interner, Canonical, ConstrainedSubst, Constraints, Fallible};
 use chalk_solve::Solution;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
+use std::collections::BinaryHeap;
 use tracing::debug;
 
 use crate::{
@@ -8,18 +10,42 @@ use crate::{
     Minimums, UCanonicalGoal,
 };
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct CoinductiveCycleDependencyBoundaries {
+    pub(crate) lower: DepthFirstNumber,
+    pub(crate) upper: DepthFirstNumber,
+}
+
+impl CoinductiveCycleDependencyBoundaries {
+    pub(crate) fn update_from(&mut self, other_boundaries: CoinductiveCycleDependencyBoundaries) {
+        self.lower = min(self.lower, other_boundaries.lower);
+        self.upper = max(self.upper, other_boundaries.upper);
+    }
+
+    pub(crate) fn eq_singular(&self, singular: DepthFirstNumber) -> bool {
+        self.lower == singular && self.upper == singular
+    }
+
+    pub(crate) fn new(singular: DepthFirstNumber) -> Self {
+        CoinductiveCycleDependencyBoundaries {
+            lower: singular,
+            upper: singular,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct PrematureResult<I: Interner> {
     result: Fallible<Solution<I>>,
 
-    /// All coinductive cycle assumptions this result depends on.
-    /// Must not be empty.
-    dependencies: FxHashSet<DepthFirstNumber>,
+    /// The outermost and innermost cycles on which this result depends.
+    dependency: CoinductiveCycleDependencyBoundaries,
 }
 
 pub(crate) struct CoinductionHandler<I: Interner> {
-    /// Stack of cycle start DFNs for nested cycles.
-    cycle_start_dfns: Vec<DepthFirstNumber>,
+    /// Heap of start DFNs for nested cycles.
+    /// The innermost cycle start is the first element in the heap.
+    cycle_start_dfns: BinaryHeap<DepthFirstNumber>,
 
     /// Temporary cache for premature results with
     /// corresponding cycle start DFNs.
@@ -36,7 +62,7 @@ impl<I: Interner> CoinductionHandler<I> {
     }
 
     pub fn get_current_cycle_start(&self) -> Option<DepthFirstNumber> {
-        self.cycle_start_dfns.last().copied()
+        self.cycle_start_dfns.peek().copied()
     }
 
     /// Get a cached result from the temporary cache
@@ -50,21 +76,20 @@ impl<I: Interner> CoinductionHandler<I> {
         interner: &I,
     ) -> Option<Fallible<Solution<I>>> {
         if let Some(dfn) = dfn {
-            if self.cycle_start_dfns.contains(&dfn) {
-                minimums.add_cycle_start(dfn);
+            if self.cycle_start_dfns.iter().any(|start| start == &dfn) {
+                minimums.update_coinductive_cycle_boundaries(
+                    CoinductiveCycleDependencyBoundaries::new(dfn),
+                );
                 return Some(Ok(Self::generate_assumption(goal, interner)));
             }
         }
 
-        self.temp_cache.get(goal).map(
-            |PrematureResult {
-                 result,
-                 dependencies,
-             }| {
-                minimums.add_cycle_starts(dependencies);
+        self.temp_cache
+            .get(goal)
+            .map(|PrematureResult { result, dependency }| {
+                minimums.update_coinductive_cycle_boundaries(*dependency);
                 result.clone()
-            },
-        )
+            })
     }
 
     /// Handles results inside coinductive cycles.
@@ -75,24 +100,23 @@ impl<I: Interner> CoinductionHandler<I> {
     pub fn handle_coinductive_result(
         &mut self,
         dfn: DepthFirstNumber,
-        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+        standard_cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
         search_graph: &mut SearchGraph<I>,
         minimums: &mut Minimums,
     ) {
-        if minimums.is_mature() {
+        if minimums.coinductive_cycle_boundaries.is_none() {
             // If the result is mature, it can be cached directly in the standard cache.
-            search_graph.move_to_cache(dfn, cache, move |result| result);
+            search_graph.move_to_cache(dfn, standard_cache, move |result| result);
         } else if let Some(start_dfn) = self.get_current_cycle_start() {
             if dfn == start_dfn {
                 // If the handled result belongs to the current innermost cycle start
                 // this cycle can be finished.
-                minimums.coinductive_cycle_starts.remove(&dfn);
-                self.finish_cycle(cache, search_graph, minimums);
+                self.finish_cycle(standard_cache, search_graph, minimums);
             } else {
                 search_graph.move_to_cache(dfn, &mut self.temp_cache, move |result| {
                     PrematureResult {
                         result,
-                        dependencies: minimums.coinductive_cycle_starts.clone(),
+                        dependency: minimums.coinductive_cycle_boundaries.unwrap(),
                     }
                 });
             }
@@ -104,59 +128,51 @@ impl<I: Interner> CoinductionHandler<I> {
     /// goal of the cycle.
     fn finish_cycle(
         &mut self,
-        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+        standard_cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
         search_graph: &mut SearchGraph<I>,
         minimums: &Minimums,
     ) {
         if let Some(start_dfn) = self.cycle_start_dfns.pop() {
-            if minimums.is_mature() {
-                // The temporarily cached results from inside the current coinductive cycle
-                // can be moved to the standard cache iff the assumption at the cycle start
-                // holds and is itself not dependent on any assumption.
-                if search_graph[start_dfn].solution.is_ok() {
-                    for (
-                        goal,
-                        PrematureResult {
-                            result,
-                            dependencies,
-                        },
-                    ) in self.temp_cache.iter_mut()
-                    {
-                        dependencies.remove(&start_dfn);
-                        if dependencies.is_empty() {
-                            // The result has no pending dependencies anymore and can be moved to the standard cache.
-                            cache.insert(goal.clone(), result.clone());
+            if let Some(minimum_boundaries) = minimums.coinductive_cycle_boundaries {
+                if minimum_boundaries.eq_singular(start_dfn) {
+                    // The temporarily cached results from inside the current coinductive cycle
+                    // can be moved to the standard cache iff the assumption at the cycle start
+                    // holds and is itself not dependent on any assumption.
+                    if search_graph[start_dfn].solution.is_ok() {
+                        for (goal, PrematureResult { result, dependency }) in
+                            self.temp_cache.iter_mut()
+                        {
+                            if dependency.eq_singular(start_dfn) {
+                                standard_cache.insert(goal.clone(), result.clone());
+                            }
                         }
                     }
+
+                    search_graph.move_to_cache(start_dfn, standard_cache, |result| result);
+                } else {
+                    // If the cycle start is itself dependent on another coinductive cycle assumption,
+                    // its result is also premature and can't be decided yet.
+                    // All results from inside the current cycle are invalidated as the precise
+                    // dependency on the outer cycle is not tracked.
+                    search_graph.rollback_to(start_dfn);
                 }
 
-                search_graph.move_to_cache(start_dfn, cache, |result| result);
-            } else {
-                // If the cycle start is itself dependent on another coinductive cycle assumption
-                // its result is also premature and needs to be put in the temporary cache.
-                // All results from inside th current cycle are invalidated as the concrete
-                // dependency on the outer cycle is not tracked.
-                search_graph.move_to_cache(start_dfn, &mut self.temp_cache, move |result| {
-                    PrematureResult {
-                        result,
-                        dependencies: minimums.coinductive_cycle_starts.clone(),
-                    }
-                });
+                // Remove all moved or invalidated results (i.e. still dependent on the finished cycle).
+                self.temp_cache.retain(
+                    |_k,
+                     PrematureResult {
+                         result: _,
+                         dependency,
+                     }| {
+                        dependency.lower != start_dfn && dependency.upper != start_dfn
+                    },
+                );
+
+                debug!(
+                    "Coinductive cycle finished. Remaining temporary cache: {:?}",
+                    self.temp_cache
+                );
             }
-
-            // Remove all moved or invalidated results (i.e. still dependent on the finished cycle).
-            self.temp_cache.retain(
-                |_k,
-                 PrematureResult {
-                     result: _,
-                     dependencies,
-                 }| !(dependencies.is_empty() || dependencies.contains(&start_dfn)),
-            );
-
-            debug!(
-                "Coinductive cycle finished. Remaining temporary cache: {:?}",
-                self.temp_cache
-            );
         }
     }
 
@@ -174,7 +190,7 @@ impl<I: Interner> CoinductionHandler<I> {
 impl<I: Interner> Default for CoinductionHandler<I> {
     fn default() -> Self {
         CoinductionHandler {
-            cycle_start_dfns: Vec::new(),
+            cycle_start_dfns: BinaryHeap::new(),
             temp_cache: FxHashMap::default(),
         }
     }

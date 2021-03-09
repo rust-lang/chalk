@@ -7,7 +7,7 @@ It follows the description in [this GitHub comment](https://github.com/rust-lang
 The general idea for the handling of coinductive cycles in the recursive solver is to start by assuming the goal is provable and then try to find evidence that it is not.
 This search for a disproof is done by the standard recursive solving process described in the sub-chapters before.
 
-Albeit this approach would allow for the handling of mixed inductive/co-inductive cycles, these are actually handled as errors to prevent propagation of the assumed provability outside of the coinductive cycle.
+Its is important to note that mixed inductive/co-inductive cycles are treated as errors to prevent propagation of the assumptions outside of the coinductive cycle.
 This propagation of the assumed solution might also happen in pure coinductive cycles and can potentially lead to false positives.
 
 ## Prevention of False Positives
@@ -56,12 +56,12 @@ Results for other goals are labeled premature if at least one subgoal has a prem
 Finished goals that have a premature result are then stored in the temporary cache.
 For the caches the following invariant holds: results stored in the temporary cache are by definition premature whereas all results in the standard cache are mature.
 
-For each premature result, all coinductive assumptions that result depends upon are collected and stored alongside the result in the temporary cache.
-With this information, it is possible to track the concrete dependencies of each result even if nested coinductive cycles occur.
+For each premature result, lower and upper bounds (i.e. the outermost and innermost dependencies) are collected and stored alongside the result in the temporary cache.
+With this information, it is possible to over-approximate the precise dependencies for each result even if nested coinductive cycles occur.
 If such a nested cycle is finished, all results that depend on it can either be dropped if the assumption for this cycle was disproved or they become mature and can be moved to the standard cache.
 
 A special case occurs if a cycle start depends on the coinductive assumption of an enclosing active cycle.
-In this case, the result for the cycle start is still premature after finishing the cycle and needs to be kept in the temporary cache.
+In this case, the result for the cycle start is still premature after finishing the cycle and must be dropped alongside all results that depend on it.
 The following is an example where this happens. `C5` depends indirectly on the cycle start `C1` but is itself also a cycle start. 
 Thus, these two cycles are nested and interconnected, as the cycle starting with `C1` can't be finished without the cycle starting with `C5` be finished first, which in turn depends on the first one again.
 

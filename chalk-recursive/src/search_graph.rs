@@ -7,7 +7,7 @@ use super::stack::StackDepth;
 use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
 use chalk_solve::Solution;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 use tracing::{debug, instrument};
 
 /// The "search graph" stores in-progress goals that are still
@@ -72,7 +72,7 @@ impl<I: Interner> SearchGraph<I> {
             stack_depth: Some(stack_depth),
             links: Minimums {
                 positive: dfn,
-                coinductive_cycle_starts: FxHashSet::default(),
+                coinductive_cycle_boundaries: None,
             },
         };
         self.nodes.push(node);

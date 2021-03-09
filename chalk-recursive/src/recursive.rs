@@ -1,4 +1,4 @@
-use crate::coinduction_handler::CoinductionHandler;
+use crate::coinduction_handler::{CoinductionHandler, CoinductiveCycleDependencyBoundaries};
 use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
@@ -165,7 +165,7 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // We can return.
                 self.context.search_graph[dfn].solution = current_answer;
                 self.context.search_graph[dfn].solution_priority = current_prio;
-                return minimums.clone();
+                return *minimums;
             }
 
             let old_answer = &self.context.search_graph[dfn].solution;
@@ -184,7 +184,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // with the current answer.
             if self.context.search_graph[dfn].solution == current_answer {
                 // Reached a fixed point.
-                return minimums.clone();
+                return *minimums;
             }
 
             let current_answer_is_ambig = match &current_answer {
@@ -199,7 +199,7 @@ impl<'me, I: Interner> Solver<'me, I> {
             // in fact we *must* -- otherwise, we sometimes fail to reach a
             // fixed point. See `multiple_ambiguous_cycles` for more.
             if current_answer_is_ambig {
-                return minimums.clone();
+                return *minimums;
             }
 
             // Otherwise: rollback the search tree and try again.
@@ -250,7 +250,9 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                         constraints: Constraints::empty(self.program.interner()),
                     };
                     self.context.coinduct_handler.start_cycle(dfn);
-                    minimums.add_cycle_start(dfn);
+                    minimums.update_coinductive_cycle_boundaries(
+                        CoinductiveCycleDependencyBoundaries::new(dfn),
+                    );
 
                     debug!("applying coinductive semantics");
                     return Ok(Solution::Unique(Canonical {
@@ -279,7 +281,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             let depth = self.context.stack.push(coinductive_goal);
             let dfn = self.context.search_graph.insert(&goal, depth);
             let mut subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
-            self.context.search_graph[dfn].links = subgoal_minimums.clone();
+            self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
             self.context.stack.pop(depth);
 
