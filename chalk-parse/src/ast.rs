@@ -185,6 +185,14 @@ impl AssocItemDefn {
             _ => None,
         }
     }
+
+    /// Returns the const value if it is one, `None` otherwise.
+    pub fn const_(&self) -> Option<&AssocConstDefn> {
+        match self {
+            AssocItemDefn::Const(c) => Some(c),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -309,6 +317,14 @@ impl AssocItemValue {
     pub fn ty(&self) -> Option<&AssocTyValue> {
         match self {
             AssocItemValue::Ty(ty) => Some(ty),
+            _ => None,
+        }
+    }
+
+    /// Returns the type value if it is one, `None` otherwise.
+    pub fn const_(&self) -> Option<&AssocConstValue> {
+        match self {
+            AssocItemValue::Const(c) => Some(c),
             _ => None,
         }
     }

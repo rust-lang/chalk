@@ -246,6 +246,7 @@ pub struct TraitDatum<I: Interner> {
     pub flags: TraitFlags,
 
     pub associated_ty_ids: Vec<AssocTypeId<I>>,
+    pub associated_const_ids: Vec<AssocConstId<I>>,
 
     /// If this is a well-known trait, which one? If `None`, this is a regular,
     /// user-defined trait.
@@ -497,6 +498,22 @@ pub struct AssociatedTyDatum<I: Interner> {
     pub binders: Binders<AssociatedTyDatumBound<I>>,
 }
 
+// Manual implementation to avoid I::Identifier type.
+impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
+    fn visit_with<'i, B>(
+        &self,
+        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, BreakTy = B>,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<B>
+    where
+        I: 'i,
+    {
+        try_break!(self.trait_id.visit_with(visitor, outer_binder));
+        try_break!(self.id.visit_with(visitor, outer_binder));
+        self.binders.visit_with(visitor, outer_binder)
+    }
+}
+
 /// Represents an associated const declaration found inside of a trait.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedConstDatum<I: Interner> {
@@ -517,7 +534,7 @@ pub struct AssociatedConstDatum<I: Interner> {
 }
 
 // Manual implementation to avoid I::Identifier type.
-impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
+impl<I: Interner> Visit<I> for AssociatedConstDatum<I> {
     fn visit_with<'i, B>(
         &self,
         visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, BreakTy = B>,
@@ -528,7 +545,8 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
     {
         try_break!(self.trait_id.visit_with(visitor, outer_binder));
         try_break!(self.id.visit_with(visitor, outer_binder));
-        self.binders.visit_with(visitor, outer_binder)
+        try_break!(self.ty.visit_with(visitor, outer_binder));
+        self.value.visit_with(visitor, outer_binder)
     }
 }
 

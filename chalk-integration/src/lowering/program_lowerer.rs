@@ -96,7 +96,6 @@ impl ProgramLowerer {
                             }
                             AssocItemValue::Const(acv) => {
                                 let acv_id = AssociatedConstValueId(self.next_item_id());
-
                                 self.associated_const_value_ids
                                     .insert((ImplId(raw_id), acv.name.str.clone()), acv_id);
                             }

@@ -232,6 +232,16 @@ impl Env<'_> {
             .ok_or(RustIrError::MissingAssociatedType(ident.clone()))
     }
 
+    pub fn lookup_associated_const(
+        &self,
+        trait_id: TraitId<ChalkIr>,
+        ident: &Identifier,
+    ) -> LowerResult<&AssociatedConstLookup> {
+        self.associated_const_lookups
+            .get(&(trait_id, ident.str.clone()))
+            .ok_or(RustIrError::MissingAssociatedConst(ident.clone()))
+    }
+
     /// Introduces new parameters, shifting the indices of existing
     /// parameters to accommodate them. The indices of the new binders
     /// will be assigned in order as they are iterated.

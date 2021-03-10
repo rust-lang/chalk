@@ -169,6 +169,20 @@ impl tls::DebugContext for Program {
         }
     }
 
+    fn debug_assoc_const_id(
+        &self,
+        assoc_const_id: AssocConstId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(d) = self.associated_const_data.get(&assoc_const_id) {
+            write!(fmt, "({:?}::{})", d.trait_id, d.name)
+        } else {
+            fmt.debug_struct("InvalidAssocConstId")
+                .field("index", &assoc_const_id.0)
+                .finish()
+        }
+    }
+
     fn debug_opaque_ty_id(
         &self,
         opaque_ty_id: OpaqueTyId<ChalkIr>,

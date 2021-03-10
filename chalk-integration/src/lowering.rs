@@ -906,7 +906,7 @@ impl LowerWithEnv
                 && impl_
                     .assoc_item_values
                     .iter()
-                    .all(|item| item.ty().is_none())
+                    .any(|item| item.ty().is_some())
             {
                 Err(RustIrError::NegativeImplAssociatedValues(
                     impl_.trait_ref.trait_name.clone(),
@@ -927,10 +927,7 @@ impl LowerWithEnv
         let associated_ty_value_ids = impl_
             .assoc_item_values
             .iter()
-            .filter_map(|item| match item {
-                AssocItemValue::Ty(ty) => Some(ty),
-                _ => None,
-            })
+            .filter_map(|item| item.ty())
             .map(|atv| associated_ty_value_ids[&(*impl_id, atv.name.str.clone())])
             .collect();
 
@@ -939,10 +936,7 @@ impl LowerWithEnv
         let associated_const_value_ids = impl_
             .assoc_item_values
             .iter()
-            .filter_map(|item| match item {
-                AssocItemValue::Const(c) => Some(c),
-                _ => None,
-            })
+            .filter_map(|item| item.const_())
             .map(|acv| associated_const_value_ids[&(*impl_id, acv.name.str.clone())])
             .collect();
 
@@ -1028,11 +1022,23 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
             .map(|defn| env.lookup_associated_ty(*trait_id, &defn.name).unwrap().id)
             .collect();
 
+        let associated_const_ids: Vec<_> = trait_defn
+            .assoc_item_defns
+            .iter()
+            .filter_map(|item| item.const_())
+            .map(|defn| {
+                env.lookup_associated_const(*trait_id, &defn.name)
+                    .unwrap()
+                    .id
+            })
+            .collect();
+
         let trait_datum = rust_ir::TraitDatum {
             id: *trait_id,
             binders,
             flags: trait_defn.flags.lower(),
             associated_ty_ids,
+            associated_const_ids,
             well_known: trait_defn.well_known.map(|def| def.lower()),
         };
 
