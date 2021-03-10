@@ -28,10 +28,10 @@ The following crates are used to define the REPL and internal testing
 harness. These crates build on the crates above. Essentially, they
 define a kind of "minimal embedding" of chalk.
 
-* The `chalk-parser` crate can parse Rust syntax to product an AST.
+* The `chalk-parser` crate can parse Rust syntax to produce an AST.
 * The `chalk-integration` crate can take that AST and use it to drive the
   `chalk-solve` crate above. The AST is converted into Rust IR by a process
-  called "lowering'.
+  called "lowering".
 * Finally, the main `chalk` crate, along with the testing crate in the
   `tests` directory, define the actual entry points.
 
