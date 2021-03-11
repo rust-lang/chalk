@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["combine",""],["fulfill",""],["recursive",""],["search_graph",""],["solve",""],["stack",""]],"struct":[["Minimums","The `minimums` struct is used while solving to track whether we encountered any cycles in the process."],["RecursiveSolver",""]],"type":[["UCanonicalGoal",""]]});

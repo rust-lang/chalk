@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["chalk_ir"] = [{"text":"impl&lt;IT:&nbsp;Iterator, U&gt; Iterator for Casted&lt;'_, IT, U&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;IT::Item: CastTo&lt;U&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;U: HasInterner,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;V&gt; Iterator for BindersIntoIterator&lt;V&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;V: HasInterner + IntoIterator,<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;V as IntoIterator&gt;::Item: HasInterner&lt;Interner = V::Interner&gt;,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

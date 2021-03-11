@@ -1,0 +1,5 @@
+(function() {var implementors = {};
+implementors["chalk_engine"] = [{"text":"impl&lt;'forest, I:&nbsp;Interner&gt; Drop for SolveState&lt;'forest, I&gt;","synthetic":false,"types":[]}];
+implementors["chalk_ir"] = [{"text":"impl&lt;T, U&gt; Drop for VecMappedInPlace&lt;T, U&gt;","synthetic":false,"types":[]}];
+implementors["chalk_solve"] = [{"text":"impl&lt;I, W, DB, P&gt; Drop for WriteOnDropRustIrDatabase&lt;I, W, DB, P&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;I: Interner,<br>&nbsp;&nbsp;&nbsp;&nbsp;W: Write,<br>&nbsp;&nbsp;&nbsp;&nbsp;DB: RustIrDatabase&lt;I&gt;,<br>&nbsp;&nbsp;&nbsp;&nbsp;P: Borrow&lt;DB&gt;,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

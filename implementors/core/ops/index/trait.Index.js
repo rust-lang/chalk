@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["chalk_engine"] = [{"text":"impl&lt;I:&nbsp;Interner&gt; Index&lt;StackIndex&gt; for Stack&lt;I&gt;","synthetic":false,"types":[]},{"text":"impl&lt;I:&nbsp;Interner&gt; Index&lt;TableIndex&gt; for Tables&lt;I&gt;","synthetic":false,"types":[]}];
+implementors["chalk_recursive"] = [{"text":"impl&lt;I:&nbsp;Interner&gt; Index&lt;DepthFirstNumber&gt; for SearchGraph&lt;I&gt;","synthetic":false,"types":[]},{"text":"impl Index&lt;StackDepth&gt; for Stack","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

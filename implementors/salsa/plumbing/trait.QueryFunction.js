@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["chalk_integration"] = [{"text":"impl QueryFunction for ProgramIrQuery","synthetic":false,"types":[]},{"text":"impl QueryFunction for CoherenceQuery","synthetic":false,"types":[]},{"text":"impl QueryFunction for OrphanCheckQuery","synthetic":false,"types":[]},{"text":"impl QueryFunction for CheckedProgramQuery","synthetic":false,"types":[]},{"text":"impl QueryFunction for EnvironmentQuery","synthetic":false,"types":[]},{"text":"impl QueryFunction for SolverQuery","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
