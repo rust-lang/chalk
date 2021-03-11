@@ -9,7 +9,7 @@ use chalk_ir::{
 use std::collections::BTreeSet;
 
 /// Collects the identifiers needed to resolve all the names for a given
-/// set of identifers, excluding identifiers we already have.
+/// set of identifiers, excluding identifiers we already have.
 ///
 /// When recording identifiers to print, the `LoggingRustIrDatabase` only
 /// records identifiers the solver uses. But the solver assumes well-formedness,

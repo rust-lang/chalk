@@ -514,7 +514,13 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
     }
 }
 
-/// Represents an associated const declaration found inside of a trait.
+/// Represents an associated const declaration found inside of a trait:
+///
+/// ```notrust
+/// trait Foo<P1..Pn> { // P0 is Self
+///     const Bar: [type] (= [const]);
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AssociatedConstDatum<I: Interner> {
     /// The trait this associated const is defined in.
@@ -529,8 +535,9 @@ pub struct AssociatedConstDatum<I: Interner> {
     /// Type of this associated const.
     pub ty: Ty<I>,
 
-    /// Value of this associated const.
-    pub value: Option<Const<I>>,
+    /// Value of this associated const with variables `P0...Pn`
+    /// from the trait the assoc const is in.
+    pub binders: Option<Binders<Const<I>>>,
 }
 
 // Manual implementation to avoid I::Identifier type.
@@ -546,7 +553,7 @@ impl<I: Interner> Visit<I> for AssociatedConstDatum<I> {
         try_break!(self.trait_id.visit_with(visitor, outer_binder));
         try_break!(self.id.visit_with(visitor, outer_binder));
         try_break!(self.ty.visit_with(visitor, outer_binder));
-        self.value.visit_with(visitor, outer_binder)
+        self.binders.visit_with(visitor, outer_binder)
     }
 }
 
@@ -663,7 +670,7 @@ pub struct AssociatedTyValueBound<I: Interner> {
 pub struct AssociatedConstValue<I: Interner> {
     pub impl_id: ImplId<I>,
     pub associated_const_id: AssocConstId<I>,
-    pub value: Const<I>,
+    pub value: Binders<Const<I>>,
 }
 
 /// Represents the bounds for an `impl Trait` type.

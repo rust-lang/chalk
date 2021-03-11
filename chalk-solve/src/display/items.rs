@@ -485,7 +485,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedConstValue<I> {
 
         write!(f, "{}const {}", s.indent(), assoc_const_data.id.display(s))?;
         write!(f, ": {}", assoc_const_data.ty.display(s))?;
-        write!(f, " = {};", self.value.display(s))?;
+        write!(f, " = {};", self.value.skip_binders().display(s))?;
         Ok(())
     }
 }

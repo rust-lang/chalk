@@ -340,6 +340,16 @@ impl ProgramLowerer {
                             AssocItemDefn::Const(assoc_const_defn) => {
                                 let lookup = &self.associated_const_lookups
                                     [&(trait_id, assoc_const_defn.name.str.clone())];
+
+                                let variable_kinds = trait_defn.all_parameters();
+                                let binders = assoc_const_defn
+                                    .value
+                                    .as_ref()
+                                    .map(|value| {
+                                        empty_env
+                                            .in_binders(variable_kinds, |env| value.lower(&env))
+                                    })
+                                    .transpose()?;
                                 associated_const_data.insert(
                                     lookup.id,
                                     Arc::new(rust_ir::AssociatedConstDatum {
@@ -347,11 +357,7 @@ impl ProgramLowerer {
                                         id: lookup.id,
                                         name: assoc_const_defn.name.str.clone(),
                                         ty: assoc_const_defn.ty.lower(&empty_env)?,
-                                        value: assoc_const_defn
-                                            .value
-                                            .clone()
-                                            .map(|v| v.lower(&empty_env))
-                                            .transpose()?,
+                                        binders,
                                     }),
                                 );
                             }
@@ -409,7 +415,9 @@ impl ProgramLowerer {
                                 let lookup = &self.associated_const_lookups
                                     [&(trait_id, acv.name.str.clone())];
 
-                                let value = acv.value.lower(&empty_env)?;
+                                let variable_kinds = impl_defn.all_parameters();
+                                let value = empty_env
+                                    .in_binders(variable_kinds, |env| acv.value.lower(env))?;
                                 associated_const_values.insert(
                                     acv_id,
                                     Arc::new(rust_ir::AssociatedConstValue {
