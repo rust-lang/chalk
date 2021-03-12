@@ -265,6 +265,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         self.db.assoc_type_name(assoc_ty_id)
     }
 
+    fn assoc_const_name(&self, assoc_const_id: chalk_ir::AssocConstId<I>) -> String {
+        self.db.assoc_const_name(assoc_const_id)
+    }
+
     fn opaque_type_name(&self, opaque_ty_id: chalk_ir::OpaqueTyId<I>) -> String {
         self.db.opaque_type_name(opaque_ty_id)
     }

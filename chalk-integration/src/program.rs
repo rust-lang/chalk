@@ -626,6 +626,14 @@ impl RustIrDatabase<ChalkIr> for Program {
             .to_string()
     }
 
+    fn assoc_const_name(&self, assoc_const_id: AssocConstId<ChalkIr>) -> String {
+        self.associated_const_data
+            .get(&assoc_const_id)
+            .unwrap()
+            .name
+            .to_string()
+    }
+
     // Mirrors current (07a63e6d1fabf3560e8e1e17c1d56b10a06152d9) implementation in rustc
     fn discriminant_type(&self, ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
         let interner = self.interner();

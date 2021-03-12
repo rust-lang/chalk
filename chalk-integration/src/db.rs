@@ -250,6 +250,10 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().assoc_type_name(assoc_ty_id)
     }
 
+    fn assoc_const_name(&self, assoc_const_id: AssocConstId<ChalkIr>) -> String {
+        self.program_ir().unwrap().assoc_const_name(assoc_const_id)
+    }
+
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<ChalkIr>) -> String {
         self.program_ir().unwrap().opaque_type_name(opaque_ty_id)
     }

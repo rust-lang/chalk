@@ -49,6 +49,9 @@ where
     fn assoc_type_name(&self, _assoc_ty_id: chalk_ir::AssocTypeId<I>) -> String {
         "Foo".to_owned()
     }
+    fn assoc_const_name(&self, _assoc_const_id: chalk_ir::AssocConstId<I>) -> String {
+        "Foo".to_owned()
+    }
     fn opaque_type_name(&self, _opaque_ty_id: chalk_ir::OpaqueTyId<I>) -> String {
         "Foo".to_owned()
     }

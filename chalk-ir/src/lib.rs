@@ -722,6 +722,7 @@ impl<I: Interner> TyKind<I> {
                         ConstValue::Placeholder(_) => {
                             TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
                         }
+                        ConstValue::ConstProjection(_) => todo!(),
                     }
             }
             TyKind::Placeholder(_) => TypeFlags::HAS_TY_PLACEHOLDER,
@@ -1184,6 +1185,7 @@ impl<I: Interner> Const<I> {
             ConstValue::InferenceVar(_) => false,
             ConstValue::Placeholder(_) => false,
             ConstValue::Concrete(_) => false,
+            ConstValue::ConstProjection(_) => todo!(),
         }
     }
 }
@@ -1208,9 +1210,11 @@ pub enum ConstValue<I: Interner> {
     Placeholder(PlaceholderIndex),
     /// Concrete constant value.
     Concrete(ConcreteConst<I>),
+    /// Projection for associated constant.
+    ConstProjection(ConstProjection<I>),
 }
 
-impl<I: Interner> Copy for ConstValue<I> where I::InternedConcreteConst: Copy {}
+// impl<I: Interner> Copy for ConstValue<I> where I::InternedConcreteConst: Copy {}
 
 impl<I: Interner> ConstData<I> {
     /// Wraps the constant data in a `Const`.
@@ -1232,6 +1236,15 @@ impl<I: Interner> ConcreteConst<I> {
     pub fn const_eq(&self, ty: &Ty<I>, other: &ConcreteConst<I>, interner: &I) -> bool {
         interner.const_eq(&ty.interned, &self.interned, &other.interned)
     }
+}
+
+/// Projection for an associated constant.
+#[derive(Clone, PartialEq, Eq, Hash, HasInterner)]
+pub struct ConstProjection<I: Interner> {
+    /// The id for the associated constant.
+    pub associated_const_id: AssocConstId<I>,
+    /// The substitution for the projection.
+    pub substitution: Substitution<I>,
 }
 
 /// A Rust lifetime.
@@ -1518,6 +1531,7 @@ impl<I: Interner> GenericArg<I> {
                             | TypeFlags::STILL_FURTHER_SPECIALIZABLE
                     }
                     ConstValue::Concrete(_) => flags,
+                    ConstValue::ConstProjection(_) => todo!(),
                 }
             }
         }

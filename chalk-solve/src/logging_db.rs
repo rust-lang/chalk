@@ -255,6 +255,10 @@ where
         self.ws.db().assoc_type_name(assoc_ty_id)
     }
 
+    fn assoc_const_name(&self, assoc_const_id: AssocConstId<I>) -> String {
+        self.ws.db().assoc_const_name(assoc_const_id)
+    }
+
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
         self.ws.db().opaque_type_name(opaque_ty_id)
     }
@@ -523,6 +527,10 @@ where
 
     fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
         self.db.assoc_type_name(assoc_ty_id)
+    }
+
+    fn assoc_const_name(&self, assoc_const_id: AssocConstId<I>) -> String {
+        self.db.assoc_const_name(assoc_const_id)
     }
 
     fn opaque_type_name(&self, opaque_ty_id: OpaqueTyId<I>) -> String {
