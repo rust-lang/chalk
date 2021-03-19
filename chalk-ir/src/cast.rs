@@ -111,6 +111,12 @@ impl<I: Interner> CastTo<WhereClause<I>> for LifetimeOutlives<I> {
     }
 }
 
+impl<I: Interner> CastTo<WhereClause<I>> for TypeOutlives<I> {
+    fn cast_to(self, _interner: &I) -> WhereClause<I> {
+        WhereClause::TypeOutlives(self)
+    }
+}
+
 impl<T, I> CastTo<DomainGoal<I>> for T
 where
     T: CastTo<WhereClause<I>>,
