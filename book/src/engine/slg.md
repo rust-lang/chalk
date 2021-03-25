@@ -252,7 +252,7 @@ Since we now have an answer, `ensure_answer(T1, A0)` will return `Ok`
 to the table T0, indicating that answer A0 is available. T0 now has
 the job of incorporating that result into its active strand. It does
 this in two ways. First, it creates a new strand that is looking for
-the next possible answer of T1. Next, it incorpoates the answer from
+the next possible answer of T1. Next, it incorporates the answer from
 A0 and removes the subgoal. The resulting state of table T0 is:
 
 ```text

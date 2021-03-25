@@ -59,11 +59,11 @@ Examples for binders:
 - A sum `\sum_n x_n` binds the index variable `n`.
 
 ## Canonical Form
-A formula in canonical form has the property that its DeBruijn indices are
+A formula in canonical form has the property that its De Bruijn indices are
 minimized. For example when the formula `forall<0, 1> { 0: A && 1: B }` is
 processed, both "branches" `0: A` and `1: B` are processed individually. The
 first branch would be in canonical form, the second branch not since the
-occurring DeBruijn index `1` could be replaced with `0`.
+occurring De Bruijn index `1` could be replaced with `0`.
 
 ## Clause
 A clause is the disjunction of several expressions. For example the clause
@@ -95,8 +95,8 @@ impl C for A {}
 is expressed as the *Horn clause* `(A: B) && (A: C)`. Note the missing
 consequence.
 
-## DeBruijn Index
-DeBruijn indices numerate literals that are bound in an unambiguous way. The
+## De Bruijn Index
+De Bruijn indices numerate literals that are bound in an unambiguous way. The
 literal is given the number of its binder. The indices start at zero from the
 innermost binder increasing from the inside out.
 
@@ -105,7 +105,7 @@ literal names `U` and `T` are replaced with `0` and `1` respectively and the nam
 { exists<_> { 1: Foo<Item=0> } }`.
 
 As another example, in `forall<X, Y> { forall <Z> { X } }`, `X` is represented
-as `^1.0`. The `1` represents the de Bruijn index of the variable and the `0`
+as `^1.0`. The `1` represents the De Bruijn index of the variable and the `0`
 represents the index in that scope: `X` is bound in the second scope counting
 from where it is referenced, and it is the first variable bound in that scope.
 
@@ -127,7 +127,7 @@ goal.
 
 ## Normal form
 To say that a statement is in a certain *normal form* means that the pattern in
-which the subformulas are arranged fulfil certain rules. The individual patterns
+which the subformulas are arranged fulfill certain rules. The individual patterns
 have different advantages for their manipulation.
 
 ### Conjunctive normal form (CNF)

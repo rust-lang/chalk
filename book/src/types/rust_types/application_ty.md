@@ -23,14 +23,14 @@ A `Generator` represents a Rust generator. There are three major components
 to a generator:
 
 * Upvars - similar to closure upvars, they reference values outside of the generator,
-  and are stored across al yield points.
+  and are stored across all yield points.
 * Resume/yield/return types - the types produced/consumed by various generator methods.
   These are not stored in the generator across yield points - they are only
   used when the generator is running.
 * Generator witness - see the `Generator Witness` section below.
 
 Of these types, only upvars and resume/yield/return are stored directly in `GeneratorDatum`
-(which is acessed via `RustIrDatabase`). The generator witness is implicitly associated with
+(which is accessed via `RustIrDatabase`). The generator witness is implicitly associated with
 the generator by virtue of sharing the same `GeneratorId`. It is only used when determining
 auto trait impls, where it is considered a 'constituent type'.
 

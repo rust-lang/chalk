@@ -183,7 +183,7 @@ of  "local" implied bound reasoning which would say
 only be done within our `foo` function in order to avoid the earlier
 problem where we had a global clause.
 
-We can apply these local reasonings everywhere we can have an environment
+We can apply this local reasoning everywhere we can have an environment
 -- i.e. when we can write where clauses -- that is, inside impls,
 trait declarations, and type declarations.
 
