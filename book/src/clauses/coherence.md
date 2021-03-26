@@ -81,7 +81,7 @@ Given an impl of the form `impl<T0…Tn> Trait<P1…Pn> for P0`, the impl is all
         - This only really applies if we allowed fundamental types with multiple type parameters
         - Since we don’t do that yet, we can ignore this for the time being
     - All types `Pj` such that `j < i` do not contain `T0…Tn` at any level of depth (i.e. the types are **fully visible** **—** “visible” meaning that the type is a known type and not a type parameter or variable)
-## Modelling The Orphan Check
+## Modeling The Orphan Check
 
 Determining how to model these rules in chalk is actually quite straightforward at this point. We have an exact specification of how the rules are meant to work and we can translate that directly. 
 
@@ -122,7 +122,7 @@ forall<Self, P1...Pn> {
     IsLocal(Pn)
 }
 ```
-Here, we have modelled every possible case of `P1` to `Pn` being local and then checked if all prior type parameters are fully visible. This truly is a direct translation of the rules listed above!
+Here, we have modeled every possible case of `P1` to `Pn` being local and then checked if all prior type parameters are fully visible. This truly is a direct translation of the rules listed above!
 
 Now, to complete the orphan check, we can iterate over each impl of the same form as before and check if `LocalImplAllowed(P0: Trait<P1…Pn>)` is provable.
 
@@ -166,7 +166,7 @@ The conclusion from all of this is that it is perfectly safe to rule out impls t
 
 **Downstream Crates:** Downstream crates come into play because all traits in upstream crates and in the current crate can potentially be implemented by downstream crates using the forms allowed by the orphan rules. In essence, we always need to assume that downstream crates will implement traits in all ways that compile.
 
-## Discussion: Modelling the Overlap Check
+## Discussion: Modeling the Overlap Check
 
 [Aaron’s excellent blog post](https://aturon.github.io/blog/2017/04/24/negative-chalk/) talks about this exact problem from the point of view of negative reasoning. It also describes a potential solution which we will apply here to solve our problem.
 
@@ -240,7 +240,7 @@ forall<T> { DownstreamType(MyFundamentalType<T>) :- DownstreamType(T) }
 
 ## Overlap Check in Chalk
 
-Thus, based on the discussion above, the overlap check with coherence in mind can be modelled in chalk with the following:
+Thus, based on the discussion above, the overlap check with coherence in mind can be modeled in chalk with the following:
 
 
 - All disjoint queries take place inside of `compatible`
@@ -318,7 +318,7 @@ Initially, when Niko and I started working on this, Niko suggested the following
 > }
 > ```
 
-This appears to make sense because we need to assume that any impls that the current crate cannot add itself may exist somewhere else. By using `not { LocalImplAllowed(…) }`, we modelled exactly that. The problem is, that this assumption is actually too strong. What we actually need to model is that any **compatible** impls that the current crate cannot add itself may exist somewhere else. This is a **subset** of the impls covered by `not { LocalImplAllowed(…) }`.
+This appears to make sense because we need to assume that any impls that the current crate cannot add itself may exist somewhere else. By using `not { LocalImplAllowed(…) }`, we modeled exactly that. The problem is, that this assumption is actually too strong. What we actually need to model is that any **compatible** impls that the current crate cannot add itself may exist somewhere else. This is a **subset** of the impls covered by `not { LocalImplAllowed(…) }`.
 
 Notes to be added somewhere:
 

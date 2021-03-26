@@ -17,7 +17,7 @@ What happens is that we
 
 * start to prove C1
 * start to prove C2
-* see a recursive attempt to prove C1, assume it is succesful
+* see a recursive attempt to prove C1, assume it is successful
 * consider C2 proved **and cache this**
 * start to prove C3, fail
 * consider C1 **unproven**
@@ -92,7 +92,7 @@ This is true for all `A, B`
 ### High-level idea
 
 * When we encounter a co-inductive subgoal, we delay them in the current `Strand`
-* When all subgoals have been tested, and there are remaining delayed co-inductive subgoals, this is propogated up, marking the current `Strand` as co-inductive
+* When all subgoals have been tested, and there are remaining delayed co-inductive subgoals, this is propagated up, marking the current `Strand` as co-inductive
 * When the co-inductive `Strand`s reach the root table, we only then pursue an answer
 
 ## Niko's proposed solution
@@ -195,7 +195,7 @@ I think when we get a new answer, we want it to *overwrite* the old answer in pl
 
 In particular, it could be that the table already has a "complete" set of answers -- i.e., somebody invoked `ensure_answer(N)` and got back `None`. We don't want to be adding new answers which would change the result of that call. It *is* a bit strange that we are changing the result of `ensure_answer(i)` for the current `i`, but then the result is the same answer, just a bit more elaborated.
 
-The idea then would be to create a strand *associated with this answer somehow* (it doesn't, I don't think, live in the normal strand table; we probably have a separate "refinment strand" table). This strand has as its subgoals the delayed subgoals. It pursues them. This either results in an answer (which replaces the existing answer) or an error (in which case the existing answer is marked as *error*). This may require extending strand with an optional answer index that it should overwrite, or perhaps we thread it down as an argument to `pursue_strand` (optional because, in the normal mode, we are just appending a new answer).
+The idea then would be to create a strand *associated with this answer somehow* (it doesn't, I don't think, live in the normal strand table; we probably have a separate "refinement strand" table). This strand has as its subgoals the delayed subgoals. It pursues them. This either results in an answer (which replaces the existing answer) or an error (in which case the existing answer is marked as *error*). This may require extending strand with an optional answer index that it should overwrite, or perhaps we thread it down as an argument to `pursue_strand` (optional because, in the normal mode, we are just appending a new answer).
 
 (Question: What distinguishes root answer? Nothing -- we could actually do this process for any answer, so long as the delayed subgoals are not to tables actively on the stack. This just happens to be trivially true for root answers. The key part though is that the answer must be registered in the table first before the refinement strand is created, see Delayed Self-Cycle Variant 3.)
 

@@ -32,7 +32,7 @@ As either `Answer`s are found for the selected `Table`, entries on the stack are
 
 ## Table creation
 
-As mentioned before, whenever a new `Goal` is encounted, a new [`Table`] is
+As mentioned before, whenever a new `Goal` is encountered, a new [`Table`] is
 created to store current and future answers. First, the [`Goal`] is converted into
 an `HhGoal`. If it can be simplified, then a `Strand` with one or more
 subgoals will be generated and can be followed as above. Otherwise, if it is a
@@ -86,7 +86,7 @@ anywhere.
 ## Cycles
 
 If while pursuing a `Goal`, the engine encounters the same `Table` twice, then a
-cycle has occured. If the cycle is not coinductive (see next), then there is
+cycle has occurred. If the cycle is not coinductive (see next), then there is
 nothing that can be gained from taking this route. We mark how far up the stack
 is in the cycle, and try the next `Strand`. If all `Strand`s for a table
 encounter a cycle, then we know that the current selected `Goal` has no more

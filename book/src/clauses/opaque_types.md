@@ -65,7 +65,7 @@ A chalk opaque type declaration has several parts:
 * The **generic parameters** `P0..Pn`. In real Rust, these parameters are inherited
   from the context in which the `impl Trait` appeared. In our example, these
   parameters come from the surrounding function. Note that in real Rust the set
-  of generic parmaeters is a *subset* of those that appear on the surrounding
+  of generic parameters is a *subset* of those that appear on the surrounding
   function: in particular, lifetime parameters may not appear unless they explicitly
   appear in the opaque type's bounds.
 * The **bounds**, which would be `IntoIterator<Item = u32> + 'a` in our example.
@@ -75,7 +75,7 @@ A chalk opaque type declaration has several parts:
 * The **where clauses**, which would be `T: Copy` and `T: Into<u32>` in our
   example. These are conditions that must hold on `V0..Vn` for
   `OpaqueTypeName<V0..Vn>` to be a valid type.
-    * Note that constrast with bounds: bounds are things that the hidden type must meet
+    * Note that this contrasts with bounds: bounds are things that the hidden type must meet
       but which the rest of the code can assume to be true. Where clauses are things
       that the rest of the code must prove to be true in order to use the opaque type.
       In our example, then, a type like `AsU32sReturn<'a, String>` would be invalid

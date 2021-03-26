@@ -8,7 +8,7 @@ Rust types, or Rust logic.
 
 The engine implements the following PROLOG logic concepts. Some of these
 have been published on previously, and some are `Chalk`-specific. This isn't
-necesarily an exhaustive list:
+necessarily an exhaustive list:
 - Basic logic
 - Negation
 - Floundering
@@ -18,6 +18,6 @@ necesarily an exhaustive list:
 
 Throughout most of this chapter, the specifics in regards to
 `Canonicalization` and `UCanonicalization` are avoided. These are important
-concepts to understand, but don't particulary help to understand how
+concepts to understand, but don't particularly help to understand how
 `chalk-engine` *works*. In a few places, it may be highlighted if it *is*
 important.

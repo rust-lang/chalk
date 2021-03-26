@@ -142,7 +142,7 @@ them in the [aliases chapter](./rust_types/alias.md).
 The `BoundVar` variant represents some variable that is bound in
 an outer term. For example, given a term like `forall<X> {
 Implemented(X: Trait) }`, the `X` is bound. Bound variables in chalk
-(like rustc) use de bruijin indices (See below).
+(like rustc) use De Bruijn indices (See below).
 
 Bound variables are never directly equated, as any bound variables would have
 been instantiated with either inference variables or placeholders.
