@@ -162,13 +162,13 @@ other type without any effect, and so forth.
 
 ## Mapping to rustc types
 
-The rustc [`TyKind`] enum is almost equivalent to chalk's. This
+The rustc [`TyKind`][Rustc-TyKind] enum is almost equivalent to chalk's. This
 section describes how the rustc types can be mapped to chalk
 types. The intention is that, at least when transitioning, rustc would
-implement the `Interner` trait and would map from the [`TyKind`]
-enum to chalk's `TyKind` on the fly, when `data()` is invoked.
+implement the `Interner` trait and would map from the [`TyKind`][Rustc-TyKind]
+enum to chalk's [`TyKind`] on the fly, when `data()` is invoked.
 
-[`TyKind`]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html
+[Rustc-TyKind]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/enum.TyKind.html
 
 | rustc type | chalk variant (and some notes) |
 | ------------- | ------------------ |
