@@ -34,6 +34,21 @@ Of these types, only upvars and resume/yield/return are stored directly in `Gene
 the generator by virtue of sharing the same `GeneratorId`. It is only used when determining
 auto trait impls, where it is considered a 'constituent type'.
 
+For example:
+
+```rust,ignore
+// This is not "real" syntax at the moment.
+fn gen() -> Bar {
+  let a = yield 0usize;
+  use(a)
+}
+
+fn use(_: usize) -> Bar {}
+```
+
+The type of yield would be `usize`, the resume type would be the type of `a` and the return type
+would be `Bar`.
+
 ### Generator witness types
 
 The `GeneratorWitness` variant represents the generator witness of
@@ -47,6 +62,8 @@ a `yield` point.
 Unlike other types, witnesses include bound, existential
 lifetimes, which refer to lifetimes within the suspended stack frame.
 You can think of it as a type like `exists<'a> { (T...) }`.
+As an example, imagine that a type that isn't `Send` lives across a `yield`, then the generator
+itself can't be `Send`.
 
 Witnesses have a binder for the erased lifetime(s), which must be
 handled specifically in equating and so forth. In many ways,
