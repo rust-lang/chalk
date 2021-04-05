@@ -212,7 +212,9 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // Check if this table is still on the stack.
             if let Some(depth) = self.context.search_graph[dfn].stack_depth {
                 self.context.stack[depth].flag_cycle();
-                // Mixed cycles are not allowed.
+                // Mixed cycles are not allowed. For mor information about this
+                // see the corresponding section in the coinduction chapter:
+                // https://rust-lang.github.io/chalk/book/recursive/coinduction.html#mixed-co-inductive-and-inductive-cycles
                 if self
                     .context
                     .stack
