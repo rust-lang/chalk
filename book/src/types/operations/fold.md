@@ -62,8 +62,14 @@ Each callback in the [`Folder`] trait takes a `binders` argument. This indicates
 the number of binders that we have traversed during folding, which is relevant for De Bruijn indices.
 So e.g. a bound variable with depth 1, if invoked with a `binders` value of 1, indicates something that was bound to something external to the fold.
 
-XXX explain with examples and in more detail
-  
+For example, consider:
+
+```rust,ignore
+Foo<'a>: for<'b> Bar<'b>
+```
+
+In this case, `Foo<'a>` gets visited with depth 0 and `Bar<'b>` gets visited with depth 1.
+
 ## The `Fold::Result` associated type
 
 The `Fold` trait defines a [`Result`] associated type, indicating the
