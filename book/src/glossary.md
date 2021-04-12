@@ -229,3 +229,15 @@ valuation `A = true, B = false` makes the premise true and the conclusion false.
 ## Valuation
 A valuation is an assignment of values to all variables inside a logical
 formula.
+
+## Fixed-Points
+A fixed-point of a function `f` is a value `x` for which `f(x)=x`.
+Similarly a pre-fixed-point is defined as `x ≤ f(x)`, whereas for a post-fixed-point it holds that `f(x) ≤ x`.
+
+A least fixed-point (lfp) of `f` is the fixed-point `x` of `f` for which all other fixed-points `y` are greater or equal (i.e. if `f(y)=y` then `x ≤ y`).
+Similarly, a greatest fixed-point (gfp) is greater or equal than all other fixed-points.
+If `f` is a function on sets, the least fixed-point is defined as the intersection of all pre-fixed-points, which are then defined as sets `x` for which `x ⊆ f(x)`.
+The greatest fixed-point is in this case the union of all post-fixed-points, respectively.
+
+This simple definition of lfp and gfp can also be lifted to general lattices.
+The results for Chalk goals form such a lattice and, thus, every solver for such goals tries to find such fixed-points.

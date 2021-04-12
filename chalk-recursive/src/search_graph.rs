@@ -5,7 +5,10 @@ use std::usize;
 
 use super::stack::StackDepth;
 use crate::{Minimums, UCanonicalGoal};
-use chalk_ir::{interner::Interner, ClausePriority, Fallible, NoSolution};
+use chalk_ir::{
+    interner::Interner, Canonical, ClausePriority, ConstrainedSubst, Constraints, Fallible,
+    NoSolution,
+};
 use chalk_solve::Solution;
 use rustc_hash::FxHashMap;
 use tracing::{debug, instrument};
@@ -56,18 +59,32 @@ impl<I: Interner> SearchGraph<I> {
     ///
     /// - stack depth as given
     /// - links set to its own DFN
-    /// - solution is initially `NoSolution`
+    /// - solution is initially an identity substitution for coinductive goals
+    ///   or `NoSolution` for other goals
     pub(crate) fn insert(
         &mut self,
         goal: &UCanonicalGoal<I>,
         stack_depth: StackDepth,
+        coinductive: bool,
+        interner: &I,
     ) -> DepthFirstNumber {
         let dfn = DepthFirstNumber {
             index: self.nodes.len(),
         };
+        let solution = if coinductive {
+            Ok(Solution::Unique(Canonical {
+                value: ConstrainedSubst {
+                    subst: goal.trivial_substitution(interner),
+                    constraints: Constraints::empty(interner),
+                },
+                binders: goal.canonical.binders.clone(),
+            }))
+        } else {
+            Err(NoSolution)
+        };
         let node = Node {
             goal: goal.clone(),
-            solution: Err(NoSolution),
+            solution,
             solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
             links: Minimums { positive: dfn },

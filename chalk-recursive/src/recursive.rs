@@ -2,10 +2,10 @@ use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
 use crate::stack::{Stack, StackDepth};
-use crate::{combine, Minimums, UCanonicalGoal};
-use chalk_ir::interner::Interner;
+use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::Fallible;
-use chalk_ir::{Canonical, ConstrainedSubst, Constraints, Goal, InEnvironment, UCanonical};
+use chalk_ir::{interner::Interner, NoSolution};
+use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
 use rustc_hash::FxHashMap;
 use std::fmt;
@@ -163,18 +163,6 @@ impl<'me, I: Interner> Solver<'me, I> {
                 return *minimums;
             }
 
-            let old_answer = &self.context.search_graph[dfn].solution;
-            let old_prio = self.context.search_graph[dfn].solution_priority;
-
-            let (current_answer, current_prio) = combine::with_priorities_for_goal(
-                self.program.interner(),
-                &canonical_goal.canonical.value.goal,
-                old_answer.clone(),
-                old_prio,
-                current_answer,
-                current_prio,
-            );
-
             // Some of our subgoals depended on us. We need to re-run
             // with the current answer.
             if self.context.search_graph[dfn].solution == current_answer {
@@ -223,24 +211,17 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         if let Some(dfn) = self.context.search_graph.lookup(&goal) {
             // Check if this table is still on the stack.
             if let Some(depth) = self.context.search_graph[dfn].stack_depth {
-                // Is this a coinductive goal? If so, that is success,
-                // so we can return normally. Note that this return is
-                // not tabled.
-                //
-                // XXX how does caching with coinduction work?
-                if self.context.stack.coinductive_cycle_from(depth) {
-                    let value = ConstrainedSubst {
-                        subst: goal.trivial_substitution(self.program.interner()),
-                        constraints: Constraints::empty(self.program.interner()),
-                    };
-                    debug!("applying coinductive semantics");
-                    return Ok(Solution::Unique(Canonical {
-                        value,
-                        binders: goal.canonical.binders,
-                    }));
-                }
-
                 self.context.stack[depth].flag_cycle();
+                // Mixed cycles are not allowed. For more information about this
+                // see the corresponding section in the coinduction chapter:
+                // https://rust-lang.github.io/chalk/book/recursive/coinduction.html#mixed-co-inductive-and-inductive-cycles
+                if self
+                    .context
+                    .stack
+                    .mixed_inductive_coinductive_cycle_from(depth)
+                {
+                    return Err(NoSolution);
+                }
             }
 
             minimums.update_from(self.context.search_graph[dfn].links);
@@ -255,10 +236,15 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             previous_solution
         } else {
             // Otherwise, push the goal onto the stack and create a table.
-            // The initial result for this table is error.
+            // The initial result for this table depends on whether the goal is coinductive.
             let coinductive_goal = goal.is_coinductive(self.program);
             let depth = self.context.stack.push(coinductive_goal);
-            let dfn = self.context.search_graph.insert(&goal, depth);
+            let dfn = self.context.search_graph.insert(
+                &goal,
+                depth,
+                coinductive_goal,
+                self.program.interner(),
+            );
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
