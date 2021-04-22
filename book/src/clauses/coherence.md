@@ -3,9 +3,9 @@
 This document was previously prepared for the initial design of coherence rules in Chalk. It was copy-pasted here on 2020-10-06, but has not been vetted for accuracy of the current implementation or edited for clarity.
 
 ## Coherence
-> The idea of trait coherence is that, given a trait and some set of types for its type parameters, there should be exactly one impl that applies. So if we think of the trait `Show`, we want to guarantee that if we have a trait reference like `MyType : Show`, we can uniquely identify a particular impl.
+> The idea of trait coherence is that, given a trait and some set of types for its type parameters, there should be exactly one impl that applies. So if we think of the trait `Display`, we want to guarantee that if we have a trait reference like `MyType : Display`, we can uniquely identify a particular impl.
 > 
-> The role of the orphan rules in particular is basically to prevent you from implementing external traits for external types. So continuing our simple example of `Show`, if you are defining your own library, you could not implement `Show` for `Vec<T>`, because both `Show` and `Vec` are defined in the standard library. But you can implement `Show` for `MyType`, because you defined `MyType`. However, if you define your own trait `MyTrait`, then you can implement `MyTrait` for any type you like, including external types like `Vec<T>`. To this end, the orphan rule intuitively says “either the trait must be local or the self-type must be local”.
+> The role of the orphan rules in particular is basically to prevent you from implementing external traits for external types. So continuing our simple example of `Display`, if you are defining your own library, you could not implement `Display` for `Vec<T>`, because both `Display` and `Vec` are defined in the standard library. But you can implement `Display` for `MyType`, because you defined `MyType`. However, if you define your own trait `MyTrait`, then you can implement `MyTrait` for any type you like, including external types like `Vec<T>`. To this end, the orphan rule intuitively says “either the trait must be local or the self-type must be local”.
 > 
 > -- [Little Orphan Impls](https://smallcultfollowing.com/babysteps/blog/2015/01/14/little-orphan-impls/) by Niko Matsakis
 
