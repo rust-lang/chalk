@@ -19,7 +19,6 @@ fn test_const_generics() {
 }
 
 #[test]
-#[ignore]
 fn test_basic_const_values_in_impls() {
     // Test we render const values correctly in impls.
     reparse_test!(
@@ -34,7 +33,6 @@ fn test_basic_const_values_in_impls() {
 }
 
 #[test]
-#[ignore]
 fn test_basic_const_values_in_opaque_ty_values() {
     // Test we render const values correctly in opaque type values.
     reparse_test!(
@@ -46,7 +44,6 @@ fn test_basic_const_values_in_opaque_ty_values() {
 }
 
 #[test]
-#[ignore]
 fn test_basic_const_values_in_assoc_ty_values() {
     // Test we render const values correctly in associated type values.
     reparse_test!(
