@@ -34,7 +34,7 @@ As either `Answer`s are found for the selected `Table`, entries on the stack are
 
 As mentioned before, whenever a new `Goal` is encountered, a new [`Table`] is
 created to store current and future answers. First, the [`Goal`] is converted into
-an `HhGoal`. If it can be simplified, then a `Strand` with one or more
+an `GoalData`. If it can be simplified, then a `Strand` with one or more
 subgoals will be generated and can be followed as above. Otherwise, if it is a
 `DomainGoal` (see above), then
 [`program_clauses_for_goal`](https://rust-lang.github.io/chalk/chalk_solve/clauses/fn.program_clauses_for_goal.html)
