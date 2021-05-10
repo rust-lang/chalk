@@ -15,7 +15,7 @@ tracing = "0.1"
 
 chalk-derive = { version = "0.66.0-dev.0", path = "../chalk-derive" }
 chalk-ir = { version = "0.66.0-dev.0", path = "../chalk-ir" }
-chalk-solve = { version = "0.66.0-dev.0", path = "../chalk-solve" }
+chalk-solve = { version = "0.66.0-dev.0", path = "../chalk-solve", default-features = false }
 
 [dev-dependencies]
 chalk-integration = { path = "../chalk-integration" }
@@ -23,4 +23,4 @@ chalk-integration = { path = "../chalk-integration" }
 [features]
 default = ["tracing-full"]
 
-tracing-full = ["chalk-solve/tracing-subscriber", "chalk-solve/tracing-tree"]
+tracing-full = ["chalk-solve/tracing-full"]
