@@ -23,9 +23,9 @@ something to be unsolvable), the solving is restarted at the root `Goal`.
 In order to detect cycles (talked more about later), as well as keep track of
 the selected [`Strand`] for each table, `chalk-engine` stores a [`Stack`] on the
 `Forest`. Whenever a new goal is selected, a [`StackEntry`] is pushed onto the
-`Stack`, as well as the the "time" (which also gets incremented) that it was
-pushed. This "time" can be compared later to check if all the `Strands` of a
-[`Table`] have been checked in a single solve.
+`Stack`, as well as the "time" (which also gets incremented) that it was pushed.
+This "time" can be compared later to check if all the `Strands` of a [`Table`]
+have been checked in a single solve.
 
 As either `Answer`s are found for the selected `Table`, entries on the stack are
 `pop`ed. If something is found to be unsolvable, the complete stack is unwound.
@@ -34,7 +34,7 @@ As either `Answer`s are found for the selected `Table`, entries on the stack are
 
 As mentioned before, whenever a new `Goal` is encountered, a new [`Table`] is
 created to store current and future answers. First, the [`Goal`] is converted into
-an `HhGoal`. If it can be simplified, then a `Strand` with one or more
+an `GoalData`. If it can be simplified, then a `Strand` with one or more
 subgoals will be generated and can be followed as above. Otherwise, if it is a
 `DomainGoal` (see above), then
 [`program_clauses_for_goal`](https://rust-lang.github.io/chalk/chalk_solve/clauses/fn.program_clauses_for_goal.html)

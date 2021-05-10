@@ -7,14 +7,14 @@ logic.
 ## Goals
 
 A "goal" in Chalk can be thought of as "something we want to prove". The engine
-itself understands `HhGoal`s. `HHGoal`s consist of the most basic logic,
+itself understands `GoalData`s. `GoalData`s consist of the most basic logic,
 such as introducing Binders (`Forall` or `Exists`) or combining goals (`All`).
 On the other hand, `Goal` represents an opaque goal generated
 externally. As such, it may contain any extra information or may be interned.
 When solving a logic predicate, Chalk will lazily convert `Goal`s
-into `HHGoal`s.
+into `GoalData`s.
 
-There are three types of completely opaque `HhGoal`s that Chalk can solve:
+There are three types of completely opaque `GoalData`s that Chalk can solve:
 `Unify`, `DomainGoal`, and `CannotProve`. Unlike the other types of goals,
 these three cannot be simplified any further. `Unify` is the goal of unifying
 any two types. `DomainGoal` is any goal that can solve by applying a
