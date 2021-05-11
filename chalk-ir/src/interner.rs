@@ -493,7 +493,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
     fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
-    /// Deterermine whether two concrete const values are equal.
+    /// Determine whether two concrete const values are equal.
     fn const_eq(
         &self,
         ty: &Self::InternedType,
