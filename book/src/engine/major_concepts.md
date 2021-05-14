@@ -9,9 +9,9 @@ logic.
 A "goal" in Chalk can be thought of as "something we want to prove". The engine
 itself understands `GoalData`s. `GoalData`s consist of the most basic logic,
 such as introducing Binders (`Forall` or `Exists`) or combining goals (`All`).
-On the other hand, `Goal` represents an opaque goal generated
+On the other hand, `DomainGoal` represents an opaque goal generated
 externally. As such, it may contain any extra information or may be interned.
-When solving a logic predicate, Chalk will lazily convert `Goal`s
+When solving a logic predicate, Chalk will lazily convert `DomainGoal`s
 into `GoalData`s.
 
 There are three types of completely opaque `GoalData`s that Chalk can solve:
