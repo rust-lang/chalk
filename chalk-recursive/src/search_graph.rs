@@ -4,7 +4,7 @@ use std::ops::IndexMut;
 use std::usize;
 
 use super::stack::StackDepth;
-use crate::{Minimums, UCanonicalGoal};
+use crate::{Cache, Minimums, UCanonicalGoal};
 use chalk_ir::{
     interner::Interner, Canonical, ClausePriority, ConstrainedSubst, Constraints, Fallible,
     NoSolution,
@@ -104,12 +104,8 @@ impl<I: Interner> SearchGraph<I> {
 
     /// Removes all nodes with a depth-first-number greater than or
     /// equal to `dfn`, adding their final solutions into the cache.
-    #[instrument(level = "debug", skip(self))]
-    pub(crate) fn move_to_cache(
-        &mut self,
-        dfn: DepthFirstNumber,
-        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
-    ) {
+    #[instrument(level = "debug", skip(self, cache))]
+    pub(crate) fn move_to_cache(&mut self, dfn: DepthFirstNumber, cache: &Cache<I>) {
         self.indices.retain(|_key, value| *value < dfn);
         for node in self.nodes.drain(dfn.index..) {
             assert!(node.stack_depth.is_none());

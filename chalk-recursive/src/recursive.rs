@@ -1,3 +1,4 @@
+use crate::cache::Cache;
 use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
@@ -7,7 +8,6 @@ use chalk_ir::Fallible;
 use chalk_ir::{interner::Interner, NoSolution};
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
-use rustc_hash::FxHashMap;
 use std::fmt;
 use tracing::debug;
 use tracing::{info, instrument};
@@ -22,12 +22,10 @@ struct RecursiveContext<I: Interner> {
     /// The "cache" stores results for goals that we have completely solved.
     /// Things are added to the cache when we have completely processed their
     /// result.
-    cache: FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+    cache: Option<Cache<I>>,
 
     /// The maximum size for goals.
     max_size: usize,
-
-    caching_enabled: bool,
 }
 
 /// A Solver is the basic context in which you can propose goals for a given
@@ -45,13 +43,9 @@ pub struct RecursiveSolver<I: Interner> {
 }
 
 impl<I: Interner> RecursiveSolver<I> {
-    pub fn new(overflow_depth: usize, max_size: usize, caching_enabled: bool) -> Self {
+    pub fn new(overflow_depth: usize, max_size: usize, cache: Option<Cache<I>>) -> Self {
         Self {
-            ctx: Box::new(RecursiveContext::new(
-                overflow_depth,
-                max_size,
-                caching_enabled,
-            )),
+            ctx: Box::new(RecursiveContext::new(overflow_depth, max_size, cache)),
         }
     }
 }
@@ -83,13 +77,12 @@ impl<T> MergeWith<T> for Fallible<T> {
 }
 
 impl<I: Interner> RecursiveContext<I> {
-    pub fn new(overflow_depth: usize, max_size: usize, caching_enabled: bool) -> Self {
+    pub fn new(overflow_depth: usize, max_size: usize, cache: Option<Cache<I>>) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
-            cache: FxHashMap::default(),
+            cache,
             max_size,
-            caching_enabled,
         }
     }
 
@@ -202,9 +195,11 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
         // First check the cache.
-        if let Some(value) = self.context.cache.get(&goal) {
-            debug!("solve_reduced_goal: cache hit, value={:?}", value);
-            return value.clone();
+        if let Some(cache) = &self.context.cache {
+            if let Some(value) = cache.get(&goal) {
+                debug!("solve_reduced_goal: cache hit, value={:?}", value);
+                return value.clone();
+            }
         }
 
         // Next, check if the goal is in the search tree already.
@@ -260,10 +255,8 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // cache now. This is a sort of hack to alleviate the
             // worst of the repeated work that we do during tabling.
             if subgoal_minimums.positive >= dfn {
-                if self.context.caching_enabled {
-                    self.context
-                        .search_graph
-                        .move_to_cache(dfn, &mut self.context.cache);
+                if let Some(cache) = &mut self.context.cache {
+                    self.context.search_graph.move_to_cache(dfn, cache);
                     debug!("solve_reduced_goal: SCC head encountered, moving to cache");
                 } else {
                     debug!(

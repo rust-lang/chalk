@@ -3,6 +3,7 @@ use chalk_ir::{Goal, InEnvironment, UCanonical};
 
 pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
+mod cache;
 mod combine;
 mod fulfill;
 mod recursive;
@@ -10,6 +11,7 @@ mod search_graph;
 pub mod solve;
 mod stack;
 
+pub use cache::Cache;
 pub use recursive::RecursiveSolver;
 
 /// The `minimums` struct is used while solving to track whether we encountered
