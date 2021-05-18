@@ -4,9 +4,9 @@ use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
 use crate::stack::{Stack, StackDepth};
 use crate::{Minimums, UCanonicalGoal};
-use chalk_ir::Fallible;
 use chalk_ir::{interner::Interner, NoSolution};
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
+use chalk_ir::{Constraints, Fallible};
 use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
 use std::fmt;
 use tracing::debug;
@@ -234,12 +234,21 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             // The initial result for this table depends on whether the goal is coinductive.
             let coinductive_goal = goal.is_coinductive(self.program);
             let depth = self.context.stack.push(coinductive_goal);
-            let dfn = self.context.search_graph.insert(
-                &goal,
-                depth,
-                coinductive_goal,
-                self.program.interner(),
-            );
+            let initial_solution = if coinductive_goal {
+                Ok(Solution::Unique(Canonical {
+                    value: ConstrainedSubst {
+                        subst: goal.trivial_substitution(self.interner()),
+                        constraints: Constraints::empty(self.interner()),
+                    },
+                    binders: goal.canonical.binders.clone(),
+                }))
+            } else {
+                Err(NoSolution)
+            };
+            let dfn =
+                self.context
+                    .search_graph
+                    .insert(&goal, depth, coinductive_goal, initial_solution);
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;

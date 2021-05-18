@@ -66,21 +66,10 @@ impl<I: Interner> SearchGraph<I> {
         goal: &UCanonicalGoal<I>,
         stack_depth: StackDepth,
         coinductive: bool,
-        interner: &I,
+        solution: Fallible<Solution<I>>,
     ) -> DepthFirstNumber {
         let dfn = DepthFirstNumber {
             index: self.nodes.len(),
-        };
-        let solution = if coinductive {
-            Ok(Solution::Unique(Canonical {
-                value: ConstrainedSubst {
-                    subst: goal.trivial_substitution(interner),
-                    constraints: Constraints::empty(interner),
-                },
-                binders: goal.canonical.binders.clone(),
-            }))
-        } else {
-            Err(NoSolution)
         };
         let node = Node {
             goal: goal.clone(),
