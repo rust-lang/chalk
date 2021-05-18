@@ -60,26 +60,6 @@ impl<I: Interner> fmt::Debug for RecursiveSolver<I> {
     }
 }
 
-/// An extension trait for merging `Result`s
-trait MergeWith<T> {
-    fn merge_with<F>(self, other: Self, f: F) -> Self
-    where
-        F: FnOnce(T, T) -> T;
-}
-
-impl<T> MergeWith<T> for Fallible<T> {
-    fn merge_with<F>(self: Fallible<T>, other: Fallible<T>, f: F) -> Fallible<T>
-    where
-        F: FnOnce(T, T) -> T,
-    {
-        match (self, other) {
-            (Err(_), Ok(v)) | (Ok(v), Err(_)) => Ok(v),
-            (Ok(v1), Ok(v2)) => Ok(f(v1, v2)),
-            (Err(_), Err(e)) => Err(e),
-        }
-    }
-}
-
 impl<I: Interner> RecursiveContext<I> {
     pub fn new(
         overflow_depth: usize,
