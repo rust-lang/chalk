@@ -17,12 +17,12 @@ struct RecursiveContext<I: Interner> {
 
     /// The "search graph" stores "in-progress results" that are still being
     /// solved.
-    search_graph: SearchGraph<I>,
+    search_graph: SearchGraph<UCanonicalGoal<I>, Fallible<Solution<I>>>,
 
     /// The "cache" stores results for goals that we have completely solved.
     /// Things are added to the cache when we have completely processed their
     /// result.
-    cache: Option<Cache<I>>,
+    cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
 
     /// The maximum size for goals.
     max_size: usize,
@@ -43,7 +43,11 @@ pub struct RecursiveSolver<I: Interner> {
 }
 
 impl<I: Interner> RecursiveSolver<I> {
-    pub fn new(overflow_depth: usize, max_size: usize, cache: Option<Cache<I>>) -> Self {
+    pub fn new(
+        overflow_depth: usize,
+        max_size: usize,
+        cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
+    ) -> Self {
         Self {
             ctx: Box::new(RecursiveContext::new(overflow_depth, max_size, cache)),
         }
@@ -77,7 +81,11 @@ impl<T> MergeWith<T> for Fallible<T> {
 }
 
 impl<I: Interner> RecursiveContext<I> {
-    pub fn new(overflow_depth: usize, max_size: usize, cache: Option<Cache<I>>) -> Self {
+    pub fn new(
+        overflow_depth: usize,
+        max_size: usize,
+        cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
+    ) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
@@ -245,10 +253,10 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             } else {
                 Err(NoSolution)
             };
-            let dfn =
-                self.context
-                    .search_graph
-                    .insert(&goal, depth, coinductive_goal, initial_solution);
+            let dfn = self
+                .context
+                .search_graph
+                .insert(&goal, depth, initial_solution);
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
