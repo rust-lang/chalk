@@ -1,8 +1,8 @@
+use crate::cache::Cache;
 use crate::search_graph::DepthFirstNumber;
 use crate::search_graph::SearchGraph;
 use crate::solve::{SolveDatabase, SolveIteration};
 use crate::stack::{Stack, StackDepth};
-use crate::{cache::Cache, PrioritizedSolution};
 use crate::{Minimums, UCanonicalGoal};
 use chalk_ir::{interner::Interner, NoSolution};
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
@@ -17,12 +17,12 @@ struct RecursiveContext<I: Interner> {
 
     /// The "search graph" stores "in-progress results" that are still being
     /// solved.
-    search_graph: SearchGraph<UCanonicalGoal<I>, PrioritizedSolution<I>>,
+    search_graph: SearchGraph<UCanonicalGoal<I>, Fallible<Solution<I>>>,
 
     /// The "cache" stores results for goals that we have completely solved.
     /// Things are added to the cache when we have completely processed their
     /// result.
-    cache: Option<Cache<UCanonicalGoal<I>, PrioritizedSolution<I>>>,
+    cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
 
     /// The maximum size for goals.
     max_size: usize,
@@ -46,7 +46,7 @@ impl<I: Interner> RecursiveSolver<I> {
     pub fn new(
         overflow_depth: usize,
         max_size: usize,
-        cache: Option<Cache<UCanonicalGoal<I>, PrioritizedSolution<I>>>,
+        cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
     ) -> Self {
         Self {
             ctx: Box::new(RecursiveContext::new(overflow_depth, max_size, cache)),
@@ -84,7 +84,7 @@ impl<I: Interner> RecursiveContext<I> {
     pub fn new(
         overflow_depth: usize,
         max_size: usize,
-        cache: Option<Cache<UCanonicalGoal<I>, PrioritizedSolution<I>>>,
+        cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
     ) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
@@ -149,7 +149,7 @@ impl<'me, I: Interner> Solver<'me, I> {
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let current_answer = self.solve_iteration(&canonical_goal, minimums);
+            let (current_answer, current_prio) = self.solve_iteration(&canonical_goal, minimums);
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
@@ -160,22 +160,24 @@ impl<'me, I: Interner> Solver<'me, I> {
                 // None of our subgoals depended on us directly.
                 // We can return.
                 self.context.search_graph[dfn].solution = current_answer;
+                self.context.search_graph[dfn].solution_priority = current_prio;
                 return *minimums;
             }
 
             // Some of our subgoals depended on us. We need to re-run
             // with the current answer.
-            if self.context.search_graph[dfn].solution.solution == current_answer.solution {
+            if self.context.search_graph[dfn].solution == current_answer {
                 // Reached a fixed point.
                 return *minimums;
             }
 
-            let current_answer_is_ambig = match &current_answer.solution {
+            let current_answer_is_ambig = match &current_answer {
                 Ok(s) => s.is_ambig(),
                 Err(_) => false,
             };
 
             self.context.search_graph[dfn].solution = current_answer;
+            self.context.search_graph[dfn].solution_priority = current_prio;
 
             // Subtle: if our current answer is ambiguous, we can just stop, and
             // in fact we *must* -- otherwise, we sometimes fail to reach a
@@ -204,7 +206,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         if let Some(cache) = &self.context.cache {
             if let Some(value) = cache.get(&goal) {
                 debug!("solve_reduced_goal: cache hit, value={:?}", value);
-                return value.solution.clone();
+                return value.clone();
             }
         }
 
@@ -229,11 +231,12 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
             // Return the solution from the table.
             let previous_solution = self.context.search_graph[dfn].solution.clone();
+            let previous_solution_priority = self.context.search_graph[dfn].solution_priority;
             info!(
-                "solve_goal: cycle detected, previous solution {:?}",
-                previous_solution,
+                "solve_goal: cycle detected, previous solution {:?} with prio {:?}",
+                previous_solution, previous_solution_priority
             );
-            previous_solution.solution
+            previous_solution
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table depends on whether the goal is coinductive.
@@ -250,11 +253,10 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
             } else {
                 Err(NoSolution)
             };
-            let dfn = self.context.search_graph.insert(
-                &goal,
-                depth,
-                PrioritizedSolution::high(initial_solution),
-            );
+            let dfn = self
+                .context
+                .search_graph
+                .insert(&goal, depth, initial_solution);
             let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
@@ -263,6 +265,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
 
             // Read final result from table.
             let result = self.context.search_graph[dfn].solution.clone();
+            let priority = self.context.search_graph[dfn].solution_priority;
 
             // If processing this subgoal did not involve anything
             // outside of its subtree, then we can promote it to the
@@ -280,8 +283,8 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                 }
             }
 
-            info!("solve_goal: solution = {:#?}", result);
-            result.solution
+            info!("solve_goal: solution = {:?} prio {:?}", result, priority);
+            result
         }
     }
 

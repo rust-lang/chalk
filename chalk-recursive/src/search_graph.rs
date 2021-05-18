@@ -1,5 +1,6 @@
 use super::stack::StackDepth;
 use crate::{Cache, Minimums};
+use chalk_ir::ClausePriority;
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -29,6 +30,7 @@ pub(super) struct Node<K, V> {
     pub(crate) goal: K,
 
     pub(crate) solution: V,
+    pub(crate) solution_priority: ClausePriority,
 
     /// This is `Some(X)` if we are actively exploring this node, or
     /// `None` otherwise.
@@ -76,6 +78,7 @@ where
         let node = Node {
             goal: goal.clone(),
             solution,
+            solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
             links: Minimums { positive: dfn },
         };
