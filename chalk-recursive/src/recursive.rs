@@ -80,6 +80,98 @@ where
         }
     }
 
+    /// Attempt to solve a goal that has been fully broken down into leaf form
+    /// and canonicalized. This is where the action really happens, and is the
+    /// place where we would perform caching in rustc (and may eventually do in Chalk).
+    #[instrument(
+        level = "info",
+        skip(
+            self,
+            minimums,
+            initial_value,
+            solve_iteration,
+            reached_fixed_point,
+            error_value
+        )
+    )]
+    fn solve_goal(
+        &mut self,
+        goal: &K,
+        minimums: &mut Minimums,
+        initial_value: impl Fn(&K) -> (bool, V),
+        solve_iteration: impl FnMut(&mut Self, &K, &mut Minimums) -> V,
+        reached_fixed_point: impl Fn(&V, &V) -> bool,
+        error_value: impl Fn() -> V,
+    ) -> V {
+        // First check the cache.
+        if let Some(cache) = &self.cache {
+            if let Some(value) = cache.get(&goal) {
+                debug!("solve_reduced_goal: cache hit, value={:?}", value);
+                return value.clone();
+            }
+        }
+
+        // Next, check if the goal is in the search tree already.
+        if let Some(dfn) = self.search_graph.lookup(&goal) {
+            // Check if this table is still on the stack.
+            if let Some(depth) = self.search_graph[dfn].stack_depth {
+                self.stack[depth].flag_cycle();
+                // Mixed cycles are not allowed. For more information about this
+                // see the corresponding section in the coinduction chapter:
+                // https://rust-lang.github.io/chalk/book/recursive/coinduction.html#mixed-co-inductive-and-inductive-cycles
+                if self.stack.mixed_inductive_coinductive_cycle_from(depth) {
+                    return error_value();
+                }
+            }
+
+            minimums.update_from(self.search_graph[dfn].links);
+
+            // Return the solution from the table.
+            let previous_solution = self.search_graph[dfn].solution.clone();
+            info!(
+                "solve_goal: cycle detected, previous solution {:?}",
+                previous_solution,
+            );
+            previous_solution
+        } else {
+            // Otherwise, push the goal onto the stack and create a table.
+            // The initial result for this table depends on whether the goal is coinductive.
+            let (coinductive_goal, initial_solution) = initial_value(goal);
+            let depth = self.stack.push(coinductive_goal);
+            let dfn = self.search_graph.insert(&goal, depth, initial_solution);
+
+            let subgoal_minimums =
+                self.solve_new_subgoal(&goal, depth, dfn, solve_iteration, reached_fixed_point);
+
+            self.search_graph[dfn].links = subgoal_minimums;
+            self.search_graph[dfn].stack_depth = None;
+            self.stack.pop(depth);
+            minimums.update_from(subgoal_minimums);
+
+            // Read final result from table.
+            let result = self.search_graph[dfn].solution.clone();
+
+            // If processing this subgoal did not involve anything
+            // outside of its subtree, then we can promote it to the
+            // cache now. This is a sort of hack to alleviate the
+            // worst of the repeated work that we do during tabling.
+            if subgoal_minimums.positive >= dfn {
+                if let Some(cache) = &mut self.cache {
+                    self.search_graph.move_to_cache(dfn, cache);
+                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
+                } else {
+                    debug!(
+                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
+                    );
+                    self.search_graph.rollback_to(dfn);
+                }
+            }
+
+            info!("solve_goal: solution = {:?}", result);
+            result
+        }
+    }
+
     #[instrument(level = "debug", skip(self, solve_iteration, reached_fixed_point))]
     fn solve_new_subgoal(
         &mut self,
@@ -159,122 +251,6 @@ impl<'me, I: Interner> Solver<'me, I> {
         let minimums = &mut Minimums::new();
         self.solve_goal(canonical_goal.clone(), minimums)
     }
-
-    /// Attempt to solve a goal that has been fully broken down into leaf form
-    /// and canonicalized. This is where the action really happens, and is the
-    /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    #[instrument(level = "info", skip(self, minimums))]
-    fn solve_goal(
-        &mut self,
-        goal: UCanonicalGoal<I>,
-        minimums: &mut Minimums,
-    ) -> Fallible<Solution<I>> {
-        // First check the cache.
-        if let Some(cache) = &self.context.cache {
-            if let Some(value) = cache.get(&goal) {
-                debug!("solve_reduced_goal: cache hit, value={:?}", value);
-                return value.clone();
-            }
-        }
-
-        // Next, check if the goal is in the search tree already.
-        if let Some(dfn) = self.context.search_graph.lookup(&goal) {
-            // Check if this table is still on the stack.
-            if let Some(depth) = self.context.search_graph[dfn].stack_depth {
-                self.context.stack[depth].flag_cycle();
-                // Mixed cycles are not allowed. For more information about this
-                // see the corresponding section in the coinduction chapter:
-                // https://rust-lang.github.io/chalk/book/recursive/coinduction.html#mixed-co-inductive-and-inductive-cycles
-                if self
-                    .context
-                    .stack
-                    .mixed_inductive_coinductive_cycle_from(depth)
-                {
-                    return Err(NoSolution);
-                }
-            }
-
-            minimums.update_from(self.context.search_graph[dfn].links);
-
-            // Return the solution from the table.
-            let previous_solution = self.context.search_graph[dfn].solution.clone();
-            info!(
-                "solve_goal: cycle detected, previous solution {:?}",
-                previous_solution,
-            );
-            previous_solution
-        } else {
-            // Otherwise, push the goal onto the stack and create a table.
-            // The initial result for this table depends on whether the goal is coinductive.
-            let coinductive_goal = goal.is_coinductive(self.program);
-            let depth = self.context.stack.push(coinductive_goal);
-            let initial_solution = if coinductive_goal {
-                Ok(Solution::Unique(Canonical {
-                    value: ConstrainedSubst {
-                        subst: goal.trivial_substitution(self.interner()),
-                        constraints: Constraints::empty(self.interner()),
-                    },
-                    binders: goal.canonical.binders.clone(),
-                }))
-            } else {
-                Err(NoSolution)
-            };
-            let dfn = self
-                .context
-                .search_graph
-                .insert(&goal, depth, initial_solution);
-
-            let program = self.program;
-            let subgoal_minimums = self.context.solve_new_subgoal(
-                &goal,
-                depth,
-                dfn,
-                |context, goal, minimums| {
-                    Solver::new(context, program).solve_iteration(goal, minimums)
-                },
-                |old_answer, current_answer| {
-                    // Some of our subgoals depended on us. We need to re-run
-                    // with the current answer.
-                    old_answer == current_answer || {
-                        // Subtle: if our current answer is ambiguous, we can just stop, and
-                        // in fact we *must* -- otherwise, we sometimes fail to reach a
-                        // fixed point. See `multiple_ambiguous_cycles` for more.
-                        match &current_answer {
-                            Ok(s) => s.is_ambig(),
-                            Err(_) => false,
-                        }
-                    }
-                },
-            );
-
-            self.context.search_graph[dfn].links = subgoal_minimums;
-            self.context.search_graph[dfn].stack_depth = None;
-            self.context.stack.pop(depth);
-            minimums.update_from(subgoal_minimums);
-
-            // Read final result from table.
-            let result = self.context.search_graph[dfn].solution.clone();
-
-            // If processing this subgoal did not involve anything
-            // outside of its subtree, then we can promote it to the
-            // cache now. This is a sort of hack to alleviate the
-            // worst of the repeated work that we do during tabling.
-            if subgoal_minimums.positive >= dfn {
-                if let Some(cache) = &mut self.context.cache {
-                    self.context.search_graph.move_to_cache(dfn, cache);
-                    debug!("solve_reduced_goal: SCC head encountered, moving to cache");
-                } else {
-                    debug!(
-                        "solve_reduced_goal: SCC head encountered, rolling back as caching disabled"
-                    );
-                    self.context.search_graph.rollback_to(dfn);
-                }
-            }
-
-            info!("solve_goal: solution = {:?}", result);
-            result
-        }
-    }
 }
 
 impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
@@ -283,7 +259,42 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
-        self.solve_goal(goal, minimums)
+        let program = self.program;
+        let interner = program.interner();
+        self.context.solve_goal(
+            &goal,
+            minimums,
+            |goal| {
+                let coinductive_goal = goal.is_coinductive(program);
+                let initial_solution = if coinductive_goal {
+                    Ok(Solution::Unique(Canonical {
+                        value: ConstrainedSubst {
+                            subst: goal.trivial_substitution(interner),
+                            constraints: Constraints::empty(interner),
+                        },
+                        binders: goal.canonical.binders.clone(),
+                    }))
+                } else {
+                    Err(NoSolution)
+                };
+                (coinductive_goal, initial_solution)
+            },
+            |context, goal, minimums| Solver::new(context, program).solve_iteration(goal, minimums),
+            |old_answer, current_answer| {
+                // Some of our subgoals depended on us. We need to re-run
+                // with the current answer.
+                old_answer == current_answer || {
+                    // Subtle: if our current answer is ambiguous, we can just stop, and
+                    // in fact we *must* -- otherwise, we sometimes fail to reach a
+                    // fixed point. See `multiple_ambiguous_cycles` for more.
+                    match &current_answer {
+                        Ok(s) => s.is_ambig(),
+                        Err(_) => false,
+                    }
+                }
+            },
+            || Err(NoSolution),
+        )
     }
 
     fn interner(&self) -> &I {
