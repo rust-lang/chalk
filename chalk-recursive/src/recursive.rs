@@ -83,27 +83,12 @@ where
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    #[instrument(
-        level = "info",
-        skip(
-            self,
-            minimums,
-            is_coinductive_goal,
-            initial_value,
-            solve_iteration,
-            reached_fixed_point,
-            error_value
-        )
-    )]
+    #[instrument(level = "info", skip(self, minimums, solver_stuff,))]
     fn solve_goal(
         &mut self,
         goal: &K,
         minimums: &mut Minimums,
-        is_coinductive_goal: impl Fn(&K) -> bool,
-        initial_value: impl Fn(&K, bool) -> V,
-        solve_iteration: impl FnMut(&mut Self, &K, &mut Minimums) -> V,
-        reached_fixed_point: impl Fn(&V, &V) -> bool,
-        error_value: impl Fn() -> V,
+        solver_stuff: impl SolverStuff<K, V>,
     ) -> V {
         // First check the cache.
         if let Some(cache) = &self.cache {
@@ -122,7 +107,7 @@ where
                 // see the corresponding section in the coinduction chapter:
                 // https://rust-lang.github.io/chalk/book/recursive/coinduction.html#mixed-co-inductive-and-inductive-cycles
                 if self.stack.mixed_inductive_coinductive_cycle_from(depth) {
-                    return error_value();
+                    return solver_stuff.error_value();
                 }
             }
 
@@ -138,13 +123,12 @@ where
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table depends on whether the goal is coinductive.
-            let coinductive_goal = is_coinductive_goal(goal);
-            let initial_solution = initial_value(goal, coinductive_goal);
+            let coinductive_goal = solver_stuff.is_coinductive_goal(goal);
+            let initial_solution = solver_stuff.initial_value(goal, coinductive_goal);
             let depth = self.stack.push(coinductive_goal);
             let dfn = self.search_graph.insert(&goal, depth, initial_solution);
 
-            let subgoal_minimums =
-                self.solve_new_subgoal(&goal, depth, dfn, solve_iteration, reached_fixed_point);
+            let subgoal_minimums = self.solve_new_subgoal(&goal, depth, dfn, solver_stuff);
 
             self.search_graph[dfn].links = subgoal_minimums;
             self.search_graph[dfn].stack_depth = None;
@@ -175,14 +159,13 @@ where
         }
     }
 
-    #[instrument(level = "debug", skip(self, solve_iteration, reached_fixed_point))]
+    #[instrument(level = "debug", skip(self, solver_stuff))]
     fn solve_new_subgoal(
         &mut self,
         canonical_goal: &K,
         depth: StackDepth,
         dfn: DepthFirstNumber,
-        mut solve_iteration: impl FnMut(&mut Self, &K, &mut Minimums) -> V,
-        reached_fixed_point: impl Fn(&V, &V) -> bool,
+        solver_stuff: impl SolverStuff<K, V>,
     ) -> Minimums {
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
@@ -195,7 +178,7 @@ where
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let current_answer = solve_iteration(self, &canonical_goal, minimums);
+            let current_answer = solver_stuff.solve_iteration(self, &canonical_goal, minimums);
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
@@ -212,7 +195,7 @@ where
             let old_answer =
                 std::mem::replace(&mut self.search_graph[dfn].solution, current_answer);
 
-            if reached_fixed_point(&old_answer, &self.search_graph[dfn].solution) {
+            if solver_stuff.reached_fixed_point(&old_answer, &self.search_graph[dfn].solution) {
                 return *minimums;
             }
 
@@ -256,47 +239,85 @@ impl<'me, I: Interner> Solver<'me, I> {
     }
 }
 
+trait SolverStuff<K, V>: Copy
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
+    fn is_coinductive_goal(self, goal: &K) -> bool;
+    fn initial_value(self, goal: &K, coinductive_goal: bool) -> V;
+    fn solve_iteration(
+        self,
+        context: &mut RecursiveContext<K, V>,
+        goal: &K,
+        minimums: &mut Minimums,
+    ) -> V;
+    fn reached_fixed_point(self, old_value: &V, new_value: &V) -> bool;
+    fn error_value(self) -> V;
+}
+
+impl<I: Interner> SolverStuff<UCanonicalGoal<I>, Fallible<Solution<I>>> for &dyn RustIrDatabase<I> {
+    fn is_coinductive_goal(self, goal: &UCanonicalGoal<I>) -> bool {
+        goal.is_coinductive(self)
+    }
+
+    fn initial_value(
+        self,
+        goal: &UCanonicalGoal<I>,
+        coinductive_goal: bool,
+    ) -> Fallible<Solution<I>> {
+        if coinductive_goal {
+            Ok(Solution::Unique(Canonical {
+                value: ConstrainedSubst {
+                    subst: goal.trivial_substitution(self.interner()),
+                    constraints: Constraints::empty(self.interner()),
+                },
+                binders: goal.canonical.binders.clone(),
+            }))
+        } else {
+            Err(NoSolution)
+        }
+    }
+
+    fn solve_iteration(
+        self,
+        context: &mut RecursiveContext<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+        goal: &UCanonicalGoal<I>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution<I>> {
+        Solver::new(context, self).solve_iteration(goal, minimums)
+    }
+
+    fn reached_fixed_point(
+        self,
+        old_answer: &Fallible<Solution<I>>,
+        current_answer: &Fallible<Solution<I>>,
+    ) -> bool {
+        // Some of our subgoals depended on us. We need to re-run
+        // with the current answer.
+        old_answer == current_answer || {
+            // Subtle: if our current answer is ambiguous, we can just stop, and
+            // in fact we *must* -- otherwise, we sometimes fail to reach a
+            // fixed point. See `multiple_ambiguous_cycles` for more.
+            match &current_answer {
+                Ok(s) => s.is_ambig(),
+                Err(_) => false,
+            }
+        }
+    }
+
+    fn error_value(self) -> Fallible<Solution<I>> {
+        Err(NoSolution)
+    }
+}
+
 impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     fn solve_goal(
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
     ) -> Fallible<Solution<I>> {
-        let program = self.program;
-        let interner = program.interner();
-        self.context.solve_goal(
-            &goal,
-            minimums,
-            |goal| goal.is_coinductive(program),
-            |goal, coinductive_goal| {
-                if coinductive_goal {
-                    Ok(Solution::Unique(Canonical {
-                        value: ConstrainedSubst {
-                            subst: goal.trivial_substitution(interner),
-                            constraints: Constraints::empty(interner),
-                        },
-                        binders: goal.canonical.binders.clone(),
-                    }))
-                } else {
-                    Err(NoSolution)
-                }
-            },
-            |context, goal, minimums| Solver::new(context, program).solve_iteration(goal, minimums),
-            |old_answer, current_answer| {
-                // Some of our subgoals depended on us. We need to re-run
-                // with the current answer.
-                old_answer == current_answer || {
-                    // Subtle: if our current answer is ambiguous, we can just stop, and
-                    // in fact we *must* -- otherwise, we sometimes fail to reach a
-                    // fixed point. See `multiple_ambiguous_cycles` for more.
-                    match &current_answer {
-                        Ok(s) => s.is_ambig(),
-                        Err(_) => false,
-                    }
-                }
-            },
-            || Err(NoSolution),
-        )
+        self.context.solve_goal(&goal, minimums, self.program)
     }
 
     fn interner(&self) -> &I {
