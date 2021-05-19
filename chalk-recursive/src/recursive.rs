@@ -80,6 +80,32 @@ where
         }
     }
 
+    /// Solves a canonical goal. The substitution returned in the
+    /// solution will be for the fully decomposed goal. For example, given the
+    /// program
+    ///
+    /// ```ignore
+    /// struct u8 { }
+    /// struct SomeType<T> { }
+    /// trait Foo<T> { }
+    /// impl<U> Foo<u8> for SomeType<U> { }
+    /// ```
+    ///
+    /// and the goal `exists<V> { forall<U> { SomeType<U>: Foo<V> }
+    /// }`, `into_peeled_goal` can be used to create a canonical goal
+    /// `SomeType<!1>: Foo<?0>`. This function will then return a
+    /// solution with the substitution `?0 := u8`.
+    pub(crate) fn solve_root_goal(
+        &mut self,
+        canonical_goal: &K,
+        solver_stuff: impl SolverStuff<K, V>,
+    ) -> V {
+        debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
+        assert!(self.stack.is_empty());
+        let minimums = &mut Minimums::new();
+        self.solve_goal(canonical_goal, minimums, solver_stuff)
+    }
+
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
@@ -212,31 +238,6 @@ impl<'me, I: Interner> Solver<'me, I> {
     ) -> Self {
         Self { program, context }
     }
-
-    /// Solves a canonical goal. The substitution returned in the
-    /// solution will be for the fully decomposed goal. For example, given the
-    /// program
-    ///
-    /// ```ignore
-    /// struct u8 { }
-    /// struct SomeType<T> { }
-    /// trait Foo<T> { }
-    /// impl<U> Foo<u8> for SomeType<U> { }
-    /// ```
-    ///
-    /// and the goal `exists<V> { forall<U> { SomeType<U>: Foo<V> }
-    /// }`, `into_peeled_goal` can be used to create a canonical goal
-    /// `SomeType<!1>: Foo<?0>`. This function will then return a
-    /// solution with the substitution `?0 := u8`.
-    pub(crate) fn solve_root_goal(
-        &mut self,
-        canonical_goal: &UCanonicalGoal<I>,
-    ) -> Fallible<Solution<I>> {
-        debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
-        assert!(self.context.stack.is_empty());
-        let minimums = &mut Minimums::new();
-        self.solve_goal(canonical_goal.clone(), minimums)
-    }
 }
 
 trait SolverStuff<K, V>: Copy
@@ -339,9 +340,7 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> Option<chalk_solve::Solution<I>> {
-        Solver::new(&mut self.ctx, program)
-            .solve_root_goal(goal)
-            .ok()
+        self.ctx.solve_root_goal(goal, program).ok()
     }
 
     fn solve_limited(
@@ -351,9 +350,7 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         _should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<chalk_solve::Solution<I>> {
         // TODO support should_continue in recursive solver
-        Solver::new(&mut self.ctx, program)
-            .solve_root_goal(goal)
-            .ok()
+        self.ctx.solve_root_goal(goal, program).ok()
     }
 
     fn solve_multiple(
