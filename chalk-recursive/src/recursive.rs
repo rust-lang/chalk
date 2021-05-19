@@ -88,6 +88,7 @@ where
         skip(
             self,
             minimums,
+            is_coinductive_goal,
             initial_value,
             solve_iteration,
             reached_fixed_point,
@@ -98,7 +99,8 @@ where
         &mut self,
         goal: &K,
         minimums: &mut Minimums,
-        initial_value: impl Fn(&K) -> (bool, V),
+        is_coinductive_goal: impl Fn(&K) -> bool,
+        initial_value: impl Fn(&K, bool) -> V,
         solve_iteration: impl FnMut(&mut Self, &K, &mut Minimums) -> V,
         reached_fixed_point: impl Fn(&V, &V) -> bool,
         error_value: impl Fn() -> V,
@@ -136,7 +138,8 @@ where
         } else {
             // Otherwise, push the goal onto the stack and create a table.
             // The initial result for this table depends on whether the goal is coinductive.
-            let (coinductive_goal, initial_solution) = initial_value(goal);
+            let coinductive_goal = is_coinductive_goal(goal);
+            let initial_solution = initial_value(goal, coinductive_goal);
             let depth = self.stack.push(coinductive_goal);
             let dfn = self.search_graph.insert(&goal, depth, initial_solution);
 
@@ -264,9 +267,9 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         self.context.solve_goal(
             &goal,
             minimums,
-            |goal| {
-                let coinductive_goal = goal.is_coinductive(program);
-                let initial_solution = if coinductive_goal {
+            |goal| goal.is_coinductive(program),
+            |goal, coinductive_goal| {
+                if coinductive_goal {
                     Ok(Solution::Unique(Canonical {
                         value: ConstrainedSubst {
                             subst: goal.trivial_substitution(interner),
@@ -276,8 +279,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
                     }))
                 } else {
                     Err(NoSolution)
-                };
-                (coinductive_goal, initial_solution)
+                }
             },
             |context, goal, minimums| Solver::new(context, program).solve_iteration(goal, minimums),
             |old_answer, current_answer| {
