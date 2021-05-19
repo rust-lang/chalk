@@ -9,20 +9,26 @@ use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_ir::{Constraints, Fallible};
 use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
 use std::fmt;
+use std::fmt::Debug;
+use std::hash::Hash;
 use tracing::debug;
 use tracing::{info, instrument};
 
-struct RecursiveContext<I: Interner> {
+struct RecursiveContext<K, V>
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
     stack: Stack,
 
     /// The "search graph" stores "in-progress results" that are still being
     /// solved.
-    search_graph: SearchGraph<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+    search_graph: SearchGraph<K, V>,
 
     /// The "cache" stores results for goals that we have completely solved.
     /// Things are added to the cache when we have completely processed their
     /// result.
-    cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
+    cache: Option<Cache<K, V>>,
 
     /// The maximum size for goals.
     max_size: usize,
@@ -35,11 +41,11 @@ struct RecursiveContext<I: Interner> {
 /// context.
 struct Solver<'me, I: Interner> {
     program: &'me dyn RustIrDatabase<I>,
-    context: &'me mut RecursiveContext<I>,
+    context: &'me mut RecursiveContext<UCanonicalGoal<I>, Fallible<Solution<I>>>,
 }
 
 pub struct RecursiveSolver<I: Interner> {
-    ctx: Box<RecursiveContext<I>>,
+    ctx: Box<RecursiveContext<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
 }
 
 impl<I: Interner> RecursiveSolver<I> {
@@ -60,12 +66,12 @@ impl<I: Interner> fmt::Debug for RecursiveSolver<I> {
     }
 }
 
-impl<I: Interner> RecursiveContext<I> {
-    pub fn new(
-        overflow_depth: usize,
-        max_size: usize,
-        cache: Option<Cache<UCanonicalGoal<I>, Fallible<Solution<I>>>>,
-    ) -> Self {
+impl<K, V> RecursiveContext<K, V>
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
+    pub fn new(overflow_depth: usize, max_size: usize, cache: Option<Cache<K, V>>) -> Self {
         RecursiveContext {
             stack: Stack::new(overflow_depth),
             search_graph: SearchGraph::new(),
@@ -73,19 +79,16 @@ impl<I: Interner> RecursiveContext<I> {
             max_size,
         }
     }
-
-    pub(crate) fn solver<'me>(
-        &'me mut self,
-        program: &'me dyn RustIrDatabase<I>,
-    ) -> Solver<'me, I> {
-        Solver {
-            program,
-            context: self,
-        }
-    }
 }
 
 impl<'me, I: Interner> Solver<'me, I> {
+    pub(crate) fn new(
+        context: &'me mut RecursiveContext<UCanonicalGoal<I>, Fallible<Solution<I>>>,
+        program: &'me dyn RustIrDatabase<I>,
+    ) -> Self {
+        Self { program, context }
+    }
+
     /// Solves a canonical goal. The substitution returned in the
     /// solution will be for the fully decomposed goal. For example, given the
     /// program
@@ -111,66 +114,6 @@ impl<'me, I: Interner> Solver<'me, I> {
         self.solve_goal(canonical_goal.clone(), minimums)
     }
 
-    #[instrument(level = "debug", skip(self))]
-    fn solve_new_subgoal(
-        &mut self,
-        canonical_goal: UCanonicalGoal<I>,
-        depth: StackDepth,
-        dfn: DepthFirstNumber,
-    ) -> Minimums {
-        // We start with `answer = None` and try to solve the goal. At the end of the iteration,
-        // `answer` will be updated with the result of the solving process. If we detect a cycle
-        // during the solving process, we cache `answer` and try to solve the goal again. We repeat
-        // until we reach a fixed point for `answer`.
-        // Considering the partial order:
-        // - None < Some(Unique) < Some(Ambiguous)
-        // - None < Some(CannotProve)
-        // the function which maps the loop iteration to `answer` is a nondecreasing function
-        // so this function will eventually be constant and the loop terminates.
-        loop {
-            let minimums = &mut Minimums::new();
-            let current_answer = self.solve_iteration(&canonical_goal, minimums);
-
-            debug!(
-                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
-                current_answer, minimums
-            );
-
-            if !self.context.stack[depth].read_and_reset_cycle_flag() {
-                // None of our subgoals depended on us directly.
-                // We can return.
-                self.context.search_graph[dfn].solution = current_answer;
-                return *minimums;
-            }
-
-            // Some of our subgoals depended on us. We need to re-run
-            // with the current answer.
-            if self.context.search_graph[dfn].solution == current_answer {
-                // Reached a fixed point.
-                return *minimums;
-            }
-
-            let current_answer_is_ambig = match &current_answer {
-                Ok(s) => s.is_ambig(),
-                Err(_) => false,
-            };
-
-            self.context.search_graph[dfn].solution = current_answer;
-
-            // Subtle: if our current answer is ambiguous, we can just stop, and
-            // in fact we *must* -- otherwise, we sometimes fail to reach a
-            // fixed point. See `multiple_ambiguous_cycles` for more.
-            if current_answer_is_ambig {
-                return *minimums;
-            }
-
-            // Otherwise: rollback the search tree and try again.
-            self.context.search_graph.rollback_to(dfn + 1);
-        }
-    }
-}
-
-impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
@@ -264,6 +207,74 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
+    fn solve_new_subgoal(
+        &mut self,
+        canonical_goal: UCanonicalGoal<I>,
+        depth: StackDepth,
+        dfn: DepthFirstNumber,
+    ) -> Minimums {
+        // We start with `answer = None` and try to solve the goal. At the end of the iteration,
+        // `answer` will be updated with the result of the solving process. If we detect a cycle
+        // during the solving process, we cache `answer` and try to solve the goal again. We repeat
+        // until we reach a fixed point for `answer`.
+        // Considering the partial order:
+        // - None < Some(Unique) < Some(Ambiguous)
+        // - None < Some(CannotProve)
+        // the function which maps the loop iteration to `answer` is a nondecreasing function
+        // so this function will eventually be constant and the loop terminates.
+        loop {
+            let minimums = &mut Minimums::new();
+            let current_answer = self.solve_iteration(&canonical_goal, minimums);
+
+            debug!(
+                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
+                current_answer, minimums
+            );
+
+            if !self.context.stack[depth].read_and_reset_cycle_flag() {
+                // None of our subgoals depended on us directly.
+                // We can return.
+                self.context.search_graph[dfn].solution = current_answer;
+                return *minimums;
+            }
+
+            // Some of our subgoals depended on us. We need to re-run
+            // with the current answer.
+            if self.context.search_graph[dfn].solution == current_answer {
+                // Reached a fixed point.
+                return *minimums;
+            }
+
+            let current_answer_is_ambig = match &current_answer {
+                Ok(s) => s.is_ambig(),
+                Err(_) => false,
+            };
+
+            self.context.search_graph[dfn].solution = current_answer;
+
+            // Subtle: if our current answer is ambiguous, we can just stop, and
+            // in fact we *must* -- otherwise, we sometimes fail to reach a
+            // fixed point. See `multiple_ambiguous_cycles` for more.
+            if current_answer_is_ambig {
+                return *minimums;
+            }
+
+            // Otherwise: rollback the search tree and try again.
+            self.context.search_graph.rollback_to(dfn + 1);
+        }
+    }
+}
+
+impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
+    fn solve_goal(
+        &mut self,
+        goal: UCanonicalGoal<I>,
+        minimums: &mut Minimums,
+    ) -> Fallible<Solution<I>> {
+        self.solve_goal(goal, minimums)
+    }
+
     fn interner(&self) -> &I {
         &self.program.interner()
     }
@@ -283,7 +294,9 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> Option<chalk_solve::Solution<I>> {
-        self.ctx.solver(program).solve_root_goal(goal).ok()
+        Solver::new(&mut self.ctx, program)
+            .solve_root_goal(goal)
+            .ok()
     }
 
     fn solve_limited(
@@ -293,7 +306,9 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         _should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<chalk_solve::Solution<I>> {
         // TODO support should_continue in recursive solver
-        self.ctx.solver(program).solve_root_goal(goal).ok()
+        Solver::new(&mut self.ctx, program)
+            .solve_root_goal(goal)
+            .ok()
     }
 
     fn solve_multiple(
