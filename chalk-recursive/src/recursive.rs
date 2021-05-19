@@ -79,6 +79,52 @@ where
             max_size,
         }
     }
+
+    #[instrument(level = "debug", skip(self, solve_iteration, reached_fixed_point))]
+    fn solve_new_subgoal(
+        &mut self,
+        canonical_goal: &K,
+        depth: StackDepth,
+        dfn: DepthFirstNumber,
+        mut solve_iteration: impl FnMut(&mut Self, &K, &mut Minimums) -> V,
+        reached_fixed_point: impl Fn(&V, &V) -> bool,
+    ) -> Minimums {
+        // We start with `answer = None` and try to solve the goal. At the end of the iteration,
+        // `answer` will be updated with the result of the solving process. If we detect a cycle
+        // during the solving process, we cache `answer` and try to solve the goal again. We repeat
+        // until we reach a fixed point for `answer`.
+        // Considering the partial order:
+        // - None < Some(Unique) < Some(Ambiguous)
+        // - None < Some(CannotProve)
+        // the function which maps the loop iteration to `answer` is a nondecreasing function
+        // so this function will eventually be constant and the loop terminates.
+        loop {
+            let minimums = &mut Minimums::new();
+            let current_answer = solve_iteration(self, &canonical_goal, minimums);
+
+            debug!(
+                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
+                current_answer, minimums
+            );
+
+            if !self.stack[depth].read_and_reset_cycle_flag() {
+                // None of our subgoals depended on us directly.
+                // We can return.
+                self.search_graph[dfn].solution = current_answer;
+                return *minimums;
+            }
+
+            let old_answer =
+                std::mem::replace(&mut self.search_graph[dfn].solution, current_answer);
+
+            if reached_fixed_point(&old_answer, &self.search_graph[dfn].solution) {
+                return *minimums;
+            }
+
+            // Otherwise: rollback the search tree and try again.
+            self.search_graph.rollback_to(dfn + 1);
+        }
+    }
 }
 
 impl<'me, I: Interner> Solver<'me, I> {
@@ -177,7 +223,30 @@ impl<'me, I: Interner> Solver<'me, I> {
                 .context
                 .search_graph
                 .insert(&goal, depth, initial_solution);
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn);
+
+            let program = self.program;
+            let subgoal_minimums = self.context.solve_new_subgoal(
+                &goal,
+                depth,
+                dfn,
+                |context, goal, minimums| {
+                    Solver::new(context, program).solve_iteration(goal, minimums)
+                },
+                |old_answer, current_answer| {
+                    // Some of our subgoals depended on us. We need to re-run
+                    // with the current answer.
+                    old_answer == current_answer || {
+                        // Subtle: if our current answer is ambiguous, we can just stop, and
+                        // in fact we *must* -- otherwise, we sometimes fail to reach a
+                        // fixed point. See `multiple_ambiguous_cycles` for more.
+                        match &current_answer {
+                            Ok(s) => s.is_ambig(),
+                            Err(_) => false,
+                        }
+                    }
+                },
+            );
+
             self.context.search_graph[dfn].links = subgoal_minimums;
             self.context.search_graph[dfn].stack_depth = None;
             self.context.stack.pop(depth);
@@ -204,64 +273,6 @@ impl<'me, I: Interner> Solver<'me, I> {
 
             info!("solve_goal: solution = {:?}", result);
             result
-        }
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn solve_new_subgoal(
-        &mut self,
-        canonical_goal: UCanonicalGoal<I>,
-        depth: StackDepth,
-        dfn: DepthFirstNumber,
-    ) -> Minimums {
-        // We start with `answer = None` and try to solve the goal. At the end of the iteration,
-        // `answer` will be updated with the result of the solving process. If we detect a cycle
-        // during the solving process, we cache `answer` and try to solve the goal again. We repeat
-        // until we reach a fixed point for `answer`.
-        // Considering the partial order:
-        // - None < Some(Unique) < Some(Ambiguous)
-        // - None < Some(CannotProve)
-        // the function which maps the loop iteration to `answer` is a nondecreasing function
-        // so this function will eventually be constant and the loop terminates.
-        loop {
-            let minimums = &mut Minimums::new();
-            let current_answer = self.solve_iteration(&canonical_goal, minimums);
-
-            debug!(
-                "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
-                current_answer, minimums
-            );
-
-            if !self.context.stack[depth].read_and_reset_cycle_flag() {
-                // None of our subgoals depended on us directly.
-                // We can return.
-                self.context.search_graph[dfn].solution = current_answer;
-                return *minimums;
-            }
-
-            // Some of our subgoals depended on us. We need to re-run
-            // with the current answer.
-            if self.context.search_graph[dfn].solution == current_answer {
-                // Reached a fixed point.
-                return *minimums;
-            }
-
-            let current_answer_is_ambig = match &current_answer {
-                Ok(s) => s.is_ambig(),
-                Err(_) => false,
-            };
-
-            self.context.search_graph[dfn].solution = current_answer;
-
-            // Subtle: if our current answer is ambiguous, we can just stop, and
-            // in fact we *must* -- otherwise, we sometimes fail to reach a
-            // fixed point. See `multiple_ambiguous_cycles` for more.
-            if current_answer_is_ambig {
-                return *minimums;
-            }
-
-            // Otherwise: rollback the search tree and try again.
-            self.context.search_graph.rollback_to(dfn + 1);
         }
     }
 }
