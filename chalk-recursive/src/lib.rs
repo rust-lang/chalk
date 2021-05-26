@@ -5,6 +5,7 @@ pub type UCanonicalGoal<I> = UCanonical<InEnvironment<Goal<I>>>;
 
 mod cache;
 mod combine;
+mod fixed_point;
 mod fulfill;
 mod recursive;
 mod search_graph;
