@@ -12,3 +12,8 @@ chalk-parse/src/parser.rs
 
 ## IDE files
 /.idea/
+
+## Files used in changelog generation
+package.json
+package-lock.json
+node_modules
