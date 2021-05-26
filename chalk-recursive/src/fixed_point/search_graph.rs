@@ -1,5 +1,5 @@
 use super::stack::StackDepth;
-use crate::{Cache, Minimums};
+use super::{Cache, Minimums};
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 use std::hash::Hash;

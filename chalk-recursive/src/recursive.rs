@@ -1,7 +1,6 @@
-use super::fixed_point::{RecursiveContext, SolverStuff};
-use crate::cache::Cache;
+use crate::fixed_point::{Cache, Minimums, RecursiveContext, SolverStuff};
 use crate::solve::{SolveDatabase, SolveIteration};
-use crate::{Minimums, UCanonicalGoal};
+use crate::UCanonicalGoal;
 use chalk_ir::{interner::Interner, NoSolution};
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_ir::{Constraints, Fallible};

@@ -1,6 +1,7 @@
 use super::combine;
 use super::fulfill::Fulfill;
-use crate::{Minimums, UCanonicalGoal};
+use crate::fixed_point::Minimums;
+use crate::UCanonicalGoal;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};

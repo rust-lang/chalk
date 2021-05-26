@@ -1,12 +1,15 @@
-use crate::cache::Cache;
-use crate::search_graph::DepthFirstNumber;
-use crate::search_graph::SearchGraph;
-use crate::stack::{Stack, StackDepth};
-use crate::Minimums;
 use std::fmt::Debug;
 use std::hash::Hash;
 use tracing::debug;
 use tracing::{info, instrument};
+
+mod cache;
+mod search_graph;
+mod stack;
+
+pub use cache::Cache;
+use search_graph::{DepthFirstNumber, SearchGraph};
+use stack::{Stack, StackDepth};
 
 pub(super) struct RecursiveContext<K, V>
 where
@@ -43,6 +46,25 @@ where
     ) -> V;
     fn reached_fixed_point(self, old_value: &V, new_value: &V) -> bool;
     fn error_value(self) -> V;
+}
+
+/// The `minimums` struct is used while solving to track whether we encountered
+/// any cycles in the process.
+#[derive(Copy, Clone, Debug)]
+pub(super) struct Minimums {
+    positive: DepthFirstNumber,
+}
+
+impl Minimums {
+    pub fn new() -> Self {
+        Minimums {
+            positive: DepthFirstNumber::MAX,
+        }
+    }
+
+    pub fn update_from(&mut self, minimums: Minimums) {
+        self.positive = ::std::cmp::min(self.positive, minimums.positive);
+    }
 }
 
 impl<K, V> RecursiveContext<K, V>

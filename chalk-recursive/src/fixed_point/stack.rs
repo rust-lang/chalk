@@ -3,19 +3,19 @@ use std::ops::Index;
 use std::ops::IndexMut;
 use std::usize;
 
-pub(crate) struct Stack {
+pub(super) struct Stack {
     // program: Arc<ProgramEnvironment>,
     entries: Vec<StackEntry>,
     overflow_depth: usize,
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
-pub(crate) struct StackDepth {
+pub(super) struct StackDepth {
     depth: usize,
 }
 
 /// The data we actively keep for each goal on the stack.
-pub(crate) struct StackEntry {
+pub(super) struct StackEntry {
     /// Was this a coinductive goal?
     coinductive_goal: bool,
 
@@ -24,7 +24,7 @@ pub(crate) struct StackEntry {
 }
 
 impl Stack {
-    pub(crate) fn new(
+    pub(super) fn new(
         // program: &Arc<ProgramEnvironment>,
         overflow_depth: usize,
     ) -> Self {
@@ -35,11 +35,11 @@ impl Stack {
         }
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub(super) fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
-    pub(crate) fn push(&mut self, coinductive_goal: bool) -> StackDepth {
+    pub(super) fn push(&mut self, coinductive_goal: bool) -> StackDepth {
         let depth = StackDepth {
             depth: self.entries.len(),
         };
@@ -58,7 +58,7 @@ impl Stack {
         depth
     }
 
-    pub(crate) fn pop(&mut self, depth: StackDepth) {
+    pub(super) fn pop(&mut self, depth: StackDepth) {
         assert_eq!(
             depth.depth + 1,
             self.entries.len(),
@@ -70,7 +70,7 @@ impl Stack {
     /// True iff there exist at least one coinductive goal
     /// and one inductive goal each from the top of the stack
     /// down to (and including) the given depth.
-    pub(crate) fn mixed_inductive_coinductive_cycle_from(&self, depth: StackDepth) -> bool {
+    pub(super) fn mixed_inductive_coinductive_cycle_from(&self, depth: StackDepth) -> bool {
         let coinductive_count = self.entries[depth.depth..]
             .iter()
             .filter(|entry| entry.coinductive_goal)
@@ -83,11 +83,11 @@ impl Stack {
 }
 
 impl StackEntry {
-    pub(crate) fn flag_cycle(&mut self) {
+    pub(super) fn flag_cycle(&mut self) {
         self.cycle = true;
     }
 
-    pub(crate) fn read_and_reset_cycle_flag(&mut self) -> bool {
+    pub(super) fn read_and_reset_cycle_flag(&mut self) -> bool {
         mem::replace(&mut self.cycle, false)
     }
 }
