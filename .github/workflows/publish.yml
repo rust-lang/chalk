@@ -41,7 +41,7 @@ jobs:
           # Update changelog
           npm install auto-changelog@2.2.1
           auto-changelog --output RELEASES.md \
-                         --starting-version v0.13.0 \
+                         --starting-version v0.11.0 \
                          --merge-pattern 'Auto merge of #(\d+) - .+\n\n(.+)' \
                          --template releases-template.hbs
 
