@@ -28,16 +28,27 @@ jobs:
         with:
           crate: cargo-workspaces
 
+      - name: Install Node (for changelog generation)
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
       - name: Release
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         shell: bash
         run: |
+          # Update changelog
+          npm install auto-changelog@2.2.1
+          auto-changelog --output RELEASES.md \
+                         --starting-version v0.11.0 \
+                         --merge-pattern 'Auto merge of #(\d+) - .+\n\n(.+)' \
+                         --template releases-template.hbs
+
           git config --global user.email "runner@gha.local"
           git config --global user.name "Github Action"
           cargo workspaces -v version -ay --force '*' --include-merged-tags --no-git-commit --exact patch
           export VERSION=$(cargo pkgid | sed -E 's/.*#(.*)/\1/g')
-          sed -E -i '' $'s/(# Unreleased)/\\1\\\n\\\n# Release '"$VERSION/" RELEASES.md
           git commit -am "Release $VERSION"
           git tag "v$VERSION"
           cargo workspaces -v publish --from-git --skip-published
