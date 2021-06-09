@@ -38,6 +38,14 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         shell: bash
         run: |
+          # Check if we can skip releasing a new version
+          # (there are no changes and the job was not manually triggered)
+          export CHANGED=$(cargo workspaces changed --include-merged-tags --ignore-changes "**/Cargo.toml")
+          if [[ -z "$CHANGED" && "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]]; then
+            # Nothing has changed, so don't publish a new version
+            exit 0
+          fi
+
           # Update version
           git config --global user.email "runner@gha.local"
           git config --global user.name "Github Action"
