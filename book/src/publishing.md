@@ -6,6 +6,7 @@ The following crates get published to crates.io:
 - `chalk-derive`
 - `chalk-engine`
 - `chalk-ir`
+- `chalk-recursive`
 - `chalk-solve`
 
 The following crates get versioned without publishing:
@@ -13,20 +14,22 @@ The following crates get versioned without publishing:
 - `chalk-integration`
 - `chalk` (root directory)
 
-## Pre-publish
-- Remove the `-dev` suffix from the versions in each `cargo.toml`
-- Bump the dependency version for each crate
-- Change the `Unreleased` section in `RELEASES.md` to the version getting published
-- Create commit
+## Release Automation
+Releases are fully automated. Once a week (Sunday at midnight UTC) a GitHub
+Actions job is executed which generates the changelog, bumps crate versions, and
+publishes the crates. If there have not been any changes since the last version,
+the release is skipped. However, if the job is manually triggered then the
+release will be published even if there are no changes.
 
-## Publishing
-- For each crate in the order above, run `cargo publish`
-    - You will probably have to wait a couple seconds between each to let the index update
+The release pipeline is located in [`publish.yml`].
 
-## Post-publish
-- Bump the minor version in each `cargo.toml` and add a `-dev` suffix
-- Bump the dependency version for each crate
-- Add an `Unreleased` section in the `RELEASES.md`
-- Run `cargo check`
-- Tag release commit on github (e.g. `v0.10.0`)
+[`publish.yml`]: https://github.com/rust-lang/chalk/blob/master/.github/workflows/publish.yml
 
+### Changelog Generation
+The changelog is generated using [`auto-changelog`] and is stored in
+[`RELEASES.md`]. The template used for the changelog is in
+[`releases-template.hbs`].
+
+[`auto-changelog`]: https://www.npmjs.com/package/auto-changelog
+[`RELEASES.md`]: https://github.com/rust-lang/chalk/blob/master/RELEASES.md
+[`releases-template.hbs`]: https://github.com/rust-lang/chalk/blob/master/releases-template.hbs
