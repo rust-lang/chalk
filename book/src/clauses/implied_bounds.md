@@ -405,7 +405,7 @@ Notice that we are now also requiring `Implemented(Self: Trait)` for
 traversing all the implied bounds transitively. This does not change anything
 when checking whether impls are legal, because since we assume
 that the where clauses hold inside the impl, we know that the corresponding
-trait reference do hold. Thanks to this setup, you can see that we indeed
+trait reference does hold. Thanks to this setup, you can see that we indeed
 require to prove the set of all bounds transitively implied by the where
 clauses.
 
@@ -462,41 +462,38 @@ are effectively visiting all the transitive implied bounds, and only these.
 
 ## Implied bounds on types
 
-We mainly talked about implied bounds for traits because this was the most
-subtle regarding implementation. Implied bounds on types are simpler,
-especially because if we assume that a type is well-formed, we don't use that
-fact to deduce that other types are well-formed, we only use it to deduce
-that e.g. some trait bounds hold.
+We mainly talked about implied bounds for traits, but implied bounds on types
+are very similar. Suppose we have the following definition:
 
-For types, we just use rules like these ones:
 ```rust,ignore
 struct Type<...> where WC1, ..., WCn {
     ...
 }
 ```
 
+To prove that `Type<...>` is well-formed, we would need to prove a goal of the
+form `WellFormed(Type<...>).`. The `WellFormed(Type<...>)` predicate is defined
+by the rule:
+
 ```text
 forall<...> {
-    WellFormed(Type<...>) :- WC1, ..., WCn.
+    WellFormed(Type<...>) :- WellFormed(WC1), ..., WellFormed(WCn).
 }
+```
 
+Conversely, if we know a type is well-formed from our environment (for example
+because it appears as an argument of one of our functions), we can have implied
+bounds thanks to the below set of rules:
+
+```text
 forall<...> {
     FromEnv(WC1) :- FromEnv(Type<...>).
     ...
     FromEnv(WCn) :- FromEnv(Type<...>).
 }
 ```
-We can see that we have this asymmetry between well-formedness check,
-which only verifies that the direct superbounds hold, and implied bounds which
-gives access to all bounds transitively implied by the where clauses. In that
-case this is ok because as we said, we don't use `FromEnv(Type<...>)` to deduce
-other `FromEnv(OtherType<...>)` things, nor do we use `FromEnv(Type: Trait)` to
-deduce `FromEnv(OtherType<...>)` things. So in that sense type definitions are
-"less recursive" than traits, and we saw in a previous subsection that
-it was the combination of asymmetry and recursive trait / impls that led to
-unsoundness. As such, the `WellFormed(Type<...>)` predicate does not need
-to be co-inductive.
 
-This asymmetry optimization is useful because in a real Rust program, we have
-to check the well-formedness of types very often (e.g. for each type which
-appears in the body of a function).
+Looking at the above rules, we see that we can never encounter a chain of
+deductions of the form `WellFormed(Type<...>) :- ... :- WellFormed(Type<...>)`.
+So in contrast with traits, the `WellFormed(Type<...>)` predicate does not need
+to be co-inductive.

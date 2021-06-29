@@ -204,12 +204,12 @@ we produce the following rule:
 ```text
 // Rule WellFormed-Type
 forall<P1..Pn> {
-  WellFormed(Type<P1..Pn>) :- WC
+  WellFormed(Type<P1..Pn>) :- WellFormed(WC)
 }
 ```
 
-Note that we use `struct` for defining a type, but this should be understood
-as a general type definition (it could be e.g. a generic `enum`).
+Note that we use `struct` to define a type, but this should be understood as a
+general type definition (it could be e.g. a generic `enum`).
 
 Conversely, we define rules which say that if we assume that a type is
 well-formed, we can also assume that its where clauses hold. That is,
