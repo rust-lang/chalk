@@ -22,15 +22,21 @@ pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 chalk_ir::id_visit!(AssociatedTyValueId);
 chalk_ir::id_fold!(AssociatedTyValueId);
 
+/// Data about a trait implementation.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
 pub struct ImplDatum<I: Interner> {
+    /// Whether this is an `impl Trait` or `impl !Trait`
     pub polarity: Polarity,
+    /// Bindings of variables from the where clauses in the trait.
     pub binders: Binders<ImplDatumBound<I>>,
+    /// Whether this impl is local to this crate or from an external crate
     pub impl_type: ImplType,
+    /// IDs for associated types `type T = SomeTy`
     pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {
+    /// True if this is an `impl Trait`, false if `impl !Trait`
     pub fn is_positive(&self) -> bool {
         self.polarity.is_positive()
     }
@@ -39,6 +45,7 @@ impl<I: Interner> ImplDatum<I> {
         self.binders.skip_binders().trait_ref.trait_id
     }
 
+    /// Gets the [`AdtId`] for the `Self` type of this impl.
     pub fn self_type_adt_id(&self, interner: &I) -> Option<AdtId<I>> {
         match self
             .binders
@@ -59,6 +66,7 @@ pub struct ImplDatumBound<I: Interner> {
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
+/// Whether this impl is local to this crate or from an external crate
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ImplType {
     Local,
@@ -713,7 +721,9 @@ pub struct GeneratorWitnessExistential<I: Interner> {
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub enum Polarity {
+    /// `impl Trait for ..`
     Positive,
+    /// `impl !Trait for ..`
     Negative,
 }
 
