@@ -49,6 +49,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the associated type with the given id.
     fn associated_ty_data(&self, ty: AssocTypeId<I>) -> Arc<AssociatedTyDatum<I>>;
 
+    /// Returns the datum for the associated fn with the given id.
+    fn associated_fn_data(&self, f: AssocFnDefId<I>) -> Arc<AssociatedFnDatum<I>>;
+
     /// Returns the datum for the definition with the given id.
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
 
@@ -76,7 +79,10 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the [`AssociatedTyValue`] with the given id.
     fn associated_ty_value(&self, id: AssociatedTyValueId<I>) -> Arc<AssociatedTyValue<I>>;
 
-    /// Returns the `OpaqueTyDatum` with the given id.
+    /// Returns the [`AssociatedFnValue`] with the given id.
+    fn associated_fn_value(&self, id: AssociatedFnValueId<I>) -> Arc<AssociatedFnValue<I>>;
+
+    /// Returns the [`OpaqueTyDatum`] with the given id.
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>>;
 
     /// Returns the "hidden type" corresponding with the opaque type.

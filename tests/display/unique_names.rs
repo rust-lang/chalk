@@ -64,6 +64,12 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyDatum<I>> {
         self.db.associated_ty_data(ty)
     }
+    fn associated_fn_data(
+        &self,
+        f: chalk_ir::AssocFnDefId<I>,
+    ) -> Arc<chalk_solve::rust_ir::AssociatedFnDatum<I>> {
+        self.db.associated_fn_data(f)
+    }
     fn trait_datum(
         &self,
         trait_id: chalk_ir::TraitId<I>,
@@ -96,6 +102,12 @@ where
         id: chalk_solve::rust_ir::AssociatedTyValueId<I>,
     ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyValue<I>> {
         self.db.associated_ty_value(id)
+    }
+    fn associated_fn_value(
+        &self,
+        id: chalk_solve::rust_ir::AssociatedFnValueId<I>,
+    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedFnValue<I>> {
+        self.db.associated_fn_value(id)
     }
     fn generator_datum(
         &self,

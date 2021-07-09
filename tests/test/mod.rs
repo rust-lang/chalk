@@ -231,9 +231,9 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
         );
 
         let program = if coherence {
-            db.checked_program().unwrap()
+            db.checked_program().expect("checked_program failed")
         } else {
-            db.program_ir().unwrap()
+            db.program_ir().expect("program_ir failed")
         };
 
         for (goal_text, solver_choice, expected) in goals {
@@ -254,11 +254,14 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                 println!("goal {}", goal_text);
                 assert!(goal_text.starts_with("{"));
                 assert!(goal_text.ends_with("}"));
-                let goal = lower_goal(
-                    &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
-                    &*program,
-                )
-                .unwrap();
+                let parsed = chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]);
+
+                if let Err(e) = parsed {
+                    println!("Parse error:\n{}", e);
+                    panic!("parse error above");
+                }
+                let parsed = parsed.unwrap();
+                let goal = lower_goal(&*parsed, &*program).expect("lower_goal failed");
 
                 println!("using solver: {:?}", solver_choice);
                 let peeled_goal = goal.into_peeled_goal(db.interner());

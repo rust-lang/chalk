@@ -5,8 +5,8 @@ use chalk_ir::*;
 use std::sync::Arc;
 use tracing::{debug, instrument};
 
-/// Methods for splitting up the projections for associated types from
-/// the surrounding context.
+/// Methods for splitting up the projections for associated types and
+/// functions from the surrounding context.
 pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// Given a projection of an associated type, split the type
     /// parameters into those that come from the *trait* and those
@@ -182,7 +182,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// Returns the tuple of:
     ///
     /// * the parameters for the impl (`[Y]`, in our example)
-    /// * the parameters for the associated type value (`['a]`, in our example)
+    /// * the parameters for the associated type value (`['x]`, in our example)
     fn split_associated_ty_parameters<'p, P>(
         &self,
         parameters: &'p [P],
@@ -193,6 +193,146 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         let split_point = parameters.len() - trait_num_params;
         let (other_params, trait_params) = parameters.split_at(split_point);
         (trait_params, other_params)
+    }
+
+    /// Given the full set of parameters (or binders) for an
+    /// associated function *value* (which appears in an impl), splits
+    /// them into the substitutions for the *impl* and those for the
+    /// *associated function*.
+    ///
+    /// # Example
+    ///
+    /// ```ignore (example)
+    /// impl<T> Iterable for Vec<T> {
+    ///     fn f<'a, U>(&self, r: &'a [U]);
+    /// }
+    /// ```
+    ///
+    /// in this example, the full set of parameters would be `['x, S,
+    /// Y]`, where `'x` is the value for `'a`, `S` is the value for
+    /// `self`, and `Y` is the value for `T`.
+    ///
+    /// # Returns
+    ///
+    /// Returns the pair of:
+    ///
+    /// * the parameters for the impl (`[Y]`, in our example)
+    /// * the parameters for the associated type value (`['a, S]`, in our example)
+    fn split_associated_fn_value_parameters<'p, P>(
+        &self,
+        parameters: &'p [P],
+        associated_fn_value: &AssociatedFnValue<I>,
+    ) -> (&'p [P], &'p [P]) {
+        let interner = self.interner();
+        let impl_datum = self.impl_datum(associated_fn_value.impl_id);
+        let impl_params_len = impl_datum.binders.len(interner);
+        assert!(parameters.len() >= impl_params_len);
+
+        // the impl parameters are a suffix
+        //
+        // [ P0..Pn, Pn...Pm ]
+        //           ^^^^^^^ impl parameters
+        let split_point = parameters.len() - impl_params_len;
+        let (other_params, impl_params) = parameters.split_at(split_point);
+        (impl_params, other_params)
+    }
+
+    /// Given the full set of parameters (or binders) for an associated
+    /// function datum (the one appearing in a trait), splits them into
+    /// the parameters for the *trait* and those for the *associated
+    /// function*.
+    ///
+    /// # Example
+    ///
+    /// ```ignore (example)
+    /// trait Foo<T> {
+    ///     fn f<'a>(&self, b: &'a ()) -> &'a ();
+    /// }
+    /// ```
+    ///
+    /// in this example, the full set of parameters would be `['x,
+    /// S, Y]`, where `'x` is the value for `'a`, `S` is the value for
+    /// `self` and `Y` is the value for `T`.
+    ///
+    /// # Returns
+    ///
+    /// Returns the tuple of:
+    ///
+    /// * the parameters for the impl (`[Y]`, in our example)
+    /// * the parameters for the associated fn value (`['x, S]`, in our
+    ///   example)
+    fn split_associated_fn_parameters<'p, P>(
+        &self,
+        parameters: &'p [P],
+        associated_ty_datum: &AssociatedFnDatum<I>,
+    ) -> (&'p [P], &'p [P]) {
+        let trait_datum = &self.trait_datum(associated_ty_datum.trait_id);
+        let trait_num_params = trait_datum.binders.len(self.interner());
+        let split_point = parameters.len() - trait_num_params;
+        let (other_params, trait_params) = parameters.split_at(split_point);
+        (trait_params, other_params)
+    }
+
+    /// Given the full set of parameters for an associated function
+    /// *value* (which appears in an impl), returns the trait reference
+    /// and projection that are being satisfied by that value.
+    ///
+    /// # Example
+    ///
+    /// ```ignore (example)
+    /// impl<T> Trait for Vec<T> {
+    ///     fn f<'a, U>(&self, r: &'a [U]);
+    /// }
+    /// ```
+    ///
+    /// Here we expect the full set of parameters for `f`, which would
+    /// be `['x, Y, Vec<T>, Z]`, where `'x` is the value for `'a`, `Y`
+    /// is the value for `U`, `Vec<T>` is the value for `&self`, and `Z`
+    /// is the value for `T`.
+    ///
+    /// Returns the pair of:
+    ///
+    /// * the parameters that apply to the impl (`Z`, in our example)
+    /// * the projection `<Vec<Z> as Trait>::f<'x, Y>`
+    #[instrument(level = "debug", skip(self, associated_fn_value))]
+    fn impl_parameters_and_projection_from_associated_fn_value<'p>(
+        &self,
+        parameters: &'p [GenericArg<I>],
+        associated_fn_value: &AssociatedFnValue<I>,
+    ) -> (&'p [GenericArg<I>], FnDefTy<I>) {
+        let interner = self.interner();
+
+        let impl_datum = self.impl_datum(associated_fn_value.impl_id);
+
+        // Get the trait ref from the impl -- so in our example above
+        // this would be `Box<!T>: Foo`.
+        let (impl_parameters, atv_parameters) =
+            self.split_associated_fn_value_parameters(&parameters, associated_fn_value);
+        let trait_ref = {
+            let opaque_ty_ref = impl_datum.binders.map_ref(|b| &b.trait_ref).cloned();
+            debug!(?opaque_ty_ref);
+            opaque_ty_ref.substitute(interner, impl_parameters)
+        };
+
+        // Create the parameters for the projection -- in our example
+        // above, this would be `['!a, Box<!T>]`, corresponding to
+        // `<Box<!T> as Foo>::Item<'!a>`
+        let projection_substitution = Substitution::from_iter(
+            interner,
+            atv_parameters
+                .iter()
+                .chain(trait_ref.substitution.iter(interner))
+                .cloned(),
+        );
+
+        let fn_def_ty = FnDefTy {
+            fn_def_id: associated_fn_value.fn_id.as_fn(),
+            substitution: projection_substitution,
+        };
+
+        debug!(?impl_parameters, ?trait_ref, ?fn_def_ty);
+
+        (impl_parameters, fn_def_ty)
     }
 }
 

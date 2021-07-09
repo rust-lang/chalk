@@ -1,6 +1,5 @@
 use crate::interner::ChalkIr;
 use crate::{tls, Identifier, TypeKind};
-use chalk_ir::FnDefTy;
 use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
 use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
@@ -9,10 +8,12 @@ use chalk_ir::{
     OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, Scalar,
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
+use chalk_ir::{AssocFnDefId, FnDefTy};
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
-    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
-    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AssociatedFnDatum, AssociatedFnValue, AssociatedFnValueId,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum, ImplType,
+    OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -54,6 +55,9 @@ pub struct Program {
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
 
+    /// From impl name to item-id. Used during lowering only.
+    pub impl_ids: BTreeMap<Identifier, ImplId<ChalkIr>>,
+
     /// For each trait:
     pub trait_kinds: BTreeMap<TraitId<ChalkIr>, TypeKind>,
 
@@ -77,6 +81,10 @@ pub struct Program {
     pub associated_ty_values:
         BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
 
+    /// For each associated fn value `fn foo() { ... }` found in an impl:
+    pub associated_fn_values:
+        BTreeMap<AssociatedFnValueId<ChalkIr>, Arc<AssociatedFnValue<ChalkIr>>>,
+
     // From opaque type name to item-id. Used during lowering only.
     pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
 
@@ -97,6 +105,9 @@ pub struct Program {
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+
+    /// For each associated fn declaration `fn foo()` found in a trait
+    pub associated_fn_data: BTreeMap<AssocFnDefId<ChalkIr>, Arc<AssociatedFnDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -148,6 +159,26 @@ impl tls::DebugContext for Program {
         }
     }
 
+    fn debug_impl_id(
+        &self,
+        impl_id: ImplId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error> {
+        if let Some(name) = self
+            .impl_ids
+            .iter()
+            .find_map(|(iname, &iid)| (iid == impl_id).then(|| iname))
+        {
+            write!(fmt, "{{impl @{}}}", name)
+        } else if self.impl_data.contains_key(&impl_id) {
+            write!(fmt, "{{impl id {:?}}}", impl_id.0)
+        } else {
+            fmt.debug_struct("InvalidImplId")
+                .field("index", &impl_id.0)
+                .finish()
+        }
+    }
+
     fn debug_assoc_type_id(
         &self,
         assoc_type_id: AssocTypeId<ChalkIr>,
@@ -181,6 +212,17 @@ impl tls::DebugContext for Program {
         fn_def_id: FnDefId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
+        if let Some(impl_item) = self
+            .associated_fn_values
+            .get(&AssociatedFnValueId(fn_def_id))
+        {
+            self.debug_impl_id(impl_item.impl_id, fmt)?;
+            write!(fmt, "::")?;
+        } else if let Some(trait_item) = self.associated_fn_data.get(&AssocFnDefId(fn_def_id)) {
+            self.debug_trait_id(trait_item.trait_id, fmt)?;
+            write!(fmt, "::")?;
+        }
+
         if let Some(k) = self.fn_def_kinds.get(&fn_def_id) {
             write!(fmt, "{}", k.name)
         } else {
@@ -389,6 +431,10 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.associated_ty_data[&ty].clone()
     }
 
+    fn associated_fn_data(&self, f: AssocFnDefId<ChalkIr>) -> Arc<AssociatedFnDatum<ChalkIr>> {
+        self.associated_fn_data[&f].clone()
+    }
+
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
         self.trait_data[&id].clone()
     }
@@ -402,6 +448,13 @@ impl RustIrDatabase<ChalkIr> for Program {
         id: AssociatedTyValueId<ChalkIr>,
     ) -> Arc<AssociatedTyValue<ChalkIr>> {
         self.associated_ty_values[&id].clone()
+    }
+
+    fn associated_fn_value(
+        &self,
+        id: AssociatedFnValueId<ChalkIr>,
+    ) -> Arc<AssociatedFnValue<ChalkIr>> {
+        self.associated_fn_values[&id].clone()
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {

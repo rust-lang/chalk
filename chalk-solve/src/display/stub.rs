@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::rust_ir::{GeneratorDatum, GeneratorWitnessDatum};
 use crate::{
     rust_ir::{
-        AdtDatumBound, AdtKind, AdtVariantDatum, AssociatedTyDatumBound, FnDefDatumBound,
+        AdtDatumBound, AdtKind, AdtVariantDatum, AssociatedItemDatumBound, FnDefDatumBound,
         OpaqueTyDatumBound, TraitDatumBound,
     },
     RustIrDatabase,
@@ -48,12 +48,20 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         let mut v = (*self.db.associated_ty_data(ty)).clone();
         v.binders = Binders::new(
             v.binders.binders.clone(),
-            AssociatedTyDatumBound {
+            AssociatedItemDatumBound {
                 where_clauses: Vec::new(),
                 bounds: Vec::new(),
             },
         );
         Arc::new(v)
+    }
+
+    fn associated_fn_data(
+        &self,
+        f: chalk_ir::AssocFnDefId<I>,
+    ) -> std::sync::Arc<crate::rust_ir::AssociatedFnDatum<I>> {
+        // there are no binders in here to stub out, those would be dealt with with FnDef
+        self.db.associated_fn_data(f)
     }
 
     fn trait_datum(
@@ -117,6 +125,13 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         _id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> std::sync::Arc<crate::rust_ir::AssociatedTyValue<I>> {
         unreachable!("associated type values should never be stubbed")
+    }
+
+    fn associated_fn_value(
+        &self,
+        _id: crate::rust_ir::AssociatedFnValueId<I>,
+    ) -> std::sync::Arc<crate::rust_ir::AssociatedFnValue<I>> {
+        unreachable!("associated function values should never be stubbed")
     }
 
     fn opaque_ty_data(

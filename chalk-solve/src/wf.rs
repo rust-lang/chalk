@@ -607,7 +607,7 @@ fn compute_assoc_ty_goal<I: Interner>(
                 //     * original in trait, `Self: 'a`
                 //     * after substituting impl parameters, `Box<!T>: '!a`
                 let assoc_ty_datum = db.associated_ty_data(projection.associated_ty_id);
-                let AssociatedTyDatumBound {
+                let AssociatedItemDatumBound {
                     bounds: defn_bounds,
                     where_clauses: defn_where_clauses,
                 } = assoc_ty_datum

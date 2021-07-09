@@ -57,8 +57,13 @@ impl std::error::Error for ChalkError {}
 pub enum RustIrError {
     InvalidParameterName(Identifier),
     InvalidTraitName(Identifier),
+    InvalidImplName(Identifier),
+    InvalidImplMemberName(Identifier, Identifier),
     NotTrait(Identifier),
     NotStruct(Identifier),
+    NotAssociatedType(Identifier),
+    NotAssociatedFn(Identifier),
+    AmbiguousProjection(Identifier),
     DuplicateOrShadowedParameters,
     AutoTraitAssociatedTypes(Identifier),
     AutoTraitParameters(Identifier),
@@ -66,6 +71,7 @@ pub enum RustIrError {
     InvalidFundamentalTypesParameters(Identifier),
     NegativeImplAssociatedValues(Identifier),
     MissingAssociatedType(Identifier),
+    MissingAssociatedFn(Identifier),
     IncorrectNumberOfVarianceParameters {
         identifier: Identifier,
         expected: usize,
@@ -77,6 +83,11 @@ pub enum RustIrError {
         actual: usize,
     },
     IncorrectNumberOfAssociatedTypeParameters {
+        identifier: Identifier,
+        expected: usize,
+        actual: usize,
+    },
+    IncorrectNumberOfAssociatedFnParameters {
         identifier: Identifier,
         expected: usize,
         actual: usize,
@@ -96,6 +107,11 @@ pub enum RustIrError {
         expected: Kind,
         actual: Kind,
     },
+    IncorrectAssociatedFnParameterKind {
+        identifier: Identifier,
+        expected: Kind,
+        actual: Kind,
+    },
     CannotApplyTypeParameter(Identifier),
     InvalidExternAbi(Atom),
 }
@@ -107,6 +123,12 @@ impl std::fmt::Display for RustIrError {
                 write!(f, "invalid parameter name `{}`", name)
             }
             RustIrError::InvalidTraitName(name) => write!(f, "invalid trait name `{}`", name),
+            RustIrError::InvalidImplName(name) => write!(f, "invalid impl name `{}`", name),
+            RustIrError::InvalidImplMemberName(impl_name, member_name) => write!(
+                f,
+                "invalid impl member name `{}::{}`",
+                impl_name, member_name
+            ),
             RustIrError::NotTrait(name) => write!(
                 f,
                 "expected a trait, found `{}`, which is not a trait",
@@ -117,6 +139,22 @@ impl std::fmt::Display for RustIrError {
                 "expected a struct, found `{}`, which is not a struct",
                 name
             ),
+            RustIrError::NotAssociatedType(name) => write!(
+                f,
+                "expected an associated type, found `{}`, which is not",
+                name
+            ),
+            RustIrError::NotAssociatedFn(name) => write!(
+                f,
+                "expected an associated fn, found `{}`, which is not",
+                name
+            ),
+            RustIrError::AmbiguousProjection(name) => write!(
+                f,
+                "projection refers to `{}` which is both a fn and a type",
+                name
+            ),
+
             RustIrError::DuplicateOrShadowedParameters => {
                 write!(f, "duplicate or shadowed parameters")
             }
@@ -141,6 +179,9 @@ impl std::fmt::Display for RustIrError {
             ),
             RustIrError::MissingAssociatedType(name) => {
                 write!(f, "no associated type `{}` defined in trait", name)
+            }
+            RustIrError::MissingAssociatedFn(name) => {
+                write!(f, "no associated fn `{}` defined in trait", name)
             }
             RustIrError::IncorrectNumberOfVarianceParameters {
                 identifier,
@@ -169,6 +210,15 @@ impl std::fmt::Display for RustIrError {
                 "wrong number of parameters for associated type `{}` (expected {}, got {})",
                 identifier, expected, actual
             ),
+            RustIrError::IncorrectNumberOfAssociatedFnParameters {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "wrong number of parameters for associated fn `{}` (expected {}, got {})",
+                identifier, expected, actual
+            ),
             RustIrError::IncorrectParameterKind {
                 identifier,
                 expected,
@@ -194,6 +244,15 @@ impl std::fmt::Display for RustIrError {
             } => write!(
                 f,
                 "incorrect associated type parameter kind for `{}`: expected {}, found {}",
+                identifier, expected, actual
+            ),
+            RustIrError::IncorrectAssociatedFnParameterKind {
+                identifier,
+                expected,
+                actual,
+            } => write!(
+                f,
+                "incorrect associated fn parameter kind for `{}`: expected {}, found {}",
                 identifier, expected, actual
             ),
             RustIrError::CannotApplyTypeParameter(name) => {

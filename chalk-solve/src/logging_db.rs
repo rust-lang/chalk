@@ -128,6 +128,15 @@ where
         ty_datum
     }
 
+    fn associated_fn_data(
+        &self,
+        f: chalk_ir::AssocFnDefId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedFnDatum<I>> {
+        let datum = self.ws.db().associated_fn_data(f);
+        self.record(datum.trait_id);
+        datum
+    }
+
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.record(trait_id);
         self.ws.db().trait_datum(trait_id)
@@ -171,6 +180,15 @@ where
         id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
         let value = self.ws.db().associated_ty_value(id);
+        self.record(value.impl_id);
+        value
+    }
+
+    fn associated_fn_value(
+        &self,
+        id: crate::rust_ir::AssociatedFnValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedFnValue<I>> {
+        let value = self.ws.db().associated_fn_value(id);
         self.record(value.impl_id);
         value
     }
@@ -395,6 +413,13 @@ where
         self.db.associated_ty_data(ty)
     }
 
+    fn associated_fn_data(
+        &self,
+        f: chalk_ir::AssocFnDefId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedFnDatum<I>> {
+        self.db.associated_fn_data(f)
+    }
+
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.db.trait_datum(trait_id)
     }
@@ -428,6 +453,13 @@ where
         id: crate::rust_ir::AssociatedTyValueId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
         self.db.associated_ty_value(id)
+    }
+
+    fn associated_fn_value(
+        &self,
+        id: crate::rust_ir::AssociatedFnValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedFnValue<I>> {
+        self.db.associated_fn_value(id)
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {

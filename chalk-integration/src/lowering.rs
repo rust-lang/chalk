@@ -22,6 +22,29 @@ use env::*;
 const SELF: &str = "Self";
 const FIXME_SELF: &str = "__FIXME_SELF__";
 
+/// The chalk-integration language can have projections either refer to types
+/// or functions
+pub enum ProjectionTarget {
+    ProjectionTy(chalk_ir::ProjectionTy<ChalkIr>),
+    ProjectionFn(chalk_ir::FnDefTy<ChalkIr>),
+}
+
+impl ProjectionTarget {
+    pub fn expect_ty(self, name: &Identifier) -> LowerResult<chalk_ir::ProjectionTy<ChalkIr>> {
+        match self {
+            ProjectionTarget::ProjectionTy(t) => Ok(t),
+            ProjectionTarget::ProjectionFn(_) => Err(RustIrError::NotAssociatedType(name.clone())),
+        }
+    }
+
+    pub fn expect_fn(self, name: &Identifier) -> LowerResult<chalk_ir::FnDefTy<ChalkIr>> {
+        match self {
+            ProjectionTarget::ProjectionFn(f) => Ok(f),
+            ProjectionTarget::ProjectionTy(_) => Err(RustIrError::NotAssociatedFn(name.clone())),
+        }
+    }
+}
+
 trait LowerWithEnv {
     type Lowered;
 
@@ -44,7 +67,7 @@ impl Lower for Program {
         // based just on its position:
         let raw_ids = self.items.iter().map(|_| lowerer.next_item_id()).collect();
 
-        lowerer.extract_associated_types(self, &raw_ids)?;
+        lowerer.extract_trait_decls(self, &raw_ids)?;
         lowerer.extract_ids(self, &raw_ids)?;
         lowerer.lower(self, &raw_ids)
     }
@@ -162,7 +185,9 @@ impl LowerWithEnv for WhereClause {
             }
             WhereClause::ProjectionEq { projection, ty } => vec![
                 chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
-                    alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
+                    alias: chalk_ir::AliasTy::Projection(
+                        projection.lower(env)?.expect_ty(&projection.name)?,
+                    ),
                     ty: ty.lower(env)?,
                 }),
                 chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
@@ -214,9 +239,17 @@ impl LowerWithEnv for DomainGoal {
                 .collect(),
             DomainGoal::Normalize { projection, ty } => {
                 vec![chalk_ir::DomainGoal::Normalize(chalk_ir::Normalize {
-                    alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
+                    alias: chalk_ir::AliasTy::Projection(
+                        projection.lower(env)?.expect_ty(&projection.name)?,
+                    ),
                     ty: ty.lower(env)?,
                 })]
+            }
+            DomainGoal::NormalizeFn { projection, ty } => {
+                vec![chalk_ir::DomainGoal::NormalizeFn(
+                    projection.lower(env)?.expect_fn(&projection.name)?,
+                    ty.lower(env)?,
+                )]
             }
             DomainGoal::TyWellFormed { ty } => vec![chalk_ir::DomainGoal::WellFormed(
                 chalk_ir::WellFormed::Ty(ty.lower(env)?),
@@ -333,11 +366,13 @@ impl LowerWithEnv for AdtRepr {
     }
 }
 
-impl LowerWithEnv for (&FnDefn, chalk_ir::FnDefId<ChalkIr>) {
+pub struct LowerFnDefn<'a>(&'a FnDefn, chalk_ir::FnDefId<ChalkIr>);
+
+impl<'a> LowerWithEnv for LowerFnDefn<'a> {
     type Lowered = rust_ir::FnDefDatum<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let (fn_defn, fn_def_id) = self;
+        let LowerFnDefn(fn_defn, fn_def_id) = self;
 
         let binders = env.in_binders(fn_defn.all_parameters(), |env| {
             let where_clauses = fn_defn.where_clauses.lower(env)?;
@@ -610,11 +645,11 @@ impl Lower for TraitFlags {
     }
 }
 
-impl LowerWithEnv for ProjectionTy {
-    type Lowered = chalk_ir::ProjectionTy<ChalkIr>;
+impl LowerWithEnv for Projection {
+    type Lowered = ProjectionTarget;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let ProjectionTy {
+        let Projection {
             ref trait_ref,
             ref name,
             ref args,
@@ -624,36 +659,87 @@ impl LowerWithEnv for ProjectionTy {
             trait_id,
             substitution: trait_substitution,
         } = trait_ref.lower(env)?;
-        let lookup = env.lookup_associated_ty(trait_id, name)?;
-        let mut args: Vec<_> = args
-            .iter()
-            .map(|a| a.lower(env))
-            .collect::<LowerResult<_>>()?;
+        match (
+            env.lookup_associated_ty(trait_id, name),
+            env.lookup_associated_fn(trait_id, name),
+        ) {
+            // both present; ambiguous in the chalk-integration language
+            (Ok(_), Ok(_)) => return Err(RustIrError::AmbiguousProjection(name.clone())),
 
-        if args.len() != lookup.addl_variable_kinds.len() {
-            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
-                identifier: self.name.clone(),
-                expected: lookup.addl_variable_kinds.len(),
-                actual: args.len(),
-            })?;
-        }
+            // neither present
+            (
+                Err(e @ RustIrError::MissingAssociatedType(_)),
+                Err(RustIrError::MissingAssociatedFn(_)),
+            ) => return Err(e),
 
-        for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
-            if param.kind() != arg.kind() {
-                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
-                    identifier: self.name.clone(),
-                    expected: param.kind(),
-                    actual: arg.kind(),
-                })?;
+            // type
+            (Ok(lookup), _) => {
+                let mut args: Vec<_> = args
+                    .iter()
+                    .map(|a| a.lower(env))
+                    .collect::<LowerResult<_>>()?;
+
+                if args.len() != lookup.addl_variable_kinds.len() {
+                    Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+                        identifier: self.name.clone(),
+                        expected: lookup.addl_variable_kinds.len(),
+                        actual: args.len(),
+                    })?;
+                }
+
+                for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
+                    if param.kind() != arg.kind() {
+                        Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                            identifier: self.name.clone(),
+                            expected: param.kind(),
+                            actual: arg.kind(),
+                        })?;
+                    }
+                }
+
+                args.extend(trait_substitution.iter(interner).cloned());
+
+                Ok(ProjectionTarget::ProjectionTy(chalk_ir::ProjectionTy {
+                    associated_ty_id: lookup.id,
+                    substitution: chalk_ir::Substitution::from_iter(interner, args),
+                }))
             }
+
+            // function
+            (_, Ok(lookup)) => {
+                let mut args: Vec<_> = args
+                    .iter()
+                    .map(|a| a.lower(env))
+                    .collect::<LowerResult<_>>()?;
+
+                if args.len() != lookup.addl_variable_kinds.len() {
+                    Err(RustIrError::IncorrectNumberOfAssociatedFnParameters {
+                        identifier: self.name.clone(),
+                        expected: lookup.addl_variable_kinds.len(),
+                        actual: args.len(),
+                    })?;
+                }
+
+                for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
+                    if param.kind() != arg.kind() {
+                        Err(RustIrError::IncorrectAssociatedFnParameterKind {
+                            identifier: self.name.clone(),
+                            expected: param.kind(),
+                            actual: arg.kind(),
+                        })?;
+                    }
+                }
+
+                args.extend(trait_substitution.iter(interner).cloned());
+
+                Ok(ProjectionTarget::ProjectionFn(chalk_ir::FnDefTy {
+                    fn_def_id: lookup.id.as_fn(),
+                    substitution: chalk_ir::Substitution::from_iter(interner, args),
+                }))
+            }
+
+            (Err(e), _) => return Err(e),
         }
-
-        args.extend(trait_substitution.iter(interner).cloned());
-
-        Ok(chalk_ir::ProjectionTy {
-            associated_ty_id: lookup.id,
-            substitution: chalk_ir::Substitution::from_iter(interner, args),
-        })
     }
 }
 
@@ -761,10 +847,10 @@ impl LowerWithEnv for Ty {
                 }
             }
 
-            Ty::Projection { ref proj } => {
-                chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Projection(proj.lower(env)?))
-                    .intern(interner)
-            }
+            Ty::Projection { ref proj } => chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Projection(
+                proj.lower(env)?.expect_ty(&proj.name)?,
+            ))
+            .intern(interner),
 
             Ty::ForAll {
                 lifetime_names,
@@ -818,6 +904,21 @@ impl LowerWithEnv for Ty {
             Ty::Str => chalk_ir::TyKind::Str.intern(interner),
 
             Ty::Never => chalk_ir::TyKind::Never.intern(interner),
+            Ty::ImplFn { func } => {
+                // resolve the function reference
+                let impl_fn = env.lookup_impl_fn(&func.impl_name, &func.fn_name)?;
+
+                let substitution = Substitution::from_fallible(
+                    interner,
+                    func.args.iter().map(|arg| arg.lower(env)),
+                )?;
+
+                chalk_ir::TyKind::FnDef(chalk_ir::FnDefTy {
+                    fn_def_id: impl_fn.as_fn(),
+                    substitution,
+                })
+                .intern(interner)
+            }
         })
     }
 }
@@ -894,11 +995,18 @@ impl LowerWithEnv for Lifetime {
     }
 }
 
-impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
+struct LowerImpl<'a>(
+    &'a Impl,
+    ImplId<ChalkIr>,
+    &'a AssociatedTyValueIds,
+    &'a AssociatedFnValueIds,
+);
+
+impl<'a> LowerWithEnv for LowerImpl<'a> {
     type Lowered = rust_ir::ImplDatum<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let (impl_, impl_id, associated_ty_value_ids) = self;
+        let LowerImpl(impl_, impl_id, associated_ty_value_ids, associated_fn_value_ids) = self;
 
         let polarity = impl_.polarity.lower();
         let binders = env.in_binders(impl_.all_parameters(), |env| {
@@ -930,11 +1038,18 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
 
         debug!(?associated_ty_value_ids);
 
+        let fn_defs = impl_
+            .fn_defs
+            .iter()
+            .map(|fd| associated_fn_value_ids[&(*impl_id, fd.name.str.clone())])
+            .collect();
+
         Ok(rust_ir::ImplDatum {
             polarity,
             binders,
             impl_type: impl_.impl_type.lower(),
             associated_ty_value_ids,
+            associated_fn_value_ids: fn_defs,
         })
     }
 }
@@ -979,11 +1094,13 @@ impl LowerWithEnv for Clause {
     }
 }
 
-impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
+struct LowerTrait<'a>(&'a TraitDefn, chalk_ir::TraitId<ChalkIr>);
+
+impl LowerWithEnv for LowerTrait<'_> {
     type Lowered = rust_ir::TraitDatum<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let (trait_defn, trait_id) = self;
+        let LowerTrait(trait_defn, trait_id) = self;
 
         let all_parameters = trait_defn.all_parameters();
         let all_parameters_len = all_parameters.len();
@@ -1008,12 +1125,19 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
             .map(|defn| env.lookup_associated_ty(*trait_id, &defn.name).unwrap().id)
             .collect();
 
+        let associated_fn_def_ids = trait_defn
+            .fn_defs
+            .iter()
+            .map(|fd| env.lookup_associated_fn(*trait_id, &fd.name).unwrap().id)
+            .collect();
+
         let trait_datum = rust_ir::TraitDatum {
             id: *trait_id,
             binders,
             flags: trait_defn.flags.lower(),
             associated_ty_ids,
             well_known: trait_defn.well_known.map(|def| def.lower()),
+            fn_defs: associated_fn_def_ids,
         };
 
         debug!(?trait_datum);
@@ -1041,6 +1165,38 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         })
         .collect();
 
+    let associated_fn_lookups = program
+        .associated_fn_data
+        .iter()
+        .map(|(&fn_id, fn_datum)| {
+            let trait_datum = &program.trait_data[&fn_datum.trait_id];
+            let num_trait_params = trait_datum.binders.len(interner);
+            let num_addl_params = fn_datum.binders.len(interner) - num_trait_params;
+            let addl_variable_kinds =
+                fn_datum.binders.binders.as_slice(interner)[..num_addl_params].to_owned();
+            let lookup = AssociatedFnLookup {
+                id: fn_id,
+                addl_variable_kinds,
+            };
+            ((fn_datum.trait_id, fn_datum.name.clone()), lookup)
+        })
+        .collect();
+
+    let associated_fn_value_lookups = program
+        .impl_data
+        .iter()
+        .flat_map(|(&impl_id, impl_datum)| {
+            impl_datum
+                .associated_fn_value_ids
+                .iter()
+                .map(move |&value_id| {
+                    let def_id = program.associated_fn_values[&value_id].fn_id;
+                    let name = program.associated_fn_data[&def_id].name.clone();
+                    ((impl_id, name), value_id)
+                })
+        })
+        .collect();
+
     let auto_traits = program
         .trait_data
         .iter()
@@ -1052,6 +1208,7 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         fn_def_ids: &program.fn_def_ids,
         closure_ids: &program.closure_ids,
         trait_ids: &program.trait_ids,
+        impl_ids: &program.impl_ids,
         opaque_ty_ids: &program.opaque_ty_ids,
         generator_ids: &program.generator_ids,
         generator_kinds: &program.generator_kinds,
@@ -1061,6 +1218,8 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         trait_kinds: &program.trait_kinds,
         opaque_ty_kinds: &program.opaque_ty_kinds,
         associated_ty_lookups: &associated_ty_lookups,
+        associated_fn_lookups: &associated_fn_lookups,
+        associated_fn_value_lookups: &associated_fn_value_lookups,
         foreign_ty_ids: &program.foreign_ty_ids,
         parameter_map: BTreeMap::new(),
         auto_traits: &auto_traits,

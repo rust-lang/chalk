@@ -134,6 +134,95 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
     }
 }
 
+impl<I: Interner> ToProgramClauses<I> for AssociatedFnValue<I> {
+    /// Generate program clauses for an associated function implementation on an impl.
+    ///
+    /// For:
+    /// ```notrust
+    /// trait Trait {
+    ///     fn fun(self: &Self);
+    /// }
+    /// ```
+    ///
+    /// With the impl:
+    /// ```notrust
+    /// impl<T> @Impl Trait for Vec<T> where T: Clone {
+    ///     fn fun(self: &Self);
+    /// }
+    /// ```
+    ///
+    /// Generates:
+    /// ```notrust
+    /// forall<T> {
+    ///     NormalizeFn(<Vec<T> as Trait>::fun -> @Impl::fun) :-
+    ///         Implemented(T: Clone).
+    /// }
+    /// ```
+    fn to_program_clauses(
+        &self,
+        builder: &mut ClauseBuilder<'_, I>,
+        _environment: &Environment<I>,
+    ) {
+        let impl_datum = builder.db.impl_datum(self.impl_id);
+        let associated_fn = builder.db.associated_fn_data(self.fn_id);
+
+        builder.push_binders(self.value.clone(), |builder, assoc_fn_id| {
+            let all_parameters = builder.placeholders_in_scope().to_vec();
+            // FIXME: the example for this needs to be changed to show rule (2)
+
+            // Get the projection for this associated function:
+            //
+            // * `impl_params`: `[!T]`
+            // * `projection`: `@Impl::fun`
+            let (impl_params, projection) = builder
+                .db
+                .impl_parameters_and_projection_from_associated_fn_value(&all_parameters, self);
+
+            // Assemble the full list of conditions for projection to be valid.
+            // This comes in two parts, marked as (1) and (2) in doc above:
+            //
+            // 1. require that the where clauses from the impl apply
+            let interner = builder.db.interner();
+            let impl_where_clauses = impl_datum
+                .binders
+                .map_ref(|b| &b.where_clauses)
+                .into_iter()
+                .map(|wc| wc.cloned().substitute(interner, impl_params));
+
+            // 2. any where-clauses from the `fn` declaration in the trait: the
+            //    parameters must be substituted with those of the impl
+            let assoc_ty_where_clauses = associated_fn
+                .binders
+                .map_ref(|b| &b.where_clauses)
+                .into_iter()
+                .map(|wc| wc.cloned().substitute(interner, &projection.substitution));
+
+            let substitution = builder.substitution_in_scope();
+
+            // Create the final program clause:
+            //
+            // ```notrust
+            // -- Rule NormalizeFn-From-Impl
+            // forall<T> {
+            //     NormalizeFn(<Vec<T> as Trait>::fun -> @Impl::fun<T>) :-
+            //         Implemented(T: Clone),  // (1)
+            // }
+            // ```
+            builder.push_clause(
+                DomainGoal::NormalizeFn(
+                    projection.clone(),
+                    TyKind::FnDef(FnDefTy {
+                        fn_def_id: assoc_fn_id,
+                        substitution,
+                    })
+                    .intern(interner),
+                ),
+                impl_where_clauses.chain(assoc_ty_where_clauses),
+            );
+        });
+    }
+}
+
 impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
     /// Given `opaque type T<U>: A + B = HiddenTy where U: C;`, we generate:
     ///
@@ -805,7 +894,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
         builder.push_binders(
             binders,
             |builder,
-             AssociatedTyDatumBound {
+             AssociatedItemDatumBound {
                  where_clauses,
                  bounds,
              }| {

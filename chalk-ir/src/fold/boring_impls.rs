@@ -251,6 +251,7 @@ id_fold!(TraitId);
 id_fold!(AssocTypeId);
 id_fold!(OpaqueTyId);
 id_fold!(FnDefId);
+id_fold!(AssocFnDefId);
 id_fold!(ClosureId);
 id_fold!(GeneratorId);
 id_fold!(ForeignDefId);

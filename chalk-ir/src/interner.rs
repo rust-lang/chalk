@@ -1,5 +1,6 @@
 //! Encapsulates the concrete representation of core types such as types and goals.
 use crate::AliasTy;
+use crate::AssocFnDefId;
 use crate::AssocTypeId;
 use crate::CanonicalVarKind;
 use crate::CanonicalVarKinds;
@@ -7,6 +8,7 @@ use crate::ClosureId;
 use crate::Constraint;
 use crate::Constraints;
 use crate::FnDefId;
+use crate::FnDefTy;
 use crate::ForeignDefId;
 use crate::GeneratorId;
 use crate::GenericArg;
@@ -14,6 +16,7 @@ use crate::GenericArgData;
 use crate::Goal;
 use crate::GoalData;
 use crate::Goals;
+use crate::ImplId;
 use crate::InEnvironment;
 use crate::Lifetime;
 use crate::LifetimeData;
@@ -240,11 +243,29 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
+    /// Prints the debug representation of an impl id.
+    /// Returns `None` to fallback to the default debug output (e.g.,
+    /// if no info about current program is available from TLS).
+    #[allow(unused_variables)]
+    fn debug_impl_id(impl_id: ImplId<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+        None
+    }
+
     /// Prints the debug representation of a associated type id.
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_assoc_type_id(
         type_id: AssocTypeId<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of an associated-function-def-id.
+    /// Returns `None` to fallback to the default debug output.
+    #[allow(unused_variables)]
+    fn debug_assoc_fn_def_id(
+        fn_def_id: AssocFnDefId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -317,6 +338,16 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     #[allow(unused_variables)]
     fn debug_projection_ty(
         projection_ty: &ProjectionTy<Self>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Option<fmt::Result> {
+        None
+    }
+
+    /// Prints the debug representation of a [`FnDefTy`]
+    /// Returns `None` to fallback to the default debug output.
+    #[allow(unused_variables)]
+    fn debug_fn_def_ty(
+        fn_def_ty: &FnDefTy<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None

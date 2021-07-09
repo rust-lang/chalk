@@ -6,12 +6,13 @@ use chalk_derive::{Fold, HasInterner, Visit};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
+
 use chalk_ir::{
     try_break,
     visit::{ControlFlow, Visit},
-    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
-    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
-    Ty, TyKind, VariableKind, WhereClause, WithKind,
+    AdtId, AliasEq, AliasTy, AssocFnDefId, AssocTypeId, Binders, DebruijnIndex, FnDefId,
+    GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
+    ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 
@@ -21,6 +22,21 @@ pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 
 chalk_ir::id_visit!(AssociatedTyValueId);
 chalk_ir::id_fold!(AssociatedTyValueId);
+
+/// Identifier for an implementation of a function
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssociatedFnValueId<I: Interner>(pub FnDefId<I>);
+
+chalk_ir::id_visit!(AssociatedFnValueId);
+chalk_ir::id_fold!(AssociatedFnValueId);
+
+impl<I: Interner> AssociatedFnValueId<I> {
+    /// Gets the function definition ID corresponding to this associated
+    /// function value.
+    pub fn as_fn(&self) -> FnDefId<I> {
+        self.0
+    }
+}
 
 /// Data about a trait implementation.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
@@ -33,6 +49,8 @@ pub struct ImplDatum<I: Interner> {
     pub impl_type: ImplType,
     /// IDs for associated types `type T = SomeTy`
     pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
+    /// IDs of the implemented functions
+    pub associated_fn_value_ids: Vec<AssociatedFnValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {
@@ -250,6 +268,9 @@ pub struct TraitDatum<I: Interner> {
     /// If this is a well-known trait, which one? If `None`, this is a regular,
     /// user-defined trait.
     pub well_known: Option<WellKnownTrait>,
+
+    /// Types of the functions defined in this trait
+    pub fn_defs: Vec<AssocFnDefId<I>>,
 }
 
 /// A list of the traits that are "well known" to chalk, which means that
@@ -495,7 +516,7 @@ pub struct AssociatedTyDatum<I: Interner> {
     /// from `Bar` come first (corresponding to the de bruijn concept
     /// that "inner" binders are lower indices, although within a
     /// given binder we do not have an ordering).
-    pub binders: Binders<AssociatedTyDatumBound<I>>,
+    pub binders: Binders<AssociatedItemDatumBound<I>>,
 }
 
 // Manual implementation to avoid I::Identifier type.
@@ -514,11 +535,12 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
     }
 }
 
-/// Encodes the parts of `AssociatedTyDatum` where the parameters
-/// `P0..Pm` are in scope (`bounds` and `where_clauses`).
+/// Encodes the parts of [`AssociatedTyDatum`] and [`AssociatedFnDatum`]
+/// where the parameters `P0..Pm` are in scope (`bounds` and
+/// `where_clauses`).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct AssociatedTyDatumBound<I: Interner> {
-    /// Bounds on the associated type itself.
+pub struct AssociatedItemDatumBound<I: Interner> {
+    /// Bounds on the associated item itself.
     ///
     /// These must be proven by the implementer, for all possible parameters that
     /// would result in a well-formed projection.
@@ -620,6 +642,45 @@ pub struct AssociatedTyValue<I: Interner> {
 pub struct AssociatedTyValueBound<I: Interner> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<I>,
+}
+
+/// Data for an associated function on a trait
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner)]
+pub struct AssociatedFnDatum<I: Interner> {
+    /// Trait the associated function is implemented on
+    pub trait_id: TraitId<I>,
+
+    /// Name of the associated function
+    pub name: I::Identifier,
+
+    /// ID of the function. You can use the [`FnDefId`] from [`AssocFnDefId::as_fn`] to look up
+    /// signature, binders, etc.
+    pub fn_id: AssocFnDefId<I>,
+
+    /// Binders introduced on the trait.
+    pub binders: Binders<AssociatedItemDatumBound<I>>,
+}
+
+/// An implementation of an associated fn.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+pub struct AssociatedFnValue<I: Interner> {
+    /// Impl where this implementation is defined
+    pub impl_id: ImplId<I>,
+
+    /// ID of the function being defined (on the trait)
+    pub fn_id: AssocFnDefId<I>,
+    // FIXME: store if it's a default fn
+    //
+    /// All the binders from both the impl and the function.
+    ///
+    /// ```ignore
+    /// impl<T> TraitWithGenericFn for Vec<T> {
+    ///   // ^ this generic
+    ///     fn a<Y, 'a>(self: &Self, s: &'a [Y]);
+    ///       // ^^^^^  ^^^^^^^^^^^ these generics
+    /// }
+    /// ```
+    pub value: Binders<FnDefId<I>>,
 }
 
 /// Represents the bounds for an `impl Trait` type.

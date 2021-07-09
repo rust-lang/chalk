@@ -1,19 +1,22 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
-    GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
+    self, AdtId, AssocFnDefId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId,
+    ForeignDefId, GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
-    self, Anonymize, AssociatedTyValueId, GeneratorDatum, GeneratorInputOutputDatum,
-    GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
+    self, Anonymize, AssociatedFnValueId, AssociatedTyValueId, GeneratorDatum,
+    GeneratorInputOutputDatum, GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum,
+    OpaqueTyDatumBound,
 };
 use rust_ir::IntoWhereClauses;
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
 
-use super::{env::*, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
+use super::{
+    env::*, Lower, LowerFnDefn, LowerImpl, LowerParameterMap, LowerTrait, LowerWithEnv, FIXME_SELF,
+};
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
 use crate::RawId;
@@ -25,10 +28,13 @@ pub(super) struct ProgramLowerer {
 
     associated_ty_lookups: AssociatedTyLookups,
     associated_ty_value_ids: AssociatedTyValueIds,
+    associated_fn_lookups: AssociatedFnLookups,
+    associated_fn_value_ids: AssociatedFnValueIds,
     adt_ids: AdtIds,
     fn_def_ids: FnDefIds,
     closure_ids: ClosureIds,
     trait_ids: TraitIds,
+    impl_ids: ImplIds,
     auto_traits: AutoTraits,
     opaque_ty_ids: OpaqueTyIds,
     adt_kinds: AdtKinds,
@@ -49,8 +55,8 @@ impl ProgramLowerer {
         RawId { index }
     }
 
-    /// Create ids for associated type declarations and values
-    pub fn extract_associated_types(
+    /// Create ids for associated type/function declarations and values
+    pub fn extract_trait_decls(
         &mut self,
         program: &Program,
         raw_ids: &Vec<RawId>,
@@ -70,13 +76,30 @@ impl ProgramLowerer {
                         self.associated_ty_lookups
                             .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                     }
+
+                    for defn in &d.fn_defs {
+                        let addl_variable_kinds = defn.all_parameters();
+                        let lookup = AssociatedFnLookup {
+                            id: AssocFnDefId(FnDefId(self.next_item_id())),
+                            addl_variable_kinds: addl_variable_kinds.anonymize(),
+                        };
+                        self.associated_fn_lookups
+                            .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
+                    }
                 }
 
                 Item::Impl(d) => {
+                    let impl_id = ImplId(raw_id);
                     for atv in &d.assoc_ty_values {
                         let atv_id = AssociatedTyValueId(self.next_item_id());
                         self.associated_ty_value_ids
-                            .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
+                            .insert((impl_id, atv.name.str.clone()), atv_id);
+                    }
+
+                    for f in &d.fn_defs {
+                        let id = AssociatedFnValueId(FnDefId(self.next_item_id()));
+                        self.associated_fn_value_ids
+                            .insert((impl_id, f.name.str.clone()), id);
                     }
                 }
 
@@ -117,6 +140,13 @@ impl ProgramLowerer {
                     if defn.flags.object_safe {
                         self.object_safe_traits.insert(id);
                     }
+
+                    for func in &defn.fn_defs {
+                        let fn_lookup =
+                            &self.associated_fn_lookups[&(TraitId(raw_id), func.name.str.clone())];
+                        self.fn_def_kinds
+                            .insert(fn_lookup.id.as_fn(), func.lower_type_kind()?);
+                    }
                 }
                 Item::OpaqueTyDefn(defn) => {
                     let type_kind = defn.lower_type_kind()?;
@@ -133,7 +163,18 @@ impl ProgramLowerer {
                     self.generator_ids.insert(defn.name.str.clone(), id);
                     self.generator_kinds.insert(id, defn.lower_type_kind()?);
                 }
-                Item::Impl(_) => continue,
+                Item::Impl(imp) => {
+                    if let Some(ref name) = imp.id {
+                        self.impl_ids.insert(name.str.clone(), ImplId(raw_id));
+                    }
+
+                    for func in &imp.fn_defs {
+                        let fn_id =
+                            self.associated_fn_value_ids[&(ImplId(raw_id), func.name.str.clone())];
+                        self.fn_def_kinds
+                            .insert(fn_id.as_fn(), func.lower_type_kind()?);
+                    }
+                }
                 Item::Clause(_) => continue,
             };
         }
@@ -154,11 +195,39 @@ impl ProgramLowerer {
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
+        let mut associated_fn_data = BTreeMap::new();
+        let mut associated_fn_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
         let mut generator_data = BTreeMap::new();
         let mut generator_witness_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
+
+        let mut process_fn_def = |defn: &FnDefn, fn_def_id, identifier: &Identifier, n_params| {
+            let variances = match defn.variances.clone() {
+                Some(v) => {
+                    if v.len() != n_params {
+                        return Err(RustIrError::IncorrectNumberOfVarianceParameters {
+                            identifier: identifier.clone(),
+                            expected: n_params,
+                            actual: v.len(),
+                        });
+                    }
+                    v.into_iter()
+                        .map(|v| match v {
+                            Variance::Invariant => chalk_ir::Variance::Invariant,
+                            Variance::Covariant => chalk_ir::Variance::Covariant,
+                            Variance::Contravariant => chalk_ir::Variance::Contravariant,
+                        })
+                        .collect()
+                }
+                None => (0..n_params)
+                    .map(|_| chalk_ir::Variance::Invariant)
+                    .collect(),
+            };
+            fn_def_variances.insert(fn_def_id, variances);
+            Ok(fn_def_id)
+        };
 
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             let empty_env = Env {
@@ -169,6 +238,7 @@ impl ProgramLowerer {
                 closure_ids: &self.closure_ids,
                 closure_kinds: &self.closure_kinds,
                 trait_ids: &self.trait_ids,
+                impl_ids: &self.impl_ids,
                 trait_kinds: &self.trait_kinds,
                 opaque_ty_ids: &self.opaque_ty_ids,
                 opaque_ty_kinds: &self.opaque_ty_kinds,
@@ -178,6 +248,8 @@ impl ProgramLowerer {
                 parameter_map: BTreeMap::new(),
                 auto_traits: &self.auto_traits,
                 foreign_ty_ids: &self.foreign_ty_ids,
+                associated_fn_lookups: &self.associated_fn_lookups,
+                associated_fn_value_lookups: &self.associated_fn_value_ids,
             };
 
             match *item {
@@ -213,30 +285,11 @@ impl ProgramLowerer {
                 Item::FnDefn(ref defn) => {
                     let identifier = defn.name.clone();
                     let fn_def_id = FnDefId(raw_id);
-                    fn_def_data.insert(fn_def_id, Arc::new((defn, fn_def_id).lower(&empty_env)?));
-                    let n_params = defn.all_parameters().len();
-                    let variances = match defn.variances.clone() {
-                        Some(v) => {
-                            if v.len() != n_params {
-                                return Err(RustIrError::IncorrectNumberOfVarianceParameters {
-                                    identifier,
-                                    expected: n_params,
-                                    actual: v.len(),
-                                });
-                            }
-                            v.into_iter()
-                                .map(|v| match v {
-                                    Variance::Invariant => chalk_ir::Variance::Invariant,
-                                    Variance::Covariant => chalk_ir::Variance::Covariant,
-                                    Variance::Contravariant => chalk_ir::Variance::Contravariant,
-                                })
-                                .collect()
-                        }
-                        None => (0..n_params)
-                            .map(|_| chalk_ir::Variance::Invariant)
-                            .collect(),
-                    };
-                    fn_def_variances.insert(fn_def_id, variances);
+                    fn_def_data.insert(
+                        fn_def_id,
+                        Arc::new(LowerFnDefn(defn, fn_def_id).lower(&empty_env)?),
+                    );
+                    process_fn_def(defn, fn_def_id, &identifier, defn.all_parameters().len())?;
                 }
                 Item::ClosureDefn(ref defn) => {
                     let closure_def_id = ClosureId(raw_id);
@@ -257,7 +310,7 @@ impl ProgramLowerer {
                 }
                 Item::TraitDefn(ref trait_defn) => {
                     let trait_id = TraitId(raw_id);
-                    let trait_datum = (trait_defn, trait_id).lower(&empty_env)?;
+                    let trait_datum = LowerTrait(trait_defn, trait_id).lower(&empty_env)?;
 
                     if let Some(well_known) = trait_datum.well_known {
                         well_known_traits.insert(well_known, trait_id);
@@ -293,7 +346,7 @@ impl ProgramLowerer {
                         variable_kinds.extend(trait_defn.all_parameters());
 
                         let binders = empty_env.in_binders(variable_kinds, |env| {
-                            Ok(rust_ir::AssociatedTyDatumBound {
+                            Ok(rust_ir::AssociatedItemDatumBound {
                                 bounds: assoc_ty_defn.bounds.lower(&env)?,
                                 where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
                             })
@@ -309,11 +362,51 @@ impl ProgramLowerer {
                             }),
                         );
                     }
+
+                    for assoc_fn_defn in &trait_defn.fn_defs {
+                        let fn_id = self.associated_fn_lookups
+                            [&(trait_id, assoc_fn_defn.name.str.clone())]
+                            .id;
+                        let identifier = assoc_fn_defn.name.clone();
+
+                        let mut variable_kinds = assoc_fn_defn.all_parameters();
+                        variable_kinds.extend(trait_defn.all_parameters());
+                        let n_params = variable_kinds.len();
+
+                        let binders = empty_env.in_binders(variable_kinds, |env| {
+                            let fn_datum = LowerFnDefn(assoc_fn_defn, fn_id.as_fn()).lower(&env)?;
+                            process_fn_def(assoc_fn_defn, fn_id.as_fn(), &identifier, n_params)?;
+                            fn_def_data.insert(fn_id.as_fn(), Arc::new(fn_datum));
+
+                            Ok(rust_ir::AssociatedItemDatumBound {
+                                // in the chalk language, functions can't have inline bounds
+                                bounds: Vec::new(),
+                                where_clauses: assoc_fn_defn.where_clauses.lower(&env)?,
+                            })
+                        })?;
+
+                        associated_fn_data.insert(
+                            fn_id,
+                            Arc::new(rust_ir::AssociatedFnDatum {
+                                name: assoc_fn_defn.name.str.clone(),
+                                trait_id,
+                                binders,
+                                // this wrapping is ok because it's known to be attached to a trait
+                                fn_id,
+                            }),
+                        );
+                    }
                 }
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
                     let impl_datum = Arc::new(
-                        (impl_defn, impl_id, &self.associated_ty_value_ids).lower(&empty_env)?,
+                        LowerImpl(
+                            impl_defn,
+                            impl_id,
+                            &self.associated_ty_value_ids,
+                            &self.associated_fn_value_ids,
+                        )
+                        .lower(&empty_env)?,
                     );
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
@@ -341,6 +434,36 @@ impl ProgramLowerer {
                             Arc::new(rust_ir::AssociatedTyValue {
                                 impl_id,
                                 associated_ty_id: lookup.id,
+                                value,
+                            }),
+                        );
+                    }
+
+                    for fn_def in &impl_defn.fn_defs {
+                        let fn_name = &fn_def.name.str;
+                        let id = self.associated_fn_value_ids[&(impl_id, fn_name.clone())];
+                        let lookup_on_trait =
+                            &self.associated_fn_lookups[&(trait_id, fn_name.clone())];
+
+                        let mut variable_kinds = fn_def.all_parameters();
+                        variable_kinds.extend(impl_defn.all_parameters());
+                        let n_params = variable_kinds.len();
+
+                        tracing::debug!(?variable_kinds);
+
+                        let value = empty_env.in_binders(variable_kinds, |env| {
+                            let datum = LowerFnDefn(fn_def, id.as_fn()).lower(env)?;
+                            let fn_def_id =
+                                process_fn_def(fn_def, datum.id, &fn_def.name, n_params)?;
+
+                            Ok(fn_def_id)
+                        })?;
+
+                        associated_fn_values.insert(
+                            id,
+                            Arc::new(rust_ir::AssociatedFnValue {
+                                impl_id,
+                                fn_id: lookup_on_trait.id,
                                 value,
                             }),
                         );
@@ -474,6 +597,7 @@ impl ProgramLowerer {
             closure_upvars,
             closure_kinds: self.closure_kinds,
             trait_ids: self.trait_ids,
+            impl_ids: self.impl_ids,
             adt_kinds: self.adt_kinds,
             fn_def_kinds: self.fn_def_kinds,
             trait_kinds: self.trait_kinds,
@@ -493,6 +617,8 @@ impl ProgramLowerer {
             impl_data,
             associated_ty_values,
             associated_ty_data,
+            associated_fn_values,
+            associated_fn_data,
             opaque_ty_ids: self.opaque_ty_ids,
             opaque_ty_kinds: self.opaque_ty_kinds,
             opaque_ty_data,

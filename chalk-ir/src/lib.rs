@@ -383,12 +383,24 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
+/// The ID of an associated function on a trait. This is a special case
+/// of a [`FnDefId`].
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssocFnDefId<I: Interner>(pub FnDefId<I>);
+
+impl<I: Interner> AssocFnDefId<I> {
+    /// Gets the function definition ID for this associated function
+    pub fn as_fn(self) -> FnDefId<I> {
+        self.0
+    }
+}
+
 /// Id for an opaque type.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct OpaqueTyId<I: Interner>(pub I::DefId);
 
 /// Function definition id.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, HasInterner)]
 pub struct FnDefId<I: Interner>(pub I::DefId);
 
 /// Id for Rust closures.
@@ -403,7 +415,7 @@ pub struct GeneratorId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ForeignDefId<I: Interner>(pub I::DefId);
 
-impl_debugs!(ImplId, ClauseId);
+impl_debugs!(ClauseId);
 
 /// A Rust type. The actual type data is stored in [`TyKind`].
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
@@ -611,7 +623,7 @@ pub enum TyKind<I: Interner> {
     OpaqueType(OpaqueTyId<I>, Substitution<I>),
 
     /// a function definition
-    FnDef(FnDefId<I>, Substitution<I>),
+    FnDef(FnDefTy<I>),
 
     /// the string primitive type
     Str,
@@ -686,7 +698,7 @@ impl<I: Interner> TyKind<I> {
         Ty::new(interner, self)
     }
 
-    /// Compute type flags for a TyKind
+    /// Compute type flags for a [`TyKind`]
     pub fn compute_flags(&self, interner: &I) -> TypeFlags {
         match self {
             TyKind::Adt(_, substitution)
@@ -695,7 +707,7 @@ impl<I: Interner> TyKind<I> {
             | TyKind::Closure(_, substitution)
             | TyKind::Generator(_, substitution)
             | TyKind::GeneratorWitness(_, substitution)
-            | TyKind::FnDef(_, substitution)
+            | TyKind::FnDef(FnDefTy { substitution, .. })
             | TyKind::OpaqueType(_, substitution) => substitution.compute_flags(interner),
             TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => {
                 TypeFlags::empty()
@@ -1287,7 +1299,7 @@ impl<I: Interner> Lifetime<I> {
         }
     }
 
-    ///compute type flags for Lifetime
+    ///compute type flags for [`Lifetime`]
     fn compute_flags(&self, interner: &I) -> TypeFlags {
         match self.data(&interner) {
             LifetimeData::InferenceVar(_) => {
@@ -1495,7 +1507,7 @@ impl<I: Interner> GenericArg<I> {
         }
     }
 
-    /// Compute type flags for GenericArg<I>
+    /// Compute type flags for [`GenericArg<I>`]
     fn compute_flags(&self, interner: &I) -> TypeFlags {
         match self.data(&interner) {
             GenericArgData::Ty(ty) => ty.data(interner).flags,
@@ -1656,6 +1668,28 @@ impl<I: Interner> ProjectionTy<I> {
             .clone()
     }
 }
+
+/// A function definition item
+/// ```
+/// struct S;
+/// trait T {
+///     fn fun<X>() -> u32;
+/// }
+/// impl T for S {
+///     fn fun<X>() -> u32 {1}
+///     // ^^^ ^
+/// }
+/// ```
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
+pub struct FnDefTy<I: Interner> {
+    /// The id for the function definition
+    pub fn_def_id: FnDefId<I>,
+
+    /// Generic parameters for the function
+    pub substitution: Substitution<I>,
+}
+
+impl<I: Interner> Copy for FnDefTy<I> where I::InternedSubstitution: Copy {}
 
 /// An opaque type `opaque type T<..>: Trait = HiddenTy`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
@@ -1849,6 +1883,12 @@ pub enum DomainGoal<I: Interner> {
 
     /// True if the alias type can be normalized to some other type
     Normalize(Normalize<I>),
+
+    /// True if the [`FnDefTy`] can be normalized to the given function type.
+    ///
+    /// `.1` can in practice only be [`TyKind::BoundVar`],
+    /// [`TyKind::InferenceVar`] or [`TyKind::FnDef`].
+    NormalizeFn(FnDefTy<I>, Ty<I>),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
     /// a `struct Foo { }` but false for a `#[upstream] struct Foo { }`. However, for fundamental types
@@ -2104,7 +2144,7 @@ impl<T: HasInterner> Binders<T> {
     /// do with bound vars, or you are being very careful about
     /// your depth accounting.
     ///
-    /// Some examples where `skip_binder` is reasonable:
+    /// Some examples where `skip_binders` is reasonable:
     ///
     /// - extracting the `TraitId` from a TraitRef;
     /// - checking if there are any fields in a StructDatum
@@ -2732,7 +2772,7 @@ impl<I: Interner> Substitution<I> {
             .cloned()
     }
 
-    /// Compute type flags for Substitution<I>
+    /// Compute type flags for [`Substitution<I>`]
     fn compute_flags(&self, interner: &I) -> TypeFlags {
         let mut flags = TypeFlags::empty();
         for generic_arg in self.iter(&interner) {

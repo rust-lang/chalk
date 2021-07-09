@@ -5,7 +5,7 @@ use chalk_ir::{
 };
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
-use chalk_solve::rust_ir::AssociatedTyValueId;
+use chalk_solve::rust_ir::{AssociatedFnValueId, AssociatedTyValueId};
 use std::collections::BTreeMap;
 
 use crate::error::RustIrError;
@@ -16,6 +16,7 @@ pub type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
 pub type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
 pub type ClosureIds = BTreeMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
 pub type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
+pub type ImplIds = BTreeMap<Ident, chalk_ir::ImplId<ChalkIr>>;
 pub type GeneratorIds = BTreeMap<Ident, chalk_ir::GeneratorId<ChalkIr>>;
 pub type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 pub type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
@@ -28,6 +29,9 @@ pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
+pub type AssociatedFnLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedFnLookup>;
+pub type AssociatedFnValueIds =
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedFnValueId<ChalkIr>>;
 pub type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
 
 pub type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
@@ -43,10 +47,13 @@ pub struct Env<'k> {
     pub closure_ids: &'k ClosureIds,
     pub closure_kinds: &'k ClosureKinds,
     pub trait_ids: &'k TraitIds,
+    pub impl_ids: &'k ImplIds,
     pub trait_kinds: &'k TraitKinds,
     pub opaque_ty_ids: &'k OpaqueTyIds,
     pub opaque_ty_kinds: &'k OpaqueTyVariableKinds,
     pub associated_ty_lookups: &'k AssociatedTyLookups,
+    pub associated_fn_lookups: &'k AssociatedFnLookups,
+    pub associated_fn_value_lookups: &'k AssociatedFnValueIds,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,
     pub generator_ids: &'k GeneratorIds,
@@ -73,6 +80,25 @@ pub struct Env<'k> {
 #[derive(Debug, PartialEq, Eq)]
 pub struct AssociatedTyLookup {
     pub id: chalk_ir::AssocTypeId<ChalkIr>,
+    pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
+}
+
+/// Information about an associated function **declaration** (i.e., an
+/// [`AssociatedFnDatum`](chalk_solve::rust_ir::AssociatedFnDatum)). This
+/// information is gathered in the first phase of creating the Rust IR and is
+/// then later used to lookup the "id" of an associated function.
+///
+/// ```ignore
+/// trait Foo {
+///     fn foo<'a, T>(); // <-- associated fn declaration
+///         // -----
+///         // |
+///         // addl_variable_kinds
+/// }
+/// ```
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct AssociatedFnLookup {
+    pub id: chalk_ir::AssocFnDefId<ChalkIr>,
     pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 
@@ -194,6 +220,23 @@ impl Env<'_> {
         }
     }
 
+    pub fn lookup_impl_fn(
+        &self,
+        impl_name: &Identifier,
+        fn_name: &Identifier,
+    ) -> LowerResult<AssociatedFnValueId<ChalkIr>> {
+        let impl_id = self
+            .impl_ids
+            .get(&impl_name.str)
+            .copied()
+            .ok_or_else(|| RustIrError::InvalidImplName(impl_name.clone()))?;
+
+        self.associated_fn_value_lookups
+            .get(&(impl_id, fn_name.str.clone()))
+            .copied()
+            .ok_or_else(|| RustIrError::InvalidImplMemberName(impl_name.clone(), fn_name.clone()))
+    }
+
     pub fn trait_kind(&self, id: chalk_ir::TraitId<ChalkIr>) -> &TypeKind {
         &self.trait_kinds[&id]
     }
@@ -226,6 +269,17 @@ impl Env<'_> {
         self.associated_ty_lookups
             .get(&(trait_id, ident.str.clone()))
             .ok_or(RustIrError::MissingAssociatedType(ident.clone()))
+    }
+
+    pub fn lookup_associated_fn(
+        &self,
+        trait_id: TraitId<ChalkIr>,
+        ident: &Identifier,
+    ) -> LowerResult<AssociatedFnLookup> {
+        self.associated_fn_lookups
+            .get(&(trait_id, ident.str.clone()))
+            .cloned()
+            .ok_or(RustIrError::MissingAssociatedFn(ident.clone()))
     }
 
     /// Introduces new parameters, shifting the indices of existing

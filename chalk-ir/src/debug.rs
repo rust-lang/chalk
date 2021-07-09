@@ -10,6 +10,12 @@ impl<I: Interner> Debug for TraitId<I> {
     }
 }
 
+impl<I: Interner> Debug for ImplId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        I::debug_impl_id(*self, fmt).unwrap_or_else(|| write!(fmt, "ImplId({:?})", self.0))
+    }
+}
+
 impl<I: Interner> Debug for AdtId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_adt_id(*self, fmt).unwrap_or_else(|| write!(fmt, "AdtId({:?})", self.0))
@@ -20,6 +26,13 @@ impl<I: Interner> Debug for AssocTypeId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_assoc_type_id(*self, fmt)
             .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
+    }
+}
+
+impl<I: Interner> Debug for AssocFnDefId<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
+        I::debug_assoc_fn_def_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "AssocFnDefId({:?})", self.0))
     }
 }
 
@@ -141,6 +154,13 @@ impl<I: Interner> Debug for ProjectionTy<I> {
         I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
             unimplemented!("cannot format ProjectionTy without setting Program in tls")
         })
+    }
+}
+
+impl<I: Interner> Debug for FnDefTy<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        I::debug_fn_def_ty(self, fmt)
+            .unwrap_or_else(|| write!(fmt, "{:?} {:?}", self.fn_def_id, self.substitution))
     }
 }
 
@@ -819,6 +839,7 @@ impl<I: Interner> Debug for DomainGoal<I> {
             DomainGoal::WellFormed(n) => write!(fmt, "{:?}", n),
             DomainGoal::FromEnv(n) => write!(fmt, "{:?}", n),
             DomainGoal::Normalize(n) => write!(fmt, "{:?}", n),
+            DomainGoal::NormalizeFn(a, b) => write!(fmt, "NormalizeFn({:?}, {:?})", a, b),
             DomainGoal::IsLocal(n) => write!(fmt, "IsLocal({:?})", n),
             DomainGoal::IsUpstream(n) => write!(fmt, "IsUpstream({:?})", n),
             DomainGoal::IsFullyVisible(n) => write!(fmt, "IsFullyVisible({:?})", n),

@@ -677,3 +677,121 @@ fn unify_types_in_impl() {
         }
     }
 }
+
+#[test]
+fn impl_function_basic() {
+    test! {
+        program {
+            trait Trait {
+                fn a();
+            }
+
+            struct A {}
+            struct B {}
+
+            impl@Impl Trait for A {
+                fn a();
+            }
+
+            impl@NotImpl Trait for B {
+                fn a();
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<A as Trait>::a -> F)
+            }
+        } yields {
+            "Unique; substitution [?0 := {impl @Impl}::a], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn impl_function_basic_generics() {
+    test! {
+        program {
+            trait Trait<T> {
+                fn a();
+            }
+
+            struct A<T> {}
+            struct B<T> {}
+            struct C {}
+
+            impl@Impl<T> Trait<T> for A<T> {
+                fn a();
+            }
+            impl@NotImpl<T> Trait<T> for B<T> {
+                fn a();
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<A<C> as Trait<C>>::a -> F)
+            }
+        } yields {
+            "Unique; substitution [?0 := {impl @Impl}::a<C>], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn impl_function_tautology() {
+    test! {
+        program {
+            trait Trait<T> {
+                fn a();
+            }
+
+            struct A<T> {}
+            struct B<T> {}
+            struct C {}
+
+            impl@Impl<T> Trait<T> for A<T> {
+                fn a();
+            }
+            impl@NotImpl<T> Trait<T> for B<T> {
+                fn a();
+            }
+        }
+
+        goal {
+            NormalizeFn(<A<C> as Trait<C>>::a -> @Impl::a<C>)
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn impl_function_generic_arg() {
+    test! {
+        program {
+            trait Trait<T> {
+                fn a(v: T);
+            }
+
+            struct A<T> {}
+            struct B<T> {}
+            struct C {}
+
+            impl@Impl<T> Trait<T> for A<T> {
+                fn a(v: T);
+            }
+            impl@NotImpl<T> Trait<T> for B<T> {
+                fn a(v: T);
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<A<C> as Trait<C>>::a -> F)
+            }
+        } yields {
+            "Unique; substitution [?0 := {impl @Impl}::a<C>], lifetime constraints []"
+        }
+    }
+}

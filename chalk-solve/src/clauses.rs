@@ -644,6 +644,26 @@ pub fn program_clauses_that_could_match<I: Interner>(
             }
             AliasTy::Opaque(_) => (),
         },
+        DomainGoal::NormalizeFn(a, _) => {
+            // XXX: mildly alarming cast between ID types from user provided
+            // data. It might panic or do something silly if they give us a
+            // function ID for a non associated function...
+            let associated_fn_datum = db.associated_fn_data(AssocFnDefId(a.fn_def_id));
+            let trait_id = associated_fn_datum.trait_id;
+
+            let (trait_params, _other_params) = db.split_associated_fn_parameters(
+                a.substitution.as_slice(db.interner()),
+                &associated_fn_datum,
+            );
+
+            push_program_clauses_for_associated_fn_values_in_impls_of(
+                builder,
+                environment,
+                trait_id,
+                trait_params,
+                binders,
+            );
+        }
         DomainGoal::Compatible | DomainGoal::Reveal => (),
     };
 
@@ -744,6 +764,37 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
             let atv = builder.db.associated_ty_value(atv_id);
             debug!(?atv_id, ?atv);
             atv.to_program_clauses(builder, environment);
+        }
+    }
+}
+
+/// Generate program clauses from the associated-fn values
+/// found in impls of the given trait. i.e., if `trait_id` = SomeTrait,
+/// then we would generate program clauses from each `fn do_thing()`
+/// found in any impls of `SomeTrait`.
+#[instrument(level = "debug", skip(builder))]
+fn push_program_clauses_for_associated_fn_values_in_impls_of<I: Interner>(
+    builder: &mut ClauseBuilder<'_, I>,
+    environment: &Environment<I>,
+    trait_id: TraitId<I>,
+    trait_parameters: &[GenericArg<I>],
+    binders: &CanonicalVarKinds<I>,
+) {
+    for impl_id in builder
+        .db
+        .impls_for_trait(trait_id, trait_parameters, binders)
+    {
+        let impl_datum = builder.db.impl_datum(impl_id);
+        if !impl_datum.is_positive() {
+            continue;
+        }
+
+        debug!(?impl_id);
+
+        for &afn_id in &impl_datum.associated_fn_value_ids {
+            let afv = builder.db.associated_fn_value(afn_id);
+            debug!(?afn_id, ?afv);
+            afv.to_program_clauses(builder, environment);
         }
     }
 }

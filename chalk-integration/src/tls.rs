@@ -1,4 +1,5 @@
 use crate::interner::ChalkIr;
+use chalk_ir::ImplId;
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, Constraints, FnDefId,
     GenericArg, Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
@@ -23,6 +24,12 @@ pub trait DebugContext {
     fn debug_trait_id(
         &self,
         id: TraitId<ChalkIr>,
+        fmt: &mut fmt::Formatter<'_>,
+    ) -> Result<(), fmt::Error>;
+
+    fn debug_impl_id(
+        &self,
+        id: ImplId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
