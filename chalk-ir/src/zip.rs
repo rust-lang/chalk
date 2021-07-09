@@ -333,6 +333,31 @@ eq_zip!(I => ClausePriority);
 eq_zip!(I => Mutability);
 eq_zip!(I => Scalar);
 
+macro_rules! slice_zip {
+    ($I:ident => $t:ty) => {
+        impl<$I: Interner> Zip<$I> for $t {
+            fn zip_with<'i, Z: Zipper<'i, $I>>(
+                zipper: &mut Z,
+                variance: Variance,
+                a: &Self,
+                b: &Self,
+            ) -> Fallible<()>
+            where
+                $I: 'i,
+            {
+                let interner = zipper.interner();
+                Zip::zip_with(zipper, variance, a.as_slice(interner), b.as_slice(interner))?;
+                Ok(())
+            }
+        }
+    };
+}
+
+slice_zip!(I => Goals<I>);
+slice_zip!(I => ProgramClauses<I>);
+slice_zip!(I => Constraints<I>);
+slice_zip!(I => QuantifiedWhereClauses<I>);
+
 impl<T: HasInterner<Interner = I> + Zip<I>, I: Interner> Zip<I> for InEnvironment<T> {
     fn zip_with<'i, Z: Zipper<'i, I>>(
         zipper: &mut Z,
@@ -367,70 +392,6 @@ impl<I: Interner> Zip<I> for Environment<I> {
             a.clauses.as_slice(interner),
             b.clauses.as_slice(interner),
         )?;
-        Ok(())
-    }
-}
-
-impl<I: Interner> Zip<I> for Goals<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(
-        zipper: &mut Z,
-        variance: Variance,
-        a: &Self,
-        b: &Self,
-    ) -> Fallible<()>
-    where
-        I: 'i,
-    {
-        let interner = zipper.interner();
-        Zip::zip_with(zipper, variance, a.as_slice(interner), b.as_slice(interner))?;
-        Ok(())
-    }
-}
-
-impl<I: Interner> Zip<I> for ProgramClauses<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(
-        zipper: &mut Z,
-        variance: Variance,
-        a: &Self,
-        b: &Self,
-    ) -> Fallible<()>
-    where
-        I: 'i,
-    {
-        let interner = zipper.interner();
-        Zip::zip_with(zipper, variance, a.as_slice(interner), b.as_slice(interner))?;
-        Ok(())
-    }
-}
-
-impl<I: Interner> Zip<I> for Constraints<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(
-        zipper: &mut Z,
-        variance: Variance,
-        a: &Self,
-        b: &Self,
-    ) -> Fallible<()>
-    where
-        I: 'i,
-    {
-        let interner = zipper.interner();
-        Zip::zip_with(zipper, variance, a.as_slice(interner), b.as_slice(interner))?;
-        Ok(())
-    }
-}
-
-impl<I: Interner> Zip<I> for QuantifiedWhereClauses<I> {
-    fn zip_with<'i, Z: Zipper<'i, I>>(
-        zipper: &mut Z,
-        variance: Variance,
-        a: &Self,
-        b: &Self,
-    ) -> Fallible<()>
-    where
-        I: 'i,
-    {
-        let interner = zipper.interner();
-        Zip::zip_with(zipper, variance, a.as_slice(interner), b.as_slice(interner))?;
         Ok(())
     }
 }
