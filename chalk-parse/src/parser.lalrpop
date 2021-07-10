@@ -251,24 +251,40 @@ ClosureArgs: Vec<Ty> = {
     "," <args:FnArgs> => args.to_tys(),
 }
 
+TraitItem: TraitItem = {
+    <assoc:AssocTyDefn> => TraitItem::Assoc(assoc),
+    <fndef:FnDefn> => TraitItem::FnDefn(fndef),
+};
+
 TraitDefn: TraitDefn = {
     <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <object_safe:ObjectSafeKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<VariableKind>>
-        <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
-    {
-        name: n,
-        variable_kinds: p,
-        where_clauses: w,
-        assoc_ty_defns: a,
-        well_known,
-        flags: TraitFlags {
-            auto: auto.is_some(),
-            marker: marker.is_some(),
-            upstream: upstream.is_some(),
-            fundamental: fundamental.is_some(),
-            non_enumerable: non_enumerable.is_some(),
-            coinductive: coinductive.is_some(),
-            object_safe: object_safe.is_some(),
-        },
+        <w:QuantifiedWhereClauses> "{" <t:TraitItem*> "}" => {
+        let mut assoc = vec![];
+        let mut fn_defs = vec![];
+        for item in t {
+            match item {
+                TraitItem::Assoc(v) => assoc.push(v),
+                TraitItem::FnDefn(v) => fn_defs.push(v),
+            }
+        }
+
+        TraitDefn {
+            name: n,
+            variable_kinds: p,
+            where_clauses: w,
+            assoc_ty_defns: assoc,
+            fn_defs,
+            well_known,
+            flags: TraitFlags {
+                auto: auto.is_some(),
+                marker: marker.is_some(),
+                upstream: upstream.is_some(),
+                fundamental: fundamental.is_some(),
+                non_enumerable: non_enumerable.is_some(),
+                coinductive: coinductive.is_some(),
+                object_safe: object_safe.is_some(),
+            },
+        }
     }
 };
 
@@ -338,13 +354,30 @@ QuantifiedInlineBound: QuantifiedInlineBound = {
     },
 };
 
+ImplItem: ImplItem = {
+    <assoc:AssocTyValue> => ImplItem::Assoc(assoc),
+    <fndef:FnDefn> => ImplItem::FnDefn(fndef),
+};
+
+
 Impl: Impl = {
-    <external:UpstreamKeyword?> "impl" <p:Angle<VariableKind>> <mark:"!"?> <t:Id> <a:Angle<GenericArg>> "for" <s:Ty>
-        <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
+    <external:UpstreamKeyword?> "impl" <id:ImplId?> <p:Angle<VariableKind>>
+        <mark:"!"?> <t:Id> <a:Angle<GenericArg>> "for" <s:Ty>
+        <w:QuantifiedWhereClauses> "{" <items:ImplItem*> "}" =>
     {
         let mut args = vec![GenericArg::Ty(s)];
         args.extend(a);
+        let mut assoc = vec![];
+        let mut fn_defs = vec![];
+        for item in items {
+            match item {
+                ImplItem::Assoc(v) => assoc.push(v),
+                ImplItem::FnDefn(v) => fn_defs.push(v),
+            }
+        }
+
         Impl {
+            id,
             variable_kinds: p,
             polarity: Polarity::from_bool(mark.is_none()),
             trait_ref: TraitRef {
@@ -353,6 +386,7 @@ Impl: Impl = {
             },
             where_clauses: w,
             assoc_ty_values: assoc,
+            fn_defs,
             impl_type: external.map(|_| ImplType::External).unwrap_or(ImplType::Local),
         }
     },
@@ -425,7 +459,8 @@ TyWithoutId: Ty = {
         lifetime: l,
     },
     <n:Id> "<" <a:Comma<GenericArg>> ">" => Ty::Apply { name: n, args: a },
-    <p:ProjectionTy> => Ty::Projection { proj: p },
+    <p:Projection> => Ty::Projection { proj: p },
+    <f:ImplFnRef> => Ty::ImplFn { func: f },
     "(" <t:TupleOrParensInner> ")" => t,
     "*" <m: RawMutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
     "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
@@ -463,7 +498,7 @@ FloatTy: FloatTy = {
 ScalarType: ScalarType = {
     <i:IntTy> => ScalarType::Int(i),
     <u:UintTy> => ScalarType::Uint(u),
-    <f:FloatTy> => ScalarType::Float(f), 
+    <f:FloatTy> => ScalarType::Float(f),
     "bool" => ScalarType::Bool,
     "char" => ScalarType::Char,
 };
@@ -507,8 +542,8 @@ GenericArg: GenericArg = {
     ConstWithoutId => GenericArg::Const(<>),
 };
 
-ProjectionTy: ProjectionTy = {
-    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => ProjectionTy {
+Projection: Projection = {
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => Projection {
         trait_ref: t, name: n, args: a
     },
 };
@@ -572,7 +607,7 @@ WhereClause: WhereClause = {
         let mut args = vec![GenericArg::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
-        let projection = ProjectionTy { trait_ref, name, args: a2 };
+        let projection = Projection { trait_ref, name, args: a2 };
         WhereClause::ProjectionEq { projection, ty }
     },
 
@@ -616,7 +651,10 @@ DomainGoal: DomainGoal = {
     "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
 
     // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
+    "Normalize" "(" <s:Projection> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
+
+    // `<T as Foo>::some_func -> @SomeImpl::some_func` -- a normalization
+    "NormalizeFn" "(" <s:Projection> "->" <t:Ty> ")" => DomainGoal::NormalizeFn { projection: s, ty: t },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },
@@ -639,6 +677,15 @@ LeafGoal: LeafGoal = {
 
     "Subtype" "(" <a:Ty> "," <b:Ty> ")" => LeafGoal::SubtypeGenericArgs { a, b },
 };
+
+// @ImplName::f<A, B>
+ImplFnRef: ImplFnRef = {
+    <imp:ImplId> "::" <f:Id> <a:Angle<GenericArg>> => ImplFnRef {
+        impl_name: imp,
+        fn_name: f,
+        args: a,
+    },
+}
 
 TraitRef<S>: TraitRef = {
     <s:Ty> S <t:Id> <a:Angle<GenericArg>> => {
@@ -694,6 +741,13 @@ Id: Identifier = {
 
 LifetimeId: Identifier = {
     <l:@L> <s:r"'([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
+        str: Atom::from(s),
+        span: Span::new(l, r),
+    }
+};
+
+ImplId: Identifier = {
+    <l:@L> "@" <s:r"([A-Za-z]|_)([A-Za-z0-9]|_)*"> <r:@R> => Identifier {
         str: Atom::from(s),
         span: Span::new(l, r),
     }

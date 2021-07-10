@@ -143,6 +143,7 @@ pub struct TraitDefn {
     pub assoc_ty_defns: Vec<AssocTyDefn>,
     pub flags: TraitFlags,
     pub well_known: Option<WellKnownTrait>,
+    pub fn_defs: Vec<FnDefn>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -261,11 +262,25 @@ impl fmt::Display for Kind {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ImplItem {
+    Assoc(AssocTyValue),
+    FnDefn(FnDefn),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum TraitItem {
+    Assoc(AssocTyDefn),
+    FnDefn(FnDefn),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Impl {
+    pub id: Option<Identifier>,
     pub variable_kinds: Vec<VariableKind>,
     pub trait_ref: TraitRef,
     pub polarity: Polarity,
     pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub fn_defs: Vec<FnDefn>,
     pub assoc_ty_values: Vec<AssocTyValue>,
     pub impl_type: ImplType,
 }
@@ -297,8 +312,11 @@ pub enum Ty {
         name: Identifier,
         args: Vec<GenericArg>,
     },
+    ImplFn {
+        func: ImplFnRef,
+    },
     Projection {
-        proj: ProjectionTy,
+        proj: Projection,
     },
     ForAll {
         lifetime_names: Vec<Identifier>,
@@ -393,9 +411,16 @@ pub enum Lifetime {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct ProjectionTy {
+pub struct Projection {
     pub trait_ref: TraitRef,
     pub name: Identifier,
+    pub args: Vec<GenericArg>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ImplFnRef {
+    pub impl_name: Identifier,
+    pub fn_name: Identifier,
     pub args: Vec<GenericArg>,
 }
 
@@ -439,7 +464,7 @@ impl fmt::Display for Identifier {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTy, ty: Ty },
+    ProjectionEq { projection: Projection, ty: Ty },
     LifetimeOutlives { a: Lifetime, b: Lifetime },
     TypeOutlives { ty: Ty, lifetime: Lifetime },
 }
@@ -447,7 +472,8 @@ pub enum WhereClause {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
     Holds { where_clause: WhereClause },
-    Normalize { projection: ProjectionTy, ty: Ty },
+    Normalize { projection: Projection, ty: Ty },
+    NormalizeFn { projection: Projection, ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
     TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },
