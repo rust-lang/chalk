@@ -212,9 +212,16 @@ impl<I: Interner> MayInvalidate<'_, I> {
                 TyKind::OpaqueType(id_b, substitution_b),
             ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
             (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => self.aggregate_tys(ty_a, ty_b),
-            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
-                self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
-            }
+            (
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_a,
+                    substitution: substitution_a,
+                }),
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_b,
+                    substitution: substitution_b,
+                }),
+            ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
             (TyKind::Ref(id_a, lifetime_a, ty_a), TyKind::Ref(id_b, lifetime_b, ty_b)) => {
                 id_a != id_b
                     || self.aggregate_lifetimes(lifetime_a, lifetime_b)

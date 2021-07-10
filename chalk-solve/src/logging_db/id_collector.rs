@@ -4,7 +4,7 @@ use chalk_ir::{
     interner::Interner,
     visit::{ControlFlow, Visitor},
     visit::{SuperVisit, Visit},
-    AliasTy, DebruijnIndex, TyKind, WhereClause,
+    AliasTy, DebruijnIndex, FnDefTy, TyKind, WhereClause,
 };
 use std::collections::BTreeSet;
 
@@ -134,7 +134,7 @@ where
     ) -> ControlFlow<()> {
         match ty.kind(self.db.interner()) {
             TyKind::Adt(adt, _) => self.record(*adt),
-            TyKind::FnDef(fn_def, _) => self.record(*fn_def),
+            TyKind::FnDef(FnDefTy { fn_def_id, .. }) => self.record(*fn_def_id),
             TyKind::OpaqueType(opaque, _) => self.record(*opaque),
             TyKind::Alias(alias) => self.visit_alias(&alias),
             TyKind::BoundVar(..) => (),

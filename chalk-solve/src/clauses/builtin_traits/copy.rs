@@ -45,7 +45,7 @@ pub fn add_copy_program_clauses<I: Interner>(
         TyKind::Array(ty, _) => {
             needs_impl_for_tys(db, builder, trait_ref, iter::once(ty.clone()));
         }
-        TyKind::FnDef(_, _) => {
+        TyKind::FnDef(_) => {
             builder.push_fact(trait_ref);
         }
         TyKind::Closure(closure_id, ref substitution) => {

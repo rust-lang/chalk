@@ -204,7 +204,10 @@ impl<I: Interner> Debug for TyKind<I> {
                 write!(fmt, "!{:?}<{:?}>", opaque_ty, substitution)
             }
             TyKind::Slice(substitution) => write!(fmt, "{{slice}}<{:?}>", substitution),
-            TyKind::FnDef(fn_def, substitution) => write!(fmt, "{:?}<{:?}>", fn_def, substitution),
+            TyKind::FnDef(FnDefTy {
+                fn_def_id,
+                substitution,
+            }) => write!(fmt, "{:?}<{:?}>", fn_def_id, substitution),
             TyKind::Ref(mutability, lifetime, ty) => match mutability {
                 Mutability::Mut => write!(fmt, "(&{:?} mut {:?})", lifetime, ty),
                 Mutability::Not => write!(fmt, "(&{:?} {:?})", lifetime, ty),
@@ -506,8 +509,16 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
                 substitution.with_angle(interner)
             ),
             TyKind::Slice(ty) => write!(fmt, "[{:?}]", ty),
-            TyKind::FnDef(fn_def, substitution) => {
-                write!(fmt, "{:?}{:?}", fn_def, substitution.with_angle(interner))
+            TyKind::FnDef(FnDefTy {
+                fn_def_id,
+                substitution,
+            }) => {
+                write!(
+                    fmt,
+                    "{:?}{:?}",
+                    fn_def_id,
+                    substitution.with_angle(interner)
+                )
             }
             TyKind::Ref(mutability, lifetime, ty) => match mutability {
                 Mutability::Mut => write!(fmt, "(&{:?} mut {:?})", lifetime, ty),

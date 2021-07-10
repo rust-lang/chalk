@@ -470,7 +470,11 @@ impl<I: Interner> ToProgramClauses<I> for FnDefDatum<I> {
         let binders = self.binders.map_ref(|b| &b.where_clauses).cloned();
 
         builder.push_binders(binders, |builder, where_clauses| {
-            let ty = TyKind::FnDef(self.id, builder.substitution_in_scope()).intern(interner);
+            let ty = TyKind::FnDef(FnDefTy {
+                fn_def_id: self.id,
+                substitution: builder.substitution_in_scope(),
+            })
+            .intern(interner);
 
             well_formed_program_clauses(builder, ty.clone(), where_clauses.iter());
 

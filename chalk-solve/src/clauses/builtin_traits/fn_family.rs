@@ -3,8 +3,8 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty,
-    TyKind,
+    AliasTy, Binders, Floundered, FnDefTy, Normalize, ProjectionTy, Safety, Substitution, TraitId,
+    Ty, TyKind,
 };
 
 fn push_clauses<I: Interner>(
@@ -91,7 +91,10 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     let trait_id = db.well_known_trait_id(well_known).unwrap();
 
     match self_ty.kind(interner) {
-        TyKind::FnDef(fn_def_id, substitution) => {
+        TyKind::FnDef(FnDefTy {
+            fn_def_id,
+            substitution,
+        }) => {
             let fn_def_datum = builder.db.fn_def_datum(*fn_def_id);
             if fn_def_datum.sig.safety == Safety::Safe && !fn_def_datum.sig.variadic {
                 let bound = fn_def_datum

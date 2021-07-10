@@ -263,7 +263,16 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 )
             }
             (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => Zip::zip_with(self, variance, ty_a, ty_b),
-            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
+            (
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_a,
+                    substitution: substitution_a,
+                }),
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_b,
+                    substitution: substitution_b,
+                }),
+            ) => {
                 if id_a != id_b {
                     return Err(NoSolution);
                 }
@@ -536,7 +545,10 @@ impl<'t, I: Interner> Unifier<'t, I> {
             TyKind::Slice(ty) => {
                 TyKind::Slice(self.generalize_ty(ty, universe_index, variance)).intern(interner)
             }
-            TyKind::FnDef(id, substitution) => {
+            TyKind::FnDef(FnDefTy {
+                fn_def_id: id,
+                substitution,
+            }) => {
                 let variances = if matches!(variance, Variance::Invariant) {
                     None
                 } else {
@@ -548,10 +560,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
                         .map(|v| v.as_slice(interner)[i])
                         .unwrap_or(Variance::Invariant)
                 };
-                TyKind::FnDef(
-                    *id,
-                    self.generalize_substitution(substitution, universe_index, get_variance),
-                )
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: *id,
+                    substitution: self.generalize_substitution(
+                        substitution,
+                        universe_index,
+                        get_variance,
+                    ),
+                })
                 .intern(interner)
             }
             TyKind::Ref(mutability, lifetime, ty) => {

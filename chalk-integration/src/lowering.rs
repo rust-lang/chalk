@@ -705,7 +705,7 @@ impl LowerWithEnv for Ty {
 
             Ty::Apply { name, ref args } => {
                 macro_rules! tykind {
-                    ($k:expr, $tykind:ident, $id:expr) => {{
+                    ($k:expr, $id:expr => $f:expr) => {{
                         if $k.binders.len(interner) != args.len() {
                             Err(RustIrError::IncorrectNumberOfTypeParameters {
                                 identifier: name.clone(),
@@ -733,15 +733,25 @@ impl LowerWithEnv for Ty {
                                 })?;
                             }
                         }
-                        chalk_ir::TyKind::$tykind($id, substitution).intern(interner)
+                        ($f)($id, substitution).intern(interner)
                     }};
+                    ($k:expr, $tykind:ident, $id:expr) => {
+                        tykind!($k, $id => chalk_ir::TyKind::$tykind)
+                    };
                 }
                 match env.lookup_type(&name)? {
                     TypeLookup::Parameter(_) => {
                         return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
                     }
                     TypeLookup::Adt(id) => tykind!(env.adt_kind(id), Adt, id),
-                    TypeLookup::FnDef(id) => tykind!(env.fn_def_kind(id), FnDef, id),
+                    TypeLookup::FnDef(id) => {
+                        tykind!(env.fn_def_kind(id), id => |x, y| chalk_ir::TyKind::FnDef(
+                            chalk_ir::FnDefTy {
+                                fn_def_id: x,
+                                substitution: y
+                            }
+                        ))
+                    }
                     TypeLookup::Closure(id) => tykind!(env.closure_kind(id), Closure, id),
                     TypeLookup::Opaque(id) => tykind!(env.opaque_kind(id), OpaqueType, id),
                     TypeLookup::Generator(id) => tykind!(env.generator_kind(id), Generator, id),

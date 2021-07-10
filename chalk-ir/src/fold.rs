@@ -426,10 +426,13 @@ where
                 TyKind::Slice(substitution.clone().fold_with(folder, outer_binder)?)
                     .intern(folder.interner())
             }
-            TyKind::FnDef(fn_def, substitution) => TyKind::FnDef(
-                fn_def.fold_with(folder, outer_binder)?,
-                substitution.clone().fold_with(folder, outer_binder)?,
-            )
+            TyKind::FnDef(FnDefTy {
+                fn_def_id,
+                substitution,
+            }) => TyKind::FnDef(FnDefTy {
+                fn_def_id: fn_def_id.fold_with(folder, outer_binder)?,
+                substitution: substitution.clone().fold_with(folder, outer_binder)?,
+            })
             .intern(folder.interner()),
             TyKind::Ref(mutability, lifetime, ty) => TyKind::Ref(
                 mutability.fold_with(folder, outer_binder)?,

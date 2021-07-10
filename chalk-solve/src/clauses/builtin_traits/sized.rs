@@ -83,7 +83,7 @@ pub fn add_sized_program_clauses<I: Interner>(
         TyKind::Array(_, _)
         | TyKind::Never
         | TyKind::Closure(_, _)
-        | TyKind::FnDef(_, _)
+        | TyKind::FnDef(_)
         | TyKind::Scalar(_)
         | TyKind::Raw(_, _)
         | TyKind::Generator(_, _)

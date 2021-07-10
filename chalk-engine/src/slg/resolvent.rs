@@ -489,7 +489,16 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
                 )
             }
             (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => Zip::zip_with(self, variance, ty_a, ty_b),
-            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => {
+            (
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_a,
+                    substitution: substitution_a,
+                }),
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_b,
+                    substitution: substitution_b,
+                }),
+            ) => {
                 if id_a != id_b {
                     return Err(NoSolution);
                 }

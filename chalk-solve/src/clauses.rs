@@ -39,7 +39,7 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
         // And for `PhantomData<T>`, we pass `T`.
         TyKind::Adt(_, substitution)
         | TyKind::Tuple(_, substitution)
-        | TyKind::FnDef(_, substitution) => substitution
+        | TyKind::FnDef(FnDefTy { substitution, .. }) => substitution
             .iter(interner)
             .filter_map(|x| x.ty(interner))
             .cloned()
@@ -457,7 +457,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                     let _ = db.adt_datum(*adt_id);
                 }
 
-                TyKind::FnDef(fn_def_id, _) => {
+                TyKind::FnDef(FnDefTy { fn_def_id, .. }) => {
                     let _ = db.fn_def_datum(*fn_def_id);
                 }
 
@@ -881,7 +881,7 @@ fn match_ty<I: Interner>(
             .db
             .associated_ty_data(*type_id)
             .to_program_clauses(builder, environment),
-        TyKind::FnDef(fn_def_id, _) => builder
+        TyKind::FnDef(FnDefTy { fn_def_id, .. }) => builder
             .db
             .fn_def_datum(*fn_def_id)
             .to_program_clauses(builder, environment),

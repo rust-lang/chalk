@@ -135,9 +135,12 @@ impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
                 push_ty();
                 substitution.visit_with(self, outer_binder)
             }
-            TyKind::FnDef(fn_def, substitution) => {
+            TyKind::FnDef(FnDefTy {
+                fn_def_id,
+                substitution,
+            }) => {
                 push_ty();
-                fn_def.visit_with(self, outer_binder);
+                fn_def_id.visit_with(self, outer_binder);
                 substitution.visit_with(self, outer_binder)
             }
             TyKind::Ref(mutability, lifetime, ty) => {

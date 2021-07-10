@@ -2,8 +2,8 @@
 use std::fmt::Debug;
 
 use crate::{
-    BoundVar, Const, ConstValue, DebruijnIndex, DomainGoal, Goal, InferenceVar, Interner, Lifetime,
-    LifetimeData, PlaceholderIndex, ProgramClause, Ty, TyKind, WhereClause,
+    BoundVar, Const, ConstValue, DebruijnIndex, DomainGoal, FnDefTy, Goal, InferenceVar, Interner,
+    Lifetime, LifetimeData, PlaceholderIndex, ProgramClause, Ty, TyKind, WhereClause,
 };
 
 mod binder_impls;
@@ -321,8 +321,11 @@ where
                 substitution.visit_with(visitor, outer_binder)
             }
             TyKind::Slice(substitution) => substitution.visit_with(visitor, outer_binder),
-            TyKind::FnDef(fn_def, substitution) => {
-                try_break!(fn_def.visit_with(visitor, outer_binder));
+            TyKind::FnDef(FnDefTy {
+                fn_def_id,
+                substitution,
+            }) => {
+                try_break!(fn_def_id.visit_with(visitor, outer_binder));
                 substitution.visit_with(visitor, outer_binder)
             }
             TyKind::Ref(mutability, lifetime, ty) => {

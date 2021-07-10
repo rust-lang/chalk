@@ -1,5 +1,6 @@
 use crate::interner::ChalkIr;
 use crate::{tls, Identifier, TypeKind};
+use chalk_ir::FnDefTy;
 use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
 use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
@@ -499,7 +500,14 @@ impl RustIrDatabase<ChalkIr> for Program {
                 (TyKind::Tuple(arity_a, _), TyKind::Tuple(arity_b, _)) => arity_a == arity_b,
                 (TyKind::OpaqueType(id_a, _), TyKind::OpaqueType(id_b, _)) => id_a == id_b,
                 (TyKind::Slice(_), TyKind::Slice(_)) => true,
-                (TyKind::FnDef(id_a, _), TyKind::FnDef(id_b, _)) => id_a == id_b,
+                (
+                    TyKind::FnDef(FnDefTy {
+                        fn_def_id: id_a, ..
+                    }),
+                    TyKind::FnDef(FnDefTy {
+                        fn_def_id: id_b, ..
+                    }),
+                ) => id_a == id_b,
                 (TyKind::Ref(id_a, _, _), TyKind::Ref(id_b, _, _)) => id_a == id_b,
                 (TyKind::Raw(id_a, _), TyKind::Raw(id_b, _)) => id_a == id_b,
                 (TyKind::Never, TyKind::Never) => true,

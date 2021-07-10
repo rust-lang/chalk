@@ -73,8 +73,14 @@ where
                         ty_a.could_match(interner, self.db, ty_b)
                     }
                     (
-                        TyKind::FnDef(fn_def_a, substitution_a),
-                        TyKind::FnDef(fn_def_b, substitution_b),
+                        TyKind::FnDef(FnDefTy {
+                            fn_def_id: fn_def_a,
+                            substitution: substitution_a,
+                        }),
+                        TyKind::FnDef(FnDefTy {
+                            fn_def_id: fn_def_b,
+                            substitution: substitution_b,
+                        }),
                     ) => {
                         fn_def_a == fn_def_b
                             && self

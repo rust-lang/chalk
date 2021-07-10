@@ -305,9 +305,24 @@ impl<I: Interner> AntiUnifier<'_, '_, I> {
             (TyKind::Slice(ty_a), TyKind::Slice(ty_b)) => {
                 TyKind::Slice(self.aggregate_tys(ty_a, ty_b)).intern(interner)
             }
-            (TyKind::FnDef(id_a, substitution_a), TyKind::FnDef(id_b, substitution_b)) => self
+            (
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_a,
+                    substitution: substitution_a,
+                }),
+                TyKind::FnDef(FnDefTy {
+                    fn_def_id: id_b,
+                    substitution: substitution_b,
+                }),
+            ) => self
                 .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
-                .map(|(&name, substitution)| TyKind::FnDef(name, substitution).intern(interner))
+                .map(|(&name, substitution)| {
+                    TyKind::FnDef(FnDefTy {
+                        fn_def_id: name,
+                        substitution,
+                    })
+                    .intern(interner)
+                })
                 .unwrap_or_else(|| self.new_ty_variable()),
             (TyKind::Ref(id_a, lifetime_a, ty_a), TyKind::Ref(id_b, lifetime_b, ty_b)) => {
                 if id_a == id_b {

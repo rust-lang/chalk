@@ -98,7 +98,7 @@ impl Env<'_> {
         let interner = self.interner();
 
         macro_rules! tykind {
-            ($k:expr, $tykind:ident, $id:expr) => {
+            ($k:expr, $id:expr => $f:expr) => {
                 if $k.binders.len(interner) > 0 {
                     Err(RustIrError::IncorrectNumberOfTypeParameters {
                         identifier: name.clone(),
@@ -107,11 +107,14 @@ impl Env<'_> {
                     })
                 } else {
                     Ok(
-                        chalk_ir::TyKind::$tykind($id, chalk_ir::Substitution::empty(interner))
+                        ($f)($id, chalk_ir::Substitution::empty(interner))
                             .intern(interner),
                     )
                     .cast(interner)
                 }
+            };
+            ($k:expr, $tykind:ident, $id:expr) => {
+                tykind!($k, $id => chalk_ir::TyKind::$tykind)
             };
         }
 
@@ -131,7 +134,9 @@ impl Env<'_> {
                 })
             }
             Ok(TypeLookup::Adt(id)) => tykind!(self.adt_kind(id), Adt, id),
-            Ok(TypeLookup::FnDef(id)) => tykind!(self.fn_def_kind(id), FnDef, id),
+            Ok(TypeLookup::FnDef(id)) => {
+                tykind!(self.fn_def_kind(id), id => |x, y| chalk_ir::TyKind::FnDef(chalk_ir::FnDefTy {fn_def_id: x, substitution: y}))
+            }
             Ok(TypeLookup::Closure(id)) => tykind!(self.closure_kind(id), Closure, id),
             Ok(TypeLookup::Generator(id)) => tykind!(self.generator_kind(id), Generator, id),
             Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Opaque(
