@@ -11,7 +11,7 @@ impl<I: Interner> InferenceTable<I> {
     /// inference variable. This substitution can then be applied to
     /// C, which would be equivalent to
     /// `self.instantiate_canonical(v)`.
-    pub(crate) fn fresh_subst(
+    pub(super) fn fresh_subst(
         &mut self,
         interner: &I,
         binders: &[CanonicalVarKind<I>],
@@ -39,7 +39,7 @@ impl<I: Interner> InferenceTable<I> {
     /// `binders`. This is used to apply a universally quantified
     /// clause like `forall X, 'Y. P => Q`. Here the `binders`
     /// argument is referring to `X, 'Y`.
-    pub(crate) fn instantiate_in<T>(
+    fn instantiate_in<T>(
         &mut self,
         interner: &I,
         universe: UniverseIndex,
