@@ -20,14 +20,14 @@ pub struct InferenceTable<I: Interner> {
     max_universe: UniverseIndex,
 }
 
-pub(crate) struct InferenceSnapshot<I: Interner> {
+pub struct InferenceSnapshot<I: Interner> {
     unify_snapshot: ena::unify::Snapshot<ena::unify::InPlace<EnaVariable<I>>>,
     max_universe: UniverseIndex,
     vars: Vec<EnaVariable<I>>,
 }
 
 #[allow(type_alias_bounds)]
-pub(crate) type ParameterEnaVariable<I: Interner> = WithKind<I, EnaVariable<I>>;
+pub type ParameterEnaVariable<I: Interner> = WithKind<I, EnaVariable<I>>;
 
 impl<I: Interner> InferenceTable<I> {
     /// Create an empty inference table with no variables.
@@ -72,7 +72,7 @@ impl<I: Interner> InferenceTable<I> {
     /// others created within this inference table. This universe is
     /// able to see all previously created universes (though hopefully
     /// it is only brought into contact with its logical *parents*).
-    pub(crate) fn new_universe(&mut self) -> UniverseIndex {
+    pub fn new_universe(&mut self) -> UniverseIndex {
         let u = self.max_universe.next();
         self.max_universe = u;
         debug!("created new universe: {:?}", u);
@@ -95,7 +95,7 @@ impl<I: Interner> InferenceTable<I> {
     /// must respect a stack discipline (i.e., rollback or commit
     /// snapshots in reverse order of that with which they were
     /// created).
-    pub(crate) fn snapshot(&mut self) -> InferenceSnapshot<I> {
+    pub fn snapshot(&mut self) -> InferenceSnapshot<I> {
         let unify_snapshot = self.unify.snapshot();
         let vars = self.vars.clone();
         let max_universe = self.max_universe;
@@ -107,14 +107,14 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Restore the table to the state it had when the snapshot was taken.
-    pub(crate) fn rollback_to(&mut self, snapshot: InferenceSnapshot<I>) {
+    pub fn rollback_to(&mut self, snapshot: InferenceSnapshot<I>) {
         self.unify.rollback_to(snapshot.unify_snapshot);
         self.vars = snapshot.vars;
         self.max_universe = snapshot.max_universe;
     }
 
     /// Make permanent the changes made since the snapshot was taken.
-    pub(crate) fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
+    pub fn commit(&mut self, snapshot: InferenceSnapshot<I>) {
         self.unify.commit(snapshot.unify_snapshot);
     }
 
