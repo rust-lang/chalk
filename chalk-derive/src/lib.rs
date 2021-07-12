@@ -124,6 +124,7 @@ decl_derive!([Fold, attributes(has_interner)] => derive_fold);
 decl_derive!([Zip, attributes(has_interner)] => derive_zip);
 
 fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
+    s.underscore_const(true);
     let (interner, _) = find_interner(&mut s);
 
     s.add_bounds(synstructure::AddBounds::None);
@@ -157,6 +158,7 @@ fn derive_any_visit(
     trait_name: Ident,
     method_name: Ident,
 ) -> TokenStream {
+    s.underscore_const(true);
     let input = s.ast();
     let (interner, kind) = find_interner(&mut s);
 
@@ -216,6 +218,7 @@ where
 }
 
 fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
+    s.underscore_const(true);
     let (interner, _) = find_interner(&mut s);
 
     let mut a = s.clone();
@@ -258,6 +261,7 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
 fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
+    s.underscore_const(true);
     s.bind_with(|_| synstructure::BindStyle::Move);
 
     let (interner, kind) = find_interner(&mut s);
