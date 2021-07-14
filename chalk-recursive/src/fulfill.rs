@@ -1,5 +1,5 @@
+use crate::fixed_point::Minimums;
 use crate::solve::SolveDatabase;
-use crate::Minimums;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};

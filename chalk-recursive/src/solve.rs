@@ -1,6 +1,7 @@
 use super::combine;
 use super::fulfill::Fulfill;
-use crate::{Minimums, UCanonicalGoal};
+use crate::fixed_point::Minimums;
+use crate::UCanonicalGoal;
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::fold::Fold;
 use chalk_ir::interner::{HasInterner, Interner};
@@ -39,7 +40,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> Fallible<Solution<I>> {
         let UCanonical {
             universes,
             canonical:
@@ -68,14 +69,14 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                 // or from the lowered program, which includes fallback
                 // clauses. We try each approach in turn:
 
-                let (prog_solution, prog_prio) = {
+                let prog_solution = {
                     debug_span!("prog_clauses");
 
                     self.solve_from_clauses(&canonical_goal, minimums)
                 };
                 debug!(?prog_solution);
 
-                (prog_solution, prog_prio)
+                prog_solution
             }
 
             _ => {
@@ -107,11 +108,11 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> Fallible<Solution<I>> {
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_simplification(self, infer, subst, goal) {
-            Ok(fulfill) => (fulfill.solve(minimums), ClausePriority::High),
-            Err(e) => (Err(e), ClausePriority::High),
+            Ok(fulfill) => fulfill.solve(minimums),
+            Err(e) => Err(e),
         }
     }
 
@@ -122,7 +123,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         minimums: &mut Minimums,
-    ) -> (Fallible<Solution<I>>, ClausePriority) {
+    ) -> Fallible<Solution<I>> {
         let mut clauses = vec![];
 
         let db = self.db();
@@ -137,7 +138,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         match program_clauses_that_could_match(db, canonical_goal) {
             Ok(goal_clauses) => clauses.extend(goal_clauses.into_iter().filter(could_match)),
             Err(Floundered) => {
-                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
+                return Ok(Solution::Ambig(Guidance::Unknown));
             }
         }
 
@@ -155,7 +156,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
 
             // If we have a completely ambiguous answer, it's not going to get better, so stop
             if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
-                return (Ok(Solution::Ambig(Guidance::Unknown)), ClausePriority::High);
+                return Ok(Solution::Ambig(Guidance::Unknown));
             }
 
             let ProgramClauseData(implication) = program_clause.data(self.interner());
@@ -184,7 +185,12 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
                 debug!("Error");
             }
         }
-        cur_solution.map_or((Err(NoSolution), ClausePriority::High), |(s, p)| (Ok(s), p))
+
+        if let Some((s, _)) = cur_solution {
+            Ok(s)
+        } else {
+            Err(NoSolution)
+        }
     }
 
     fn new_inference_table<T: Fold<I, Result = T> + HasInterner<Interner = I> + Clone>(

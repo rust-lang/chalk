@@ -14,7 +14,7 @@ pub mod tls;
 use chalk_engine::solve::SLGSolver;
 use chalk_ir::interner::HasInterner;
 use chalk_ir::Binders;
-use chalk_recursive::RecursiveSolver;
+use chalk_recursive::{Cache, RecursiveSolver};
 use chalk_solve::Solver;
 use interner::ChalkIr;
 
@@ -104,7 +104,11 @@ impl SolverChoice {
             } => Box::new(RecursiveSolver::new(
                 overflow_depth,
                 max_size,
-                caching_enabled,
+                if caching_enabled {
+                    Some(Cache::default())
+                } else {
+                    None
+                },
             )),
         }
     }

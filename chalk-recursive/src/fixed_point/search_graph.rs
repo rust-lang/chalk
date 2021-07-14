@@ -1,23 +1,23 @@
+use super::stack::StackDepth;
+use super::{Cache, Minimums};
+use rustc_hash::FxHashMap;
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::ops::Add;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::usize;
-
-use super::stack::StackDepth;
-use crate::{Minimums, UCanonicalGoal};
-use chalk_ir::{
-    interner::Interner, Canonical, ClausePriority, ConstrainedSubst, Constraints, Fallible,
-    NoSolution,
-};
-use chalk_solve::Solution;
-use rustc_hash::FxHashMap;
 use tracing::{debug, instrument};
 
 /// The "search graph" stores in-progress goals that are still
 /// being solved.
-pub(super) struct SearchGraph<I: Interner> {
-    indices: FxHashMap<UCanonicalGoal<I>, DepthFirstNumber>,
-    nodes: Vec<Node<I>>,
+pub(super) struct SearchGraph<K, V>
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
+    indices: FxHashMap<K, DepthFirstNumber>,
+    nodes: Vec<Node<K, V>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
@@ -25,11 +25,10 @@ pub(super) struct DepthFirstNumber {
     index: usize,
 }
 
-pub(super) struct Node<I: Interner> {
-    pub(crate) goal: UCanonicalGoal<I>,
+pub(super) struct Node<K, V> {
+    pub(crate) goal: K,
 
-    pub(crate) solution: Fallible<Solution<I>>,
-    pub(crate) solution_priority: ClausePriority,
+    pub(crate) solution: V,
 
     /// This is `Some(X)` if we are actively exploring this node, or
     /// `None` otherwise.
@@ -42,7 +41,11 @@ pub(super) struct Node<I: Interner> {
     pub(crate) links: Minimums,
 }
 
-impl<I: Interner> SearchGraph<I> {
+impl<K, V> SearchGraph<K, V>
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
     pub(crate) fn new() -> Self {
         SearchGraph {
             indices: FxHashMap::default(),
@@ -50,7 +53,7 @@ impl<I: Interner> SearchGraph<I> {
         }
     }
 
-    pub(crate) fn lookup(&self, goal: &UCanonicalGoal<I>) -> Option<DepthFirstNumber> {
+    pub(crate) fn lookup(&self, goal: &K) -> Option<DepthFirstNumber> {
         self.indices.get(goal).cloned()
     }
 
@@ -63,29 +66,16 @@ impl<I: Interner> SearchGraph<I> {
     ///   or `NoSolution` for other goals
     pub(crate) fn insert(
         &mut self,
-        goal: &UCanonicalGoal<I>,
+        goal: &K,
         stack_depth: StackDepth,
-        coinductive: bool,
-        interner: &I,
+        solution: V,
     ) -> DepthFirstNumber {
         let dfn = DepthFirstNumber {
             index: self.nodes.len(),
         };
-        let solution = if coinductive {
-            Ok(Solution::Unique(Canonical {
-                value: ConstrainedSubst {
-                    subst: goal.trivial_substitution(interner),
-                    constraints: Constraints::empty(interner),
-                },
-                binders: goal.canonical.binders.clone(),
-            }))
-        } else {
-            Err(NoSolution)
-        };
         let node = Node {
             goal: goal.clone(),
             solution,
-            solution_priority: ClausePriority::High,
             stack_depth: Some(stack_depth),
             links: Minimums { positive: dfn },
         };
@@ -104,12 +94,8 @@ impl<I: Interner> SearchGraph<I> {
 
     /// Removes all nodes with a depth-first-number greater than or
     /// equal to `dfn`, adding their final solutions into the cache.
-    #[instrument(level = "debug", skip(self))]
-    pub(crate) fn move_to_cache(
-        &mut self,
-        dfn: DepthFirstNumber,
-        cache: &mut FxHashMap<UCanonicalGoal<I>, Fallible<Solution<I>>>,
-    ) {
+    #[instrument(level = "debug", skip(self, cache))]
+    pub(crate) fn move_to_cache(&mut self, dfn: DepthFirstNumber, cache: &Cache<K, V>) {
         self.indices.retain(|_key, value| *value < dfn);
         for node in self.nodes.drain(dfn.index..) {
             assert!(node.stack_depth.is_none());
@@ -120,16 +106,24 @@ impl<I: Interner> SearchGraph<I> {
     }
 }
 
-impl<I: Interner> Index<DepthFirstNumber> for SearchGraph<I> {
-    type Output = Node<I>;
+impl<K, V> Index<DepthFirstNumber> for SearchGraph<K, V>
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
+    type Output = Node<K, V>;
 
-    fn index(&self, table_index: DepthFirstNumber) -> &Node<I> {
+    fn index(&self, table_index: DepthFirstNumber) -> &Node<K, V> {
         &self.nodes[table_index.index]
     }
 }
 
-impl<I: Interner> IndexMut<DepthFirstNumber> for SearchGraph<I> {
-    fn index_mut(&mut self, table_index: DepthFirstNumber) -> &mut Node<I> {
+impl<K, V> IndexMut<DepthFirstNumber> for SearchGraph<K, V>
+where
+    K: Hash + Eq + Debug + Clone,
+    V: Debug + Clone,
+{
+    fn index_mut(&mut self, table_index: DepthFirstNumber) -> &mut Node<K, V> {
         &mut self.nodes[table_index.index]
     }
 }
