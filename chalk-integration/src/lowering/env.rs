@@ -57,7 +57,8 @@ pub struct Env<'k> {
 }
 
 /// Information about an associated type **declaration** (i.e., an
-/// `AssociatedTyDatum`). This information is gathered in the first
+/// [`rust_ir::AssociatedTyDatum`](chalk_solve::rust_ir::AssociatedTyDatum)).
+/// This information is gathered in the first
 /// phase of creating the Rust IR and is then later used to lookup the
 /// "id" of an associated type.
 ///

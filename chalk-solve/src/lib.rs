@@ -73,7 +73,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>>;
 
-    /// Returns the `AssociatedTyValue` with the given id.
+    /// Returns the [`AssociatedTyValue`] with the given id.
     fn associated_ty_value(&self, id: AssociatedTyValueId<I>) -> Arc<AssociatedTyValue<I>>;
 
     /// Returns the `OpaqueTyDatum` with the given id.

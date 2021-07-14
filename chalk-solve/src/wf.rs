@@ -895,8 +895,8 @@ impl WfWellKnownConstraints {
 
     /// Verify constraints a CoerceUnsized impl.
     /// Rules for CoerceUnsized impl to be considered well-formed:
-    /// a) pointer conversions: &[mut] T -> &[mut] U, &[mut] T -> *[mut] U,
-    ///    *[mut] T -> *[mut] U are considered valid if
+    /// a) pointer conversions: `&[mut] T` -> `&[mut] U`, `&[mut] T` -> `*[mut] U`,
+    ///    `*[mut] T` -> `*[mut] U` are considered valid if
     ///    1) T: Unsize<U>
     ///    2) mutability is respected, i.e. immutable -> immutable, mutable -> immutable,
     ///       mutable -> mutable conversions are allowed, immutable -> mutable is not.

@@ -301,7 +301,7 @@ pub enum Mutability {
 /// `forall<T> { Goal(T) }` (syntactical representation)
 /// `forall { Goal(?0) }` (used a DeBruijn index)
 /// `Goal(!U1)` (the quantifier was moved to the environment and replaced with a universe index)
-/// See https://rustc-dev-guide.rust-lang.org/borrow_check/region_inference.html#placeholders-and-universes for more.
+/// See <https://rustc-dev-guide.rust-lang.org/borrow_check/region_inference.html#placeholders-and-universes> for more.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UniverseIndex {
     /// The counter for the universe index, starts with 0.
@@ -376,8 +376,8 @@ pub struct ImplId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClauseId<I: Interner>(pub I::DefId);
 
-/// The id for the associated type member of a trait. The details of the type
-/// can be found by invoking the [`associated_ty_data`] method.
+/// The id for the associated type member of a trait. The details of the
+/// type can be found by invoking the [`associated_ty_data`] method.
 ///
 /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -405,14 +405,14 @@ pub struct ForeignDefId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
-/// A Rust type. The actual type data is stored in `TyKind`.
+/// A Rust type. The actual type data is stored in [`TyKind`].
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
 
 impl<I: Interner> Ty<I> {
-    /// Creates a type from `TyKind`.
+    /// Creates a type from [`TyKind`].
     pub fn new(interner: &I, data: impl CastTo<TyKind<I>>) -> Self {
         let ty_kind = data.cast(&interner);
         Ty {
@@ -1424,14 +1424,14 @@ impl<I: Interner> VariableKind<I> {
     }
 }
 
-/// A generic argument, see `GenericArgData` for more information.
+/// A generic argument, see [`GenericArgData`] for more information.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct GenericArg<I: Interner> {
     interned: I::InternedGenericArg,
 }
 
 impl<I: Interner> GenericArg<I> {
-    /// Constructs a generic argument using `GenericArgData`.
+    /// Constructs a generic argument using [`GenericArgData`].
     pub fn new(interner: &I, data: GenericArgData<I>) -> Self {
         let interned = I::intern_generic_arg(interner, data);
         GenericArg { interned }
@@ -2113,7 +2113,7 @@ impl<T: HasInterner> Binders<T> {
     }
 
     /// Skips the binder and returns the "bound" value as well as the skipped free variables. This
-    /// is just as risky as [`skip_binders`].
+    /// is just as risky as [`skip_binders`](Self::skip_binders).
     pub fn into_value_and_skipped_binders(self) -> (T, VariableKinds<T::Interner>) {
         (self.value, self.binders)
     }
@@ -2366,6 +2366,8 @@ impl<I: Interner> ProgramClauseData<I> {
 }
 
 /// A program clause is a logic expression used to describe a part of the program.
+///
+/// See [`ProgramClauseData`] for the interned data.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
 pub struct ProgramClause<I: Interner> {
     interned: I::InternedProgramClause,

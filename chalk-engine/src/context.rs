@@ -1,10 +1,3 @@
-//! Defines traits used to embed the chalk-engine in another crate.
-//!
-//! chalk and rustc both define types which implement the traits in this
-//! module. This allows each user of chalk-engine to define their own
-//! `DomainGoal` type, add arena lifetime parameters, and more. See
-//! [`Context`] trait for a list of types.
-
 use crate::CompleteAnswer;
 use chalk_ir::interner::Interner;
 use chalk_ir::Substitution;

@@ -24,7 +24,7 @@ macro_rules! write_joined_non_empty_list {
     }};
 }
 
-/// Processes a name given by an [`Interner`][chalk_ir::Interner] debug
+/// Processes a name given by an [`Interner`][chalk_ir::interner::Interner] debug
 /// method into something usable by the `display` module.
 ///
 /// This is specifically useful when implementing

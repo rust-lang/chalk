@@ -60,36 +60,40 @@ use std::sync::Arc;
 pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// "Interned" representation of types.  In normal user code,
     /// `Self::InternedType` is not referenced. Instead, we refer to
-    /// `Ty<Self>`, which wraps this type.
+    /// [`Ty<Self>`], which wraps this type.
     ///
     /// An `InternedType` must be something that can be created from a
-    /// `TyKind` (by the [`intern_ty`] method) and then later
-    /// converted back (by the [`ty_data`] method). The interned form
-    /// must also introduce indirection, either via a `Box`, `&`, or
-    /// other pointer type.
+    /// [`TyKind`] (by the [`intern_ty`](Interner::intern_ty) method) and
+    /// then later converted back (by the [`ty_data`](Interner::ty_data)
+    /// method). The interned form must also introduce indirection,
+    /// either via a `Box`, `&`, or other pointer type.
     type InternedType: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of lifetimes.  In normal user code,
     /// `Self::InternedLifetime` is not referenced. Instead, we refer to
-    /// `Lifetime<Self>`, which wraps this type.
+    /// [`Lifetime<Self>`], which wraps this type.
     ///
-    /// An `InternedLifetime` must be something that can be created
-    /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
-    /// then later converted back (by the [`lifetime_data`] method).
+    /// An `InternedLifetime` must be something that can be created from
+    /// a [`LifetimeData`] (by the
+    /// [`intern_lifetime`](Interner::intern_lifetime) method) and then
+    /// later converted back (by the
+    /// [`lifetime_data`](Interner::lifetime_data) method).
     type InternedLifetime: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of const expressions. In normal user code,
     /// `Self::InternedConst` is not referenced. Instead, we refer to
-    /// `Const<Self>`, which wraps this type.
+    /// [`Const<Self>`], which wraps this type.
     ///
-    /// An `InternedConst` must be something that can be created
-    /// from a `ConstData` (by the [`intern_const`] method) and
-    /// then later converted back (by the [`const_data`] method).
+    /// An `InternedConst` must be something that can be created from a
+    /// [`ConstData`] (by the [`intern_const`](Interner::intern_const)
+    /// method) and then later converted back (by the
+    /// [`const_data`](Interner::const_data) method).
     type InternedConst: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of an evaluated const value.
     /// `Self::InternedConcreteConst` is not referenced. Instead,
-    /// we refer to `ConcreteConst<Self>`, which wraps this type.
+    /// we refer to [`ConcreteConst<Self>`](chalk_ir::ConcreteConst),
+    /// which wraps this type.
     ///
     /// `InternedConcreteConst` instances are not created by chalk,
     /// it can only make a query asking about equality of two
@@ -99,92 +103,111 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// "Interned" representation of a "generic parameter", which can
     /// be either a type or a lifetime.  In normal user code,
     /// `Self::InternedGenericArg` is not referenced. Instead, we refer to
-    /// `GenericArg<Self>`, which wraps this type.
+    /// [`GenericArg<Self>`], which wraps this type.
     ///
-    /// An `InternedType` is created by `intern_generic_arg` and can be
-    /// converted back to its underlying data via `generic_arg_data`.
+    /// An `InternedType` is created by
+    /// [`intern_generic_arg`](Self::intern_generic_arg) and can be
+    /// converted back to its underlying data via
+    /// [`generic_arg_data`](Self::generic_arg_data).
     type InternedGenericArg: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "goal".  In normal user code,
     /// `Self::InternedGoal` is not referenced. Instead, we refer to
-    /// `Goal<Self>`, which wraps this type.
+    /// [`Goal<Self>`], which wraps this type.
     ///
-    /// An `InternedGoal` is created by `intern_goal` and can be
-    /// converted back to its underlying data via `goal_data`.
+    /// An `InternedGoal` is created by
+    /// [`intern_goal`](Self::intern_goal) and can be
+    /// converted back to its underlying [`GoalData`] via
+    /// [`goal_data`](Self::goal_data).
     type InternedGoal: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of goals.  In normal user code,
     /// `Self::InternedGoals` is not referenced. Instead, we refer to
-    /// `Goals<Self>`, which wraps this type.
+    /// [`Goals<Self>`], which wraps this type.
     ///
-    /// An `InternedGoals` is created by `intern_goals` and can be
-    /// converted back to its underlying data via `goals_data`.
+    /// An `InternedGoals` is created by
+    /// [`intern_goals`](Self::intern_goals) and can be converted back
+    /// to its underlying data via [`goals_data`](Self::goals_data).
     type InternedGoals: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "substitution".  In normal user code,
     /// `Self::InternedSubstitution` is not referenced. Instead, we refer to
-    /// `Substitution<Self>`, which wraps this type.
+    /// [`Substitution<Self>`], which wraps this type.
     ///
-    /// An `InternedSubstitution` is created by `intern_substitution` and can be
-    /// converted back to its underlying data via `substitution_data`.
+    /// An `InternedSubstitution` is created by
+    /// [`intern_substitution`](Self::intern_substitution) and can be
+    /// converted back to its underlying data via
+    /// [`substitution_data`](Self::substitution_data).
     type InternedSubstitution: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of program clauses.  In normal user code,
     /// `Self::InternedProgramClauses` is not referenced. Instead, we refer to
-    /// `ProgramClauses<Self>`, which wraps this type.
+    /// [`ProgramClauses<Self>`], which wraps this type.
     ///
-    /// An `InternedProgramClauses` is created by `intern_program_clauses` and can be
-    /// converted back to its underlying data via `program_clauses_data`.
+    /// An `InternedProgramClauses` is created by
+    /// [`intern_program_clauses`](Self::intern_program_clauses) and can
+    /// be converted back to its underlying data via
+    /// [`program_clauses_data`](Self::program_clauses_data).
     type InternedProgramClauses: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a "program clause".  In normal user code,
     /// `Self::InternedProgramClause` is not referenced. Instead, we refer to
-    /// `ProgramClause<Self>`, which wraps this type.
+    /// [`ProgramClause<Self>`], which wraps this type.
     ///
-    /// An `InternedProgramClause` is created by `intern_program_clause` and can be
-    /// converted back to its underlying data via `program_clause_data`.
+    /// An `InternedProgramClause` is created by
+    /// [`intern_program_clause`](Self::intern_program_clause) and can
+    /// be converted back to its underlying data via
+    /// [`program_clause_data`](Self::program_clause_data).
     type InternedProgramClause: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of quantified where clauses.
     /// In normal user code, `Self::InternedQuantifiedWhereClauses` is not referenced.
-    /// Instead, we refer to `QuantifiedWhereClauses<Self>`, which wraps this type.
+    /// Instead, we refer to [`QuantifiedWhereClauses<Self>`], which wraps this type.
     ///
-    /// An `InternedQuantifiedWhereClauses` is created by `intern_quantified_where_clauses`
-    /// and can be converted back to its underlying data via `quantified_where_clauses_data`.
+    /// An `InternedQuantifiedWhereClauses` is created by
+    /// [`intern_quantified_where_clauses`](Self::intern_quantified_where_clauses)
+    /// and can be converted back to its underlying data via
+    /// [`quantified_where_clauses_data`](Self::quantified_where_clauses_data).
     type InternedQuantifiedWhereClauses: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of variable kinds.
     /// In normal user code, `Self::InternedVariableKinds` is not referenced.
-    /// Instead, we refer to `VariableKinds<Self>`, which wraps this type.
+    /// Instead, we refer to [`VariableKinds<Self>`], which wraps this type.
     ///
-    /// An `InternedVariableKinds` is created by `intern_generic_arg_kinds`
-    /// and can be converted back to its underlying data via `variable_kinds_data`.
+    /// An `InternedVariableKinds` is created by
+    /// [`intern_generic_arg_kinds`](Self::intern_generic_arg_kinds) and
+    /// can be converted back to its underlying data via
+    /// [`variable_kinds_data`](Self::variable_kinds_data).
     type InternedVariableKinds: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of variable kinds with universe index.
     /// In normal user code, `Self::InternedCanonicalVarKinds` is not referenced.
-    /// Instead, we refer to `CanonicalVarKinds<Self>`, which wraps this type.
+    /// Instead, we refer to [`CanonicalVarKinds<Self>`], which wraps this type.
     ///
     /// An `InternedCanonicalVarKinds` is created by
-    /// `intern_canonical_var_kinds` and can be converted back
-    /// to its underlying data via `canonical_var_kinds_data`.
+    /// [`intern_canonical_var_kinds`](Self::intern_canonical_var_kinds)
+    /// and can be converted back to its underlying data via
+    /// [`canonical_var_kinds_data`](Self::canonical_var_kinds_data).
     type InternedCanonicalVarKinds: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of region constraints.
     /// In normal user code, `Self::InternedConstraints` is not referenced.
-    /// Instead, we refer to `Constraints<Self>`, which wraps this type.
+    /// Instead, we refer to [`Constraints<Self>`], which wraps this type.
     ///
-    /// An `InternedConstraints` is created by `intern_constraints`
-    /// and can be converted back to its underlying data via `constraints_data`.
+    /// An `InternedConstraints` is created by
+    /// [`intern_constraints`](Self::intern_constraints) and can be
+    /// converted back to its underlying data via
+    /// [`constraints_data`](Self::constraints_data).
     type InternedConstraints: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of a list of `chalk_ir::Variance`.
     /// In normal user code, `Self::InternedVariances` is not referenced.
-    /// Instead, we refer to `Variances<Self>`, which wraps this type.
+    /// Instead, we refer to [`Variances<Self>`], which wraps this type.
     ///
     /// An `InternedVariances` is created by
-    /// `intern_variances` and can be converted back
-    /// to its underlying data via `variances_data`.
+    /// [`intern_variances`](Self::intern_variances) and can be
+    /// converted back to its underlying data via
+    /// [`variances_data`](Self::variances_data).
     type InternedVariances: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for trait-ids and the like.
@@ -206,7 +229,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a type-kind-id.
+    /// Prints the debug representation of a trait id.
     /// Returns `None` to fallback to the default debug output (e.g.,
     /// if no info about current program is available from TLS).
     #[allow(unused_variables)]
@@ -217,7 +240,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a type-kind-id.
+    /// Prints the debug representation of a associated type id.
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_assoc_type_id(
@@ -267,7 +290,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an alias.
+    /// Prints the debug representation of a generator.
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_generator_id(
@@ -289,7 +312,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a ProjectionTy.
+    /// Prints the debug representation of a [`ProjectionTy`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_projection_ty(
@@ -299,7 +322,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an OpaqueTy.
+    /// Prints the debug representation of an [`OpaqueTy`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_opaque_ty(
@@ -309,14 +332,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a type.
+    /// Prints the debug representation of a [`Ty`]pe.
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_ty(ty: &Ty<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a lifetime.
+    /// Prints the debug representation of a [`Lifetime`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_lifetime(
@@ -326,7 +349,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a const.
+    /// Prints the debug representation of a [`Const`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_const(constant: &Const<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
@@ -373,22 +396,23 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of an goal.
+    /// Prints the debug representation of a [`Goal`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_goal(goal: &Goal<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a list of goals.
+    /// Prints the debug representation of a list of [`Goals`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_goals(goals: &Goals<Self>, fmt: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         None
     }
 
-    /// Prints the debug representation of a ProgramClauseImplication.
-    /// Returns `None` to fallback to the default debug output.
+    /// Prints the debug representation of a
+    /// [`ProgramClauseImplication`]. Returns `None` to fallback to the
+    /// default debug output.
     #[allow(unused_variables)]
     fn debug_program_clause_implication(
         pci: &ProgramClauseImplication<Self>,
@@ -397,7 +421,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a ProgramClause.
+    /// Prints the debug representation of a [`ProgramClause`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_program_clause(
@@ -407,7 +431,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a ProgramClauses.
+    /// Prints the debug representation of a [`ProgramClauses`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_program_clauses(
@@ -417,7 +441,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a Substitution.
+    /// Prints the debug representation of a [`Substitution`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_substitution(
@@ -427,7 +451,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a SeparatorTraitRef.
+    /// Prints the debug representation of a [`SeparatorTraitRef`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_separator_trait_ref(
@@ -437,7 +461,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Prints the debug representation of a QuantifiedWhereClauses.
+    /// Prints the debug representation of a [`QuantifiedWhereClauses`].
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_quantified_where_clauses(
@@ -467,30 +491,31 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
         None
     }
 
-    /// Create an "interned" type from `ty`. This is not normally
-    /// invoked directly; instead, you invoke `TyKind::intern` (which
+    /// Create an "interned" type from `kind`. This is not normally
+    /// invoked directly; instead, you invoke [`TyKind::intern`] (which
     /// will ultimately call this method).
     fn intern_ty(&self, kind: TyKind<Self>) -> Self::InternedType;
 
-    /// Lookup the `TyKind` from an interned type.
+    /// Lookup the [`TyKind`] from an interned type.
     fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
 
     /// Create an "interned" lifetime from `lifetime`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `LifetimeData::intern` (which will ultimately call this
+    /// [`LifetimeData::intern`] (which will ultimately call this
     /// method).
     fn intern_lifetime(&self, lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
-    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
+    /// Lookup the [`LifetimeData`] that was interned to create a
+    /// [`InternedLifetime`](Self::InternedLifetime).
     fn lifetime_data<'a>(&self, lifetime: &'a Self::InternedLifetime) -> &'a LifetimeData<Self>;
 
-    /// Create an "interned" const from `const`. This is not
-    /// normally invoked directly; instead, you invoke
-    /// `ConstData::intern` (which will ultimately call this
-    /// method).
+    /// Create an "interned" const from `constant`. This is not normally
+    /// invoked directly; instead, you invoke [`ConstData::intern`]
+    /// (which will ultimately call this method).
     fn intern_const(&self, constant: ConstData<Self>) -> Self::InternedConst;
 
-    /// Lookup the `ConstData` that was interned to create a `InternedConst`.
+    /// Lookup the [`ConstData`] that was interned to create a
+    /// [`InternedConst`](Self::InternedConst).
     fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
     /// Determine whether two concrete const values are equal.
@@ -503,11 +528,12 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
 
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
-    /// `GenericArgData::intern` (which will ultimately call this
+    /// [`GenericArgData::intern`] (which will ultimately call this
     /// method).
     fn intern_generic_arg(&self, data: GenericArgData<Self>) -> Self::InternedGenericArg;
 
-    /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
+    /// Lookup the [`GenericArgData`] that was interned to create a
+    /// [`InternedGenericArg`](Self::InternedGenericArg).
     fn generic_arg_data<'a>(
         &self,
         lifetime: &'a Self::InternedGenericArg,
