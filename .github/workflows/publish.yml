@@ -43,6 +43,7 @@ jobs:
           export CHANGED=$(cargo workspaces changed --include-merged-tags --ignore-changes "**/Cargo.toml")
           if [[ -z "$CHANGED" && "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]]; then
             # Nothing has changed, so don't publish a new version
+            echo "No changes detected, skipping publish."
             exit 0
           fi
 
