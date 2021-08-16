@@ -6,6 +6,11 @@ fn generator_test() {
         program {
             #[auto] trait Send { }
 
+            #[lang(generator)]
+            trait Generator<R> {
+                type Yield;
+                type Return;
+            }
 
             struct StructOne {}
             struct NotSend {}
@@ -37,6 +42,10 @@ fn generator_test() {
                 witnesses []
             }
 
+            generator gen_with_types<U>[resume = U, yield = StructOne] -> NotSend {
+                upvars []
+                witnesses []
+            }
         }
 
         goal {
@@ -47,6 +56,36 @@ fn generator_test() {
 
         goal {
             empty_gen: Send
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            empty_gen: Generator<()>
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                gen_with_types<T>: Generator<T>
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                Normalize(<gen_with_types<T> as Generator<T>>::Yield -> StructOne)
+            }
+        } yields {
+            "Unique"
+        }
+
+        goal {
+            forall<T> {
+                Normalize(<gen_with_types<T> as Generator<T>>::Return -> NotSend)
+            }
         } yields {
             "Unique"
         }

@@ -262,6 +262,7 @@ pub enum WellKnownTrait {
     Unpin,
     CoerceUnsized,
     DiscriminantKind,
+    Generator,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);
