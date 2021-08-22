@@ -6,6 +6,7 @@ mod clone;
 mod copy;
 mod discriminant_kind;
 mod fn_family;
+mod generator;
 mod sized;
 mod unsize;
 
@@ -37,13 +38,16 @@ pub fn add_builtin_program_clauses<I: Interner>(
                 clone::add_clone_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
-                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?
+                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
             }
             WellKnownTrait::Unsize => {
                 unsize::add_unsize_program_clauses(db, builder, trait_ref, ty)
             }
             // DiscriminantKind is automatically implemented for all types
             WellKnownTrait::DiscriminantKind => builder.push_fact(trait_ref),
+            WellKnownTrait::Generator => {
+                generator::add_generator_program_clauses(db, builder, self_ty)?;
+            }
             // There are no builtin impls provided for the following traits:
             WellKnownTrait::Unpin | WellKnownTrait::Drop | WellKnownTrait::CoerceUnsized => (),
         }
@@ -72,6 +76,13 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
         }
         WellKnownTrait::DiscriminantKind => {
             discriminant_kind::add_discriminant_clauses(db, builder, self_ty)
+        }
+        WellKnownTrait::Generator => {
+            let generalized = generalize::Generalize::apply(db.interner(), self_ty);
+
+            builder.push_binders(generalized, |builder, self_ty| {
+                generator::add_generator_program_clauses(db, builder, self_ty)
+            })
         }
         _ => Ok(()),
     }

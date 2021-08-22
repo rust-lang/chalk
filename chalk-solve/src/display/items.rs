@@ -203,6 +203,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Unpin => "unpin",
                 WellKnownTrait::CoerceUnsized => "coerce_unsized",
                 WellKnownTrait::DiscriminantKind => "discriminant_kind",
+                WellKnownTrait::Generator => "generator",
             };
             writeln!(f, "#[lang({})]", name)?;
         }

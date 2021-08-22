@@ -158,6 +158,7 @@ pub enum WellKnownTrait {
     Unpin,
     CoerceUnsized,
     DiscriminantKind,
+    Generator,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
