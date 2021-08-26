@@ -1138,6 +1138,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::CoerceUnsized => rust_ir::WellKnownTrait::CoerceUnsized,
             WellKnownTrait::DiscriminantKind => rust_ir::WellKnownTrait::DiscriminantKind,
             WellKnownTrait::Generator => rust_ir::WellKnownTrait::Generator,
+            WellKnownTrait::DispatchFromDyn => rust_ir::WellKnownTrait::DispatchFromDyn,
         }
     }
 }

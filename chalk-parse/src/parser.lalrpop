@@ -67,6 +67,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "coerce_unsized" ")" "]" => WellKnownTrait::CoerceUnsized,
      "#" "[" "lang" "(" "discriminant_kind" ")" "]" => WellKnownTrait::DiscriminantKind,
      "#" "[" "lang" "(" "generator" ")" "]" => WellKnownTrait::Generator,
+     "#" "[" "lang" "(" "dispatch_from_dyn" ")" "]" => WellKnownTrait::DispatchFromDyn,
 };
 
 AdtReprAttr: AdtReprAttr = {

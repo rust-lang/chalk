@@ -259,6 +259,7 @@ pub enum WellKnownTrait {
     CoerceUnsized,
     DiscriminantKind,
     Generator,
+    DispatchFromDyn,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);

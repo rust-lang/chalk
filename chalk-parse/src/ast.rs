@@ -159,6 +159,7 @@ pub enum WellKnownTrait {
     CoerceUnsized,
     DiscriminantKind,
     Generator,
+    DispatchFromDyn,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
