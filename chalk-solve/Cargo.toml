@@ -13,7 +13,7 @@ edition = "2018"
 ena = "0.14.0"
 itertools = "0.10.0"
 petgraph = "0.5.1"
-tracing = "0.1"
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.2", optional = true }
 tracing-tree = { version = "0.1.4", optional = true }
 rustc-hash = { version = "1.1.0" }

@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 rustc-hash = { version = "1.1.0" }
-tracing = "0.1"
+tracing = { version = "0.1", default-features = false, features = ["std"] }
 
 chalk-derive = { version = "0.71.0-dev.0", path = "../chalk-derive" }
 chalk-ir = { version = "0.71.0-dev.0", path = "../chalk-ir" }
