@@ -74,6 +74,7 @@ pub struct AdtFlags {
     pub upstream: bool,
     pub fundamental: bool,
     pub phantom_data: bool,
+    pub one_zst: bool,
     pub kind: AdtKind,
 }
 

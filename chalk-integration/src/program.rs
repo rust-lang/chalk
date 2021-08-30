@@ -9,9 +9,9 @@ use chalk_ir::{
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind,
-    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
-    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
+    ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum,
+    ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -60,6 +60,8 @@ pub struct Program {
     pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
     pub adt_reprs: BTreeMap<AdtId<ChalkIr>, Arc<AdtRepr<ChalkIr>>>,
+
+    pub adt_size_aligns: BTreeMap<AdtId<ChalkIr>, Arc<AdtSizeAlign>>,
 
     pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
@@ -428,6 +430,10 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> Arc<AdtRepr<ChalkIr>> {
         self.adt_reprs[&id].clone()
+    }
+
+    fn adt_size_align(&self, id: AdtId<ChalkIr>) -> Arc<AdtSizeAlign> {
+        self.adt_size_aligns[&id].clone()
     }
 
     fn fn_def_datum(&self, id: FnDefId<ChalkIr>) -> Arc<FnDefDatum<ChalkIr>> {

@@ -325,6 +325,10 @@ impl LowerWithEnv for (&AdtDefn, chalk_ir::AdtId<ChalkIr>) {
     }
 }
 
+pub fn lower_adt_size_align(flags: &AdtFlags) -> rust_ir::AdtSizeAlign {
+    rust_ir::AdtSizeAlign::from_one_zst(flags.one_zst)
+}
+
 impl LowerWithEnv for AdtRepr {
     type Lowered = rust_ir::AdtRepr<ChalkIr>;
 

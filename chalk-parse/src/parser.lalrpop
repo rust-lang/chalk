@@ -53,6 +53,7 @@ NonEnumerableKeyword: () = "#" "[" "non_enumerable" "]";
 CoinductiveKeyword: () = "#" "[" "coinductive" "]";
 ObjectSafeKeyword: () = "#" "[" "object_safe" "]";
 PhantomDataKeyword: () = "#" "[" "phantom_data" "]";
+OneZstKeyword: () = "#" "[" "one_zst" "]";
 
 WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "sized" ")" "]" => WellKnownTrait::Sized,
@@ -91,7 +92,7 @@ ReprIntTy: Ty = {
 }
 
 AdtDefn: AdtDefn = {
-    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtReprAttr*>
+    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <one_zst:OneZstKeyword?> <repr:AdtReprAttr*>
         "enum" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <v:Variants> "}" => AdtDefn
     {
@@ -103,6 +104,7 @@ AdtDefn: AdtDefn = {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
             phantom_data: phantom_data.is_some(),
+            one_zst: one_zst.is_some(),
             kind: AdtKind::Enum,
         },
         repr: AdtRepr {
@@ -116,7 +118,7 @@ AdtDefn: AdtDefn = {
         },
         variances,
     },
-    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <repr:AdtReprAttr*>
+    <variances:Variances?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <phantom_data:PhantomDataKeyword?> <one_zst:OneZstKeyword?> <repr:AdtReprAttr*>
         "struct" <n:Id><p:Angle<VariableKind>>
         <w:QuantifiedWhereClauses> "{" <f:Fields> "}" => AdtDefn
     {
@@ -135,6 +137,7 @@ AdtDefn: AdtDefn = {
             upstream: upstream.is_some(),
             fundamental: fundamental.is_some(),
             phantom_data: phantom_data.is_some(),
+            one_zst: one_zst.is_some(),
             kind: AdtKind::Struct,
         },
         repr: AdtRepr {
