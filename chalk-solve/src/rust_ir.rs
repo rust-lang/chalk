@@ -596,14 +596,13 @@ pub struct AssociatedTyValue<I: Interner> {
     /// ```
     pub associated_ty_id: AssocTypeId<I>,
 
-    /// Additional binders declared on the associated type itself,
-    /// beyond those from the impl. This would be empty for normal
-    /// associated types, but non-empty for generic associated types.
+    /// All the binders declared on the impl and the associated type.
     ///
     /// ```ignore
     /// impl<T> Iterable for Vec<T> {
+    ///   // ^ refers to these generics here
     ///     type Iter<'a> = vec::Iter<'a, T>;
-    ///           // ^^^^ refers to these generics here
+    ///           // ^^^^ and here
     /// }
     /// ```
     pub value: Binders<AssociatedTyValueBound<I>>,
