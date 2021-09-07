@@ -1069,9 +1069,9 @@ impl WfWellKnownConstraints {
         }
     }
 
-    /// Verify constraints ofa DispatchForDyn impl.
+    /// Verify constraints of a DispatchFromDyn impl.
     ///
-    /// Rules for DispatchForDyn impl to be considered well-formed:
+    /// Rules for DispatchFromDyn impl to be considered well-formed:
     ///
     /// * Self and the type parameter must both be references or raw pointers with the same mutabilty
     /// * OR all the following hold:
@@ -1080,7 +1080,7 @@ impl WfWellKnownConstraints {
     ///   - Self must not be `#[repr(packed)]` or `#[repr(C)]`
     ///   - Self must have exactly one field which is not a 1-ZST, and that field must have a
     /// different type in the type parameter (i.e., it is a field being coerced)
-    ///   - `DispatchForDyn` is implemented for the type of the field being coerced.
+    ///   - `DispatchFromDyn` is implemented for the type of the field being coerced.
     fn dispatch_from_dyn_constraint<I: Interner>(
         solver: &mut dyn Solver<I>,
         db: &dyn RustIrDatabase<I>,
@@ -1093,7 +1093,7 @@ impl WfWellKnownConstraints {
 
         let trait_ref: &TraitRef<I> = &impl_datum.trait_ref;
 
-        // DispatchForDyn specifies that Self (source) can be coerced to T (target; its single type parameter).
+        // DispatchFromDyn specifies that Self (source) can be coerced to T (target; its single type parameter).
         let source = trait_ref.self_type_parameter(interner);
         let target = trait_ref
             .substitution
@@ -1121,7 +1121,7 @@ impl WfWellKnownConstraints {
         match (source.kind(interner), target.kind(interner)) {
             (TyKind::Ref(s_m, _, _), TyKind::Ref(t_m, _, _))
             | (TyKind::Raw(s_m, _), TyKind::Raw(t_m, _))
-                if s_m != t_m =>
+                if s_m == t_m =>
             {
                 true
             }
@@ -1153,9 +1153,9 @@ impl WfWellKnownConstraints {
                 let mut non_zst_fields: Vec<_> = source_fields
                     .iter()
                     .zip(target_fields.iter())
-                    .filter(|(sf, tf)| {
-                        // TODO ignore 1-ZST fields
-                        true
+                    .filter(|(sf, _)| match sf.adt_id(interner) {
+                        Some(adt) => !db.adt_size_align(adt).one_zst(),
+                        None => true,
                     })
                     .collect();
 
@@ -1177,7 +1177,7 @@ impl WfWellKnownConstraints {
                     return false;
                 }
 
-                // Type(field_src): DispatchForDyn<Type(field_tgt)>
+                // Type(field_src): DispatchFromDyn<Type(field_tgt)>
                 let field_dispatch_goal: Goal<I> = TraitRef {
                     trait_id: trait_ref.trait_id,
                     substitution: Substitution::from_iter(
