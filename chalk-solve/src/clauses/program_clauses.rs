@@ -189,9 +189,12 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedFnValue<I> {
                 .into_iter()
                 .map(|wc| wc.cloned().substitute(interner, impl_params));
 
+            let impl_where_clauses = impl_where_clauses.collect::<Vec<_>>();
+            tracing::debug!(impl_where_clauses = ?impl_where_clauses);
+
             // 2. any where-clauses from the `fn` declaration in the trait: the
             //    parameters must be substituted with those of the impl
-            let assoc_ty_where_clauses = associated_fn
+            let assoc_fn_where_clauses = associated_fn
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
@@ -217,7 +220,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedFnValue<I> {
                     })
                     .intern(interner),
                 ),
-                impl_where_clauses.chain(assoc_ty_where_clauses),
+                impl_where_clauses.into_iter().chain(assoc_fn_where_clauses),
             );
         });
     }

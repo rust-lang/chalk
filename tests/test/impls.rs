@@ -738,6 +738,37 @@ fn impl_function_basic_generics() {
     }
 }
 
+#[ignore = "broken; TODO bug in chalk-integration"]
+#[test]
+fn impl_function_basic_fn_generics() {
+    test! {
+        program {
+            trait Trait<T> {
+                fn a<V>(v: V);
+            }
+
+            struct A<T> {}
+            struct B<T> {}
+            struct C {}
+
+            impl@Impl<T> Trait<T> for A<T> {
+                fn a<Vii>(v: Vii);
+            }
+            impl@NotImpl<T> Trait<T> for B<T> {
+                fn a<Vee>(v: Vee);
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<A<C> as Trait<C>>::a<C> -> F)
+            }
+        } yields {
+            "Unique; substitution [?0 := {impl @Impl}::a<C>], lifetime constraints []"
+        }
+    }
+}
+
 #[test]
 fn impl_function_tautology() {
     test! {
@@ -792,6 +823,92 @@ fn impl_function_generic_arg() {
             }
         } yields {
             "Unique; substitution [?0 := {impl @Impl}::a<C>], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn impl_function_misses() {
+    test! {
+        program {
+            trait Trait {
+                fn a(v: u32);
+            }
+
+            struct A {}
+            struct C {}
+
+            impl@Impl Trait for A {
+                fn a(v: u32);
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<C as Trait>::a -> F)
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn impl_function_where_unsat() {
+    test! {
+        program {
+            trait Trait {
+                fn a(v: u32);
+            }
+
+            trait WhereC {
+            }
+
+            struct A<T> {}
+            struct C {}
+
+
+            impl@Impl<T> Trait for A<T> where T: WhereC {
+                fn a(v: u32);
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<A<C> as Trait>::a -> F)
+            }
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
+#[test]
+fn impl_function_fn_where_unsat() {
+    test! {
+        program {
+            trait Trait<T> {
+                fn a(v: T) where T: WhereC;
+            }
+
+            trait WhereC {
+            }
+
+            struct A<T> {}
+            struct C {}
+
+
+            impl@Impl<T> Trait<T> for A<T> {
+                fn a(v: T) where T: WhereC;
+            }
+        }
+
+        goal {
+            exists <F> {
+                NormalizeFn(<A<C> as Trait<C>>::a -> F)
+            }
+        } yields {
+            "No possible solution"
         }
     }
 }

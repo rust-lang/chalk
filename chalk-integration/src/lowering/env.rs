@@ -7,6 +7,7 @@ use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{AssociatedFnValueId, AssociatedTyValueId};
 use std::collections::BTreeMap;
+use tracing::{debug, span, Level};
 
 use crate::error::RustIrError;
 use crate::interner::ChalkIr;
@@ -295,13 +296,17 @@ impl Env<'_> {
         // because that is the key-value pair for ParameterMap.
         // `swap_inner` lets us do precisely that, replacing `Ident` inside
         // `ParameterKind<Ident>` with a `BoundVar` and returning both.
-        let binders = binders.into_iter().enumerate().map(|(i, k)| {
-            let (kind, name) = k.into();
-            (
-                name,
-                chalk_ir::WithKind::new(kind, BoundVar::new(DebruijnIndex::INNERMOST, i)),
-            )
-        });
+        let binders = binders
+            .into_iter()
+            .enumerate()
+            .map(|(i, k)| {
+                let (kind, name) = k.into();
+                (
+                    name,
+                    chalk_ir::WithKind::new(kind, BoundVar::new(DebruijnIndex::INNERMOST, i)),
+                )
+            })
+            .inspect(|(a, b)| debug!(binder_name = ?a, kind = ?b));
         let len = binders.len();
 
         // For things already in the parameter map, we take each existing key-value pair
@@ -312,6 +317,7 @@ impl Env<'_> {
             .map(|(k, v)| (k.clone(), v.map_ref(|b| b.shifted_in())))
             .chain(binders)
             .collect();
+        debug!(parameter_map = ?parameter_map, outer_parameter_map = ?self.parameter_map, extra_len = ?len);
         if parameter_map.len() != self.parameter_map.len() + len {
             Err(RustIrError::DuplicateOrShadowedParameters)?;
         }
@@ -321,6 +327,7 @@ impl Env<'_> {
         })
     }
 
+    #[track_caller]
     pub fn in_binders<I, T, OP>(&self, binders: I, op: OP) -> LowerResult<chalk_ir::Binders<T>>
     where
         I: IntoIterator<Item = chalk_ir::WithKind<ChalkIr, Ident>>,
@@ -328,6 +335,8 @@ impl Env<'_> {
         T: HasInterner<Interner = ChalkIr>,
         OP: FnOnce(&Self) -> LowerResult<T>,
     {
+        let _span =
+            span!(Level::DEBUG, "in_binders", loc = %std::panic::Location::caller()).entered();
         let binders: Vec<_> = binders.into_iter().collect();
         let env = self.introduce(binders.iter().cloned())?;
         Ok(chalk_ir::Binders::new(

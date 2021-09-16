@@ -373,8 +373,9 @@ impl<'a> LowerWithEnv for LowerFnDefn<'a> {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let LowerFnDefn(fn_defn, fn_def_id) = self;
-
-        let binders = env.in_binders(fn_defn.all_parameters(), |env| {
+        let params = fn_defn.all_parameters();
+        debug!(params = ?params);
+        let binders = env.in_binders(params, |env| {
             let where_clauses = fn_defn.where_clauses.lower(env)?;
 
             let inputs_and_output = env.in_binders(vec![], |env| {
@@ -394,6 +395,8 @@ impl<'a> LowerWithEnv for LowerFnDefn<'a> {
                 where_clauses,
             })
         })?;
+
+        debug!("LowerFnDefn id={:?} binders={:?}", &fn_def_id, &binders);
 
         Ok(rust_ir::FnDefDatum {
             id: *fn_def_id,
