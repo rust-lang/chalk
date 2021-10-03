@@ -181,14 +181,14 @@ fn derive_any_visit(
                 &self,
                 visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner, BreakTy = B >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> ::chalk_ir::visit::ControlFlow<B>
+            ) -> std::ops::ControlFlow<B>
             where
                 #interner: 'i
             {
                 match *self {
                     #body
                 }
-                ::chalk_ir::visit::ControlFlow::CONTINUE
+                std::ops::ControlFlow::Continue(())
             }
         },
     )

@@ -6,11 +6,11 @@ use crate::{BoundVar, ControlFlow, DebruijnIndex, Interner, Visit, Visitor};
 pub trait VisitExt<I: Interner>: Visit<I> {
     /// Check whether there are free (non-bound) variables.
     fn has_free_vars(&self, interner: &I) -> bool {
-        self.visit_with(
+        let flow = self.visit_with(
             &mut FindFreeVarsVisitor { interner },
             DebruijnIndex::INNERMOST,
-        )
-        .is_break()
+        );
+        matches!(flow, ControlFlow::Break(_))
     }
 }
 
@@ -36,6 +36,6 @@ impl<'i, I: Interner> Visitor<'i, I> for FindFreeVarsVisitor<'i, I> {
         _bound_var: BoundVar,
         _outer_binder: DebruijnIndex,
     ) -> ControlFlow<()> {
-        ControlFlow::BREAK
+        ControlFlow::Break(())
     }
 }

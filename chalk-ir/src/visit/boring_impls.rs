@@ -26,7 +26,7 @@ where
     for e in it {
         try_break!(e.visit_with(visitor, outer_binder));
     }
-    ControlFlow::CONTINUE
+    ControlFlow::Continue(())
 }
 
 impl<T: Visit<I>, I: Interner> Visit<I> for &T {
@@ -104,7 +104,7 @@ macro_rules! tuple_visit {
                 $(
                     try_break!($n.visit_with(visitor, outer_binder));
                 )*
-                ControlFlow::CONTINUE
+                ControlFlow::Continue(())
             }
         }
     }
@@ -126,7 +126,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
     {
         match self {
             Some(e) => e.visit_with(visitor, outer_binder),
-            None => ControlFlow::CONTINUE,
+            None => ControlFlow::Continue(()),
         }
     }
 }
@@ -186,7 +186,7 @@ macro_rules! const_visit {
             where
                 I: 'i,
             {
-                ControlFlow::CONTINUE
+                ControlFlow::Continue(())
             }
         }
     };
@@ -220,7 +220,7 @@ macro_rules! id_visit {
             where
                 I: 'i,
             {
-                ControlFlow::CONTINUE
+                ControlFlow::Continue(())
             }
         }
     };
@@ -305,6 +305,6 @@ impl<I: Interner> Visit<I> for PhantomData<I> {
     where
         I: 'i,
     {
-        ControlFlow::CONTINUE
+        ControlFlow::Continue(())
     }
 }

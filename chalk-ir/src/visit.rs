@@ -1,5 +1,6 @@
 //! Traits for visiting bits of IR.
 use std::fmt::Debug;
+use std::ops::ControlFlow;
 
 use crate::{
     BoundVar, Const, ConstValue, DebruijnIndex, DomainGoal, Goal, InferenceVar, Interner, Lifetime,
@@ -12,50 +13,6 @@ pub mod visitors;
 
 pub use visitors::VisitExt;
 
-/// An copy of the unstable `std::ops::ControlFlow` for use in Chalk visitors.
-pub enum ControlFlow<B, C = ()> {
-    /// Continue in the loop, using the given value for the next iteration
-    Continue(C),
-    /// Exit the loop, yielding the given value
-    Break(B),
-}
-
-impl<B, C> ControlFlow<B, C> {
-    /// Returns `true` if this is a `Break` variant.
-    #[inline]
-    pub fn is_break(&self) -> bool {
-        matches!(*self, ControlFlow::Break(_))
-    }
-
-    /// Returns `true` if this is a `Continue` variant.
-    #[inline]
-    pub fn is_continue(&self) -> bool {
-        matches!(*self, ControlFlow::Continue(_))
-    }
-
-    /// Converts the `ControlFlow` into an `Option` which is `Some`
-    /// if the `ControlFlow` was `Break` and `None` otherwise.
-    #[inline]
-    pub fn break_value(self) -> Option<B> {
-        match self {
-            ControlFlow::Continue(..) => None,
-            ControlFlow::Break(x) => Some(x),
-        }
-    }
-}
-
-impl<B> ControlFlow<B, ()> {
-    /// It's frequently the case that there's no value needed with `Continue`,
-    /// so this provides a way to avoid typing `(())`, if you prefer it.
-    pub const CONTINUE: Self = ControlFlow::Continue(());
-}
-
-impl<C> ControlFlow<(), C> {
-    /// APIs like `try_for_each` don't need values with `Break`,
-    /// so this provides a way to avoid typing `(())`, if you prefer it.
-    pub const BREAK: Self = ControlFlow::Break(());
-}
-
 /// Unwraps a `ControlFlow` or propagates its `Break` value.
 /// This replaces the `Try` implementation that would be used
 /// with `std::ops::ControlFlow`.
@@ -63,8 +20,8 @@ impl<C> ControlFlow<(), C> {
 macro_rules! try_break {
     ($expr:expr) => {
         match $expr {
-            $crate::visit::ControlFlow::Continue(c) => c,
-            $crate::visit::ControlFlow::Break(b) => return $crate::visit::ControlFlow::Break(b),
+            std::ops::ControlFlow::Continue(c) => c,
+            std::ops::ControlFlow::Break(b) => return std::ops::ControlFlow::Break(b),
         }
     };
 }
@@ -174,7 +131,7 @@ where
                 bound_var, outer_binder
             )
         } else {
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         }
     }
 
@@ -194,7 +151,7 @@ where
         if self.forbid_free_placeholders() {
             panic!("unexpected placeholder type `{:?}`", universe)
         } else {
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         }
     }
 
@@ -224,7 +181,7 @@ where
         if self.forbid_inference_vars() {
             panic!("unexpected inference type `{:?}`", var)
         } else {
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         }
     }
 
@@ -298,7 +255,7 @@ where
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             }
             TyKind::Dyn(clauses) => clauses.visit_with(visitor, outer_binder),
@@ -311,7 +268,7 @@ where
                 substitution.visit_with(visitor, outer_binder)
             }
             TyKind::Scalar(scalar) => scalar.visit_with(visitor, outer_binder),
-            TyKind::Str => ControlFlow::CONTINUE,
+            TyKind::Str => ControlFlow::Continue(()),
             TyKind::Tuple(arity, substitution) => {
                 try_break!(arity.visit_with(visitor, outer_binder));
                 substitution.visit_with(visitor, outer_binder)
@@ -334,7 +291,7 @@ where
                 try_break!(mutability.visit_with(visitor, outer_binder));
                 ty.visit_with(visitor, outer_binder)
             }
-            TyKind::Never => ControlFlow::CONTINUE,
+            TyKind::Never => ControlFlow::Continue(()),
             TyKind::Array(ty, const_) => {
                 try_break!(ty.visit_with(visitor, outer_binder));
                 const_.visit_with(visitor, outer_binder)
@@ -352,7 +309,7 @@ where
                 substitution.visit_with(visitor, outer_binder)
             }
             TyKind::Foreign(foreign_ty) => foreign_ty.visit_with(visitor, outer_binder),
-            TyKind::Error => ControlFlow::CONTINUE,
+            TyKind::Error => ControlFlow::Continue(()),
         }
     }
 }
@@ -385,7 +342,7 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             }
             LifetimeData::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
@@ -393,7 +350,7 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
             LifetimeData::Static | LifetimeData::Empty(_) | LifetimeData::Erased => {
-                ControlFlow::CONTINUE
+                ControlFlow::Continue(())
             }
             LifetimeData::Phantom(void, ..) => match *void {},
         }
@@ -428,14 +385,14 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
                 if let Some(_) = bound_var.shifted_out_to(outer_binder) {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             }
             ConstValue::InferenceVar(var) => visitor.visit_inference_var(*var, outer_binder),
             ConstValue::Placeholder(universe) => {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
-            ConstValue::Concrete(_) => ControlFlow::CONTINUE,
+            ConstValue::Concrete(_) => ControlFlow::Continue(()),
         }
     }
 }
