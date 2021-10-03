@@ -1,8 +1,9 @@
 use crate::debug_span;
 use chalk_ir::fold::{Fold, Folder};
 use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::{ControlFlow, Visit, Visitor};
+use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
+use std::ops::ControlFlow;
 
 use super::InferenceTable;
 
@@ -215,7 +216,7 @@ where
         _outer_binder: DebruijnIndex,
     ) -> ControlFlow<()> {
         self.universes.add(universe.ui);
-        ControlFlow::CONTINUE
+        ControlFlow::Continue(())
     }
 
     fn forbid_inference_vars(&self) -> bool {

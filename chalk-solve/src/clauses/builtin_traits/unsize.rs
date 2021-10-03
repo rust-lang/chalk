@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::iter;
+use std::ops::ControlFlow;
 
 use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
@@ -7,7 +8,7 @@ use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
-    visit::{ControlFlow, SuperVisit, Visit, Visitor},
+    visit::{SuperVisit, Visit, Visitor},
     Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, LifetimeOutlives,
     QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
@@ -34,7 +35,7 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
                 if bound_var.debruijn.shifted_in() == outer_binder {
                     self.parameters.insert(bound_var.index);
                 }
-                ControlFlow::CONTINUE
+                ControlFlow::Continue(())
             }
             _ => ty.super_visit_with(self, outer_binder),
         }
@@ -49,7 +50,7 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
                 self.parameters.insert(bound_var.index);
             }
         }
-        ControlFlow::CONTINUE
+        ControlFlow::Continue(())
     }
 
     fn interner(&self) -> &'a I {
@@ -90,9 +91,9 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
                 if bound_var.debruijn.shifted_in() == outer_binder
                     && self.parameters.contains(&bound_var.index)
                 {
-                    ControlFlow::BREAK
+                    ControlFlow::Break(())
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             }
             _ => ty.super_visit_with(self, outer_binder),
@@ -107,12 +108,12 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
                 if bound_var.debruijn.shifted_in() == outer_binder
                     && self.parameters.contains(&bound_var.index)
                 {
-                    ControlFlow::BREAK
+                    ControlFlow::Break(())
                 } else {
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
             }
-            _ => ControlFlow::CONTINUE,
+            _ => ControlFlow::Continue(()),
         }
     }
 
@@ -130,8 +131,9 @@ fn uses_outer_binder_params<I: Interner>(
         interner,
         parameters,
     };
-    v.visit_with(&mut visitor, DebruijnIndex::INNERMOST)
-        .is_break()
+
+    let flow = v.visit_with(&mut visitor, DebruijnIndex::INNERMOST);
+    matches!(flow, ControlFlow::Break(_))
 }
 
 fn principal_id<'a, I: Interner>(

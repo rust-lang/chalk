@@ -2,9 +2,10 @@
 
 use crate::infer::InferenceTable;
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{ControlFlow, SuperVisit, Visit, Visitor};
+use chalk_ir::visit::{SuperVisit, Visit, Visitor};
 use chalk_ir::*;
 use std::cmp::max;
+use std::ops::ControlFlow;
 
 /// "Truncation" (called "abstraction" in the papers referenced below)
 /// refers to the act of modifying a goal or answer that has become
@@ -60,7 +61,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
     fn visit_ty(&mut self, ty: &Ty<I>, outer_binder: DebruijnIndex) -> ControlFlow<()> {
         if let Some(normalized_ty) = self.infer.normalize_ty_shallow(self.interner, ty) {
             normalized_ty.visit_with(self, outer_binder);
-            return ControlFlow::CONTINUE;
+            return ControlFlow::Continue(());
         }
 
         self.size += 1;
@@ -75,7 +76,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
         if self.depth == 0 {
             self.size = 0;
         }
-        ControlFlow::CONTINUE
+        ControlFlow::Continue(())
     }
 
     fn interner(&self) -> &'i I {

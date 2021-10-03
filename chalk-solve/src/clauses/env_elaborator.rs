@@ -8,9 +8,10 @@ use crate::RustIrDatabase;
 use crate::Ty;
 use crate::{debug_span, TyKind};
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{ControlFlow, Visit, Visitor};
+use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::{DebruijnIndex, Environment};
 use rustc_hash::FxHashSet;
+use std::ops::ControlFlow;
 use tracing::instrument;
 
 /// When proving a `FromEnv` goal, we elaborate all `FromEnv` goals
@@ -71,7 +72,7 @@ impl<'me, 'builder, I: Interner> Visitor<'me, I> for EnvElaborator<'me, 'builder
                     .unwrap()
             }
         }
-        ControlFlow::CONTINUE
+        ControlFlow::Continue(())
     }
 
     fn visit_domain_goal(
@@ -95,12 +96,12 @@ impl<'me, 'builder, I: Interner> Visitor<'me, I> for EnvElaborator<'me, 'builder
                             .associated_ty_data(associated_ty_id)
                             .to_program_clauses(self.builder, self.environment);
                     }
-                    ControlFlow::CONTINUE
+                    ControlFlow::Continue(())
                 }
                 FromEnv::Ty(ty) => ty.visit_with(self, outer_binder),
             }
         } else {
-            ControlFlow::CONTINUE
+            ControlFlow::Continue(())
         }
     }
 }

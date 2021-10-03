@@ -7,13 +7,12 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    try_break,
-    visit::{ControlFlow, Visit},
-    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
-    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
-    Ty, TyKind, VariableKind, WhereClause, WithKind,
+    try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId,
+    GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
+    ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
+use std::ops::ControlFlow;
 
 /// Identifier for an "associated type value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

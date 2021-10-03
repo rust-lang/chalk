@@ -2,11 +2,12 @@ use super::RecordedItemId;
 use crate::RustIrDatabase;
 use chalk_ir::{
     interner::Interner,
-    visit::{ControlFlow, Visitor},
+    visit::Visitor,
     visit::{SuperVisit, Visit},
     AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
 use std::collections::BTreeSet;
+use std::ops::ControlFlow;
 
 /// Collects the identifiers needed to resolve all the names for a given
 /// set of identifers, excluding identifiers we already have.
