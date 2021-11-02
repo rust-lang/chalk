@@ -63,8 +63,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `Ty<Self>`, which wraps this type.
     ///
     /// An `InternedType` must be something that can be created from a
-    /// `TyKind` (by the [`intern_ty`] method) and then later
-    /// converted back (by the [`ty_data`] method). The interned form
+    /// `TyKind` (by the [`intern_ty`][Self::intern_ty] method) and then later
+    /// converted back (by the [`ty_data`][Self::ty_data] method). The interned form
     /// must also introduce indirection, either via a `Box`, `&`, or
     /// other pointer type.
     type InternedType: Debug + Clone + Eq + Hash;
@@ -74,8 +74,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `Lifetime<Self>`, which wraps this type.
     ///
     /// An `InternedLifetime` must be something that can be created
-    /// from a `LifetimeData` (by the [`intern_lifetime`] method) and
-    /// then later converted back (by the [`lifetime_data`] method).
+    /// from a `LifetimeData` (by the [`intern_lifetime`][Self::intern_lifetime] method) and
+    /// then later converted back (by the [`lifetime_data`][Self::lifetime_data] method).
     type InternedLifetime: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of const expressions. In normal user code,
@@ -83,8 +83,8 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `Const<Self>`, which wraps this type.
     ///
     /// An `InternedConst` must be something that can be created
-    /// from a `ConstData` (by the [`intern_const`] method) and
-    /// then later converted back (by the [`const_data`] method).
+    /// from a `ConstData` (by the [`intern_const`][Self::intern_const] method) and
+    /// then later converted back (by the [`const_data`][Self::const_data] method).
     type InternedConst: Debug + Clone + Eq + Hash;
 
     /// "Interned" representation of an evaluated const value.

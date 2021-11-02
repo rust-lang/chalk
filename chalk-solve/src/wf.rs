@@ -893,16 +893,16 @@ impl WfWellKnownConstraints {
 
     /// Verify constraints a CoerceUnsized impl.
     /// Rules for CoerceUnsized impl to be considered well-formed:
-    /// a) pointer conversions: &[mut] T -> &[mut] U, &[mut] T -> *[mut] U,
-    ///    *[mut] T -> *[mut] U are considered valid if
-    ///    1) T: Unsize<U>
+    /// 1) pointer conversions: `&[mut] T -> &[mut] U`, `&[mut] T -> *[mut] U`,
+    ///    `*[mut] T -> *[mut] U` are considered valid if
+    ///    1) `T: Unsize<U>`
     ///    2) mutability is respected, i.e. immutable -> immutable, mutable -> immutable,
     ///       mutable -> mutable conversions are allowed, immutable -> mutable is not.
-    /// b) struct conversions of structures with the same definition, `S<P0...Pn>` -> `S<Q0...Qn>`.
+    /// 2) struct conversions of structures with the same definition, `S<P0...Pn>` -> `S<Q0...Qn>`.
     ///    To check if this impl is legal, we would walk down the fields of `S`
     ///    and consider their types with both substitutes. We are looking to find
-    ///    exactly one (non-phantom) field that has changed its type (from T to U), and
-    ///    expect T to be unsizeable to U, i.e. T: CoerceUnsized<U>.
+    ///    exactly one (non-phantom) field that has changed its type (from `T` to `U`), and
+    ///    expect `T` to be unsizeable to `U`, i.e. `T: CoerceUnsized<U>`.
     ///
     ///    As an example, consider a struct
     ///    ```rust

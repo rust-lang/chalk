@@ -18,10 +18,10 @@ impl<I: Interner> InferenceTable<I> {
     /// yet been assigned a value, then this function will return
     /// `None`, indicating that we cannot prove negation for this goal
     /// yet.  This follows the approach in Clark's original
-    /// negation-as-failure paper [1], where negative goals are only
+    /// [negation-as-failure paper][1], where negative goals are only
     /// permitted if they contain no free (existential) variables.
     ///
-    /// [1] https://www.doc.ic.ac.uk/~klc/NegAsFailure.pdf
+    /// [1]: https://www.doc.ic.ac.uk/~klc/NegAsFailure.pdf
     ///
     /// Restricting free existential variables is done because the
     /// semantics of such queries is not what you expect: it basically
