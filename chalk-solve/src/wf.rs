@@ -421,11 +421,27 @@ where
                 )
             }
             WellKnownTrait::Clone | WellKnownTrait::Unpin => true,
+            // Manual implementations are only allowed during testing
+            WellKnownTrait::Fn | WellKnownTrait::FnOnce | WellKnownTrait::FnMut => {
+                let interner = self.db.interner();
+                self.db.custom_clauses().iter().any(|custom| {
+                    if let DomainGoal::LocalImplAllowed(tr) =
+                        &custom.data(interner).0.skip_binders().consequence
+                    {
+                        tr.trait_id == self.db.well_known_trait_id(well_known).unwrap()
+                            && tr.self_type_parameter(interner)
+                                == impl_datum
+                                    .binders
+                                    .skip_binders()
+                                    .trait_ref
+                                    .self_type_parameter(interner)
+                    } else {
+                        false
+                    }
+                })
+            }
             // You can't add a manual implementation for the following traits:
-            WellKnownTrait::Fn
-            | WellKnownTrait::FnOnce
-            | WellKnownTrait::FnMut
-            | WellKnownTrait::Unsize
+            WellKnownTrait::Unsize
             | WellKnownTrait::Sized
             | WellKnownTrait::DiscriminantKind
             | WellKnownTrait::Generator => false,

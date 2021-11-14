@@ -3,8 +3,8 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty,
-    TyKind,
+    AliasTy, Binders, DomainGoal, Floundered, Normalize, ProjectionTy, Safety, Substitution,
+    TraitId, Ty, TyKind,
 };
 
 fn push_clauses<I: Interner>(
@@ -110,6 +110,21 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             Ok(())
         }
         TyKind::Closure(closure_id, substitution) => {
+            for custom in db.custom_clauses() {
+                if let DomainGoal::LocalImplAllowed(tr) =
+                    &custom.data(interner).0.skip_binders().consequence
+                {
+                    if tr.trait_id == db.well_known_trait_id(WellKnownTrait::FnOnce).unwrap() {
+                        if let TyKind::Closure(cl_id, _) =
+                            tr.self_type_parameter(interner).data(interner).kind
+                        {
+                            if cl_id == *closure_id {
+                                return Ok(());
+                            }
+                        }
+                    }
+                }
+            }
             let closure_kind = db.closure_kind(*closure_id, &substitution);
             let trait_matches = match (well_known, closure_kind) {
                 (WellKnownTrait::Fn, ClosureKind::Fn) => true,
