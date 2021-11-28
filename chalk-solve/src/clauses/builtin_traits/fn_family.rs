@@ -156,8 +156,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             });
             Ok(())
         }
-        // Function traits are non-enumerable
-        TyKind::InferenceVar(..) | TyKind::BoundVar(_) | TyKind::Alias(..) => Err(Floundered),
         _ => Ok(()),
     }
 }

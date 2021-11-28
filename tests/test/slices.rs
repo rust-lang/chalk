@@ -17,15 +17,23 @@ fn slices_are_not_sized() {
 }
 
 #[test]
-fn slices_are_well_formed() {
+fn slices_are_well_formed_if_elem_sized() {
     test! {
         program {
+            #[lang(sized)]
+            trait Sized { }
+        }
+
+        goal {
+            forall<T> { if (T: Sized) { WellFormed([T]) } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
         }
 
         goal {
             forall<T> { WellFormed([T]) }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "No possible solution"
         }
     }
 }

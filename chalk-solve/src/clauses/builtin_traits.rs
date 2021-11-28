@@ -28,6 +28,10 @@ pub fn add_builtin_program_clauses<I: Interner>(
         let ty = self_ty.kind(db.interner()).clone();
 
         match well_known {
+            // There are no builtin impls provided for the following traits:
+            WellKnownTrait::Unpin | WellKnownTrait::Drop | WellKnownTrait::CoerceUnsized => (),
+            // Built-in traits are non-enumerable.
+            _ if self_ty.is_general_var(db.interner(), binders) => return Err(Floundered),
             WellKnownTrait::Sized => {
                 sized::add_sized_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
@@ -48,8 +52,6 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Generator => {
                 generator::add_generator_program_clauses(db, builder, self_ty)?;
             }
-            // There are no builtin impls provided for the following traits:
-            WellKnownTrait::Unpin | WellKnownTrait::Drop | WellKnownTrait::CoerceUnsized => (),
         }
         Ok(())
     })

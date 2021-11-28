@@ -3,12 +3,24 @@ use super::*;
 #[test]
 fn immut_refs_are_well_formed() {
     test! {
-        program { }
+        program {
+            struct A { }
+        }
 
         goal {
-            forall<'a, T> { WellFormed(&'a T) }
+            forall<'a, T> {
+                WellFormed(&'a T)
+            }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: !1_1: '!1_0 }]"
+        }
+
+        goal {
+            exists<'a> {
+                WellFormed(&'a A)
+            }
+        } yields {
+            "Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: A: '^0.0 }] }"
         }
     }
 }
@@ -37,7 +49,7 @@ fn mut_refs_are_well_formed() {
         goal {
             forall<'a, T> { WellFormed(&'a mut T) }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: !1_1: '!1_0 }]"
         }
     }
 }

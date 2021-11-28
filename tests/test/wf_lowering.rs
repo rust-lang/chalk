@@ -1286,7 +1286,7 @@ fn coerce_unsized_struct() {
             #[lang(coerce_unsized)]
             trait CoerceUnsized<T> {}
 
-            struct Foo<'a, T> {
+            struct Foo<'a, T> where T: 'a {
                 t: &'a T
             }
 

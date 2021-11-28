@@ -815,7 +815,7 @@ fn env_bound_vars() {
                 }
             }
         } yields {
-            "Unique"
+            "Ambiguous; definite substitution for<?U0> { [?0 := '^0.0] }"
         }
         goal {
             exists<'a> {

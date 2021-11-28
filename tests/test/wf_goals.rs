@@ -107,3 +107,16 @@ fn drop_compatible() {
         }
     }
 }
+
+#[test]
+fn placeholder_wf() {
+    test! {
+        program { }
+
+        goal {
+            forall<T> { WellFormed(T) }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}

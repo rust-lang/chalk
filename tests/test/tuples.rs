@@ -39,10 +39,6 @@ fn tuple_trait_impl() {
 fn tuples_are_copy() {
     test! {
         program {
-            // FIXME: If we don't declare Copy non-enumerable, `exists<T> { T:
-            // Copy }` gives wrong results, because it doesn't consider the
-            // built-in impls.
-            #[non_enumerable]
             #[lang(copy)]
             trait Copy { }
 
@@ -107,8 +103,6 @@ fn tuples_are_sized() {
         program {
             #[lang(sized)]
             trait Sized { }
-
-            trait Foo {}
         }
 
         goal {
@@ -179,7 +173,6 @@ fn tuples_are_sized() {
 fn tuples_are_clone() {
     test! {
         program {
-            #[non_enumerable] // see above
             #[lang(clone)]
             trait Clone { }
 
@@ -232,6 +225,70 @@ fn tuples_are_clone() {
 
         goal {
             forall<T> { if (T: Clone) { (T, u8): Clone } }
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+    }
+}
+
+#[test]
+fn tuples_are_wf() {
+    test! {
+        program {
+            #[lang(sized)]
+            trait Sized { }
+        }
+
+        goal {
+            WellFormed(())
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed((u8,))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed((u8, u8))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed(([u8],))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed((u8, [u8]))
+        } yields {
+            "Unique; substitution [], lifetime constraints []"
+        }
+
+        goal {
+            WellFormed(([u8], u8))
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            exists<T> { WellFormed((T, u8)) }
+        } yields {
+            "Ambiguous; no inference guidance"
+        }
+
+        goal {
+            forall<T> { WellFormed((T, u8)) }
+        } yields {
+            "No possible solution"
+        }
+
+        goal {
+            forall<T> { if (T: Sized) { WellFormed((T, u8)) } }
         } yields {
             "Unique; substitution [], lifetime constraints []"
         }

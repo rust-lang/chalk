@@ -806,8 +806,7 @@ fn algebraic_data_types() {
                 type Owned: Borrow<Self>;
             }
 
-            // FIXME(#435) should be `B: 'a + ToOwned`
-            enum Cow<'a, B> where B: ToOwned {
+            enum Cow<'a, B> where B: ToOwned, B: 'a {
                 Borrowed(&'a B),
                 Owned(<B as ToOwned>::Owned),
             }

@@ -107,8 +107,8 @@ lower_param_map!(
     ))
 );
 
-fn get_type_of_u32() -> chalk_ir::Ty<ChalkIr> {
-    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::U32)).intern(&ChalkIr)
+fn get_type_of_usize() -> chalk_ir::Ty<ChalkIr> {
+    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::Usize)).intern(&ChalkIr)
 }
 
 impl Lower for VariableKind {
@@ -128,7 +128,7 @@ impl Lower for VariableKind {
                 n,
             ),
             VariableKind::Lifetime(n) => (chalk_ir::VariableKind::Lifetime, n),
-            VariableKind::Const(ref n) => (chalk_ir::VariableKind::Const(get_type_of_u32()), n),
+            VariableKind::Const(ref n) => (chalk_ir::VariableKind::Const(get_type_of_usize()), n),
         };
 
         chalk_ir::WithKind::new(kind, n.str.clone())
@@ -830,7 +830,7 @@ impl LowerWithEnv for Const {
                     .map(|c| c.clone())
             }
             Const::Value(value) => Ok(chalk_ir::ConstData {
-                ty: get_type_of_u32(),
+                ty: get_type_of_usize(),
                 value: chalk_ir::ConstValue::Concrete(chalk_ir::ConcreteConst { interned: *value }),
             }
             .intern(interner)),

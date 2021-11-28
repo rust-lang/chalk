@@ -226,7 +226,6 @@ fn infinite_recursion() {
 fn cycle_with_ambiguity() {
     test! {
         program {
-            #[non_enumerable]
             #[lang(sized)]
             trait Sized { }
             trait From<T> {}

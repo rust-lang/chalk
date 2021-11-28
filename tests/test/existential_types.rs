@@ -417,3 +417,20 @@ fn dyn_associated_type_binding() {
         }
     }
 }
+
+#[test]
+fn dyn_well_formed() {
+    test! {
+        program {
+            trait MyTrait {}
+        }
+
+        goal {
+            exists<'s> {
+                WellFormed(dyn MyTrait + 's)
+            }
+        } yields {
+            "Unique"
+        }
+    }
+}
