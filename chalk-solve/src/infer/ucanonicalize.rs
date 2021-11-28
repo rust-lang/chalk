@@ -237,7 +237,9 @@ impl<'i, I: Interner> Folder<'i, I> for UMapToCanonical<'i, I>
 where
     I: 'i,
 {
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
+    type Error = NoSolution;
+
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
         self
     }
 
@@ -310,7 +312,9 @@ impl<'i, I: Interner> Folder<'i, I> for UMapFromCanonical<'i, I>
 where
     I: 'i,
 {
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I> {
+    type Error = NoSolution;
+
+    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
         self
     }
 
