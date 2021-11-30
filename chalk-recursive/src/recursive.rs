@@ -112,8 +112,8 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         self.context.solve_goal(&goal, minimums, self.program)
     }
 
-    fn interner(&self) -> &I {
-        &self.program.interner()
+    fn interner(&self) -> I {
+        self.program.interner()
     }
 
     fn db(&self) -> &dyn RustIrDatabase<I> {

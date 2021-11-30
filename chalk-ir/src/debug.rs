@@ -306,7 +306,7 @@ impl<I: Interner> VariableKinds<I> {
     }
 
     /// Helper method for debugging variable kinds.
-    pub fn inner_debug<'a>(&'a self, interner: &'a I) -> VariableKindsInnerDebug<'a, I> {
+    pub fn inner_debug<'a>(&'a self, interner: I) -> VariableKindsInnerDebug<'a, I> {
         VariableKindsInnerDebug {
             variable_kinds: self,
             interner,
@@ -326,7 +326,7 @@ impl<'a, I: Interner> Debug for VariableKindsDebug<'a, I> {
 /// Helper struct for showing debug output for `VariableKinds`.
 pub struct VariableKindsInnerDebug<'a, I: Interner> {
     variable_kinds: &'a VariableKinds<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for VariableKindsInnerDebug<'a, I> {
@@ -387,7 +387,7 @@ impl<I: Interner> Debug for GoalData<I> {
 /// Helper struct for showing debug output for `Goals`.
 pub struct GoalsDebug<'a, I: Interner> {
     goals: &'a Goals<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for GoalsDebug<'a, I> {
@@ -406,7 +406,7 @@ impl<'a, I: Interner> Debug for GoalsDebug<'a, I> {
 
 impl<I: Interner> Goals<I> {
     /// Show debug output for `Goals`.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> GoalsDebug<'a, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> GoalsDebug<'a, I> {
         GoalsDebug {
             goals: self,
             interner,
@@ -437,7 +437,7 @@ impl<I: Interner> GenericArgData<I> {
 /// Helper struct for showing debug output for program clause implications.
 pub struct ProgramClauseImplicationDebug<'a, I: Interner> {
     pci: &'a ProgramClauseImplication<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for ProgramClauseImplicationDebug<'a, I> {
@@ -445,7 +445,7 @@ impl<'a, I: Interner> Debug for ProgramClauseImplicationDebug<'a, I> {
         let ProgramClauseImplicationDebug { pci, interner } = self;
         write!(fmt, "{:?}", pci.consequence)?;
 
-        let conditions = pci.conditions.as_slice(interner);
+        let conditions = pci.conditions.as_slice(*interner);
 
         let conds = conditions.len();
         if conds == 0 {
@@ -462,7 +462,7 @@ impl<'a, I: Interner> Debug for ProgramClauseImplicationDebug<'a, I> {
 
 impl<I: Interner> ProgramClauseImplication<I> {
     /// Show debug output for the program clause implication.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> ProgramClauseImplicationDebug<'a, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> ProgramClauseImplicationDebug<'a, I> {
         ProgramClauseImplicationDebug {
             pci: self,
             interner,
@@ -473,7 +473,7 @@ impl<I: Interner> ProgramClauseImplication<I> {
 /// Helper struct for showing debug output for application types.
 pub struct TyKindDebug<'a, I: Interner> {
     ty: &'a TyKind<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
@@ -542,7 +542,7 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
 
 impl<I: Interner> TyKind<I> {
     /// Show debug output for the application type.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> TyKindDebug<'a, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> TyKindDebug<'a, I> {
         TyKindDebug { ty: self, interner }
     }
 }
@@ -550,7 +550,7 @@ impl<I: Interner> TyKind<I> {
 /// Helper struct for showing debug output for substitutions.
 pub struct SubstitutionDebug<'a, I: Interner> {
     substitution: &'a Substitution<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
@@ -563,7 +563,7 @@ impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
 
         write!(fmt, "[")?;
 
-        for (index, value) in substitution.iter(interner).enumerate() {
+        for (index, value) in substitution.iter(*interner).enumerate() {
             if first {
                 first = false;
             } else {
@@ -581,7 +581,7 @@ impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
 
 impl<I: Interner> Substitution<I> {
     /// Show debug output for the substitution.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> SubstitutionDebug<'a, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> SubstitutionDebug<'a, I> {
         SubstitutionDebug {
             substitution: self,
             interner,
@@ -632,7 +632,7 @@ pub struct SeparatorTraitRef<'me, I: Interner> {
 /// Helper struct for showing debug output for the `SeperatorTraitRef`.
 pub struct SeparatorTraitRefDebug<'a, 'me, I: Interner> {
     separator_trait_ref: &'a SeparatorTraitRef<'me, I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
@@ -644,7 +644,7 @@ impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
         let parameters = separator_trait_ref
             .trait_ref
             .substitution
-            .as_slice(interner);
+            .as_slice(*interner);
         write!(
             fmt,
             "{:?}{}{:?}{:?}",
@@ -658,7 +658,7 @@ impl<'a, 'me, I: Interner> Debug for SeparatorTraitRefDebug<'a, 'me, I> {
 
 impl<'me, I: Interner> SeparatorTraitRef<'me, I> {
     /// Show debug output for the `SeperatorTraitRef`.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> SeparatorTraitRefDebug<'a, 'me, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> SeparatorTraitRefDebug<'a, 'me, I> {
         SeparatorTraitRefDebug {
             separator_trait_ref: self,
             interner,
@@ -681,7 +681,7 @@ impl<I: Interner> Debug for TypeOutlives<I> {
 /// Helper struct for showing debug output for projection types.
 pub struct ProjectionTyDebug<'a, I: Interner> {
     projection_ty: &'a ProjectionTy<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
@@ -694,14 +694,14 @@ impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
             fmt,
             "({:?}){:?}",
             projection_ty.associated_ty_id,
-            projection_ty.substitution.with_angle(interner)
+            projection_ty.substitution.with_angle(*interner)
         )
     }
 }
 
 impl<I: Interner> ProjectionTy<I> {
     /// Show debug output for the projection type.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> ProjectionTyDebug<'a, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> ProjectionTyDebug<'a, I> {
         ProjectionTyDebug {
             projection_ty: self,
             interner,
@@ -712,7 +712,7 @@ impl<I: Interner> ProjectionTy<I> {
 /// Helper struct for showing debug output for opaque types.
 pub struct OpaqueTyDebug<'a, I: Interner> {
     opaque_ty: &'a OpaqueTy<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
@@ -725,14 +725,14 @@ impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
             fmt,
             "{:?}{:?}",
             opaque_ty.opaque_ty_id,
-            opaque_ty.substitution.with_angle(interner)
+            opaque_ty.substitution.with_angle(*interner)
         )
     }
 }
 
 impl<I: Interner> OpaqueTy<I> {
     /// Show debug output for the opaque type.
-    pub fn debug<'a>(&'a self, interner: &'a I) -> OpaqueTyDebug<'a, I> {
+    pub fn debug<'a>(&'a self, interner: I) -> OpaqueTyDebug<'a, I> {
         OpaqueTyDebug {
             opaque_ty: self,
             interner,
@@ -866,7 +866,7 @@ impl<I: Interner> Debug for CanonicalVarKinds<I> {
 
 impl<T: HasInterner + Display> Canonical<T> {
     /// Display the canonicalized item.
-    pub fn display<'a>(&'a self, interner: &'a T::Interner) -> CanonicalDisplay<'a, T> {
+    pub fn display<'a>(&'a self, interner: T::Interner) -> CanonicalDisplay<'a, T> {
         CanonicalDisplay {
             canonical: self,
             interner,
@@ -877,7 +877,7 @@ impl<T: HasInterner + Display> Canonical<T> {
 /// Helper struct for displaying canonicalized items.
 pub struct CanonicalDisplay<'a, T: HasInterner> {
     canonical: &'a Canonical<T>,
-    interner: &'a T::Interner,
+    interner: T::Interner,
 }
 
 impl<'a, T: HasInterner + Display> Display for CanonicalDisplay<'a, T> {
@@ -973,7 +973,7 @@ impl<I: Interner> Display for ConstrainedSubst<I> {
 impl<I: Interner> Substitution<I> {
     /// Displays the substitution in the form `< P0, .. Pn >`, or (if
     /// the substitution is empty) as an empty string.
-    pub fn with_angle(&self, interner: &I) -> Angle<'_, GenericArg<I>> {
+    pub fn with_angle(&self, interner: I) -> Angle<'_, GenericArg<I>> {
         Angle(self.as_slice(interner))
     }
 }

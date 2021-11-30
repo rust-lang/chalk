@@ -20,7 +20,7 @@ use std::ops::ControlFlow;
 /// - Radial Restraint
 ///   - Grosof and Swift; 2013
 pub fn needs_truncation<I: Interner>(
-    interner: &I,
+    interner: I,
     infer: &mut InferenceTable<I>,
     max_size: usize,
     value: impl Visit<I>,
@@ -31,16 +31,16 @@ pub fn needs_truncation<I: Interner>(
     visitor.max_size > max_size
 }
 
-struct TySizeVisitor<'infer, 'i, I: Interner> {
-    interner: &'i I,
+struct TySizeVisitor<'infer, I: Interner> {
+    interner: I,
     infer: &'infer mut InferenceTable<I>,
     size: usize,
     depth: usize,
     max_size: usize,
 }
 
-impl<'infer, 'i, I: Interner> TySizeVisitor<'infer, 'i, I> {
-    fn new(interner: &'i I, infer: &'infer mut InferenceTable<I>) -> Self {
+impl<'infer, I: Interner> TySizeVisitor<'infer, I> {
+    fn new(interner: I, infer: &'infer mut InferenceTable<I>) -> Self {
         Self {
             interner,
             infer,
@@ -51,10 +51,10 @@ impl<'infer, 'i, I: Interner> TySizeVisitor<'infer, 'i, I> {
     }
 }
 
-impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
+impl<'infer, I: Interner> Visitor<I> for TySizeVisitor<'infer, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -79,7 +79,7 @@ impl<'infer, 'i, I: Interner> Visitor<'i, I> for TySizeVisitor<'infer, 'i, I> {
         ControlFlow::Continue(())
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
@@ -92,7 +92,7 @@ mod tests {
     #[test]
     fn one_type() {
         use chalk_integration::interner::ChalkIr;
-        let interner = &ChalkIr;
+        let interner = ChalkIr;
         let mut table = InferenceTable::<chalk_integration::interner::ChalkIr>::new();
         let _u1 = table.new_universe();
 
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn multiple_types() {
         use chalk_integration::interner::ChalkIr;
-        let interner = &ChalkIr;
+        let interner = ChalkIr;
         let mut table = InferenceTable::<chalk_integration::interner::ChalkIr>::new();
         let _u1 = table.new_universe();
 

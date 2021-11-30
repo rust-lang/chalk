@@ -12,7 +12,7 @@ use tracing::{debug, instrument};
 impl<I: Interner> InferenceTable<I> {
     pub fn relate<T>(
         &mut self,
-        interner: &I,
+        interner: I,
         db: &dyn UnificationDatabase<I>,
         environment: &Environment<I>,
         variance: Variance,
@@ -40,7 +40,7 @@ struct Unifier<'t, I: Interner> {
     table: &'t mut InferenceTable<I>,
     environment: &'t Environment<I>,
     goals: Vec<InEnvironment<Goal<I>>>,
-    interner: &'t I,
+    interner: I,
     db: &'t dyn UnificationDatabase<I>,
 }
 
@@ -51,7 +51,7 @@ pub struct RelationResult<I: Interner> {
 
 impl<'t, I: Interner> Unifier<'t, I> {
     fn new(
-        interner: &'t I,
+        interner: I,
         db: &'t dyn UnificationDatabase<I>,
         table: &'t mut InferenceTable<I>,
         environment: &'t Environment<I>,
@@ -241,7 +241,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 self.zip_substs(
                     variance,
                     Some(Variances::from_iter(
-                        &self.interner,
+                        self.interner,
                         std::iter::repeat(Variance::Covariant).take(*arity_a),
                     )),
                     substitution_a.as_slice(interner),
@@ -759,7 +759,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         variance: Variance,
     ) -> Lifetime<I> {
         let interner = self.interner;
-        match lifetime.data(&interner) {
+        match lifetime.data(interner) {
             LifetimeData::BoundVar(_) => {
                 return lifetime.clone();
             }
@@ -777,7 +777,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     #[instrument(level = "debug", skip(self))]
     fn generalize_const(&mut self, const_: &Const<I>, universe_index: UniverseIndex) -> Const<I> {
         let interner = self.interner;
-        let data = const_.data(&interner);
+        let data = const_.data(interner);
         match data.value {
             ConstValue::BoundVar(_) => {
                 return const_.clone();
@@ -1039,7 +1039,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 .unify
                 .unify_var_value(
                     var,
-                    InferenceValue::from_lifetime(&self.interner, value.clone()),
+                    InferenceValue::from_lifetime(self.interner, value.clone()),
                 )
                 .unwrap();
             Ok(())
@@ -1050,7 +1050,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
             );
             Ok(self.push_lifetime_outlives_goals(
                 variance,
-                var.to_lifetime(&self.interner),
+                var.to_lifetime(self.interner),
                 value.clone(),
             ))
         }
@@ -1190,7 +1190,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 }
 
-impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
+impl<'i, I: Interner> Zipper<I> for Unifier<'i, I> {
     fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
         debug!("zip_tys {:?}, {:?}, {:?}", variance, a, b);
         self.relate_ty_ty(variance, a, b)
@@ -1227,7 +1227,7 @@ impl<'i, I: Interner> Zipper<'i, I> for Unifier<'i, I> {
         self.relate_binders(variance, a, b)
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 
@@ -1256,13 +1256,10 @@ impl<'u, 't, I: Interner> OccursCheck<'u, 't, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for OccursCheck<'_, 'i, I>
-where
-    I: 'i,
-{
+impl<'i, I: Interner> Folder<I> for OccursCheck<'_, 'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -1468,7 +1465,7 @@ where
         true
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.unifier.interner
     }
 }

@@ -5,7 +5,7 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{ClausePriority, DomainGoal, GenericArg};
 
 pub(super) fn with_priorities<I: Interner>(
-    interner: &I,
+    interner: I,
     domain_goal: &DomainGoal<I>,
     a: Solution<I>,
     prio_a: ClausePriority,
@@ -38,7 +38,7 @@ pub(super) fn with_priorities<I: Interner>(
 }
 
 fn calculate_inputs<I: Interner>(
-    interner: &I,
+    interner: I,
     domain_goal: &DomainGoal<I>,
     solution: &Solution<I>,
 ) -> Vec<GenericArg<I>> {

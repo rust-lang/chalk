@@ -47,7 +47,7 @@ impl<I: Interner> InferenceTable<I> {
     /// corresponding existential variable, along with the
     /// instantiated result.
     pub fn from_canonical<T>(
-        interner: &I,
+        interner: I,
         num_universes: usize,
         canonical: Canonical<T>,
     ) -> (Self, Substitution<I>, T)
@@ -118,7 +118,7 @@ impl<I: Interner> InferenceTable<I> {
         self.unify.commit(snapshot.unify_snapshot);
     }
 
-    pub fn normalize_ty_shallow(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+    pub fn normalize_ty_shallow(&mut self, interner: I, leaf: &Ty<I>) -> Option<Ty<I>> {
         // An integer/float type variable will never normalize to another
         // variable; but a general type variable might normalize to an
         // integer/float variable. So we potentially need to normalize twice to
@@ -127,26 +127,26 @@ impl<I: Interner> InferenceTable<I> {
             .map(|ty| self.normalize_ty_shallow_inner(interner, &ty).unwrap_or(ty))
     }
 
-    fn normalize_ty_shallow_inner(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+    fn normalize_ty_shallow_inner(&mut self, interner: I, leaf: &Ty<I>) -> Option<Ty<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_ty_ref(interner).clone())
     }
 
     pub fn normalize_lifetime_shallow(
         &mut self,
-        interner: &I,
+        interner: I,
         leaf: &Lifetime<I>,
     ) -> Option<Lifetime<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_lifetime_ref(interner).clone())
     }
 
-    pub fn normalize_const_shallow(&mut self, interner: &I, leaf: &Const<I>) -> Option<Const<I>> {
+    pub fn normalize_const_shallow(&mut self, interner: I, leaf: &Const<I>) -> Option<Const<I>> {
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_const_ref(interner).clone())
     }
 
-    pub fn ty_root(&mut self, interner: &I, leaf: &Ty<I>) -> Option<Ty<I>> {
+    pub fn ty_root(&mut self, interner: I, leaf: &Ty<I>) -> Option<Ty<I>> {
         Some(
             self.unify
                 .find(leaf.inference_var(interner)?)
@@ -154,7 +154,7 @@ impl<I: Interner> InferenceTable<I> {
         )
     }
 
-    pub fn lifetime_root(&mut self, interner: &I, leaf: &Lifetime<I>) -> Option<Lifetime<I>> {
+    pub fn lifetime_root(&mut self, interner: I, leaf: &Lifetime<I>) -> Option<Lifetime<I>> {
         Some(
             self.unify
                 .find(leaf.inference_var(interner)?)
@@ -196,11 +196,11 @@ impl<I: Interner> InferenceTable<I> {
 }
 
 pub trait ParameterEnaVariableExt<I: Interner> {
-    fn to_generic_arg(&self, interner: &I) -> GenericArg<I>;
+    fn to_generic_arg(&self, interner: I) -> GenericArg<I>;
 }
 
 impl<I: Interner> ParameterEnaVariableExt<I> for ParameterEnaVariable<I> {
-    fn to_generic_arg(&self, interner: &I) -> GenericArg<I> {
+    fn to_generic_arg(&self, interner: I) -> GenericArg<I> {
         // we are matching on kind, so skipping it is fine
         let ena_variable = self.skip_kind();
         match &self.kind {

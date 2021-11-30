@@ -59,7 +59,7 @@ impl<I: Interner> ResolventOps<I> for InferenceTable<I> {
     fn resolvent_clause(
         &mut self,
         db: &dyn UnificationDatabase<I>,
-        interner: &I,
+        interner: I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
         subst: &Substitution<I>,
@@ -214,7 +214,7 @@ impl<I: Interner> ResolventOps<I> for InferenceTable<I> {
     #[instrument(level = "debug", skip(self, interner))]
     fn apply_answer_subst(
         &mut self,
-        interner: &I,
+        interner: I,
         unification_database: &dyn UnificationDatabase<I>,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
@@ -276,13 +276,13 @@ struct AnswerSubstitutor<'t, I: Interner> {
     outer_binder: DebruijnIndex,
 
     ex_clause: &'t mut ExClause<I>,
-    interner: &'t I,
+    interner: I,
     unification_database: &'t dyn UnificationDatabase<I>,
 }
 
 impl<I: Interner> AnswerSubstitutor<'_, I> {
     fn substitute<T: Zip<I>>(
-        interner: &I,
+        interner: I,
         unification_database: &dyn UnificationDatabase<I>,
         table: &mut InferenceTable<I>,
         environment: &Environment<I>,
@@ -306,7 +306,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
 
     fn unify_free_answer_var(
         &mut self,
-        interner: &I,
+        interner: I,
         db: &dyn UnificationDatabase<I>,
         variance: Variance,
         answer_var: BoundVar,
@@ -379,7 +379,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
     }
 }
 
-impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
+impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
     fn zip_tys(&mut self, variance: Variance, answer: &Ty<I>, pending: &Ty<I>) -> Fallible<()> {
         let interner = self.interner;
 
@@ -721,7 +721,7 @@ impl<'i, I: Interner> Zipper<'i, I> for AnswerSubstitutor<'i, I> {
         Ok(())
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 

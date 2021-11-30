@@ -68,7 +68,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         Arc::new(TraitDatum {
             id,
             binders: Binders::new(
-                VariableKinds::empty(&ChalkIr),
+                VariableKinds::empty(ChalkIr),
                 TraitDatumBound {
                     where_clauses: vec![],
                 },
@@ -95,16 +95,16 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         assert_eq!(id.0.index, 1);
 
         let substitution = Ty::new(
-            &ChalkIr,
-            TyKind::Adt(AdtId(RawId { index: 1 }), Substitution::empty(&ChalkIr)),
+            ChalkIr,
+            TyKind::Adt(AdtId(RawId { index: 1 }), Substitution::empty(ChalkIr)),
         );
 
         let binders = Binders::new(
-            VariableKinds::empty(&ChalkIr),
+            VariableKinds::empty(ChalkIr),
             ImplDatumBound {
                 trait_ref: TraitRef {
                     trait_id: TraitId(RawId { index: 0 }),
-                    substitution: Substitution::from1(&ChalkIr, substitution),
+                    substitution: Substitution::from1(ChalkIr, substitution),
                 },
                 where_clauses: vec![],
             },
@@ -137,7 +137,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         // Only needed because we always access the adt datum for logging
         Arc::new(AdtDatum {
             binders: Binders::empty(
-                &ChalkIr,
+                ChalkIr,
                 AdtDatumBound {
                     variants: vec![],
                     where_clauses: vec![],
@@ -207,15 +207,15 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             panic!("program_clauses_for_env panic")
         }
 
-        ProgramClauses::empty(&ChalkIr)
+        ProgramClauses::empty(ChalkIr)
     }
 
-    fn interner(&self) -> &ChalkIr {
+    fn interner(&self) -> ChalkIr {
         if let PanickingMethod::Interner = self.panicking_method {
             panic!("interner panic")
         }
 
-        &ChalkIr
+        ChalkIr
     }
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
@@ -272,23 +272,23 @@ fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
     // Foo: Bar
     UCanonical {
         canonical: Canonical {
-            binders: CanonicalVarKinds::empty(&ChalkIr),
+            binders: CanonicalVarKinds::empty(ChalkIr),
             value: InEnvironment {
-                environment: Environment::new(&ChalkIr),
+                environment: Environment::new(ChalkIr),
                 goal: GoalData::DomainGoal(DomainGoal::Holds(WhereClause::Implemented(TraitRef {
                     trait_id: TraitId(interner::RawId { index: 0 }),
                     substitution: Substitution::from1(
-                        &ChalkIr,
+                        ChalkIr,
                         Ty::new(
-                            &ChalkIr,
+                            ChalkIr,
                             TyKind::Adt(
                                 AdtId(interner::RawId { index: 1 }),
-                                Substitution::empty(&ChalkIr),
+                                Substitution::empty(ChalkIr),
                             ),
                         ),
                     ),
                 })))
-                .intern(&ChalkIr),
+                .intern(ChalkIr),
             },
         },
         universes: 1,

@@ -22,7 +22,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     }
 
     /// Returns the interner within the goal builder.
-    pub fn interner(&self) -> &'i I {
+    pub fn interner(&self) -> I {
         self.db.interner()
     }
 

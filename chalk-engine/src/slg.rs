@@ -91,7 +91,7 @@ pub trait ResolventOps<I: Interner> {
     fn resolvent_clause(
         &mut self,
         ops: &dyn UnificationDatabase<I>,
-        interner: &I,
+        interner: I,
         environment: &Environment<I>,
         goal: &DomainGoal<I>,
         subst: &Substitution<I>,
@@ -100,7 +100,7 @@ pub trait ResolventOps<I: Interner> {
 
     fn apply_answer_subst(
         &mut self,
-        interner: &I,
+        interner: I,
         unification_database: &dyn UnificationDatabase<I>,
         ex_clause: &mut ExClause<I>,
         selected_goal: &InEnvironment<Goal<I>>,
@@ -110,11 +110,11 @@ pub trait ResolventOps<I: Interner> {
 }
 
 trait SubstitutionExt<I: Interner> {
-    fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool;
+    fn may_invalidate(&self, interner: I, subst: &Canonical<Substitution<I>>) -> bool;
 }
 
 impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
-    fn may_invalidate(&self, interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
+    fn may_invalidate(&self, interner: I, subst: &Canonical<Substitution<I>>) -> bool {
         self.iter(interner)
             .zip(subst.value.iter(interner))
             .any(|(new, current)| MayInvalidate { interner }.aggregate_generic_args(new, current))
@@ -122,11 +122,11 @@ impl<I: Interner> SubstitutionExt<I> for Substitution<I> {
 }
 
 // This is a struct in case we need to add state at any point like in AntiUnifier
-struct MayInvalidate<'i, I> {
-    interner: &'i I,
+struct MayInvalidate<I> {
+    interner: I,
 }
 
-impl<I: Interner> MayInvalidate<'_, I> {
+impl<I: Interner> MayInvalidate<I> {
     fn aggregate_generic_args(&mut self, new: &GenericArg<I>, current: &GenericArg<I>) -> bool {
         let interner = self.interner;
         match (new.data(interner), current.data(interner)) {

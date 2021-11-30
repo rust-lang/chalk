@@ -221,7 +221,7 @@ where
         self.ws.db().program_clauses_for_env(environment)
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> I {
         self.ws.db().interner()
     }
 
@@ -469,7 +469,7 @@ where
         self.db.program_clauses_for_env(environment)
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> I {
         self.db.interner()
     }
 

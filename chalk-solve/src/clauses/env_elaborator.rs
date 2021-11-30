@@ -43,14 +43,14 @@ struct EnvElaborator<'me, 'builder, I: Interner> {
     environment: &'me Environment<I>,
 }
 
-impl<'me, 'builder, I: Interner> Visitor<'me, I> for EnvElaborator<'me, 'builder, I> {
+impl<'me, 'builder, I: Interner> Visitor<I> for EnvElaborator<'me, 'builder, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'me, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
-    fn interner(&self) -> &'me I {
+    fn interner(&self) -> I {
         self.db.interner()
     }
     #[instrument(level = "debug", skip(self, _outer_binder))]

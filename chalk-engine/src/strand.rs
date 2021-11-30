@@ -37,14 +37,11 @@ pub(crate) struct SelectedSubgoal {
 
 impl<I: Interner> Fold<I> for Strand<I> {
     type Result = Strand<I>;
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         Ok(Strand {
             ex_clause: self.ex_clause.fold_with(folder, outer_binder)?,
             last_pursued_time: self.last_pursued_time,

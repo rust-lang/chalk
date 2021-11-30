@@ -49,33 +49,33 @@ pub struct WfSolver<'a, I: Interner> {
     solver_builder: &'a dyn Fn() -> Box<dyn Solver<I>>,
 }
 
-struct InputTypeCollector<'i, I: Interner> {
+struct InputTypeCollector<I: Interner> {
     types: Vec<Ty<I>>,
-    interner: &'i I,
+    interner: I,
 }
 
-impl<'i, I: Interner> InputTypeCollector<'i, I> {
-    fn new(interner: &'i I) -> Self {
+impl<I: Interner> InputTypeCollector<I> {
+    fn new(interner: I) -> Self {
         Self {
             types: Vec::new(),
             interner,
         }
     }
 
-    fn types_in(interner: &'i I, value: impl Visit<I>) -> Vec<Ty<I>> {
+    fn types_in(interner: I, value: impl Visit<I>) -> Vec<Ty<I>> {
         let mut collector = Self::new(interner);
         value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
         collector.types
     }
 }
 
-impl<'i, I: Interner> Visitor<'i, I> for InputTypeCollector<'i, I> {
+impl<I: Interner> Visitor<I> for InputTypeCollector<I> {
     type BreakTy = ();
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 
@@ -491,7 +491,7 @@ fn impl_header_wf_goal<I: Interner>(
 /// Creates the conditions that an impl (and its contents of an impl)
 /// can assume to be true when proving that it is well-formed.
 fn impl_wf_environment<'i, I: Interner>(
-    interner: &'i I,
+    interner: I,
     where_clauses: &'i [QuantifiedWhereClause<I>],
     trait_ref: &'i TraitRef<I>,
 ) -> impl Iterator<Item = ProgramClause<I>> + 'i {

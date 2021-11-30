@@ -13,7 +13,7 @@ impl<I: Interner> InferenceTable<I> {
     /// `self.instantiate_canonical(v)`.
     pub(super) fn fresh_subst(
         &mut self,
-        interner: &I,
+        interner: I,
         binders: &[CanonicalVarKind<I>],
     ) -> Substitution<I> {
         Substitution::from_iter(
@@ -26,7 +26,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub fn instantiate_canonical<T>(&mut self, interner: &I, bound: Canonical<T>) -> T::Result
+    pub fn instantiate_canonical<T>(&mut self, interner: I, bound: Canonical<T>) -> T::Result
     where
         T: HasInterner<Interner = I> + Fold<I> + Debug,
     {
@@ -41,7 +41,7 @@ impl<I: Interner> InferenceTable<I> {
     /// argument is referring to `X, 'Y`.
     fn instantiate_in<T>(
         &mut self,
-        interner: &I,
+        interner: I,
         universe: UniverseIndex,
         binders: impl Iterator<Item = VariableKind<I>>,
         arg: T,
@@ -58,9 +58,9 @@ impl<I: Interner> InferenceTable<I> {
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
     #[instrument(level = "debug", skip(self, interner))]
-    pub fn instantiate_binders_existentially<'a, T>(
+    pub fn instantiate_binders_existentially<T>(
         &mut self,
-        interner: &'a I,
+        interner: I,
         arg: Binders<T>,
     ) -> T::Result
     where
@@ -78,11 +78,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     #[instrument(level = "debug", skip(self, interner))]
-    pub fn instantiate_binders_universally<'a, T>(
-        &mut self,
-        interner: &'a I,
-        arg: Binders<T>,
-    ) -> T::Result
+    pub fn instantiate_binders_universally<T>(&mut self, interner: I, arg: Binders<T>) -> T::Result
     where
         T: Fold<I> + HasInterner<Interner = I>,
     {

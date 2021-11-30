@@ -38,7 +38,7 @@ impl<I: Interner> ImplDatum<I> {
         self.binders.skip_binders().trait_ref.trait_id
     }
 
-    pub fn self_type_adt_id(&self, interner: &I) -> Option<AdtId<I>> {
+    pub fn self_type_adt_id(&self, interner: I) -> Option<AdtId<I>> {
         match self
             .binders
             .skip_binders()
@@ -142,14 +142,11 @@ pub struct FnDefDatum<I: Interner> {
 
 /// Avoids visiting `I::FnAbi`
 impl<I: Interner> Visit<I> for FnDefDatum<I> {
-    fn visit_with<'i, B>(
+    fn visit_with<B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, BreakTy = B>,
+        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<B>
-    where
-        I: 'i,
-    {
+    ) -> ControlFlow<B> {
         try_break!(self.id.visit_with(visitor, outer_binder));
         self.binders.visit_with(visitor, outer_binder)
     }
@@ -349,7 +346,7 @@ pub type QuantifiedInlineBound<I: Interner> = Binders<InlineBound<I>>;
 pub trait IntoWhereClauses<I: Interner> {
     type Output;
 
-    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<Self::Output>;
+    fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<Self::Output>;
 }
 
 impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
@@ -360,7 +357,7 @@ impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
     ///
     /// Because an `InlineBound` does not know anything about what it's binding,
     /// you must provide that type as `self_ty`.
-    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+    fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         match self {
             InlineBound::TraitBound(b) => b.into_where_clauses(interner, self_ty),
             InlineBound::AliasEqBound(b) => b.into_where_clauses(interner, self_ty),
@@ -371,7 +368,7 @@ impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
 impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
     type Output = QuantifiedWhereClause<I>;
 
-    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
+    fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
         let self_ty = self_ty.shifted_in(interner);
         self.map_ref(|b| b.into_where_clauses(interner, self_ty))
             .into_iter()
@@ -388,12 +385,12 @@ pub struct TraitBound<I: Interner> {
 }
 
 impl<I: Interner> TraitBound<I> {
-    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+    fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         let trait_ref = self.as_trait_ref(interner, self_ty);
         vec![WhereClause::Implemented(trait_ref)]
     }
 
-    pub fn as_trait_ref(&self, interner: &I, self_ty: Ty<I>) -> TraitRef<I> {
+    pub fn as_trait_ref(&self, interner: I, self_ty: Ty<I>) -> TraitRef<I> {
         TraitRef {
             trait_id: self.trait_id,
             substitution: Substitution::from_iter(
@@ -416,7 +413,7 @@ pub struct AliasEqBound<I: Interner> {
 }
 
 impl<I: Interner> AliasEqBound<I> {
-    fn into_where_clauses(&self, interner: &I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
+    fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<WhereClause<I>> {
         let trait_ref = self.trait_bound.as_trait_ref(interner, self_ty);
 
         let substitution = Substitution::from_iter(
@@ -491,14 +488,11 @@ pub struct AssociatedTyDatum<I: Interner> {
 
 // Manual implementation to avoid I::Identifier type.
 impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
-    fn visit_with<'i, B>(
+    fn visit_with<B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<'i, I, BreakTy = B>,
+        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
-    ) -> ControlFlow<B>
-    where
-        I: 'i,
-    {
+    ) -> ControlFlow<B> {
         try_break!(self.trait_id.visit_with(visitor, outer_binder));
         try_break!(self.id.visit_with(visitor, outer_binder));
         self.binders.visit_with(visitor, outer_binder)
@@ -528,7 +522,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
     ///
     /// these quantified where clauses are in the scope of the
     /// `binders` field.
-    pub fn bounds_on_self(&self, interner: &I) -> Vec<QuantifiedWhereClause<I>> {
+    pub fn bounds_on_self(&self, interner: I) -> Vec<QuantifiedWhereClause<I>> {
         let (binders, assoc_ty_datum) = self.binders.as_ref().into();
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:

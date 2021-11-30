@@ -13,16 +13,16 @@ use chalk_ir::{
     QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
 
-struct UnsizeParameterCollector<'a, I: Interner> {
-    interner: &'a I,
+struct UnsizeParameterCollector<I: Interner> {
+    interner: I,
     // FIXME should probably use a bitset instead
     parameters: HashSet<usize>,
 }
 
-impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
+impl<I: Interner> Visitor<I> for UnsizeParameterCollector<I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -53,13 +53,13 @@ impl<'a, I: Interner> Visitor<'a, I> for UnsizeParameterCollector<'a, I> {
         ControlFlow::Continue(())
     }
 
-    fn interner(&self) -> &'a I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
 
 fn outer_binder_parameters_used<I: Interner>(
-    interner: &I,
+    interner: I,
     v: &Binders<impl Visit<I> + HasInterner>,
 ) -> HashSet<usize> {
     let mut visitor = UnsizeParameterCollector {
@@ -71,15 +71,15 @@ fn outer_binder_parameters_used<I: Interner>(
 }
 
 // has nothing to do with occurs check
-struct ParameterOccurenceCheck<'a, 'p, I: Interner> {
-    interner: &'a I,
+struct ParameterOccurenceCheck<'p, I: Interner> {
+    interner: I,
     parameters: &'p HashSet<usize>,
 }
 
-impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> {
+impl<'p, I: Interner> Visitor<I> for ParameterOccurenceCheck<'p, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'a, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -117,13 +117,13 @@ impl<'a, 'p, I: Interner> Visitor<'a, I> for ParameterOccurenceCheck<'a, 'p, I> 
         }
     }
 
-    fn interner(&self) -> &'a I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
 
 fn uses_outer_binder_params<I: Interner>(
-    interner: &I,
+    interner: I,
     v: &Binders<impl Visit<I> + HasInterner>,
     parameters: &HashSet<usize>,
 ) -> bool {

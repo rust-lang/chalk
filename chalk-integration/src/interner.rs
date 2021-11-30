@@ -236,167 +236,167 @@ impl Interner for ChalkIr {
         tls::with_current_program(|prog| Some(prog?.debug_variances(variances, fmt)))
     }
 
-    fn intern_ty(&self, kind: TyKind<ChalkIr>) -> Arc<TyData<ChalkIr>> {
+    fn intern_ty(self, kind: TyKind<ChalkIr>) -> Arc<TyData<ChalkIr>> {
         let flags = kind.compute_flags(self);
         Arc::new(TyData { kind, flags })
     }
 
-    fn ty_data<'a>(&self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {
+    fn ty_data<'a>(self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {
         ty
     }
 
-    fn intern_lifetime(&self, lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
+    fn intern_lifetime(self, lifetime: LifetimeData<ChalkIr>) -> LifetimeData<ChalkIr> {
         lifetime
     }
 
-    fn lifetime_data<'a>(&self, lifetime: &'a LifetimeData<ChalkIr>) -> &'a LifetimeData<ChalkIr> {
+    fn lifetime_data<'a>(self, lifetime: &'a LifetimeData<ChalkIr>) -> &'a LifetimeData<ChalkIr> {
         lifetime
     }
 
-    fn intern_const(&self, constant: ConstData<ChalkIr>) -> Arc<ConstData<ChalkIr>> {
+    fn intern_const(self, constant: ConstData<ChalkIr>) -> Arc<ConstData<ChalkIr>> {
         Arc::new(constant)
     }
 
-    fn const_data<'a>(&self, constant: &'a Arc<ConstData<ChalkIr>>) -> &'a ConstData<ChalkIr> {
+    fn const_data<'a>(self, constant: &'a Arc<ConstData<ChalkIr>>) -> &'a ConstData<ChalkIr> {
         constant
     }
 
-    fn const_eq(&self, _ty: &Arc<TyData<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
+    fn const_eq(self, _ty: &Arc<TyData<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
         c1 == c2
     }
 
-    fn intern_generic_arg(&self, generic_arg: GenericArgData<ChalkIr>) -> GenericArgData<ChalkIr> {
+    fn intern_generic_arg(self, generic_arg: GenericArgData<ChalkIr>) -> GenericArgData<ChalkIr> {
         generic_arg
     }
 
     fn generic_arg_data<'a>(
-        &self,
+        self,
         generic_arg: &'a GenericArgData<ChalkIr>,
     ) -> &'a GenericArgData<ChalkIr> {
         generic_arg
     }
 
-    fn intern_goal(&self, goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
+    fn intern_goal(self, goal: GoalData<ChalkIr>) -> Arc<GoalData<ChalkIr>> {
         Arc::new(goal)
     }
 
-    fn goal_data<'a>(&self, goal: &'a Arc<GoalData<ChalkIr>>) -> &'a GoalData<ChalkIr> {
+    fn goal_data<'a>(self, goal: &'a Arc<GoalData<ChalkIr>>) -> &'a GoalData<ChalkIr> {
         goal
     }
 
     fn intern_goals<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<Goal<ChalkIr>, E>>,
     ) -> Result<Vec<Goal<ChalkIr>>, E> {
         data.into_iter().collect()
     }
 
-    fn goals_data<'a>(&self, goals: &'a Vec<Goal<ChalkIr>>) -> &'a [Goal<ChalkIr>] {
+    fn goals_data<'a>(self, goals: &'a Vec<Goal<ChalkIr>>) -> &'a [Goal<ChalkIr>] {
         goals
     }
 
     fn intern_substitution<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<GenericArg<ChalkIr>, E>>,
     ) -> Result<Vec<GenericArg<ChalkIr>>, E> {
         data.into_iter().collect()
     }
 
     fn substitution_data<'a>(
-        &self,
+        self,
         substitution: &'a Vec<GenericArg<ChalkIr>>,
     ) -> &'a [GenericArg<ChalkIr>] {
         substitution
     }
 
-    fn intern_program_clause(&self, data: ProgramClauseData<Self>) -> ProgramClauseData<Self> {
+    fn intern_program_clause(self, data: ProgramClauseData<Self>) -> ProgramClauseData<Self> {
         data
     }
 
     fn program_clause_data<'a>(
-        &self,
+        self,
         clause: &'a ProgramClauseData<Self>,
     ) -> &'a ProgramClauseData<Self> {
         clause
     }
 
     fn intern_program_clauses<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<ProgramClause<Self>, E>>,
     ) -> Result<Vec<ProgramClause<Self>>, E> {
         data.into_iter().collect()
     }
 
     fn program_clauses_data<'a>(
-        &self,
+        self,
         clauses: &'a Vec<ProgramClause<Self>>,
     ) -> &'a [ProgramClause<Self>] {
         clauses
     }
 
     fn intern_quantified_where_clauses<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<QuantifiedWhereClause<Self>, E>>,
     ) -> Result<Self::InternedQuantifiedWhereClauses, E> {
         data.into_iter().collect()
     }
 
     fn quantified_where_clauses_data<'a>(
-        &self,
+        self,
         clauses: &'a Self::InternedQuantifiedWhereClauses,
     ) -> &'a [QuantifiedWhereClause<Self>] {
         clauses
     }
     fn intern_generic_arg_kinds<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<VariableKind<ChalkIr>, E>>,
     ) -> Result<Self::InternedVariableKinds, E> {
         data.into_iter().collect()
     }
 
     fn variable_kinds_data<'a>(
-        &self,
+        self,
         variable_kinds: &'a Self::InternedVariableKinds,
     ) -> &'a [VariableKind<ChalkIr>] {
         variable_kinds
     }
 
     fn intern_canonical_var_kinds<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<CanonicalVarKind<ChalkIr>, E>>,
     ) -> Result<Self::InternedCanonicalVarKinds, E> {
         data.into_iter().collect()
     }
 
     fn canonical_var_kinds_data<'a>(
-        &self,
+        self,
         canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
     ) -> &'a [CanonicalVarKind<ChalkIr>] {
         canonical_var_kinds
     }
 
     fn intern_constraints<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<InEnvironment<Constraint<Self>>, E>>,
     ) -> Result<Self::InternedConstraints, E> {
         data.into_iter().collect()
     }
 
     fn constraints_data<'a>(
-        &self,
+        self,
         constraints: &'a Self::InternedConstraints,
     ) -> &'a [InEnvironment<Constraint<Self>>] {
         constraints
     }
 
     fn intern_variances<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<Variance, E>>,
     ) -> Result<Self::InternedVariances, E> {
         data.into_iter().collect()
     }
 
-    fn variances_data<'a>(&self, variances: &'a Self::InternedVariances) -> &'a [Variance] {
+    fn variances_data<'a>(self, variances: &'a Self::InternedVariances) -> &'a [Variance] {
         variances
     }
 }

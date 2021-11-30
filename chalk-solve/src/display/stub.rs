@@ -183,7 +183,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         self.db.program_clauses_for_env(environment)
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> I {
         self.db.interner()
     }
 

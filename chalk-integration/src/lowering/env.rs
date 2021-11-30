@@ -87,8 +87,8 @@ pub enum TypeLookup<'k> {
 }
 
 impl Env<'_> {
-    pub fn interner(&self) -> &ChalkIr {
-        &ChalkIr
+    pub fn interner(&self) -> ChalkIr {
+        ChalkIr
     }
 
     pub fn lookup_generic_arg(

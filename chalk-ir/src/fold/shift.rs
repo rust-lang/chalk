@@ -7,28 +7,28 @@ use crate::*;
 /// of binders.
 pub trait Shift<I: Interner>: Fold<I> {
     /// Shifts this term in one level of binders.
-    fn shifted_in(self, interner: &I) -> Self::Result;
+    fn shifted_in(self, interner: I) -> Self::Result;
 
     /// Shifts a term valid at `outer_binder` so that it is
     /// valid at the innermost binder. See [`DebruijnIndex::shifted_in_from`]
     /// for a detailed explanation.
-    fn shifted_in_from(self, interner: &I, source_binder: DebruijnIndex) -> Self::Result;
+    fn shifted_in_from(self, interner: I, source_binder: DebruijnIndex) -> Self::Result;
 
     /// Shifts this term out one level of binders.
-    fn shifted_out(self, interner: &I) -> Fallible<Self::Result>;
+    fn shifted_out(self, interner: I) -> Fallible<Self::Result>;
 
     /// Shifts a term valid at the innermost binder so that it is
     /// valid at `outer_binder`. See [`DebruijnIndex::shifted_out_to`]
     /// for a detailed explanation.
-    fn shifted_out_to(self, interner: &I, target_binder: DebruijnIndex) -> Fallible<Self::Result>;
+    fn shifted_out_to(self, interner: I, target_binder: DebruijnIndex) -> Fallible<Self::Result>;
 }
 
 impl<T: Fold<I>, I: Interner> Shift<I> for T {
-    fn shifted_in(self, interner: &I) -> Self::Result {
+    fn shifted_in(self, interner: I) -> Self::Result {
         self.shifted_in_from(interner, DebruijnIndex::ONE)
     }
 
-    fn shifted_in_from(self, interner: &I, source_binder: DebruijnIndex) -> T::Result {
+    fn shifted_in_from(self, interner: I, source_binder: DebruijnIndex) -> T::Result {
         self.fold_with(
             &mut Shifter {
                 source_binder,
@@ -39,7 +39,7 @@ impl<T: Fold<I>, I: Interner> Shift<I> for T {
         .unwrap()
     }
 
-    fn shifted_out_to(self, interner: &I, target_binder: DebruijnIndex) -> Fallible<T::Result> {
+    fn shifted_out_to(self, interner: I, target_binder: DebruijnIndex) -> Fallible<T::Result> {
         self.fold_with(
             &mut DownShifter {
                 target_binder,
@@ -49,18 +49,18 @@ impl<T: Fold<I>, I: Interner> Shift<I> for T {
         )
     }
 
-    fn shifted_out(self, interner: &I) -> Fallible<Self::Result> {
+    fn shifted_out(self, interner: I) -> Fallible<Self::Result> {
         self.shifted_out_to(interner, DebruijnIndex::ONE)
     }
 }
 
 /// A folder that adjusts debruijn indices by a certain amount.
-struct Shifter<'i, I> {
+struct Shifter<I> {
     source_binder: DebruijnIndex,
-    interner: &'i I,
+    interner: I,
 }
 
-impl<I> Shifter<'_, I> {
+impl<I> Shifter<I> {
     /// Given a free variable at `depth`, shifts that depth to `depth
     /// + self.adjustment`, and then wraps *that* within the internal
     /// set `binders`.
@@ -71,10 +71,10 @@ impl<I> Shifter<'_, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
+impl<I: Interner> Folder<I> for Shifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -109,7 +109,7 @@ impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
             .to_const(self.interner(), ty))
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
@@ -119,12 +119,12 @@ impl<'i, I: Interner> Folder<'i, I> for Shifter<'i, I> {
 /// A shifter that reduces debruijn indices -- in other words, which lifts a value
 /// *out* from binders. Consider this example:
 ///
-struct DownShifter<'i, I> {
+struct DownShifter<I> {
     target_binder: DebruijnIndex,
-    interner: &'i I,
+    interner: I,
 }
 
-impl<I> DownShifter<'_, I> {
+impl<I> DownShifter<I> {
     /// Given a reference to a free variable at depth `depth`
     /// (appearing within `binders` internal binders), attempts to
     /// lift that free variable out from `adjustment` levels of
@@ -141,10 +141,10 @@ impl<I> DownShifter<'_, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
+impl<I: Interner> Folder<I> for DownShifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -179,7 +179,7 @@ impl<'i, I: Interner> Folder<'i, I> for DownShifter<'i, I> {
             .to_const(self.interner(), ty))
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }

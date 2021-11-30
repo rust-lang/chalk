@@ -108,7 +108,7 @@ lower_param_map!(
 );
 
 fn get_type_of_usize() -> chalk_ir::Ty<ChalkIr> {
-    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::Usize)).intern(&ChalkIr)
+    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::Usize)).intern(ChalkIr)
 }
 
 impl Lower for VariableKind {
@@ -1013,7 +1013,7 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
 }
 
 pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let associated_ty_lookups: BTreeMap<_, _> = program
         .associated_ty_data
         .iter()
@@ -1154,7 +1154,7 @@ impl Kinded for chalk_ir::VariableKind<ChalkIr> {
 
 impl Kinded for chalk_ir::GenericArg<ChalkIr> {
     fn kind(&self) -> Kind {
-        let interner = &ChalkIr;
+        let interner = ChalkIr;
         match self.data(interner) {
             chalk_ir::GenericArgData::Ty(_) => Kind::Ty,
             chalk_ir::GenericArgData::Lifetime(_) => Kind::Lifetime,

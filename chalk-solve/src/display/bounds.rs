@@ -62,7 +62,7 @@ impl<I: Interner> RenderAsRust<I> for QuantifiedInlineBound<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         let interner = s.db().interner();
         let s = &s.add_debrujin_index(None);
-        if !self.binders.is_empty(&interner) {
+        if !self.binders.is_empty(interner) {
             write!(
                 f,
                 "forall<{}> ",

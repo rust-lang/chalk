@@ -4,12 +4,12 @@ use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_solve::infer::InferenceTable;
 
-pub(crate) struct DeepNormalizer<'table, 'i, I: Interner> {
+pub(crate) struct DeepNormalizer<'table, I: Interner> {
     table: &'table mut InferenceTable<I>,
-    interner: &'i I,
+    interner: I,
 }
 
-impl<I: Interner> DeepNormalizer<'_, '_, I> {
+impl<I: Interner> DeepNormalizer<'_, I> {
     /// Given a value `value` with variables in it, replaces those variables
     /// with their instantiated values (if any). Uninstantiated variables are
     /// left as-is.
@@ -23,7 +23,7 @@ impl<I: Interner> DeepNormalizer<'_, '_, I> {
     /// variables.
     pub fn normalize_deep<T: Fold<I>>(
         table: &mut InferenceTable<I>,
-        interner: &I,
+        interner: I,
         value: T,
     ) -> T::Result {
         value
@@ -35,13 +35,10 @@ impl<I: Interner> DeepNormalizer<'_, '_, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for DeepNormalizer<'_, 'i, I>
-where
-    I: 'i,
-{
+impl<I: Interner> Folder<I> for DeepNormalizer<'_, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -103,7 +100,7 @@ where
         true
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
@@ -122,17 +119,17 @@ mod test {
     struct TestDatabase;
     impl UnificationDatabase<ChalkIr> for TestDatabase {
         fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
-            Variances::from_iter(&ChalkIr, [Variance::Invariant; 20].iter().copied())
+            Variances::from_iter(ChalkIr, [Variance::Invariant; 20].iter().copied())
         }
 
         fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
-            Variances::from_iter(&ChalkIr, [Variance::Invariant; 20].iter().copied())
+            Variances::from_iter(ChalkIr, [Variance::Invariant; 20].iter().copied())
         }
     }
 
     #[test]
     fn infer() {
-        let interner = &ChalkIr;
+        let interner = ChalkIr;
         let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
         let environment0 = Environment::new(interner);
         let a = table.new_variable(U0).to_ty(interner);

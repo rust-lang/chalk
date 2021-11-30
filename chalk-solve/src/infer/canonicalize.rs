@@ -27,7 +27,7 @@ impl<I: Interner> InferenceTable<I> {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub fn canonicalize<T>(&mut self, interner: &I, value: T) -> Canonicalized<T::Result>
+    pub fn canonicalize<T>(&mut self, interner: I, value: T) -> Canonicalized<T::Result>
     where
         T: Fold<I>,
         T::Result: HasInterner<Interner = I>,
@@ -71,7 +71,7 @@ struct Canonicalizer<'q, I: Interner> {
     table: &'q mut InferenceTable<I>,
     free_vars: Vec<ParameterEnaVariable<I>>,
     max_universe: UniverseIndex,
-    interner: &'q I,
+    interner: I,
 }
 
 impl<'q, I: Interner> Canonicalizer<'q, I> {
@@ -107,13 +107,10 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for Canonicalizer<'i, I>
-where
-    I: 'i,
-{
+impl<'i, I: Interner> Folder<I> for Canonicalizer<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -257,7 +254,7 @@ where
         }
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }

@@ -14,14 +14,14 @@ use chalk_ir::{
 };
 use rustc_hash::FxHashMap;
 
-pub struct Generalize<'i, I: Interner> {
+pub struct Generalize<I: Interner> {
     binders: Vec<VariableKind<I>>,
     mapping: FxHashMap<BoundVar, usize>,
-    interner: &'i I,
+    interner: I,
 }
 
-impl<I: Interner> Generalize<'_, I> {
-    pub fn apply<T>(interner: &I, value: T) -> Binders<T::Result>
+impl<I: Interner> Generalize<I> {
+    pub fn apply<T>(interner: I, value: T) -> Binders<T::Result>
     where
         T: HasInterner<Interner = I> + Fold<I>,
         T::Result: HasInterner<Interner = I>,
@@ -41,10 +41,10 @@ impl<I: Interner> Generalize<'_, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for Generalize<'i, I> {
+impl<I: Interner> Folder<I> for Generalize<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -78,7 +78,7 @@ impl<'i, I: Interner> Folder<'i, I> for Generalize<'i, I> {
         Ok(LifetimeData::BoundVar(new_var).intern(self.interner()))
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }

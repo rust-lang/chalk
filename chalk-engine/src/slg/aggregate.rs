@@ -129,7 +129,7 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
 /// u32` and the new answer is `?0 = i32`, then the guidance would
 /// become `?0 = ?X` (where `?X` is some fresh variable).
 fn merge_into_guidance<I: Interner>(
-    interner: &I,
+    interner: I,
     root_goal: &Canonical<InEnvironment<Goal<I>>>,
     guidance: Canonical<Substitution<I>>,
     answer: &Canonical<ConstrainedSubst<I>>,
@@ -184,7 +184,7 @@ fn merge_into_guidance<I: Interner>(
     infer.canonicalize(interner, aggr_subst).quantified
 }
 
-fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> bool {
+fn is_trivial<I: Interner>(interner: I, subst: &Canonical<Substitution<I>>) -> bool {
     // A subst is trivial if..
     subst
         .value
@@ -226,13 +226,13 @@ fn is_trivial<I: Interner>(interner: &I, subst: &Canonical<Substitution<I>>) -> 
 /// inference variables.
 ///
 /// [Anti-unification]: https://en.wikipedia.org/wiki/Anti-unification_(computer_science)
-struct AntiUnifier<'infer, 'intern, I: Interner> {
+struct AntiUnifier<'infer, I: Interner> {
     infer: &'infer mut InferenceTable<I>,
     universe: UniverseIndex,
-    interner: &'intern I,
+    interner: I,
 }
 
-impl<I: Interner> AntiUnifier<'_, '_, I> {
+impl<I: Interner> AntiUnifier<'_, I> {
     fn aggregate_tys(&mut self, ty0: &Ty<I>, ty1: &Ty<I>) -> Ty<I> {
         let interner = self.interner;
         match (ty0.kind(interner), ty1.kind(interner)) {
@@ -587,7 +587,7 @@ mod test {
         let mut anti_unifier = AntiUnifier {
             infer: &mut infer,
             universe: UniverseIndex::root(),
-            interner: &ChalkIr,
+            interner: ChalkIr,
         };
 
         let ty = anti_unifier.aggregate_tys(
@@ -601,7 +601,7 @@ mod test {
     #[test]
     fn vec_i32_vs_vec_i32() {
         use chalk_integration::interner::ChalkIr;
-        let interner = &ChalkIr;
+        let interner = ChalkIr;
         let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
         let mut anti_unifier = AntiUnifier {
             interner,
@@ -620,7 +620,7 @@ mod test {
     #[test]
     fn vec_x_vs_vec_y() {
         use chalk_integration::interner::ChalkIr;
-        let interner = &ChalkIr;
+        let interner = ChalkIr;
         let mut infer: InferenceTable<ChalkIr> = InferenceTable::new();
         let mut anti_unifier = AntiUnifier {
             interner,

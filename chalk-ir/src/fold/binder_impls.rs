@@ -7,14 +7,11 @@ use crate::*;
 
 impl<I: Interner> Fold<I> for FnPointer<I> {
     type Result = FnPointer<I>;
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         let FnPointer {
             num_binders,
             substitution,
@@ -39,14 +36,11 @@ where
     I: Interner,
 {
     type Result = Binders<T::Result>;
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         let Binders {
             binders: self_binders,
             value: self_value,
@@ -66,14 +60,11 @@ where
     <T as Fold<I>>::Result: HasInterner<Interner = I>,
 {
     type Result = Canonical<T::Result>;
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         let Canonical {
             binders: self_binders,
             value: self_value,

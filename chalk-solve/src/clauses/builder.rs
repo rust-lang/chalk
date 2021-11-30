@@ -201,7 +201,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         });
     }
 
-    pub fn interner(&self) -> &'me I {
+    pub fn interner(&self) -> I {
         self.db.interner()
     }
 }
