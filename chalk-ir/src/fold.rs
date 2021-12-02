@@ -566,6 +566,16 @@ where
                 }),
             }
             .intern(folder.interner())),
+            ConstValue::Function(name, args) => Ok(ConstData {
+                ty: fold_ty()?,
+                value: ConstValue::Function(
+                    name.clone(),
+                    args.into_iter()
+                        .map(|x| x.clone().super_fold_with(folder, outer_binder))
+                        .collect::<Result<Vec<_>, _>>()?,
+                ),
+            }
+            .intern(folder.interner())),
         }
     }
 }

@@ -493,7 +493,12 @@ Lifetime: Lifetime = {
 
 ConstWithoutId: Const = {
     ConstValue => Const::Value(<>),
+    Function => Const::Function(<>),
 };
+
+Function: Function = {
+    "#" <name: Id> "(" <args: Comma<Const>> ")" => Function { name, args },
+}
 
 Const : Const = {
     Id => Const::Id(<>),

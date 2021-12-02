@@ -687,6 +687,15 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
                 Ok(())
             }
 
+            (ConstValue::Function(name1, args1), ConstValue::Function(name2, args2)) => {
+                assert!(name1 == name2);
+                Ok(())
+            }
+
+            (ConstValue::Function(..), ConstValue::Concrete(_)) | (ConstValue::Concrete(_), ConstValue::Function(..)) => {
+                Ok(())
+            }
+
             (ConstValue::InferenceVar(_), _) | (_, ConstValue::InferenceVar(_)) => panic!(
                 "unexpected inference var in answer `{:?}` or pending goal `{:?}`",
                 answer, pending,
@@ -694,10 +703,12 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
 
             (ConstValue::BoundVar(_), _)
             | (ConstValue::Placeholder(_), _)
+            | (ConstValue::Function(..), _)
             | (ConstValue::Concrete(_), _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),
+
         }
     }
 

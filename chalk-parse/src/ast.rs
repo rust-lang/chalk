@@ -207,8 +207,15 @@ pub enum GenericArg {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Function {
+    pub name: Identifier,
+    pub args: Vec<Const>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Const {
     Id(Identifier),
+    Function(Function),
     Value(u32),
 }
 

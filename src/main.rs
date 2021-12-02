@@ -54,7 +54,7 @@ impl LoadedProgram {
     ///
     /// [`SolverChoice`]: struct.solve.SolverChoice.html
     fn new(text: String, solver_choice: SolverChoice) -> Result<LoadedProgram> {
-        let db = ChalkDatabase::with(&text, solver_choice);
+        let db = ChalkDatabase::with(&text, |_, _| panic!("unknown const eval"),  solver_choice);
         Ok(LoadedProgram { text, db })
     }
 
@@ -70,7 +70,8 @@ impl LoadedProgram {
         let peeled_goal = goal.into_peeled_goal(self.db.interner());
         if multiple_answers {
             if self.db.solve_multiple(&peeled_goal, &mut |v, has_next| {
-                println!("{}\n", v.as_ref().map(|v| v.display(ChalkIr)));
+                let interner = ChalkIr::default();
+                println!("{}\n", v.as_ref().map(|v| v.display(interner)));
                 if has_next {
                     if let Some(ref mut rl) = rl {
                         loop {
@@ -97,7 +98,7 @@ impl LoadedProgram {
             }
         } else {
             match self.db.solve(&peeled_goal) {
-                Some(v) => println!("{}\n", v.display(ChalkIr)),
+                Some(v) => println!("{}\n", v.display(ChalkIr::default())),
                 None => println!("No possible solution.\n"),
             }
         }

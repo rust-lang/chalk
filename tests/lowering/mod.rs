@@ -151,7 +151,7 @@ fn assoc_tys() {
 
 #[test]
 fn goal_quantifiers() {
-    let db = ChalkDatabase::with("trait Foo<A, B> { }", SolverChoice::default());
+    let db = ChalkDatabase::with("trait Foo<A, B> { }", |_, _| panic!(), SolverChoice::default());
     let goal = db
         .parse_and_lower_goal("forall<X> {exists<Y> {forall<Z> {Z: Foo<Y, X>}}}")
         .unwrap();
@@ -179,7 +179,8 @@ fn atc_accounting() {
 
             struct Iter<'a, T> { }
             ",
-        SolverChoice::default(),
+            |_, _| panic!(),
+            SolverChoice::default(),
     );
     db.with_program(|program| {
         let atv_text = format!(

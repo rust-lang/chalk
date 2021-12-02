@@ -29,6 +29,10 @@ pub struct InferenceSnapshot<I: Interner> {
 #[allow(type_alias_bounds)]
 pub type ParameterEnaVariable<I: Interner> = WithKind<I, EnaVariable<I>>;
 
+fn get_type_of_usize<I: Interner>(interner: I) -> chalk_ir::Ty<I> {
+    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::Usize)).intern(interner)
+}
+
 impl<I: Interner> InferenceTable<I> {
     /// Create an empty inference table with no variables.
     pub fn new() -> Self {
@@ -142,6 +146,26 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     pub fn normalize_const_shallow(&mut self, interner: I, leaf: &Const<I>) -> Option<Const<I>> {
+        if let ConstValue::Function(name, args) = &leaf.data(interner).value {
+            let r = args.iter().map(|x| {
+                if let ConstValue::Concrete(x) = &interner.const_data(dbg!(x).interned()).value {
+                    Some(x.interned.clone())
+                } else {
+                    None
+                }
+            }).collect::<Option<Vec<_>>>().map(|args| {
+                chalk_ir::ConstData {
+                    ty: get_type_of_usize(interner),
+                    value: chalk_ir::ConstValue::Concrete(ConcreteConst {
+                        interned: interner.const_eval(name.clone(), args),
+                    }),
+                }
+                .intern(interner)
+            });
+            if r.is_some() {
+                return r;
+            }
+        }
         self.probe_var(leaf.inference_var(interner)?)
             .map(|p| p.assert_const_ref(interner).clone())
     }

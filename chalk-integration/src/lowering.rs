@@ -108,7 +108,7 @@ lower_param_map!(
 );
 
 fn get_type_of_usize() -> chalk_ir::Ty<ChalkIr> {
-    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::Usize)).intern(ChalkIr)
+    chalk_ir::TyKind::Scalar(chalk_ir::Scalar::Uint(chalk_ir::UintTy::Usize)).intern(ChalkIr::default())
 }
 
 impl Lower for VariableKind {
@@ -818,6 +818,14 @@ impl LowerWithEnv for Const {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
+            Const::Function(f) => Ok(chalk_ir::ConstData {
+                ty: get_type_of_usize(),
+                value: chalk_ir::ConstValue::Function(
+                    f.name.to_string(),
+                    f.args.iter().map(|x| x.lower(env)).collect::<Result<Vec<_>, _>>()?,
+                ),
+            }
+            .intern(interner)),
             Const::Id(name) => {
                 let parameter = env.lookup_generic_arg(name)?;
                 parameter
@@ -1013,7 +1021,7 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
 }
 
 pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
-    let interner = ChalkIr;
+    let interner = ChalkIr::default();
     let associated_ty_lookups: BTreeMap<_, _> = program
         .associated_ty_data
         .iter()
@@ -1054,6 +1062,7 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         foreign_ty_ids: &program.foreign_ty_ids,
         parameter_map: BTreeMap::new(),
         auto_traits: &auto_traits,
+        interner: program.interner,
     };
 
     goal.lower(&env)
@@ -1154,7 +1163,7 @@ impl Kinded for chalk_ir::VariableKind<ChalkIr> {
 
 impl Kinded for chalk_ir::GenericArg<ChalkIr> {
     fn kind(&self) -> Kind {
-        let interner = ChalkIr;
+        let interner = ChalkIr::default();
         match self.data(interner) {
             chalk_ir::GenericArgData::Ty(_) => Kind::Ty,
             chalk_ir::GenericArgData::Lifetime(_) => Kind::Lifetime,

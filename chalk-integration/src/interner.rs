@@ -50,10 +50,22 @@ impl Debug for ChalkFnAbi {
     }
 }
 
+pub type ConstEval = fn(String, Vec<u32>) -> u32;
+
 /// The default "interner" and the only interner used by chalk
 /// itself. In this interner, no interning actually occurs.
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct ChalkIr;
+pub struct ChalkIr {
+    pub const_eval_fn: ConstEval,
+}
+
+impl Default for ChalkIr {
+    fn default() -> Self {
+        ChalkIr {
+            const_eval_fn: |_, _| panic!("const eval is not supported on this interner"),
+        }
+    }
+}
 
 impl Interner for ChalkIr {
     type InternedType = Arc<TyData<ChalkIr>>;
@@ -263,6 +275,10 @@ impl Interner for ChalkIr {
 
     fn const_eq(self, _ty: &Arc<TyData<ChalkIr>>, c1: &u32, c2: &u32) -> bool {
         c1 == c2
+    }
+
+    fn const_eval(&self, name: String, args: Vec<u32>) -> u32 {
+        (self.const_eval_fn)(name, args)
     }
 
     fn intern_generic_arg(self, generic_arg: GenericArgData<ChalkIr>) -> GenericArgData<ChalkIr> {

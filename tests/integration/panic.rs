@@ -27,6 +27,7 @@ impl Default for PanickingMethod {
 #[derive(Debug, Default)]
 struct MockDatabase {
     panicking_method: PanickingMethod,
+    interner: ChalkIr,
 }
 
 impl UnificationDatabase<ChalkIr> for MockDatabase {
@@ -68,7 +69,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         Arc::new(TraitDatum {
             id,
             binders: Binders::new(
-                VariableKinds::empty(ChalkIr),
+                VariableKinds::empty(ChalkIr::default()),
                 TraitDatumBound {
                     where_clauses: vec![],
                 },
@@ -95,16 +96,16 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         assert_eq!(id.0.index, 1);
 
         let substitution = Ty::new(
-            ChalkIr,
-            TyKind::Adt(AdtId(RawId { index: 1 }), Substitution::empty(ChalkIr)),
+            ChalkIr::default(),
+            TyKind::Adt(AdtId(RawId { index: 1 }), Substitution::empty(ChalkIr::default())),
         );
 
         let binders = Binders::new(
-            VariableKinds::empty(ChalkIr),
+            VariableKinds::empty(ChalkIr::default()),
             ImplDatumBound {
                 trait_ref: TraitRef {
                     trait_id: TraitId(RawId { index: 0 }),
-                    substitution: Substitution::from1(ChalkIr, substitution),
+                    substitution: Substitution::from1(ChalkIr::default(), substitution),
                 },
                 where_clauses: vec![],
             },
@@ -137,7 +138,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         // Only needed because we always access the adt datum for logging
         Arc::new(AdtDatum {
             binders: Binders::empty(
-                ChalkIr,
+                ChalkIr::default(),
                 AdtDatumBound {
                     variants: vec![],
                     where_clauses: vec![],
@@ -207,15 +208,14 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             panic!("program_clauses_for_env panic")
         }
 
-        ProgramClauses::empty(ChalkIr)
+        ProgramClauses::empty(ChalkIr::default())
     }
 
     fn interner(&self) -> ChalkIr {
         if let PanickingMethod::Interner = self.panicking_method {
             panic!("interner panic")
         }
-
-        ChalkIr
+        self.interner
     }
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {
@@ -272,23 +272,23 @@ fn prepare_goal() -> UCanonical<InEnvironment<Goal<ChalkIr>>> {
     // Foo: Bar
     UCanonical {
         canonical: Canonical {
-            binders: CanonicalVarKinds::empty(ChalkIr),
+            binders: CanonicalVarKinds::empty(ChalkIr::default()),
             value: InEnvironment {
-                environment: Environment::new(ChalkIr),
+                environment: Environment::new(ChalkIr::default()),
                 goal: GoalData::DomainGoal(DomainGoal::Holds(WhereClause::Implemented(TraitRef {
                     trait_id: TraitId(interner::RawId { index: 0 }),
                     substitution: Substitution::from1(
-                        ChalkIr,
+                        ChalkIr::default(),
                         Ty::new(
-                            ChalkIr,
+                            ChalkIr::default(),
                             TyKind::Adt(
                                 AdtId(interner::RawId { index: 1 }),
-                                Substitution::empty(ChalkIr),
+                                Substitution::empty(ChalkIr::default()),
                             ),
                         ),
                     ),
                 })))
-                .intern(ChalkIr),
+                .intern(ChalkIr::default()),
             },
         },
         universes: 1,
@@ -305,6 +305,7 @@ fn custom_clauses_panics() {
     // solve goal but this will panic
     let mut db = MockDatabase {
         panicking_method: PanickingMethod::CustomClauses,
+        interner: ChalkIr::default(),
     };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
@@ -326,6 +327,7 @@ fn trait_datum_panics() {
     // solve goal but this will panic
     let mut db = MockDatabase {
         panicking_method: PanickingMethod::TraitDatum,
+        interner: ChalkIr::default(),
     };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
@@ -347,6 +349,7 @@ fn impl_datum_panics() {
     // solve goal but this will panic
     let mut db = MockDatabase {
         panicking_method: PanickingMethod::ImplDatum,
+        interner: ChalkIr::default(),
     };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
@@ -368,6 +371,7 @@ fn impls_for_trait() {
     // solve goal but this will panic
     let mut db = MockDatabase {
         panicking_method: PanickingMethod::ImplsForTrait,
+        interner: ChalkIr::default(),
     };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
@@ -389,6 +393,7 @@ fn program_clauses_for_env() {
     // solve goal but this will panic
     let mut db = MockDatabase {
         panicking_method: PanickingMethod::ProgramClausesForEnv,
+        interner: ChalkIr::default(),
     };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);
@@ -410,6 +415,7 @@ fn interner() {
     // solve goal but this will panic
     let mut db = MockDatabase {
         panicking_method: PanickingMethod::Interner,
+        interner: ChalkIr::default(),
     };
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         solver.solve(&db, &peeled_goal);

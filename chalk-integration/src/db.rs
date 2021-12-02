@@ -1,6 +1,6 @@
 use crate::{
     error::ChalkError,
-    interner::ChalkIr,
+    interner::{ChalkIr, ConstEval},
     lowering::lower_goal,
     program::Program,
     query::{Lowering, LoweringDatabase},
@@ -26,13 +26,15 @@ use std::sync::Arc;
 #[derive(Default)]
 pub struct ChalkDatabase {
     storage: salsa::Storage<Self>,
+    interner: ChalkIr,
 }
 
 impl Database for ChalkDatabase {}
 
 impl ChalkDatabase {
-    pub fn with(program_text: &str, solver_choice: SolverChoice) -> Self {
+    pub fn with(program_text: &str, const_eval: ConstEval, solver_choice: SolverChoice) -> Self {
         let mut db = ChalkDatabase::default();
+        db.interner.const_eval_fn = const_eval;
         db.set_program_text(Arc::new(program_text.to_string()));
         db.set_solver_choice(solver_choice);
         db
@@ -174,7 +176,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
     }
 
     fn interner(&self) -> ChalkIr {
-        ChalkIr
+        self.interner
     }
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {

@@ -22,7 +22,6 @@ use crate::{interner::ChalkIr, TypeKind, TypeSort};
 #[derive(Default)]
 pub(super) struct ProgramLowerer {
     next_item_index: u32,
-
     associated_ty_lookups: AssociatedTyLookups,
     associated_ty_value_ids: AssociatedTyValueIds,
     adt_ids: AdtIds,
@@ -178,6 +177,7 @@ impl ProgramLowerer {
                 parameter_map: BTreeMap::new(),
                 auto_traits: &self.auto_traits,
                 foreign_ty_ids: &self.foreign_ty_ids,
+                interner: ChalkIr::default(),
             };
 
             match *item {
@@ -248,11 +248,11 @@ impl ProgramLowerer {
                             let upvar_tys: LowerResult<Vec<chalk_ir::Ty<ChalkIr>>> =
                                 defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
                             let substitution = chalk_ir::Substitution::from_iter(
-                                ChalkIr,
-                                upvar_tys?.into_iter().map(|ty| ty.cast(ChalkIr)),
+                                ChalkIr::default(),
+                                upvar_tys?.into_iter().map(|ty| ty.cast(ChalkIr::default())),
                             );
                             Ok(chalk_ir::TyKind::Tuple(defn.upvars.len(), substitution)
-                                .intern(ChalkIr))
+                                .intern(ChalkIr::default()))
                         })?;
                     closure_upvars.insert(closure_def_id, upvars);
                 }
@@ -501,6 +501,7 @@ impl ProgramLowerer {
             custom_clauses,
             object_safe_traits: self.object_safe_traits,
             foreign_ty_ids: self.foreign_ty_ids,
+            interner: ChalkIr::default(),
         })
     }
 }
@@ -517,7 +518,7 @@ macro_rules! lower_type_kind {
                     sort: TypeSort::$sort,
                     name: self.name.str.clone(),
                     binders: chalk_ir::Binders::new(
-                        VariableKinds::from_iter(ChalkIr, $params(self).anonymize()),
+                        VariableKinds::from_iter(ChalkIr::default(), $params(self).anonymize()),
                         crate::Unit,
                     ),
                 })

@@ -105,6 +105,45 @@ fn generic_impl() {
     }
 }
 
+
+#[test]
+fn const_expr() {
+    test! {
+        const_eval {
+            |name, args| {
+                match name.as_str() {
+                    "le128" => (args[0] < 128) as u32,
+                    _ => panic!("Unknown function"),
+                }
+            }
+        }
+
+        program {
+            struct S<const N> {}
+
+            trait Trait {}
+
+            struct Assert<const E> {}
+            trait IsTrue {}
+            impl IsTrue for Assert<1> {}
+
+            impl<const N> Trait for S<N> where Assert<#le128(N)>: IsTrue {}
+        }
+
+        goal {
+            S<3>: Trait
+        } yields {
+            "Unique; substitution[], lifetime constraints []"
+        }
+
+        goal {
+            S<240>: Trait
+        } yields {
+            "No possible solution"
+        }
+    }
+}
+
 #[test]
 fn placeholders_eq() {
     test! {

@@ -9,18 +9,18 @@ macro_rules! ty {
 
             }),
             chalk_ir::Substitution::from_iter(
-                chalk_integration::interner::ChalkIr,
+                chalk_integration::interner::ChalkIr::default(),
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
         )
-        .intern(chalk_integration::interner::ChalkIr)
+        .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (function $n:tt $($arg:tt)*) => {
         chalk_ir::TyKind::Function(chalk_ir::FnPointer {
             num_binders: $n,
             substitution: chalk_ir::FnSubst(chalk_ir::Substitution::from_iter(
-                chalk_integration::interner::ChalkIr,
+                chalk_integration::interner::ChalkIr::default(),
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             )),
             sig: chalk_ir::FnSig {
@@ -28,39 +28,39 @@ macro_rules! ty {
                 abi: <chalk_integration::interner::ChalkIr as chalk_ir::interner::Interner>::FnAbi::Rust,
                 variadic: false,
             }
-        }).intern(chalk_integration::interner::ChalkIr)
+        }).intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (placeholder $n:expr) => {
         chalk_ir::TyKind::Placeholder(PlaceholderIndex {
             ui: UniverseIndex { counter: $n },
             idx: 0,
-        }).intern(chalk_integration::interner::ChalkIr)
+        }).intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
             chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy  {
             associated_ty_id: AssocTypeId(chalk_integration::interner::RawId { index: $n }),
             substitution: chalk_ir::Substitution::from_iter(
-                chalk_integration::interner::ChalkIr,
+                chalk_integration::interner::ChalkIr::default(),
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>
             ),
-        }).intern(chalk_integration::interner::ChalkIr)
+        }).intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (infer $b:expr) => {
         chalk_ir::TyKind::InferenceVar(chalk_ir::InferenceVar::from($b), chalk_ir::TyVariableKind::General)
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (bound $d:tt $b:tt) => {
         chalk_ir::TyKind::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::new($d), $b))
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (bound $b:expr) => {
         chalk_ir::TyKind::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::INNERMOST, $b))
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (expr $b:expr) => {
@@ -76,14 +76,14 @@ macro_rules! ty {
 macro_rules! arg {
     ((lifetime $b:tt)) => {
         chalk_ir::GenericArg::new(
-            chalk_integration::interner::ChalkIr,
+            chalk_integration::interner::ChalkIr::default(),
             chalk_ir::GenericArgData::Lifetime(lifetime!($b)),
         )
     };
 
     ($arg:tt) => {
         chalk_ir::GenericArg::new(
-            chalk_integration::interner::ChalkIr,
+            chalk_integration::interner::ChalkIr::default(),
             chalk_ir::GenericArgData::Ty(ty!($arg)),
         )
     };
@@ -93,22 +93,22 @@ macro_rules! arg {
 macro_rules! lifetime {
     (infer $b:expr) => {
         chalk_ir::LifetimeData::InferenceVar(chalk_ir::InferenceVar::from($b))
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (bound $d:tt $b:tt) => {
         chalk_ir::LifetimeData::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::new($d), $b))
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (bound $b:expr) => {
         chalk_ir::LifetimeData::BoundVar(chalk_ir::BoundVar::new(chalk_ir::DebruijnIndex::INNERMOST, $b))
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (placeholder $b:expr) => {
         chalk_ir::LifetimeData::Placeholder(PlaceholderIndex { ui: UniverseIndex { counter: $b }, idx: 0})
-            .intern(chalk_integration::interner::ChalkIr)
+            .intern(chalk_integration::interner::ChalkIr::default())
     };
 
     (expr $b:expr) => {
@@ -123,6 +123,6 @@ macro_rules! lifetime {
 #[macro_export]
 macro_rules! empty_substitution {
     () => {
-        chalk_ir::Substitution::empty(chalk_integration::interner::ChalkIr)
+        chalk_ir::Substitution::empty(chalk_integration::interner::ChalkIr::default())
     };
 }

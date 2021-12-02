@@ -501,6 +501,9 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash + Sized {
         c2: &Self::InternedConcreteConst,
     ) -> bool;
 
+    /// Evaluate a function if all of its parameters are concerete constants
+    fn const_eval(&self, name: String, args: Vec<Self::InternedConcreteConst>) -> Self::InternedConcreteConst;
+
     /// Create an "interned" parameter from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `GenericArgData::intern` (which will ultimately call this
