@@ -173,8 +173,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         chalk_solve::program_clauses_for_env(self, environment)
     }
 
-    fn interner(&self) -> &ChalkIr {
-        &ChalkIr
+    fn interner(&self) -> ChalkIr {
+        ChalkIr
     }
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {

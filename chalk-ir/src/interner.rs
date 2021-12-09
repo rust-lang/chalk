@@ -57,7 +57,7 @@ use std::sync::Arc;
 /// (e.g., `SourceI` and `TargetI`) -- even if those type parameters
 /// wind up being mapped to the same underlying type families in the
 /// end.
-pub trait Interner: Debug + Copy + Eq + Ord + Hash {
+pub trait Interner: Debug + Copy + Eq + Ord + Hash + Sized {
     /// "Interned" representation of types.  In normal user code,
     /// `Self::InternedType` is not referenced. Instead, we refer to
     /// `Ty<Self>`, which wraps this type.
@@ -470,32 +470,32 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// Create an "interned" type from `ty`. This is not normally
     /// invoked directly; instead, you invoke `TyKind::intern` (which
     /// will ultimately call this method).
-    fn intern_ty(&self, kind: TyKind<Self>) -> Self::InternedType;
+    fn intern_ty(self, kind: TyKind<Self>) -> Self::InternedType;
 
     /// Lookup the `TyKind` from an interned type.
-    fn ty_data<'a>(&self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
+    fn ty_data<'a>(self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
 
     /// Create an "interned" lifetime from `lifetime`. This is not
     /// normally invoked directly; instead, you invoke
     /// `LifetimeData::intern` (which will ultimately call this
     /// method).
-    fn intern_lifetime(&self, lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
+    fn intern_lifetime(self, lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn lifetime_data<'a>(&self, lifetime: &'a Self::InternedLifetime) -> &'a LifetimeData<Self>;
+    fn lifetime_data<'a>(self, lifetime: &'a Self::InternedLifetime) -> &'a LifetimeData<Self>;
 
     /// Create an "interned" const from `const`. This is not
     /// normally invoked directly; instead, you invoke
     /// `ConstData::intern` (which will ultimately call this
     /// method).
-    fn intern_const(&self, constant: ConstData<Self>) -> Self::InternedConst;
+    fn intern_const(self, constant: ConstData<Self>) -> Self::InternedConst;
 
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
-    fn const_data<'a>(&self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
+    fn const_data<'a>(self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
 
     /// Determine whether two concrete const values are equal.
     fn const_eq(
-        &self,
+        self,
         ty: &Self::InternedType,
         c1: &Self::InternedConcreteConst,
         c2: &Self::InternedConcreteConst,
@@ -505,11 +505,11 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `GenericArgData::intern` (which will ultimately call this
     /// method).
-    fn intern_generic_arg(&self, data: GenericArgData<Self>) -> Self::InternedGenericArg;
+    fn intern_generic_arg(self, data: GenericArgData<Self>) -> Self::InternedGenericArg;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
     fn generic_arg_data<'a>(
-        &self,
+        self,
         lifetime: &'a Self::InternedGenericArg,
     ) -> &'a GenericArgData<Self>;
 
@@ -517,35 +517,35 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `GoalData::intern` (which will ultimately call this
     /// method).
-    fn intern_goal(&self, data: GoalData<Self>) -> Self::InternedGoal;
+    fn intern_goal(self, data: GoalData<Self>) -> Self::InternedGoal;
 
     /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
-    fn goal_data<'a>(&self, goal: &'a Self::InternedGoal) -> &'a GoalData<Self>;
+    fn goal_data<'a>(self, goal: &'a Self::InternedGoal) -> &'a GoalData<Self>;
 
     /// Create an "interned" goals from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `GoalsData::intern` (which will ultimately call this
     /// method).
     fn intern_goals<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<Goal<Self>, E>>,
     ) -> Result<Self::InternedGoals, E>;
 
     /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
-    fn goals_data<'a>(&self, goals: &'a Self::InternedGoals) -> &'a [Goal<Self>];
+    fn goals_data<'a>(self, goals: &'a Self::InternedGoals) -> &'a [Goal<Self>];
 
     /// Create an "interned" substitution from `data`. This is not
     /// normally invoked directly; instead, you invoke
     /// `SubstitutionData::intern` (which will ultimately call this
     /// method).
     fn intern_substitution<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<GenericArg<Self>, E>>,
     ) -> Result<Self::InternedSubstitution, E>;
 
     /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
     fn substitution_data<'a>(
-        &self,
+        self,
         substitution: &'a Self::InternedSubstitution,
     ) -> &'a [GenericArg<Self>];
 
@@ -553,11 +553,11 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// normally invoked directly; instead, you invoke
     /// `ProgramClauseData::intern` (which will ultimately call this
     /// method).
-    fn intern_program_clause(&self, data: ProgramClauseData<Self>) -> Self::InternedProgramClause;
+    fn intern_program_clause(self, data: ProgramClauseData<Self>) -> Self::InternedProgramClause;
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
     fn program_clause_data<'a>(
-        &self,
+        self,
         clause: &'a Self::InternedProgramClause,
     ) -> &'a ProgramClauseData<Self>;
 
@@ -566,13 +566,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `ProgramClauses::from_iter` (which will ultimately call this
     /// method).
     fn intern_program_clauses<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<ProgramClause<Self>, E>>,
     ) -> Result<Self::InternedProgramClauses, E>;
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
     fn program_clauses_data<'a>(
-        &self,
+        self,
         clauses: &'a Self::InternedProgramClauses,
     ) -> &'a [ProgramClause<Self>];
 
@@ -581,14 +581,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `QuantifiedWhereClauses::from_iter` (which will ultimately call this
     /// method).
     fn intern_quantified_where_clauses<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<QuantifiedWhereClause<Self>, E>>,
     ) -> Result<Self::InternedQuantifiedWhereClauses, E>;
 
     /// Lookup the slice of `QuantifiedWhereClause` that was interned to
     /// create a `QuantifiedWhereClauses`.
     fn quantified_where_clauses_data<'a>(
-        &self,
+        self,
         clauses: &'a Self::InternedQuantifiedWhereClauses,
     ) -> &'a [QuantifiedWhereClause<Self>];
 
@@ -597,14 +597,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `VariableKinds::from_iter` (which will ultimately call this
     /// method).
     fn intern_generic_arg_kinds<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<VariableKind<Self>, E>>,
     ) -> Result<Self::InternedVariableKinds, E>;
 
     /// Lookup the slice of `VariableKinds` that was interned to
     /// create a `VariableKinds`.
     fn variable_kinds_data<'a>(
-        &self,
+        self,
         variable_kinds: &'a Self::InternedVariableKinds,
     ) -> &'a [VariableKind<Self>];
 
@@ -613,14 +613,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `CanonicalVarKinds::from_iter` (which will ultimately call this
     /// method).
     fn intern_canonical_var_kinds<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<CanonicalVarKind<Self>, E>>,
     ) -> Result<Self::InternedCanonicalVarKinds, E>;
 
     /// Lookup the slice of `CanonicalVariableKind` that was interned to
     /// create a `CanonicalVariableKinds`.
     fn canonical_var_kinds_data<'a>(
-        &self,
+        self,
         canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
     ) -> &'a [CanonicalVarKind<Self>];
 
@@ -629,14 +629,14 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `Constraints::from_iter` (which will ultimately call this
     /// method).
     fn intern_constraints<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<InEnvironment<Constraint<Self>>, E>>,
     ) -> Result<Self::InternedConstraints, E>;
 
     /// Lookup the slice of `Constraint` that was interned to
     /// create a `Constraints`.
     fn constraints_data<'a>(
-        &self,
+        self,
         constraints: &'a Self::InternedConstraints,
     ) -> &'a [InEnvironment<Constraint<Self>>];
 
@@ -645,13 +645,13 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash {
     /// `Variances::from` (which will ultimately call this
     /// method).
     fn intern_variances<E>(
-        &self,
+        self,
         data: impl IntoIterator<Item = Result<Variance, E>>,
     ) -> Result<Self::InternedVariances, E>;
 
     /// Lookup the slice of `Variance` that was interned to
     /// create a `Variances`.
-    fn variances_data<'a>(&self, variances: &'a Self::InternedVariances) -> &'a [Variance];
+    fn variances_data<'a>(self, variances: &'a Self::InternedVariances) -> &'a [Variance];
 }
 
 /// Implemented by types that have an associated interner (which

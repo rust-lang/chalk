@@ -9,7 +9,7 @@ pub trait CouldMatch<T: ?Sized + HasInterner> {
     /// Checks whether `self` and `other` could possibly match.
     fn could_match(
         &self,
-        interner: &T::Interner,
+        interner: T::Interner,
         db: &dyn UnificationDatabase<T::Interner>,
         other: &T,
     ) -> bool;
@@ -21,7 +21,7 @@ where
     T: Zip<I> + ?Sized + HasInterner<Interner = I>,
     I: Interner,
 {
-    fn could_match(&self, interner: &I, db: &dyn UnificationDatabase<I>, other: &T) -> bool {
+    fn could_match(&self, interner: I, db: &dyn UnificationDatabase<I>, other: &T) -> bool {
         return Zip::zip_with(
             &mut MatchZipper { interner, db },
             Variance::Invariant,
@@ -31,11 +31,11 @@ where
         .is_ok();
 
         struct MatchZipper<'i, I> {
-            interner: &'i I,
+            interner: I,
             db: &'i dyn UnificationDatabase<I>,
         }
 
-        impl<'i, I: Interner> Zipper<'i, I> for MatchZipper<'i, I> {
+        impl<'i, I: Interner> Zipper<I> for MatchZipper<'i, I> {
             fn zip_tys(&mut self, variance: Variance, a: &Ty<I>, b: &Ty<I>) -> Fallible<()> {
                 let interner = self.interner;
                 let matches = |a: &Substitution<I>, b: &Substitution<I>| {
@@ -179,7 +179,7 @@ where
                 Zip::zip_with(self, variance, &a.value, &b.value)
             }
 
-            fn interner(&self) -> &'i I {
+            fn interner(&self) -> I {
                 self.interner
             }
 
@@ -193,7 +193,7 @@ where
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClauseData<I> {
     fn could_match(
         &self,
-        interner: &I,
+        interner: I,
         db: &dyn UnificationDatabase<I>,
         other: &DomainGoal<I>,
     ) -> bool {
@@ -204,7 +204,7 @@ impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClauseData<I> {
 impl<I: Interner> CouldMatch<DomainGoal<I>> for ProgramClause<I> {
     fn could_match(
         &self,
-        interner: &I,
+        interner: I,
         db: &dyn UnificationDatabase<I>,
         other: &DomainGoal<I>,
     ) -> bool {

@@ -123,7 +123,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// `program_clauses_for_env` function and then possibly cache the clauses.
     fn program_clauses_for_env(&self, environment: &Environment<I>) -> ProgramClauses<I>;
 
-    fn interner(&self) -> &I;
+    fn interner(&self) -> I;
 
     /// Check if a trait is object safe
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;

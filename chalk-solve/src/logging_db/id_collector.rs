@@ -115,16 +115,13 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {
     }
 }
 
-impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<'i, I> for IdCollector<'i, I, DB>
-where
-    I: 'i,
-{
+impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<I> for IdCollector<'i, I, DB> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.db.interner()
     }
 

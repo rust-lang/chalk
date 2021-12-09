@@ -663,7 +663,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
 fn push_clauses_for_compatible_normalize<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
-    interner: &I,
+    interner: I,
     trait_id: TraitId<I>,
     associated_ty_id: AssocTypeId<I>,
 ) {

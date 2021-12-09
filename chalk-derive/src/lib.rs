@@ -177,14 +177,11 @@ fn derive_any_visit(
     s.bound_impl(
         quote!(::chalk_ir::visit:: #trait_name <#interner>),
         quote! {
-            fn #method_name <'i, B>(
+            fn #method_name <B>(
                 &self,
-                visitor: &mut dyn ::chalk_ir::visit::Visitor < 'i, #interner, BreakTy = B >,
+                visitor: &mut dyn ::chalk_ir::visit::Visitor < #interner, BreakTy = B >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> std::ops::ControlFlow<B>
-            where
-                #interner: 'i
-            {
+            ) -> std::ops::ControlFlow<B> {
                 match *self {
                     #body
                 }
@@ -241,15 +238,12 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
         quote!(::chalk_ir::zip::Zip<#interner>),
         quote! {
 
-            fn zip_with<'i, Z: ::chalk_ir::zip::Zipper<'i, #interner>>(
+            fn zip_with<Z: ::chalk_ir::zip::Zipper<#interner>>(
                 zipper: &mut Z,
                 variance: ::chalk_ir::Variance,
                 a: &Self,
                 b: &Self,
-            ) -> ::chalk_ir::Fallible<()>
-            where
-                #interner: 'i,
-                {
+            ) -> ::chalk_ir::Fallible<()> {
                     match (a, b) { #body }
                 }
         },
@@ -299,14 +293,11 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
         quote! {
             type Result = #result;
 
-            fn fold_with<'i, E>(
+            fn fold_with<E>(
                 self,
-                folder: &mut dyn ::chalk_ir::fold::Folder < 'i, #interner, Error = E >,
+                folder: &mut dyn ::chalk_ir::fold::Folder < #interner, Error = E >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> ::std::result::Result<Self::Result, E>
-            where
-                #interner: 'i,
-            {
+            ) -> ::std::result::Result<Self::Result, E> {
                 Ok(match self { #body })
             }
         },

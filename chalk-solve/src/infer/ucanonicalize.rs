@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 use super::InferenceTable;
 
 impl<I: Interner> InferenceTable<I> {
-    pub fn u_canonicalize<T>(interner: &I, value0: &Canonical<T>) -> UCanonicalized<T::Result>
+    pub fn u_canonicalize<T>(interner: I, value0: &Canonical<T>) -> UCanonicalized<T::Result>
     where
         T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
         T::Result: HasInterner<Interner = I>,
@@ -80,7 +80,7 @@ pub trait UniverseMapExt {
     fn map_universe_from_canonical(&self, universe: UniverseIndex) -> UniverseIndex;
     fn map_from_canonical<T, I>(
         &self,
-        interner: &I,
+        interner: I,
         canonical_value: &Canonical<T>,
     ) -> Canonical<T::Result>
     where
@@ -159,7 +159,7 @@ impl UniverseMapExt for UniverseMap {
     /// other original universes.
     fn map_from_canonical<T, I>(
         &self,
-        interner: &I,
+        interner: I,
         canonical_value: &Canonical<T>,
     ) -> Canonical<T::Result>
     where
@@ -195,18 +195,15 @@ impl UniverseMapExt for UniverseMap {
 
 /// The `UCollector` is a "no-op" in terms of the value, but along the
 /// way it collects all universes that were found into a vector.
-struct UCollector<'q, 'i, I> {
+struct UCollector<'q, I> {
     universes: &'q mut UniverseMap,
-    interner: &'i I,
+    interner: I,
 }
 
-impl<'i, I: Interner> Visitor<'i, I> for UCollector<'_, 'i, I>
-where
-    I: 'i,
-{
+impl<I: Interner> Visitor<I> for UCollector<'_, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<'i, I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -223,23 +220,20 @@ where
         true
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
 
 struct UMapToCanonical<'q, I> {
-    interner: &'q I,
+    interner: I,
     universes: &'q UniverseMap,
 }
 
-impl<'i, I: Interner> Folder<'i, I> for UMapToCanonical<'i, I>
-where
-    I: 'i,
-{
+impl<'i, I: Interner> Folder<I> for UMapToCanonical<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -298,23 +292,20 @@ where
         .to_const(self.interner(), ty.clone()))
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }
 
 struct UMapFromCanonical<'q, I> {
-    interner: &'q I,
+    interner: I,
     universes: &'q UniverseMap,
 }
 
-impl<'i, I: Interner> Folder<'i, I> for UMapFromCanonical<'i, I>
-where
-    I: 'i,
-{
+impl<'i, I: Interner> Folder<I> for UMapFromCanonical<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -348,7 +339,7 @@ where
         true
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }

@@ -2,17 +2,17 @@ use super::*;
 use crate::fold::shift::Shift;
 
 /// Substitution used during folding
-pub struct Subst<'s, 'i, I: Interner> {
+pub struct Subst<'s, I: Interner> {
     /// Values to substitute. A reference to a free variable with
     /// index `i` will be mapped to `parameters[i]` -- if `i >
     /// parameters.len()`, then we will leave the variable untouched.
     parameters: &'s [GenericArg<I>],
-    interner: &'i I,
+    interner: I,
 }
 
-impl<I: Interner> Subst<'_, '_, I> {
+impl<I: Interner> Subst<'_, I> {
     /// Applies the substitution by folding
-    pub fn apply<T: Fold<I>>(interner: &I, parameters: &[GenericArg<I>], value: T) -> T::Result {
+    pub fn apply<T: Fold<I>>(interner: I, parameters: &[GenericArg<I>], value: T) -> T::Result {
         value
             .fold_with(
                 &mut Subst {
@@ -25,10 +25,10 @@ impl<I: Interner> Subst<'_, '_, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
+impl<I: Interner> Folder<I> for Subst<'_, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
         self
     }
 
@@ -117,7 +117,7 @@ impl<'i, I: Interner> Folder<'i, I> for Subst<'_, 'i, I> {
         }
     }
 
-    fn interner(&self) -> &'i I {
+    fn interner(&self) -> I {
         self.interner
     }
 }

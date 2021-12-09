@@ -17,7 +17,7 @@ mod bench;
 mod coherence;
 mod wf_lowering;
 
-pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, interner: &ChalkIr) {
+pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, interner: ChalkIr) {
     // sort constraints, since the different solvers may output them in different order
     match &mut result {
         Some(Solution::Unique(solution)) => {
@@ -28,7 +28,7 @@ pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, inte
         _ => {}
     }
     let result = match result {
-        Some(v) => format!("{}", v.display(&ChalkIr)),
+        Some(v) => format!("{}", v.display(ChalkIr)),
         None => format!("No possible solution"),
     };
 
@@ -276,7 +276,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                                         assert_same(
                                             &format!(
                                                 "{}",
-                                                result.as_ref().map(|v| v.display(&ChalkIr))
+                                                result.as_ref().map(|v| v.display(ChalkIr))
                                             ),
                                             expected,
                                         );
@@ -300,7 +300,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                         {
                             Some(solution) => {
                                 assert_same(
-                                    &format!("{}", result.as_ref().map(|v| v.display(&ChalkIr))),
+                                    &format!("{}", result.as_ref().map(|v| v.display(ChalkIr))),
                                     solution,
                                 );
                                 if !next_result {

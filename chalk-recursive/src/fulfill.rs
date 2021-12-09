@@ -64,7 +64,7 @@ enum NegativeSolution {
 
 fn canonicalize<I: Interner, T>(
     infer: &mut InferenceTable<I>,
-    interner: &I,
+    interner: I,
     value: T,
 ) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
 where
@@ -82,7 +82,7 @@ where
 
 fn u_canonicalize<I: Interner, T>(
     _infer: &mut InferenceTable<I>,
-    interner: &I,
+    interner: I,
     value0: &Canonical<T>,
 ) -> (UCanonical<T::Result>, UniverseMap)
 where
@@ -95,7 +95,7 @@ where
 
 fn unify<I: Interner, T>(
     infer: &mut InferenceTable<I>,
-    interner: &I,
+    interner: I,
     db: &dyn UnificationDatabase<I>,
     environment: &Environment<I>,
     variance: Variance,
@@ -604,7 +604,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         }
     }
 
-    fn interner(&self) -> &I {
+    fn interner(&self) -> I {
         self.solver.interner()
     }
 }

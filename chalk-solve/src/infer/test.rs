@@ -11,18 +11,18 @@ use chalk_integration::{arg, lifetime, ty};
 struct TestDatabase;
 impl UnificationDatabase<ChalkIr> for TestDatabase {
     fn fn_def_variance(&self, _fn_def_id: FnDefId<ChalkIr>) -> Variances<ChalkIr> {
-        Variances::from_iter(&ChalkIr, [Variance::Invariant; 20].iter().copied())
+        Variances::from_iter(ChalkIr, [Variance::Invariant; 20].iter().copied())
     }
 
     fn adt_variance(&self, _adt_id: AdtId<ChalkIr>) -> Variances<ChalkIr> {
-        Variances::from_iter(&ChalkIr, [Variance::Invariant; 20].iter().copied())
+        Variances::from_iter(ChalkIr, [Variance::Invariant; 20].iter().copied())
     }
 }
 
 #[test]
 fn universe_error() {
     // exists(A -> forall(X -> A = X)) ---> error
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -41,7 +41,7 @@ fn universe_error() {
 #[test]
 fn cycle_error() {
     // exists(A -> A = foo A) ---> error
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -72,7 +72,7 @@ fn cycle_error() {
 #[test]
 fn cycle_indirect() {
     // exists(A -> A = foo B, A = B) ---> error
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -102,7 +102,7 @@ fn cycle_indirect() {
 #[test]
 fn universe_error_indirect_1() {
     // exists(A -> forall(X -> exists(B -> B = X, A = B))) ---> error
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -132,7 +132,7 @@ fn universe_error_indirect_1() {
 #[test]
 fn universe_error_indirect_2() {
     // exists(A -> forall(X -> exists(B -> B = A, B = X))) ---> error
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -162,7 +162,7 @@ fn universe_error_indirect_2() {
 #[test]
 fn universe_promote() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), A = foo(i32)))) ---> OK
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -192,7 +192,7 @@ fn universe_promote() {
 #[test]
 fn universe_promote_bad() {
     // exists(A -> forall(X -> exists(B -> A = foo(B), B = X))) ---> error
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -224,7 +224,7 @@ fn projection_eq() {
     // exists(A -> A = Item0<<A as Item1>::foo>)
     //                       ^^^^^^^^^^^^ Can A repeat here? For now,
     //                       we say no, but it's an interesting question.
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let environment0 = Environment::new(interner);
     let a = table.new_variable(U0).to_ty(interner);
@@ -255,7 +255,7 @@ fn make_table() -> InferenceTable<ChalkIr> {
 
 #[test]
 fn quantify_simple() {
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table = make_table();
     let _ = table.new_variable(U0);
     let _ = table.new_variable(U1);
@@ -281,7 +281,7 @@ fn quantify_simple() {
 
 #[test]
 fn quantify_bound() {
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table = make_table();
     let environment0 = Environment::new(interner);
 
@@ -324,7 +324,7 @@ fn quantify_bound() {
 
 #[test]
 fn quantify_ty_under_binder() {
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table = make_table();
     let v0 = table.new_variable(U0);
     let v1 = table.new_variable(U0);
@@ -369,7 +369,7 @@ fn quantify_ty_under_binder() {
 
 #[test]
 fn lifetime_constraint_indirect() {
-    let interner = &ChalkIr;
+    let interner = ChalkIr;
     let mut table: InferenceTable<ChalkIr> = InferenceTable::new();
     let _ = table.new_universe(); // U1
 

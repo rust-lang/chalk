@@ -151,7 +151,7 @@ where
     ) -> chalk_ir::ProgramClauses<I> {
         self.db.program_clauses_for_env(environment)
     }
-    fn interner(&self) -> &I {
+    fn interner(&self) -> I {
         self.db.interner()
     }
     fn is_object_safe(&self, trait_id: chalk_ir::TraitId<I>) -> bool {

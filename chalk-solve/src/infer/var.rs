@@ -60,28 +60,28 @@ impl<I: Interner> EnaVariable<I> {
     /// Convert this inference variable into a type. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a type (we can't check it).
-    pub fn to_ty_with_kind(self, interner: &I, kind: TyVariableKind) -> Ty<I> {
+    pub fn to_ty_with_kind(self, interner: I, kind: TyVariableKind) -> Ty<I> {
         self.var.to_ty(interner, kind)
     }
 
     /// Same as `to_ty_with_kind`, but the kind is set to `TyVariableKind::General`.
     /// This should be used instead of `to_ty_with_kind` when creating a new
     /// inference variable (when the kind is not known).
-    pub fn to_ty(self, interner: &I) -> Ty<I> {
+    pub fn to_ty(self, interner: I) -> Ty<I> {
         self.var.to_ty(interner, TyVariableKind::General)
     }
 
     /// Convert this inference variable into a lifetime. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a lifetime (we can't check it).
-    pub fn to_lifetime(self, interner: &I) -> Lifetime<I> {
+    pub fn to_lifetime(self, interner: I) -> Lifetime<I> {
         self.var.to_lifetime(interner)
     }
 
     /// Convert this inference variable into a const. When using this
     /// method, naturally you should know from context that the kind
     /// of this inference variable is a const (we can't check it).
-    pub fn to_const(self, interner: &I, ty: Ty<I>) -> Const<I> {
+    pub fn to_const(self, interner: I, ty: Ty<I>) -> Const<I> {
         self.var.to_const(interner, ty)
     }
 }
@@ -112,15 +112,15 @@ pub enum InferenceValue<I: Interner> {
 }
 
 impl<I: Interner> InferenceValue<I> {
-    pub fn from_ty(interner: &I, ty: Ty<I>) -> Self {
+    pub fn from_ty(interner: I, ty: Ty<I>) -> Self {
         InferenceValue::Bound(ty.cast(interner))
     }
 
-    pub fn from_lifetime(interner: &I, lifetime: Lifetime<I>) -> Self {
+    pub fn from_lifetime(interner: I, lifetime: Lifetime<I>) -> Self {
         InferenceValue::Bound(lifetime.cast(interner))
     }
 
-    pub fn from_const(interner: &I, constant: Const<I>) -> Self {
+    pub fn from_const(interner: I, constant: Const<I>) -> Self {
         InferenceValue::Bound(constant.cast(interner))
     }
 }

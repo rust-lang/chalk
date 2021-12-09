@@ -61,7 +61,7 @@ impl<I: Interner> Solution<I> {
     //    Clone`.
     //
     // But you get the idea.
-    pub fn combine(self, other: Solution<I>, interner: &I) -> Solution<I> {
+    pub fn combine(self, other: Solution<I>, interner: I) -> Solution<I> {
         use self::Guidance::*;
 
         if self == other {
@@ -100,7 +100,7 @@ impl<I: Interner> Solution<I> {
     }
 
     /// Extract a constrained substitution from this solution, even if ambiguous.
-    pub fn constrained_subst(&self, interner: &I) -> Option<Canonical<ConstrainedSubst<I>>> {
+    pub fn constrained_subst(&self, interner: I) -> Option<Canonical<ConstrainedSubst<I>>> {
         match *self {
             Solution::Unique(ref constrained) => Some(constrained.clone()),
             Solution::Ambig(Guidance::Definite(ref canonical))
@@ -120,7 +120,7 @@ impl<I: Interner> Solution<I> {
 
     /// Determine whether this solution contains type information that *must*
     /// hold, and returns the subst in that case.
-    pub fn definite_subst(&self, interner: &I) -> Option<Canonical<ConstrainedSubst<I>>> {
+    pub fn definite_subst(&self, interner: I) -> Option<Canonical<ConstrainedSubst<I>>> {
         match self {
             Solution::Unique(constrained) => Some(constrained.clone()),
             Solution::Ambig(Guidance::Definite(canonical)) => {
@@ -145,7 +145,7 @@ impl<I: Interner> Solution<I> {
         matches!(*self, Solution::Ambig(_))
     }
 
-    pub fn display<'a>(&'a self, interner: &'a I) -> SolutionDisplay<'a, I> {
+    pub fn display<'a>(&'a self, interner: I) -> SolutionDisplay<'a, I> {
         SolutionDisplay {
             solution: self,
             interner,
@@ -155,23 +155,25 @@ impl<I: Interner> Solution<I> {
 
 pub struct SolutionDisplay<'a, I: Interner> {
     solution: &'a Solution<I>,
-    interner: &'a I,
+    interner: I,
 }
 
 impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let SolutionDisplay { solution, interner } = self;
         match solution {
-            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained.display(interner)),
+            Solution::Unique(constrained) => {
+                write!(f, "Unique; {}", constrained.display(*interner))
+            }
             Solution::Ambig(Guidance::Definite(subst)) => write!(
                 f,
                 "Ambiguous; definite substitution {}",
-                subst.display(interner)
+                subst.display(*interner)
             ),
             Solution::Ambig(Guidance::Suggested(subst)) => write!(
                 f,
                 "Ambiguous; suggested substitution {}",
-                subst.display(interner)
+                subst.display(*interner)
             ),
             Solution::Ambig(Guidance::Unknown) => write!(f, "Ambiguous; no inference guidance"),
         }

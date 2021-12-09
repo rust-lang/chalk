@@ -54,10 +54,7 @@ pub use self::subst::Subst;
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait Folder<'i, I: Interner>
-where
-    I: 'i,
-{
+pub trait Folder<I: Interner> {
     /// The type this folder returns when folding fails. This is
     /// commonly [`NoSolution`].
     type Error;
@@ -69,7 +66,7 @@ where
     /// method). Effectively, this limits impls of `Folder` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Folder<'i, I, Error = Self::Error>;
+    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when folding. By default, invokes
@@ -305,7 +302,7 @@ where
     }
 
     /// Gets the interner that is being folded from.
-    fn interner(&self) -> &'i I;
+    fn interner(&self) -> I;
 }
 
 /// Applies the given `Folder` to a value, producing a folded result
@@ -326,13 +323,11 @@ pub trait Fold<I: Interner>: Debug {
     /// folder. Typically `binders` starts as 0, but is adjusted when
     /// we encounter `Binders<T>` in the IR or other similar
     /// constructs.
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i;
+    ) -> Result<Self::Result, E>;
 }
 
 /// For types where "fold" invokes a callback on the `Folder`, the
@@ -340,13 +335,11 @@ pub trait Fold<I: Interner>: Debug {
 /// the contents of the type.
 pub trait SuperFold<I: Interner>: Fold<I> {
     /// Recursively folds the value.
-    fn super_fold_with<'i, E>(
+    fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i;
+    ) -> Result<Self::Result, E>;
 }
 
 /// "Folding" a type invokes the `fold_ty` method on the folder; this
@@ -355,14 +348,11 @@ pub trait SuperFold<I: Interner>: Fold<I> {
 impl<I: Interner> Fold<I> for Ty<I> {
     type Result = Ty<I>;
 
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         folder.fold_ty(self, outer_binder)
     }
 }
@@ -372,14 +362,11 @@ impl<I> SuperFold<I> for Ty<I>
 where
     I: Interner,
 {
-    fn super_fold_with<'i, E>(
+    fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Ty<I>, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Ty<I>, E> {
         let interner = folder.interner();
         Ok(match self.kind(interner) {
             TyKind::BoundVar(bound_var) => {
@@ -485,14 +472,11 @@ where
 impl<I: Interner> Fold<I> for Lifetime<I> {
     type Result = Lifetime<I>;
 
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         folder.fold_lifetime(self, outer_binder)
     }
 }
@@ -501,14 +485,11 @@ impl<I> SuperFold<I> for Lifetime<I>
 where
     I: Interner,
 {
-    fn super_fold_with<'i, E>(
+    fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Lifetime<I>, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Lifetime<I>, E> {
         let interner = folder.interner();
         match self.data(interner) {
             LifetimeData::BoundVar(bound_var) => {
@@ -543,14 +524,11 @@ where
 impl<I: Interner> Fold<I> for Const<I> {
     type Result = Const<I>;
 
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         folder.fold_const(self, outer_binder)
     }
 }
@@ -559,14 +537,11 @@ impl<I> SuperFold<I> for Const<I>
 where
     I: Interner,
 {
-    fn super_fold_with<'i, E>(
+    fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Const<I>, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Const<I>, E> {
         let interner = folder.interner();
         let ConstData { ref ty, ref value } = self.data(interner);
         let mut fold_ty = || ty.clone().fold_with(folder, outer_binder);
@@ -600,28 +575,22 @@ where
 impl<I: Interner> Fold<I> for Goal<I> {
     type Result = Goal<I>;
 
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         folder.fold_goal(self, outer_binder)
     }
 }
 
 /// Superfold folds recursively.
 impl<I: Interner> SuperFold<I> for Goal<I> {
-    fn super_fold_with<'i, E>(
+    fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         let interner = folder.interner();
         Ok(Goal::new(
             interner,
@@ -638,14 +607,11 @@ impl<I: Interner> SuperFold<I> for Goal<I> {
 impl<I: Interner> Fold<I> for ProgramClause<I> {
     type Result = ProgramClause<I>;
 
-    fn fold_with<'i, E>(
+    fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<'i, I, Error = E>,
+        folder: &mut dyn Folder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>
-    where
-        I: 'i,
-    {
+    ) -> Result<Self::Result, E> {
         folder.fold_program_clause(self, outer_binder)
     }
 }
