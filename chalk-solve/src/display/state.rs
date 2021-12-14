@@ -43,7 +43,7 @@ enum UnifiedId<I: Interner> {
 }
 
 #[derive(Debug)]
-pub struct IdAliasStore<T: Ord> {
+pub struct IdAliasStore<T> {
     /// Map from the DefIds we've encountered to a u32 alias id unique to all ids
     /// the same name.
     aliases: BTreeMap<T, u32>,
