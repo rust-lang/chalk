@@ -107,18 +107,21 @@ where
 
     // Build the forest of specialization relationships.
     fn build_specialization_forest(&self) -> Result<Graph<ImplId<I>, ()>, CoherenceError<I>> {
-        // The forest is returned as a graph but built as a GraphMap; this is
-        // so that we never add multiple nodes with the same ItemId.
         let mut forest = DiGraph::new();
 
         // Find all specializations (implemented in coherence/solve)
         // Record them in the forest by adding an edge from the less special
         // to the more special.
         self.visit_specializations_of_trait(|less_special, more_special| {
-            let l = forest.add_node(less_special);
-            let m = forest.add_node(more_special);
+            let node_impls: Vec<ImplId<_>> = forest.raw_nodes().iter().map(|x| x.weight).collect();
 
-            forest.add_edge(l, m, ());
+            // Check so that we never add multiple nodes with the same ImplId.
+            if !node_impls.contains(&less_special) && !node_impls.contains(&more_special) {
+                let l = forest.add_node(less_special);
+                let m = forest.add_node(more_special);
+
+                forest.add_edge(l, m, ());
+            }
         })?;
 
         Ok(forest)
