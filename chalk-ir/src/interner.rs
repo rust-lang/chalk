@@ -188,7 +188,7 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash + Sized {
     type InternedVariances: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for trait-ids and the like.
-    type DefId: Debug + Copy + Eq + Ord + Hash;
+    type DefId: Debug + Copy + Eq + Hash;
 
     /// The ID type for ADTs
     type InternedAdtId: Debug + Copy + Eq + Ord + Hash;
