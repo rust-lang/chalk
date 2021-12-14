@@ -359,55 +359,55 @@ impl UniverseMap {
 }
 
 /// The id for an Abstract Data Type (i.e. structs, unions and enums).
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AdtId<I: Interner>(pub I::InternedAdtId);
 
 /// The id of a trait definition; could be used to load the trait datum by
 /// invoking the [`trait_datum`] method.
 ///
 /// [`trait_datum`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.trait_datum
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct TraitId<I: Interner>(pub I::DefId);
 
 /// The id for an impl.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ImplId<I: Interner>(pub I::DefId);
 
 /// Id for a specific clause.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ClauseId<I: Interner>(pub I::DefId);
 
 /// The id for the associated type member of a trait. The details of the type
 /// can be found by invoking the [`associated_ty_data`] method.
 ///
 /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct AssocTypeId<I: Interner>(pub I::DefId);
 
 /// Id for an opaque type.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct OpaqueTyId<I: Interner>(pub I::DefId);
 
 /// Function definition id.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FnDefId<I: Interner>(pub I::DefId);
 
 /// Id for Rust closures.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ClosureId<I: Interner>(pub I::DefId);
 
 /// Id for Rust generators.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct GeneratorId<I: Interner>(pub I::DefId);
 
 /// Id for foreign types.
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ForeignDefId<I: Interner>(pub I::DefId);
 
 impl_debugs!(ImplId, ClauseId);
 
 /// A Rust type. The actual type data is stored in `TyKind`.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, HasInterner)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, HasInterner)]
 pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
