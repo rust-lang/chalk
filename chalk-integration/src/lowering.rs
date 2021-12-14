@@ -8,8 +8,8 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{self, IntoWhereClauses};
+use indexmap::IndexMap;
 use program_lowerer::ProgramLowerer;
-use std::collections::BTreeMap;
 use string_cache::DefaultAtom as Atom;
 use tracing::debug;
 
@@ -564,8 +564,6 @@ impl LowerWithEnv for [QuantifiedInlineBound] {
             }
         }
 
-        auto_traits.sort_by_key(|b| b.1);
-
         regular_traits
             .iter()
             .chain(auto_traits.iter())
@@ -1014,7 +1012,7 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
 
 pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
     let interner = ChalkIr;
-    let associated_ty_lookups: BTreeMap<_, _> = program
+    let associated_ty_lookups: IndexMap<_, _> = program
         .associated_ty_data
         .iter()
         .map(|(&associated_ty_id, datum)| {
@@ -1052,7 +1050,7 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         opaque_ty_kinds: &program.opaque_ty_kinds,
         associated_ty_lookups: &associated_ty_lookups,
         foreign_ty_ids: &program.foreign_ty_ids,
-        parameter_map: BTreeMap::new(),
+        parameter_map: IndexMap::new(),
         auto_traits: &auto_traits,
     };
 

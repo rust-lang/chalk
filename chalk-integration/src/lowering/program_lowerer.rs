@@ -8,8 +8,9 @@ use chalk_solve::rust_ir::{
     self, Anonymize, AssociatedTyValueId, GeneratorDatum, GeneratorInputOutputDatum,
     GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
 };
+use indexmap::IndexMap;
 use rust_ir::IntoWhereClauses;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
 
@@ -141,23 +142,23 @@ impl ProgramLowerer {
     }
 
     pub fn lower(self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
-        let mut adt_data = BTreeMap::new();
-        let mut adt_reprs = BTreeMap::new();
-        let mut adt_variances = BTreeMap::new();
-        let mut fn_def_data = BTreeMap::new();
-        let mut fn_def_variances = BTreeMap::new();
-        let mut closure_inputs_and_output = BTreeMap::new();
-        let mut closure_closure_kind = BTreeMap::new();
-        let mut closure_upvars = BTreeMap::new();
-        let mut trait_data = BTreeMap::new();
-        let mut well_known_traits = BTreeMap::new();
-        let mut impl_data = BTreeMap::new();
-        let mut associated_ty_data = BTreeMap::new();
-        let mut associated_ty_values = BTreeMap::new();
-        let mut opaque_ty_data = BTreeMap::new();
-        let mut generator_data = BTreeMap::new();
-        let mut generator_witness_data = BTreeMap::new();
-        let mut hidden_opaque_types = BTreeMap::new();
+        let mut adt_data = IndexMap::new();
+        let mut adt_reprs = IndexMap::new();
+        let mut adt_variances = IndexMap::new();
+        let mut fn_def_data = IndexMap::new();
+        let mut fn_def_variances = IndexMap::new();
+        let mut closure_inputs_and_output = IndexMap::new();
+        let mut closure_closure_kind = IndexMap::new();
+        let mut closure_upvars = IndexMap::new();
+        let mut trait_data = IndexMap::new();
+        let mut well_known_traits = IndexMap::new();
+        let mut impl_data = IndexMap::new();
+        let mut associated_ty_data = IndexMap::new();
+        let mut associated_ty_values = IndexMap::new();
+        let mut opaque_ty_data = IndexMap::new();
+        let mut generator_data = IndexMap::new();
+        let mut generator_witness_data = IndexMap::new();
+        let mut hidden_opaque_types = IndexMap::new();
         let mut custom_clauses = Vec::new();
 
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
@@ -175,7 +176,7 @@ impl ProgramLowerer {
                 generator_ids: &self.generator_ids,
                 generator_kinds: &self.generator_kinds,
                 associated_ty_lookups: &self.associated_ty_lookups,
-                parameter_map: BTreeMap::new(),
+                parameter_map: IndexMap::new(),
                 auto_traits: &self.auto_traits,
                 foreign_ty_ids: &self.foreign_ty_ids,
             };

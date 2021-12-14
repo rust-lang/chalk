@@ -16,10 +16,10 @@ use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_solve::wf;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solver;
+use indexmap::IndexMap;
 use salsa::Database;
 use std::clone::Clone;
 use std::cmp::{Eq, PartialEq};
-use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -40,7 +40,7 @@ pub trait LoweringDatabase:
     /// one another (the "specialization priorities").
     fn coherence(
         &self,
-    ) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError>;
+    ) -> Result<IndexMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError>;
 
     fn orphan_check(&self) -> Result<(), ChalkError>;
 
@@ -142,12 +142,12 @@ fn orphan_check(db: &dyn LoweringDatabase) -> Result<(), ChalkError> {
 
 fn coherence(
     db: &dyn LoweringDatabase,
-) -> Result<BTreeMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
+) -> Result<IndexMap<TraitId<ChalkIr>, Arc<SpecializationPriorities<ChalkIr>>>, ChalkError> {
     let program = db.program_ir()?;
     let solver_choice = db.solver_choice();
     let priorities_map = tls::set_current_program(&program, || -> Result<_, ChalkError> {
         let solver_builder = || solver_choice.into_solver();
-        let priorities_map: Result<BTreeMap<_, _>, ChalkError> = program
+        let priorities_map: Result<IndexMap<_, _>, ChalkError> = program
             .trait_data
             .keys()
             .map(|&trait_id| {

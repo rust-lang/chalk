@@ -142,6 +142,7 @@ dependencies = [
  "chalk-parse",
  "chalk-recursive",
  "chalk-solve",
+ "indexmap",
  "salsa",
  "string_cache",
  "tracing",

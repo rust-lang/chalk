@@ -3,8 +3,10 @@
 //! This is essentially `InternalWriterState` and other things supporting that.
 use std::{
     borrow::Borrow,
+    cmp::{Eq, PartialEq},
     collections::BTreeMap,
     fmt::{Debug, Display, Formatter, Result},
+    hash::Hash,
     marker::PhantomData,
     rc::Rc,
     sync::{Arc, Mutex},
@@ -12,6 +14,7 @@ use std::{
 
 use crate::RustIrDatabase;
 use chalk_ir::{interner::Interner, *};
+use indexmap::IndexMap;
 use itertools::Itertools;
 
 /// Like a BoundVar, but with the debrujin index inverted so as to create a
@@ -36,7 +39,7 @@ impl Display for InvertedBoundVar {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum UnifiedId<I: Interner> {
     AdtId(I::InternedAdtId),
     DefId(I::DefId),
@@ -46,21 +49,21 @@ enum UnifiedId<I: Interner> {
 pub struct IdAliasStore<T> {
     /// Map from the DefIds we've encountered to a u32 alias id unique to all ids
     /// the same name.
-    aliases: BTreeMap<T, u32>,
+    aliases: IndexMap<T, u32>,
     /// Map from each name to the next unused u32 alias id.
-    next_unused_for_name: BTreeMap<String, u32>,
+    next_unused_for_name: IndexMap<String, u32>,
 }
 
-impl<T: Ord> Default for IdAliasStore<T> {
+impl<T: PartialEq + Eq + Hash> Default for IdAliasStore<T> {
     fn default() -> Self {
         IdAliasStore {
-            aliases: BTreeMap::default(),
-            next_unused_for_name: BTreeMap::default(),
+            aliases: IndexMap::default(),
+            next_unused_for_name: IndexMap::default(),
         }
     }
 }
 
-impl<T: Copy + Ord> IdAliasStore<T> {
+impl<T: Copy + PartialEq + Eq + Hash> IdAliasStore<T> {
     fn alias_for_id_name(&mut self, id: T, name: String) -> String {
         let next_unused_for_name = &mut self.next_unused_for_name;
         let alias = *self.aliases.entry(id).or_insert_with(|| {

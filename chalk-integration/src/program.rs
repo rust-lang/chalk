@@ -15,87 +15,88 @@ use chalk_solve::rust_ir::{
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
-use std::collections::{BTreeMap, HashSet};
+use indexmap::IndexMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     /// From ADT name to item-id. Used during lowering only.
-    pub adt_ids: BTreeMap<Identifier, AdtId<ChalkIr>>,
+    pub adt_ids: IndexMap<Identifier, AdtId<ChalkIr>>,
 
     /// For each ADT:
-    pub adt_kinds: BTreeMap<AdtId<ChalkIr>, TypeKind>,
+    pub adt_kinds: IndexMap<AdtId<ChalkIr>, TypeKind>,
 
-    pub adt_variances: BTreeMap<AdtId<ChalkIr>, Vec<Variance>>,
+    pub adt_variances: IndexMap<AdtId<ChalkIr>, Vec<Variance>>,
 
-    pub fn_def_ids: BTreeMap<Identifier, FnDefId<ChalkIr>>,
+    pub fn_def_ids: IndexMap<Identifier, FnDefId<ChalkIr>>,
 
-    pub fn_def_kinds: BTreeMap<FnDefId<ChalkIr>, TypeKind>,
+    pub fn_def_kinds: IndexMap<FnDefId<ChalkIr>, TypeKind>,
 
-    pub fn_def_variances: BTreeMap<FnDefId<ChalkIr>, Vec<Variance>>,
+    pub fn_def_variances: IndexMap<FnDefId<ChalkIr>, Vec<Variance>>,
 
-    pub closure_ids: BTreeMap<Identifier, ClosureId<ChalkIr>>,
+    pub closure_ids: IndexMap<Identifier, ClosureId<ChalkIr>>,
 
-    pub closure_upvars: BTreeMap<ClosureId<ChalkIr>, Binders<Ty<ChalkIr>>>,
+    pub closure_upvars: IndexMap<ClosureId<ChalkIr>, Binders<Ty<ChalkIr>>>,
 
-    pub closure_kinds: BTreeMap<ClosureId<ChalkIr>, TypeKind>,
+    pub closure_kinds: IndexMap<ClosureId<ChalkIr>, TypeKind>,
 
     /// For each generator
-    pub generator_ids: BTreeMap<Identifier, GeneratorId<ChalkIr>>,
+    pub generator_ids: IndexMap<Identifier, GeneratorId<ChalkIr>>,
 
-    pub generator_kinds: BTreeMap<GeneratorId<ChalkIr>, TypeKind>,
+    pub generator_kinds: IndexMap<GeneratorId<ChalkIr>, TypeKind>,
 
-    pub generator_data: BTreeMap<GeneratorId<ChalkIr>, Arc<GeneratorDatum<ChalkIr>>>,
+    pub generator_data: IndexMap<GeneratorId<ChalkIr>, Arc<GeneratorDatum<ChalkIr>>>,
 
-    pub generator_witness_data: BTreeMap<GeneratorId<ChalkIr>, Arc<GeneratorWitnessDatum<ChalkIr>>>,
+    pub generator_witness_data: IndexMap<GeneratorId<ChalkIr>, Arc<GeneratorWitnessDatum<ChalkIr>>>,
 
     /// From trait name to item-id. Used during lowering only.
-    pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
+    pub trait_ids: IndexMap<Identifier, TraitId<ChalkIr>>,
 
     /// For each trait:
-    pub trait_kinds: BTreeMap<TraitId<ChalkIr>, TypeKind>,
+    pub trait_kinds: IndexMap<TraitId<ChalkIr>, TypeKind>,
 
     /// For each ADT:
-    pub adt_data: BTreeMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
+    pub adt_data: IndexMap<AdtId<ChalkIr>, Arc<AdtDatum<ChalkIr>>>,
 
-    pub adt_reprs: BTreeMap<AdtId<ChalkIr>, Arc<AdtRepr<ChalkIr>>>,
+    pub adt_reprs: IndexMap<AdtId<ChalkIr>, Arc<AdtRepr<ChalkIr>>>,
 
-    pub fn_def_data: BTreeMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
+    pub fn_def_data: IndexMap<FnDefId<ChalkIr>, Arc<FnDefDatum<ChalkIr>>>,
 
     pub closure_inputs_and_output:
-        BTreeMap<ClosureId<ChalkIr>, Binders<FnDefInputsAndOutputDatum<ChalkIr>>>,
+        IndexMap<ClosureId<ChalkIr>, Binders<FnDefInputsAndOutputDatum<ChalkIr>>>,
 
     // Weird name, but otherwise would overlap with `closure_kinds` above.
-    pub closure_closure_kind: BTreeMap<ClosureId<ChalkIr>, ClosureKind>,
+    pub closure_closure_kind: IndexMap<ClosureId<ChalkIr>, ClosureKind>,
 
     /// For each impl:
-    pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
+    pub impl_data: IndexMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
 
     /// For each associated ty value `type Foo = XXX` found in an impl:
     pub associated_ty_values:
-        BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
+        IndexMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
 
     // From opaque type name to item-id. Used during lowering only.
-    pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
+    pub opaque_ty_ids: IndexMap<Identifier, OpaqueTyId<ChalkIr>>,
 
     /// For each opaque type:
-    pub opaque_ty_kinds: BTreeMap<OpaqueTyId<ChalkIr>, TypeKind>,
+    pub opaque_ty_kinds: IndexMap<OpaqueTyId<ChalkIr>, TypeKind>,
 
     /// For each opaque type:
-    pub opaque_ty_data: BTreeMap<OpaqueTyId<ChalkIr>, Arc<OpaqueTyDatum<ChalkIr>>>,
+    pub opaque_ty_data: IndexMap<OpaqueTyId<ChalkIr>, Arc<OpaqueTyDatum<ChalkIr>>>,
 
     /// Stores the hidden types for opaque types
-    pub hidden_opaque_types: BTreeMap<OpaqueTyId<ChalkIr>, Arc<Ty<ChalkIr>>>,
+    pub hidden_opaque_types: IndexMap<OpaqueTyId<ChalkIr>, Arc<Ty<ChalkIr>>>,
 
     /// For each trait:
-    pub trait_data: BTreeMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
+    pub trait_data: IndexMap<TraitId<ChalkIr>, Arc<TraitDatum<ChalkIr>>>,
 
     /// For each trait lang item
-    pub well_known_traits: BTreeMap<WellKnownTrait, TraitId<ChalkIr>>,
+    pub well_known_traits: IndexMap<WellKnownTrait, TraitId<ChalkIr>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
-    pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+    pub associated_ty_data: IndexMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -104,7 +105,7 @@ pub struct Program {
     pub object_safe_traits: HashSet<TraitId<ChalkIr>>,
 
     /// For each foreign type `extern { type A; }`
-    pub foreign_ty_ids: BTreeMap<Identifier, ForeignDefId<ChalkIr>>,
+    pub foreign_ty_ids: IndexMap<Identifier, ForeignDefId<ChalkIr>>,
 }
 
 impl Program {

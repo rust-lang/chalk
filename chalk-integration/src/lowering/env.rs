@@ -6,31 +6,31 @@ use chalk_ir::{
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::AssociatedTyValueId;
-use std::collections::BTreeMap;
+use indexmap::IndexMap;
 
 use crate::error::RustIrError;
 use crate::interner::ChalkIr;
 use crate::{Identifier as Ident, TypeKind};
 
-pub type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
-pub type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
-pub type ClosureIds = BTreeMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
-pub type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
-pub type GeneratorIds = BTreeMap<Ident, chalk_ir::GeneratorId<ChalkIr>>;
-pub type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
-pub type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
-pub type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
-pub type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
-pub type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
-pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
-pub type OpaqueTyVariableKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
-pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
-pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
+pub type AdtIds = IndexMap<Ident, chalk_ir::AdtId<ChalkIr>>;
+pub type FnDefIds = IndexMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
+pub type ClosureIds = IndexMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
+pub type TraitIds = IndexMap<Ident, chalk_ir::TraitId<ChalkIr>>;
+pub type GeneratorIds = IndexMap<Ident, chalk_ir::GeneratorId<ChalkIr>>;
+pub type OpaqueTyIds = IndexMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
+pub type AdtKinds = IndexMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
+pub type FnDefKinds = IndexMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
+pub type ClosureKinds = IndexMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
+pub type TraitKinds = IndexMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
+pub type AutoTraits = IndexMap<chalk_ir::TraitId<ChalkIr>, bool>;
+pub type OpaqueTyVariableKinds = IndexMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
+pub type GeneratorKinds = IndexMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
+pub type AssociatedTyLookups = IndexMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
-    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
-pub type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
+    IndexMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
+pub type ForeignIds = IndexMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
 
-pub type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
+pub type ParameterMap = IndexMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
 
 pub type LowerResult<T> = Result<T, RustIrError>;
 
