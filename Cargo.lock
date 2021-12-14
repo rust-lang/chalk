@@ -186,6 +186,7 @@ dependencies = [
  "chalk-integration",
  "chalk-ir",
  "ena",
+ "indexmap",
  "itertools",
  "petgraph",
  "rustc-hash",

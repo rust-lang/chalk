@@ -52,7 +52,7 @@ impl Debug for ChalkFnAbi {
 
 /// The default "interner" and the only interner used by chalk
 /// itself. In this interner, no interning actually occurs.
-#[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct ChalkIr;
 
 impl Interner for ChalkIr {
