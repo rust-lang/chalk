@@ -36,7 +36,7 @@ impl Display for InvertedBoundVar {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum UnifiedId<I: Interner> {
     AdtId(I::InternedAdtId),
     DefId(I::DefId),
