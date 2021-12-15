@@ -571,15 +571,15 @@ impl LowerWithEnv for [QuantifiedInlineBound] {
             }
         }
 
-        let mut regular_traits = Vec::new();
-        let mut auto_traits = Vec::new();
+        let mut regular_traits = IndexSet::new();
+        let mut auto_traits = IndexSet::new();
 
         for b in self {
             let id = env.lookup_trait(trait_identifier(&b.bound))?;
             if env.auto_trait(id) {
-                auto_traits.push((b, id))
+                auto_traits.insert((b, id));
             } else {
-                regular_traits.push((b, id))
+                regular_traits.insert((b, id));
             }
         }
 
