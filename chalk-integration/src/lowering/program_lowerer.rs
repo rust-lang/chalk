@@ -400,12 +400,19 @@ impl ProgramLowerer {
                                             .collect())
                                     },
                                 )?;
+
                             let where_clauses = env.in_binders(
                                 Some(chalk_ir::WithKind::new(
                                     chalk_ir::VariableKind::Ty(TyVariableKind::General),
                                     Atom::from(FIXME_SELF),
                                 )),
-                                |env| opaque_ty.where_clauses.lower(env),
+                                |env| {
+                                    Ok(opaque_ty
+                                        .where_clauses
+                                        .lower(env)?
+                                        .into_iter()
+                                        .collect::<Vec<_>>())
+                                },
                             )?;
 
                             Ok(OpaqueTyDatumBound {
