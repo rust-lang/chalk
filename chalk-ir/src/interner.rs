@@ -665,6 +665,10 @@ pub trait HasInterner {
     type Interner: Interner;
 }
 
+impl<T: HasInterner> HasInterner for indexmap::IndexSet<T> {
+    type Interner = T::Interner;
+}
+
 impl<T: HasInterner> HasInterner for [T] {
     type Interner = T::Interner;
 }

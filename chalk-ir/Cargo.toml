@@ -13,3 +13,4 @@ edition = "2018"
 lazy_static = "1.4.0"
 bitflags = "1.2.1"
 chalk-derive = { version = "0.76.0-dev.0", path = "../chalk-derive" }
+indexmap = "1.7.0"
