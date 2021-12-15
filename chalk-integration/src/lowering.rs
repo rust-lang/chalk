@@ -564,6 +564,11 @@ impl LowerWithEnv for [QuantifiedInlineBound] {
             }
         }
 
+        // FIXME: removing the line below is causing
+        // test::unsize::dyn_to_dyn_unsizing to fail.
+        //
+        // auto_traits.sort_by_key(|b| b.1);
+
         regular_traits
             .iter()
             .chain(auto_traits.iter())
