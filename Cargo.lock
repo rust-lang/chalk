@@ -161,6 +161,7 @@ dependencies = [
 name = "chalk-parse"
 version = "0.76.0-dev.0"
 dependencies = [
+ "indexmap",
  "lalrpop",
  "lalrpop-util",
  "regex",
