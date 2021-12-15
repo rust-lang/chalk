@@ -11,6 +11,7 @@ use chalk_ir::{
     GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
     ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
+use indexmap::IndexSet;
 use std::iter;
 use std::ops::ControlFlow;
 
@@ -55,7 +56,7 @@ impl<I: Interner> ImplDatum<I> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, Fold, Visit)]
 pub struct ImplDatumBound<I: Interner> {
     pub trait_ref: TraitRef<I>,
-    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+    pub where_clauses: IndexSet<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -97,7 +98,7 @@ chalk_ir::const_visit!(AdtKind);
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
 pub struct AdtDatumBound<I: Interner> {
     pub variants: Vec<AdtVariantDatum<I>>,
-    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+    pub where_clauses: IndexSet<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
@@ -194,7 +195,7 @@ pub struct FnDefDatumBound<I: Interner> {
     /// fn foo<T>() where T: Eq;
     ///             ^^^^^^^^^^^
     /// ```
-    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+    pub where_clauses: IndexSet<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -282,7 +283,7 @@ impl<I: Interner> TraitDatum<I> {
     /// trait Foo<T> where T: Debug { }
     ///              ^^^^^^^^^^^^^^
     /// ```
-    pub fn where_clauses(&self) -> Binders<&Vec<QuantifiedWhereClause<I>>> {
+    pub fn where_clauses(&self) -> Binders<&IndexSet<QuantifiedWhereClause<I>>> {
         self.binders.as_ref().map(|td| &td.where_clauses)
     }
 }
@@ -295,7 +296,7 @@ pub struct TraitDatumBound<I: Interner> {
     /// trait Foo<T> where T: Debug { }
     ///              ^^^^^^^^^^^^^^
     /// ```
-    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+    pub where_clauses: IndexSet<QuantifiedWhereClause<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -368,7 +369,11 @@ impl<I: Interner> IntoWhereClauses<I> for InlineBound<I> {
 impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
     type Output = QuantifiedWhereClause<I>;
 
-    fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
+    fn into_where_clauses(
+        &self,
+        interner: I,
+        self_ty: Ty<I>,
+    ) -> IndexSet<QuantifiedWhereClause<I>> {
         let self_ty = self_ty.shifted_in(interner);
         self.map_ref(|b| b.into_where_clauses(interner, self_ty))
             .into_iter()
@@ -510,7 +515,7 @@ pub struct AssociatedTyDatumBound<I: Interner> {
     pub bounds: Vec<QuantifiedInlineBound<I>>,
 
     /// Where clauses that must hold for the projection to be well-formed.
-    pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+    pub where_clauses: IndexSet<QuantifiedWhereClause<I>>,
 }
 
 impl<I: Interner> AssociatedTyDatum<I> {
@@ -522,7 +527,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
     ///
     /// these quantified where clauses are in the scope of the
     /// `binders` field.
-    pub fn bounds_on_self(&self, interner: I) -> Vec<QuantifiedWhereClause<I>> {
+    pub fn bounds_on_self(&self, interner: I) -> IndexSet<QuantifiedWhereClause<I>> {
         let (binders, assoc_ty_datum) = self.binders.as_ref().into();
         // Create a list `P0...Pn` of references to the binders in
         // scope for this associated type:
@@ -625,11 +630,11 @@ pub struct OpaqueTyDatum<I: Interner> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
 pub struct OpaqueTyDatumBound<I: Interner> {
     /// Trait bounds for the opaque type. These are bounds that the hidden type must meet.
-    pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
+    pub bounds: Binders<IndexSet<QuantifiedWhereClause<I>>>,
     /// Where clauses that inform well-formedness conditions for the opaque type.
     /// These are conditions on the generic parameters of the opaque type which must be true
     /// for a reference to the opaque type to be well-formed.
-    pub where_clauses: Binders<Vec<QuantifiedWhereClause<I>>>,
+    pub where_clauses: Binders<IndexSet<QuantifiedWhereClause<I>>>,
 }
 
 // The movability of a generator: whether a generator contains self-references,
