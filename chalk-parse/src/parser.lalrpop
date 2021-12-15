@@ -1,5 +1,6 @@
 use crate::ast::*;
 use string_cache::DefaultAtom as Atom;
+use indexmap::IndexSet;
 
 grammar;
 
@@ -599,9 +600,9 @@ QuantifiedWhereClause: QuantifiedWhereClause = {
     },
 };
 
-QuantifiedWhereClauses: Vec<QuantifiedWhereClause> = {
+QuantifiedWhereClauses: IndexSet<QuantifiedWhereClause> = {
     "where" <Comma<QuantifiedWhereClause>>,
-    () => vec![],
+    () => IndexSet::new(),
 };
 
 DomainGoal: DomainGoal = {
