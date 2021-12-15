@@ -136,20 +136,24 @@ impl Lower for VariableKind {
 }
 
 impl LowerWithEnv for [QuantifiedWhereClause] {
-    type Lowered = Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
+    type Lowered = IndexSet<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         self.iter()
             .flat_map(|wc| match wc.lower(env) {
                 Ok(v) => v.into_iter().map(Ok).collect(),
-                Err(e) => vec![Err(e)],
+                Err(e) => {
+                    let mut set = IndexSet::new();
+                    set.insert([Err(e)]);
+                    set
+                }
             })
-            .collect()
+            .collect::<IndexSet<_>>()
     }
 }
 
 impl LowerWithEnv for WhereClause {
-    type Lowered = Vec<chalk_ir::WhereClause<ChalkIr>>;
+    type Lowered = IndexSet<chalk_ir::WhereClause<ChalkIr>>;
 
     /// Lower from an AST `where` clause to an internal IR.
     /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
@@ -158,37 +162,47 @@ impl LowerWithEnv for WhereClause {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         Ok(match self {
             WhereClause::Implemented { trait_ref } => {
-                vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
+                let mut set = IndexSet::new();
+                set.insert(chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?));
+                set
             }
-            WhereClause::ProjectionEq { projection, ty } => vec![
-                chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
-                    alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
-                    ty: ty.lower(env)?,
-                }),
-                chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
-            ],
+            WhereClause::ProjectionEq { projection, ty } => {
+                let mut set = IndexSet::new();
+                set.insert(
+                    chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
+                        alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
+                        ty: ty.lower(env)?,
+                    }),
+                    chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
+                );
+                set
+            }
             WhereClause::LifetimeOutlives { a, b } => {
-                vec![chalk_ir::WhereClause::LifetimeOutlives(
+                let mut set = IndexSet::new();
+                set.insert(chalk_ir::WhereClause::LifetimeOutlives(
                     chalk_ir::LifetimeOutlives {
                         a: a.lower(env)?,
                         b: b.lower(env)?,
                     },
-                )]
+                ));
+                set
             }
             WhereClause::TypeOutlives { ty, lifetime } => {
-                vec![chalk_ir::WhereClause::TypeOutlives(
+                let mut set = IndexSet::new();
+                set.insert(chalk_ir::WhereClause::TypeOutlives(
                     chalk_ir::TypeOutlives {
                         ty: ty.lower(env)?,
                         lifetime: lifetime.lower(env)?,
                     },
-                )]
+                ));
+                set
             }
         })
     }
 }
 
 impl LowerWithEnv for QuantifiedWhereClause {
-    type Lowered = Vec<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
+    type Lowered = IndexSet<chalk_ir::QuantifiedWhereClause<ChalkIr>>;
 
     /// Lower from an AST `where` clause to an internal IR.
     /// Some AST `where` clauses can lower to multiple ones, this is why we return a `Vec`.
@@ -197,7 +211,7 @@ impl LowerWithEnv for QuantifiedWhereClause {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
         let binders = env.in_binders(variable_kinds, |env| Ok(self.where_clause.lower(env)?))?;
-        Ok(binders.into_iter().collect())
+        Ok(binders.into_iter().collect::<IndexSet<_>>())
     }
 }
 
@@ -573,7 +587,7 @@ impl LowerWithEnv for [QuantifiedInlineBound] {
             .iter()
             .chain(auto_traits.iter())
             .map(|(b, _)| b.lower(env))
-            .collect()
+            .collect::<IndexSet<_>>()
     }
 }
 
