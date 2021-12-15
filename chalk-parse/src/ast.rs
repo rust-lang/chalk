@@ -1,4 +1,3 @@
-use indexmap::IndexSet;
 use std::fmt;
 use string_cache::DefaultAtom as Atom;
 
@@ -187,7 +186,7 @@ pub struct OpaqueTyDefn {
     pub variable_kinds: Vec<VariableKind>,
     pub name: Identifier,
     pub bounds: Vec<QuantifiedInlineBound>,
-    pub where_clauses: IndexSet<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
