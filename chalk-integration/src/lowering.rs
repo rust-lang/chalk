@@ -8,7 +8,7 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{self, IntoWhereClauses};
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexMap;
 use program_lowerer::ProgramLowerer;
 use string_cache::DefaultAtom as Atom;
 use tracing::debug;
@@ -542,7 +542,7 @@ impl LowerWithEnv for QuantifiedInlineBound {
 }
 
 impl LowerWithEnv for [QuantifiedInlineBound] {
-    type Lowered = IndexSet<rust_ir::QuantifiedInlineBound<ChalkIr>>;
+    type Lowered = Vec<rust_ir::QuantifiedInlineBound<ChalkIr>>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         fn trait_identifier(bound: &InlineBound) -> &Identifier {
@@ -552,15 +552,15 @@ impl LowerWithEnv for [QuantifiedInlineBound] {
             }
         }
 
-        let mut regular_traits = IndexSet::new();
-        let mut auto_traits = IndexSet::new();
+        let mut regular_traits = Vec::new();
+        let mut auto_traits = Vec::new();
 
         for b in self {
             let id = env.lookup_trait(trait_identifier(&b.bound))?;
             if env.auto_trait(id) {
-                auto_traits.insert((b, id))
+                auto_traits.push((b, id))
             } else {
-                regular_traits.insert((b, id))
+                regular_traits.push((b, id))
             }
         }
 
