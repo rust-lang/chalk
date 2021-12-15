@@ -66,7 +66,10 @@ impl ProgramLowerer {
                         let addl_variable_kinds = defn.all_parameters();
                         let lookup = AssociatedTyLookup {
                             id: AssocTypeId(self.next_item_id()),
-                            addl_variable_kinds: addl_variable_kinds.anonymize(),
+                            addl_variable_kinds: addl_variable_kinds
+                                .into_iter()
+                                .collect::<Vec<_>>()
+                                .anonymize(),
                         };
                         self.associated_ty_lookups
                             .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
@@ -295,9 +298,13 @@ impl ProgramLowerer {
                         variable_kinds.extend(trait_defn.all_parameters());
 
                         let binders = empty_env.in_binders(variable_kinds, |env| {
+                            let i1 = assoc_ty_defn.bounds.lower(&env)?;
+                            let i2 = assoc_ty_defn.where_clauses.lower(&env)?;
+                            let v1 = i1.into_iter().collect::<Vec<_>>();
+                            let v2 = i2.into_iter().collect::<Vec<_>>();
                             Ok(rust_ir::AssociatedTyDatumBound {
-                                bounds: assoc_ty_defn.bounds.lower(&env)?,
-                                where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
+                                bounds: v1,
+                                where_clauses: v2,
                             })
                         })?;
 
@@ -393,8 +400,7 @@ impl ProgramLowerer {
                                             .collect())
                                     },
                                 )?;
-                            let where_clauses: chalk_ir::Binders<Vec<chalk_ir::Binders<_>>> = env
-                                .in_binders(
+                            let where_clauses = env.in_binders(
                                 Some(chalk_ir::WithKind::new(
                                     chalk_ir::VariableKind::Ty(TyVariableKind::General),
                                     Atom::from(FIXME_SELF),
@@ -518,7 +524,10 @@ macro_rules! lower_type_kind {
                     sort: TypeSort::$sort,
                     name: self.name.str.clone(),
                     binders: chalk_ir::Binders::new(
-                        VariableKinds::from_iter(ChalkIr, $params(self).anonymize()),
+                        VariableKinds::from_iter(
+                            ChalkIr,
+                            $params(self).into_iter().collect::<Vec<_>>().anonymize(),
+                        ),
                         crate::Unit,
                     ),
                 })

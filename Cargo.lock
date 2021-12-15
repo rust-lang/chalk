@@ -154,6 +154,7 @@ version = "0.76.0-dev.0"
 dependencies = [
  "bitflags",
  "chalk-derive",
+ "indexmap",
  "lazy_static",
 ]
 
