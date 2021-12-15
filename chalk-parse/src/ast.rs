@@ -39,7 +39,7 @@ pub struct ForeignDefn(pub Identifier);
 pub struct AdtDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
-    pub where_clauses: IndexSet<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub variants: Vec<Variant>,
     pub flags: AdtFlags,
     pub repr: AdtRepr,
@@ -110,7 +110,7 @@ pub struct FnSig {
 pub struct FnDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
-    pub where_clauses: IndexSet<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub argument_types: Vec<Ty>,
     pub return_type: Ty,
     pub sig: FnSig,
@@ -140,7 +140,7 @@ impl Default for FnAbi {
 pub struct TraitDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
-    pub where_clauses: IndexSet<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
     pub flags: TraitFlags,
     pub well_known: Option<WellKnownTrait>,
@@ -178,7 +178,7 @@ pub struct AssocTyDefn {
     pub name: Identifier,
     pub variable_kinds: Vec<VariableKind>,
     pub bounds: Vec<QuantifiedInlineBound>,
-    pub where_clauses: IndexSet<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -266,7 +266,7 @@ pub struct Impl {
     pub variable_kinds: Vec<VariableKind>,
     pub trait_ref: TraitRef,
     pub polarity: Polarity,
-    pub where_clauses: IndexSet<QuantifiedWhereClause>,
+    pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
     pub impl_type: ImplType,
 }
