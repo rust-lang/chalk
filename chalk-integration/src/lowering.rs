@@ -556,7 +556,9 @@ impl LowerWithEnv for QuantifiedInlineBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
-        env.in_binders(variable_kinds, |env| self.bound.lower(env))
+        let x = env.in_binders(variable_kinds, |env| self.bound.lower(env))?;
+        //
+        Ok(rust_ir::QuantifiedInlineBound(x))
     }
 }
 

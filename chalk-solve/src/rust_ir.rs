@@ -340,8 +340,8 @@ pub enum InlineBound<I: Interner> {
     AliasEqBound(AliasEqBound<I>),
 }
 
-#[allow(type_alias_bounds)]
-pub type QuantifiedInlineBound<I: Interner> = Binders<InlineBound<I>>;
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+pub struct QuantifiedInlineBound<I: Interner>(pub Binders<InlineBound<I>>);
 
 pub trait IntoWhereClauses<I: Interner> {
     type Output;
@@ -370,7 +370,7 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
 
     fn into_where_clauses(&self, interner: I, self_ty: Ty<I>) -> Vec<QuantifiedWhereClause<I>> {
         let self_ty = self_ty.shifted_in(interner);
-        self.map_ref(|b| b.into_where_clauses(interner, self_ty))
+        self.0.map_ref(|b| b.into_where_clauses(interner, self_ty))
             .into_iter()
             .collect()
     }

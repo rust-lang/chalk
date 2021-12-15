@@ -880,7 +880,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
                 //    }
                 for quantified_bound in bounds {
-                    builder.push_binders(quantified_bound, |builder, bound| {
+                    builder.push_binders(quantified_bound.0, |builder, bound| {
                         for wc in bound.into_where_clauses(interner, projection_ty.clone()) {
                             builder.push_clause(
                                 wc.into_from_env_goal(interner),

@@ -1,7 +1,7 @@
 use std::fmt;
 use string_cache::DefaultAtom as Atom;
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Span {
     pub lo: usize,
     pub hi: usize,
@@ -98,7 +98,7 @@ pub struct AdtRepr {
     pub int: Option<Ty>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct FnSig {
     pub abi: FnAbi,
     pub safety: Safety,
@@ -126,7 +126,7 @@ pub struct ClosureDefn {
     pub upvars: Vec<Ty>,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash)]
 pub struct FnAbi(pub Atom);
 
 impl Default for FnAbi {
@@ -189,7 +189,7 @@ pub struct OpaqueTyDefn {
     pub where_clauses: Vec<QuantifiedWhereClause>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum VariableKind {
     Ty(Identifier),
     IntegerTy(Identifier),
@@ -198,7 +198,7 @@ pub enum VariableKind {
     Const(Identifier),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum GenericArg {
     Ty(Ty),
     Lifetime(Lifetime),
@@ -206,26 +206,26 @@ pub enum GenericArg {
     Const(Const),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Const {
     Id(Identifier),
     Value(u32),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
 pub enum InlineBound {
     TraitBound(TraitBound),
     AliasEqBound(AliasEqBound),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct QuantifiedInlineBound {
     pub variable_kinds: Vec<VariableKind>,
     pub bound: InlineBound,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct TraitBound {
@@ -233,7 +233,7 @@ pub struct TraitBound {
     pub args_no_self: Vec<GenericArg>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 /// Represents an alias equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
 pub struct AliasEqBound {
@@ -284,7 +284,7 @@ pub struct AssocTyValue {
     pub default: bool,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Ty {
     Id {
         name: Identifier,
@@ -331,7 +331,7 @@ pub enum Ty {
     Never,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum IntTy {
     Isize,
     I8,
@@ -341,7 +341,7 @@ pub enum IntTy {
     I128,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum UintTy {
     Usize,
     U8,
@@ -351,13 +351,13 @@ pub enum UintTy {
     U128,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum FloatTy {
     F32,
     F64,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum ScalarType {
     Bool,
     Char,
@@ -366,13 +366,13 @@ pub enum ScalarType {
     Float(FloatTy),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Mutability {
     Mut,
     Not,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Safety {
     Safe,
     Unsafe,
@@ -384,7 +384,7 @@ impl Default for Safety {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub enum Lifetime {
     Id { name: Identifier },
     Static,
@@ -392,14 +392,14 @@ pub enum Lifetime {
     Empty,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ProjectionTy {
     pub trait_ref: TraitRef,
     pub name: Identifier,
     pub args: Vec<GenericArg>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct TraitRef {
     pub trait_name: Identifier,
     pub args: Vec<GenericArg>,
@@ -424,7 +424,7 @@ impl Polarity {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Identifier {
     pub str: Atom,
     pub span: Span,
