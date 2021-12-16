@@ -8,8 +8,7 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{self, IntoWhereClauses};
-use indexmap::IndexMap;
-use indexmap::IndexSet;
+use indexmap::{indexset, IndexMap, IndexSet};
 use program_lowerer::ProgramLowerer;
 use string_cache::DefaultAtom as Atom;
 use tracing::debug;
@@ -159,40 +158,32 @@ impl LowerWithEnv for WhereClause {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         Ok(match self {
             WhereClause::Implemented { trait_ref } => {
-                let mut set = IndexSet::new();
-                set.insert(chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?));
-                set
+                indexset! { chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)}
             }
             WhereClause::ProjectionEq { projection, ty } => {
-                let mut set = IndexSet::new();
-                set.insert(chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
-                    alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
-                    ty: ty.lower(env)?,
-                }));
-                set.insert(chalk_ir::WhereClause::Implemented(
-                    projection.trait_ref.lower(env)?,
-                ));
-                set
+                indexset! {
+                    chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
+                        alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
+                        ty: ty.lower(env)?}),
+                chalk_ir::WhereClause::Implemented(
+                    projection.trait_ref.lower(env)?),
+                }
             }
             WhereClause::LifetimeOutlives { a, b } => {
-                let mut set = IndexSet::new();
-                set.insert(chalk_ir::WhereClause::LifetimeOutlives(
+                indexset! {chalk_ir::WhereClause::LifetimeOutlives(
                     chalk_ir::LifetimeOutlives {
                         a: a.lower(env)?,
                         b: b.lower(env)?,
                     },
-                ));
-                set
+                )}
             }
             WhereClause::TypeOutlives { ty, lifetime } => {
-                let mut set = IndexSet::new();
-                set.insert(chalk_ir::WhereClause::TypeOutlives(
+                indexset! {chalk_ir::WhereClause::TypeOutlives(
                     chalk_ir::TypeOutlives {
                         ty: ty.lower(env)?,
                         lifetime: lifetime.lower(env)?,
                     },
-                ));
-                set
+                )}
             }
         })
     }
