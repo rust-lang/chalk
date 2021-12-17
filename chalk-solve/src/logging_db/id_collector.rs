@@ -6,8 +6,9 @@ use chalk_ir::{
     visit::{SuperVisit, Visit},
     AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
-use std::collections::BTreeSet;
 use std::ops::ControlFlow;
+
+use indexmap::IndexSet;
 
 /// Collects the identifiers needed to resolve all the names for a given
 /// set of identifers, excluding identifiers we already have.
@@ -34,11 +35,11 @@ use std::ops::ControlFlow;
 /// resolution is successful.
 pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
     db: &'i DB,
-    identifiers: &'_ BTreeSet<RecordedItemId<I>>,
-) -> BTreeSet<RecordedItemId<I>> {
+    identifiers: &'_ IndexSet<RecordedItemId<I>>,
+) -> IndexSet<RecordedItemId<I>> {
     let mut collector = IdCollector {
         db,
-        found_identifiers: BTreeSet::new(),
+        found_identifiers: IndexSet::new(),
     };
     for id in identifiers {
         match *id {
@@ -96,7 +97,7 @@ pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
 
 struct IdCollector<'i, I: Interner, DB: RustIrDatabase<I>> {
     db: &'i DB,
-    found_identifiers: BTreeSet<RecordedItemId<I>>,
+    found_identifiers: IndexSet<RecordedItemId<I>>,
 }
 
 impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {

@@ -1,6 +1,7 @@
 //! Persistent state passed down between writers.
 //!
 //! This is essentially `InternalWriterState` and other things supporting that.
+use core::hash::Hash;
 use std::{
     borrow::Borrow,
     collections::BTreeMap,
@@ -12,6 +13,7 @@ use std::{
 
 use crate::RustIrDatabase;
 use chalk_ir::{interner::Interner, *};
+use indexmap::IndexMap;
 use itertools::Itertools;
 
 /// Like a BoundVar, but with the debrujin index inverted so as to create a
@@ -36,31 +38,31 @@ impl Display for InvertedBoundVar {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum UnifiedId<I: Interner> {
     AdtId(I::InternedAdtId),
     DefId(I::DefId),
 }
 
 #[derive(Debug)]
-pub struct IdAliasStore<T: Ord> {
+pub struct IdAliasStore<T> {
     /// Map from the DefIds we've encountered to a u32 alias id unique to all ids
     /// the same name.
-    aliases: BTreeMap<T, u32>,
+    aliases: IndexMap<T, u32>,
     /// Map from each name to the next unused u32 alias id.
     next_unused_for_name: BTreeMap<String, u32>,
 }
 
-impl<T: Ord> Default for IdAliasStore<T> {
+impl<T> Default for IdAliasStore<T> {
     fn default() -> Self {
         IdAliasStore {
-            aliases: BTreeMap::default(),
+            aliases: IndexMap::default(),
             next_unused_for_name: BTreeMap::default(),
         }
     }
 }
 
-impl<T: Copy + Ord> IdAliasStore<T> {
+impl<T: Copy + Eq + Hash> IdAliasStore<T> {
     fn alias_for_id_name(&mut self, id: T, name: String) -> String {
         let next_unused_for_name = &mut self.next_unused_for_name;
         let alias = *self.aliases.entry(id).or_insert_with(|| {
