@@ -1,6 +1,9 @@
 #![allow(non_snake_case)]
 
-use expect_test::{Expect, expect};
+use std::sync::Arc;
+
+use chalk_integration::program::Program;
+use expect_test::{expect, Expect};
 
 use crate::test_util::assert_same;
 use chalk_integration::db::ChalkDatabase;
@@ -91,8 +94,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::slg_default(), TestGoal::Aggregated($expected))
-                      (stringify!($goal), SolverChoice::recursive_default(), TestGoal::Aggregated($expected))
+                      (stringify!($goal), vec![SolverChoice::slg_default(), SolverChoice::recursive_default()], TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
@@ -107,7 +109,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::slg_default(), TestGoal::All(vec![$($expected),*]))
+                      (stringify!($goal), vec![SolverChoice::slg_default()], TestGoal::All(vec![$($expected),*]))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
@@ -121,7 +123,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), SolverChoice::default(), TestGoal::First(vec![$($expected),*]))
+                      (stringify!($goal), vec![SolverChoice::default()], TestGoal::First(vec![$($expected),*]))
               ]
               @unparsed_goals[$($unparsed_goals)*])
     };
@@ -140,7 +142,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+                      (stringify!($goal), vec![$C], TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
@@ -154,7 +156,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+                      (stringify!($goal), vec![$C], TestGoal::Aggregated($expected))
               ]
               @unparsed_goals[goal $goal yields $($unparsed_tail)*])
     };
@@ -166,7 +168,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::Aggregated($expected))
+                      (stringify!($goal), vec![$C], TestGoal::Aggregated($expected))
                 ]
               @unparsed_goals[])
     };
@@ -185,7 +187,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::All(vec![$($expected),*]))
+                      (stringify!($goal), vec![$C], TestGoal::All(vec![$($expected),*]))
               ]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
@@ -197,7 +199,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::All(vec![$($expected),*]))
+                      (stringify!($goal), vec![$C], TestGoal::All(vec![$($expected),*]))
                 ]
               @unparsed_goals[])
     };
@@ -216,7 +218,7 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::First(vec![$($expected),*]))
+                      (stringify!($goal), vec![$C], TestGoal::First(vec![$($expected),*]))
               ]
               @unparsed_goals[goal $($unparsed_goals)*])
     };
@@ -228,13 +230,17 @@ macro_rules! parse_test_data {
         parse_test_data!(@program[$program]
               @parsed_goals[
                   $($parsed_goals)*
-                      (stringify!($goal), $C, TestGoal::First(vec![$($expected),*]))
+                      (stringify!($goal), vec![$C], TestGoal::First(vec![$($expected),*]))
                 ]
               @unparsed_goals[])
     };
 }
 
-fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, coherence: bool) {
+fn solve_goal(
+    program_text: &str,
+    goals: Vec<(&str, Vec<SolverChoice>, TestGoal)>,
+    coherence: bool,
+) {
     with_tracing_logs(|| {
         println!("program {}", program_text);
         assert!(program_text.starts_with("{"));
@@ -251,7 +257,28 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
             db.program_ir().unwrap()
         };
 
-        for (goal_text, solver_choice, expected) in goals {
+        for (goal_text, solver_choices, expected) in goals {
+            let solver_choices = &*solver_choices;
+            let solver_choice = match solver_choices {
+                [] => panic!("No solvers?"),
+                [x] => *x,
+                _ => {
+                    let expected = match expected {
+                        TestGoal::Aggregated(x) => x,
+                        _ => todo!("solver comparison only supported for `Aggregated` goals"),
+                    };
+
+                    solve_aggregated(
+                        &mut db,
+                        program.clone(),
+                        goal_text,
+                        solver_choices,
+                        expected,
+                    );
+                    continue;
+                }
+            };
+
             match (&solver_choice, &expected) {
                 (SolverChoice::Recursive { .. }, TestGoal::All(_))
                 | (SolverChoice::Recursive { .. }, TestGoal::First(_)) => {
@@ -331,6 +358,53 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
             });
         }
     })
+}
+
+fn solve_aggregated(
+    db: &mut ChalkDatabase,
+    program: Arc<Program>,
+    goal_text: &str,
+    choices: &[SolverChoice],
+    expected: Expect,
+) {
+    let mut solutions = vec![];
+
+    for solver_choice in choices.iter().copied() {
+        if db.solver_choice() != solver_choice {
+            db.set_solver_choice(solver_choice);
+        }
+
+        chalk_integration::tls::set_current_program(&program, || {
+            println!("----------------------------------------------------------------------");
+            println!("goal {}", goal_text);
+            assert!(goal_text.starts_with("{"));
+            assert!(goal_text.ends_with("}"));
+            let goal = lower_goal(
+                &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
+                &*program,
+            )
+            .unwrap();
+
+            println!("using solver: {:?}", solver_choice);
+            let peeled_goal = goal.into_peeled_goal(db.interner());
+            let result = db.solve(&peeled_goal);
+            solutions.push(format_solution(result, db.interner()));
+        });
+    }
+
+    let (head, tail) = solutions
+        .split_first()
+        .expect("Test requires at least one solver");
+    for (i, other) in tail.iter().enumerate() {
+        println!(
+            "\ncomparing solvers:\n\tleft: {:?}\n\tright: {:?}\n",
+            &choices[0],
+            &choices[i + 1]
+        );
+        assert_same(head, other);
+    }
+
+    expected.assert_eq(head);
 }
 
 mod arrays;

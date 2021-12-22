@@ -27,11 +27,15 @@ macro_rules! logging_db_output_sufficient {
 
 pub fn logging_db_output_sufficient(
     program_text: &str,
-    goals: Vec<(&str, SolverChoice, TestGoal)>,
+    goals: Vec<(&str, Vec<SolverChoice>, TestGoal)>,
 ) {
     println!("program {}", program_text);
     assert!(program_text.starts_with("{"));
     assert!(program_text.ends_with("}"));
+
+    let goals = goals
+        .iter()
+        .flat_map(|(a, bs, c)| bs.into_iter().map(move |b| (a, b, c)));
 
     let output_text = {
         let db = ChalkDatabase::with(
@@ -41,6 +45,7 @@ pub fn logging_db_output_sufficient(
 
         let program = db.program_ir().unwrap();
         let wrapped = LoggingRustIrDatabase::<_, Program, _>::new(program.clone());
+
         chalk_integration::tls::set_current_program(&program, || {
             for (goal_text, solver_choice, expected) in goals.clone() {
                 let mut solver = solver_choice.into_solver();
