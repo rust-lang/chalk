@@ -44,8 +44,6 @@ fn immut_refs_are_sized() {
 #[test]
 fn mut_refs_are_well_formed() {
     test! {
-        program { }
-
         goal {
             forall<'a, T> { WellFormed(&'a mut T) }
         } yields {

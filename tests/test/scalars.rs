@@ -116,8 +116,6 @@ fn scalar_trait_impl() {
 #[test]
 fn scalars_are_well_formed() {
     test! {
-        program { }
-
         goal { WellFormed(i8) } yields { "Unique" }
         goal { WellFormed(i16) } yields { "Unique" }
         goal { WellFormed(i32) } yields { "Unique" }

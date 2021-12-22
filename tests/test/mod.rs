@@ -55,6 +55,11 @@ macro_rules! test {
         let (program, goals) = parse_test_data!(program $program $($goals)*);
         solve_goal(program, goals, false)
     }};
+
+    // If `program` is omitted, default to an empty one.
+    ($($goals:tt)*) => {
+        test!(program {} $($goals)*)
+    };
 }
 
 macro_rules! parse_test_data {

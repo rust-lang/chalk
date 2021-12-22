@@ -108,8 +108,6 @@ fn generic_impl() {
 #[test]
 fn placeholders_eq() {
     test! {
-        program {}
-
         goal {
             forall<const C, const D> {
                 C = D
