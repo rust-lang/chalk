@@ -26,7 +26,7 @@ fn unpin_auto_trait() {
         goal {
             A: Unpin
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -43,7 +43,7 @@ fn unpin_negative() {
         goal {
             A: Unpin
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -61,7 +61,7 @@ fn unpin_inherit_negative() {
         goal {
             B: Unpin
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -80,7 +80,7 @@ fn unpin_overwrite() {
         goal {
             B: Unpin
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -112,19 +112,19 @@ fn generator_unpin() {
         goal {
             static_gen: Unpin
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             movable_gen: Unpin
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             movable_with_pin: Unpin
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }

@@ -50,7 +50,7 @@ fn static_outlives() {
                 Bar: Foo<'a>
             }
         } yields {
-            "Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: 'static }] }"
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: 'static }] }"]]
         }
 
         goal {
@@ -58,7 +58,7 @@ fn static_outlives() {
                 Bar: Foo<'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: 'static }]"
+            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: 'static }]"]]
         }
     }
 }
@@ -78,7 +78,7 @@ fn empty_outlives() {
                 Bar: Foo<'a>
             }
         } yields {
-            "Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '<empty> }] }"
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '<empty> }] }"]]
         }
 
         goal {
@@ -86,7 +86,7 @@ fn empty_outlives() {
                 Bar: Foo<'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '<empty> }]"
+            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '<empty> }]"]]
         }
     }
 }
@@ -106,7 +106,7 @@ fn erased_outlives() {
                 Bar: Foo<'a>
             }
         } yields {
-            "Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '<erased> }] }"
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '<erased> }] }"]]
         }
 
         goal {
@@ -114,7 +114,7 @@ fn erased_outlives() {
                 Bar: Foo<'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '<erased> }]"
+            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '<erased> }]"]]
         }
     }
 }
@@ -131,19 +131,19 @@ fn static_impls() {
         goal {
             &'static Foo: Bar
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             forall<'a> { &'a Foo: Bar }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             exists<'a> { &'a Foo: Bar }
         } yields {
-            "Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [] }"
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [] }"]]
         }
     }
 }
@@ -160,7 +160,7 @@ fn erased_impls() {
         goal {
             &'erased Foo: Bar
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -177,7 +177,7 @@ fn empty_impls() {
         goal {
             &'empty Foo: Bar
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }

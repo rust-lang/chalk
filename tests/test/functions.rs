@@ -11,13 +11,13 @@ fn functions_are_sized() {
         goal {
             fn(()): Sized
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             fn([u8]): Sized
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -33,13 +33,13 @@ fn functions_are_copy() {
         goal {
             fn(()): Copy
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             fn([u8]): Copy
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -73,40 +73,40 @@ fn function_implement_fn_traits() {
         goal {
             fn(u8): FnOnce<(u8,)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Same as above, but for FnMut
         goal {
             fn(u8): FnMut<(u8,)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Same as above, but for Fn
         goal {
             fn(u8): Fn<(u8,)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Make sure unsafe function pointers don't implement FnOnce
         goal {
             unsafe fn(u8): FnOnce<(u8,)>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         // Same as above but for FnMut
         goal {
             unsafe fn(u8): FnMut<(u8,)>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         // Same as above but for Fn
         goal {
             unsafe fn(u8): Fn<(u8,)>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Function pointres implicity return `()` when no return
@@ -115,14 +115,14 @@ fn function_implement_fn_traits() {
         goal {
             Normalize(<fn(u8) as FnOnce<(u8,)>>::Output -> ())
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Tests normalizing when an explicit return type is used
         goal {
             Normalize(<fn(u8) -> bool as FnOnce<(u8,)>>::Output -> bool)
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Tests that we fail to normalize when there's a mismatch with
@@ -130,7 +130,7 @@ fn function_implement_fn_traits() {
         goal {
             Normalize(<fn(u8) -> bool as FnOnce<(u8,)>>::Output -> u8)
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Ensures that we don't find a solution when doing so would
@@ -141,7 +141,7 @@ fn function_implement_fn_traits() {
                 Normalize(<fn(u8, V) -> T as FnOnce<(u8, V)>>::Output -> V)
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Tests that we can normalize a generic function pointer type
@@ -152,7 +152,7 @@ fn function_implement_fn_traits() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := !1_0], lifetime constraints []"
+            expect![["Unique; substitution [?0 := !1_0], lifetime constraints []"]]
         }
 
         // Tests that we properly tuple function arguments when constrcting
@@ -160,7 +160,7 @@ fn function_implement_fn_traits() {
         goal {
             fn(u8, u32): FnOnce<(u8,u32)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Tests that we don't find a solution when fully monomorphic
@@ -168,7 +168,7 @@ fn function_implement_fn_traits() {
         goal {
             fn(i32): FnOnce<(bool,)>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Tests function pointer types that use the function's binder
@@ -179,7 +179,7 @@ fn function_implement_fn_traits() {
                 for<'b> fn(&'b u8): FnOnce<(&'a u8,)>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Tests that a 'stricter' function (requires lifetimes to be the same)
@@ -191,7 +191,7 @@ fn function_implement_fn_traits() {
                 for<'c> fn(&'c u8, &'c i32): FnOnce<(&'a u8, &'b i32)>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"
+            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
         }
 
         // Tests the opposite case as the previous test: a 'less strict' function
@@ -203,7 +203,7 @@ fn function_implement_fn_traits() {
                 for<'b, 'c> fn(&'b u8, &'c i32): FnOnce<(&'a u8, &'a i32)>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         // Similiar to the above test, but for types instead of lifetimes:
@@ -215,7 +215,7 @@ fn function_implement_fn_traits() {
                 fn(T, T): FnOnce<(T, U)>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Tests the opposite case as a previous test: a 'less strict'
@@ -226,7 +226,7 @@ fn function_implement_fn_traits() {
                 fn(T, U): FnOnce<(T, T)>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Tests that we flounder for inference variables
@@ -235,14 +235,14 @@ fn function_implement_fn_traits() {
                 T: FnOnce<()>
             }
         } yields_first[SolverChoice::slg(3, None)] {
-            "Floundered"
+            expect![["Floundered"]]
         }
 
         // No solution for alias type
         goal {
             MyOpaque: FnOnce<()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }

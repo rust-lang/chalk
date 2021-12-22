@@ -18,19 +18,19 @@ fn single_impl() {
                 S<N>: Trait
             }
         } yields {
-            "Unique; substitution [?0 := 3], lifetime constraints []"
+            expect![["Unique; substitution [?0 := 3], lifetime constraints []"]]
         }
 
         goal {
             S<3>: Trait
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             S<5>: Trait
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
 
@@ -39,7 +39,7 @@ fn single_impl() {
                 S<N>: Trait
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
     }
@@ -62,7 +62,7 @@ fn multi_impl() {
                 S<N>: Trait
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -70,7 +70,7 @@ fn multi_impl() {
                 S<N>: Trait
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
     }
@@ -92,7 +92,7 @@ fn generic_impl() {
                 S<N>: Trait
             }
         } yields {
-            "Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"]]
         }
 
         goal {
@@ -100,7 +100,7 @@ fn generic_impl() {
                 S<N>: Trait
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -113,7 +113,7 @@ fn placeholders_eq() {
                 C = D
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -123,7 +123,7 @@ fn placeholders_eq() {
                 }
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -133,7 +133,7 @@ fn placeholders_eq() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := !1_0], lifetime constraints []"
+            expect![["Unique; substitution [?0 := !1_0], lifetime constraints []"]]
         }
 
         goal {
@@ -143,7 +143,7 @@ fn placeholders_eq() {
                 }
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }

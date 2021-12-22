@@ -14,31 +14,31 @@ fn scalar_in_tuple_trait_impl() {
         goal {
             (usize, usize): Foo
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             (usize, isize): Foo
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             (usize, bool): Foo
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             (usize, usize, usize): Foo
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             (char, u8, i8): Foo
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -76,39 +76,39 @@ fn scalar_trait_impl() {
 
         }
 
-        goal { i8: Foo } yields { "Unique" }
-        goal { i16: Foo } yields { "Unique" }
-        goal { i32: Foo } yields { "Unique" }
-        goal { i64: Foo } yields { "Unique" }
-        goal { i128: Foo } yields { "Unique" }
-        goal { isize: Foo } yields { "Unique" }
-        goal { u8: Foo } yields { "Unique" }
-        goal { u16: Foo } yields { "Unique" }
-        goal { u32: Foo } yields { "Unique" }
-        goal { u64: Foo } yields { "Unique" }
-        goal { u128: Foo } yields { "Unique" }
-        goal { usize: Foo } yields { "Unique" }
-        goal { f32: Foo } yields { "Unique" }
-        goal { f64: Foo } yields { "Unique" }
-        goal { bool: Foo } yields { "Unique" }
-        goal { char: Foo } yields { "Unique" }
+        goal { i8: Foo } yields { expect![["Unique"]] }
+        goal { i16: Foo } yields { expect![["Unique"]] }
+        goal { i32: Foo } yields { expect![["Unique"]] }
+        goal { i64: Foo } yields { expect![["Unique"]] }
+        goal { i128: Foo } yields { expect![["Unique"]] }
+        goal { isize: Foo } yields { expect![["Unique"]] }
+        goal { u8: Foo } yields { expect![["Unique"]] }
+        goal { u16: Foo } yields { expect![["Unique"]] }
+        goal { u32: Foo } yields { expect![["Unique"]] }
+        goal { u64: Foo } yields { expect![["Unique"]] }
+        goal { u128: Foo } yields { expect![["Unique"]] }
+        goal { usize: Foo } yields { expect![["Unique"]] }
+        goal { f32: Foo } yields { expect![["Unique"]] }
+        goal { f64: Foo } yields { expect![["Unique"]] }
+        goal { bool: Foo } yields { expect![["Unique"]] }
+        goal { char: Foo } yields { expect![["Unique"]] }
 
-        goal { i8: UnsignedFoo } yields { "No possible solution" }
-        goal { i16: UnsignedFoo } yields { "No possible solution" }
-        goal { i32: UnsignedFoo } yields { "No possible solution" }
-        goal { i64: UnsignedFoo } yields { "No possible solution" }
-        goal { i128: UnsignedFoo } yields { "No possible solution" }
-        goal { isize: UnsignedFoo } yields { "No possible solution" }
-        goal { u8: UnsignedFoo } yields { "Unique" }
-        goal { u16: UnsignedFoo } yields { "Unique" }
-        goal { u32: UnsignedFoo } yields { "Unique" }
-        goal { u64: UnsignedFoo } yields { "Unique" }
-        goal { u128: UnsignedFoo } yields { "Unique" }
-        goal { usize: UnsignedFoo } yields { "Unique" }
-        goal { f32: UnsignedFoo } yields { "No possible solution" }
-        goal { f64: UnsignedFoo } yields { "No possible solution" }
-        goal { bool: UnsignedFoo } yields { "No possible solution" }
-        goal { char: UnsignedFoo } yields { "No possible solution" }
+        goal { i8: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { i16: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { i32: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { i64: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { i128: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { isize: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { u8: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { u16: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { u32: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { u64: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { u128: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { usize: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { f32: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { f64: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { bool: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { char: UnsignedFoo } yields { expect![["No possible solution"]] }
 
     }
 }
@@ -116,22 +116,22 @@ fn scalar_trait_impl() {
 #[test]
 fn scalars_are_well_formed() {
     test! {
-        goal { WellFormed(i8) } yields { "Unique" }
-        goal { WellFormed(i16) } yields { "Unique" }
-        goal { WellFormed(i32) } yields { "Unique" }
-        goal { WellFormed(i64) } yields { "Unique" }
-        goal { WellFormed(i128) } yields { "Unique" }
-        goal { WellFormed(isize) } yields { "Unique" }
-        goal { WellFormed(u8) } yields { "Unique" }
-        goal { WellFormed(u16) } yields { "Unique" }
-        goal { WellFormed(u32) } yields { "Unique" }
-        goal { WellFormed(u64) } yields { "Unique" }
-        goal { WellFormed(u128) } yields { "Unique" }
-        goal { WellFormed(usize) } yields { "Unique" }
-        goal { WellFormed(f32) } yields { "Unique" }
-        goal { WellFormed(f64) } yields { "Unique" }
-        goal { WellFormed(bool) } yields { "Unique" }
-        goal { WellFormed(char) } yields { "Unique" }
+        goal { WellFormed(i8) } yields { expect![["Unique"]] }
+        goal { WellFormed(i16) } yields { expect![["Unique"]] }
+        goal { WellFormed(i32) } yields { expect![["Unique"]] }
+        goal { WellFormed(i64) } yields { expect![["Unique"]] }
+        goal { WellFormed(i128) } yields { expect![["Unique"]] }
+        goal { WellFormed(isize) } yields { expect![["Unique"]] }
+        goal { WellFormed(u8) } yields { expect![["Unique"]] }
+        goal { WellFormed(u16) } yields { expect![["Unique"]] }
+        goal { WellFormed(u32) } yields { expect![["Unique"]] }
+        goal { WellFormed(u64) } yields { expect![["Unique"]] }
+        goal { WellFormed(u128) } yields { expect![["Unique"]] }
+        goal { WellFormed(usize) } yields { expect![["Unique"]] }
+        goal { WellFormed(f32) } yields { expect![["Unique"]] }
+        goal { WellFormed(f64) } yields { expect![["Unique"]] }
+        goal { WellFormed(bool) } yields { expect![["Unique"]] }
+        goal { WellFormed(char) } yields { expect![["Unique"]] }
     }
 }
 
@@ -142,21 +142,21 @@ fn scalars_are_sized() {
             #[lang(sized)] trait Sized { }
         }
 
-        goal { i8: Sized } yields { "Unique" }
-        goal { i16: Sized } yields { "Unique" }
-        goal { i32: Sized } yields { "Unique" }
-        goal { i64: Sized } yields { "Unique" }
-        goal { i128: Sized } yields { "Unique" }
-        goal { isize: Sized } yields { "Unique" }
-        goal { u8: Sized } yields { "Unique" }
-        goal { u16: Sized } yields { "Unique" }
-        goal { u32: Sized } yields { "Unique" }
-        goal { u64: Sized } yields { "Unique" }
-        goal { u128: Sized } yields { "Unique" }
-        goal { usize: Sized } yields { "Unique" }
-        goal { f32: Sized } yields { "Unique" }
-        goal { f64: Sized } yields { "Unique" }
-        goal { bool: Sized } yields { "Unique" }
-        goal { char: Sized } yields { "Unique" }
+        goal { i8: Sized } yields { expect![["Unique"]] }
+        goal { i16: Sized } yields { expect![["Unique"]] }
+        goal { i32: Sized } yields { expect![["Unique"]] }
+        goal { i64: Sized } yields { expect![["Unique"]] }
+        goal { i128: Sized } yields { expect![["Unique"]] }
+        goal { isize: Sized } yields { expect![["Unique"]] }
+        goal { u8: Sized } yields { expect![["Unique"]] }
+        goal { u16: Sized } yields { expect![["Unique"]] }
+        goal { u32: Sized } yields { expect![["Unique"]] }
+        goal { u64: Sized } yields { expect![["Unique"]] }
+        goal { u128: Sized } yields { expect![["Unique"]] }
+        goal { usize: Sized } yields { expect![["Unique"]] }
+        goal { f32: Sized } yields { expect![["Unique"]] }
+        goal { f64: Sized } yields { expect![["Unique"]] }
+        goal { bool: Sized } yields { expect![["Unique"]] }
+        goal { char: Sized } yields { expect![["Unique"]] }
     }
 }

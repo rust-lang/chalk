@@ -38,19 +38,19 @@ fn discriminant_kind_impl() {
         goal {
             A: DiscriminantKind
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             i32: DiscriminantKind
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             (i32, A): DiscriminantKind
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -58,7 +58,7 @@ fn discriminant_kind_impl() {
                 dyn Principal + 'a: DiscriminantKind
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -99,7 +99,7 @@ fn discriminant_kind_assoc() {
         goal {
             Normalize(<u32 as DiscriminantKind>::Discriminant -> u8)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // Same as above
@@ -108,14 +108,14 @@ fn discriminant_kind_assoc() {
                 Normalize(<dyn Principal + 'a as DiscriminantKind>::Discriminant -> u8)
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // Discriminant for enums with unspecified discriminant should be isize
         goal {
             Normalize(<A as DiscriminantKind>::Discriminant -> isize)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // Discriminant should be the same as specified in `repr`
@@ -123,25 +123,25 @@ fn discriminant_kind_assoc() {
         goal {
             Normalize(<B as DiscriminantKind>::Discriminant -> isize)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Normalize(<C as DiscriminantKind>::Discriminant -> i32)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Normalize(<D as DiscriminantKind>::Discriminant -> u32)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Normalize(<E as DiscriminantKind>::Discriminant -> usize)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         //--------
 
@@ -149,7 +149,7 @@ fn discriminant_kind_assoc() {
         goal {
             Normalize(<empty_gen as DiscriminantKind>::Discriminant -> u32)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // Placeholders don't have a determined discriminant
@@ -160,7 +160,7 @@ fn discriminant_kind_assoc() {
                 }
             }
         } yields {
-            "Ambiguous"
+            expect![["Ambiguous"]]
         }
     }
 }

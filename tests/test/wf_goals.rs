@@ -19,19 +19,19 @@ fn struct_wf() {
         goal {
             WellFormed(Foo<Bar>)
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             WellFormed(Foo<Baz>)
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             WellFormed(Foo<Foo<Baz>>)
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -53,19 +53,19 @@ fn enum_wf() {
         goal {
             WellFormed(Foo<Bar>)
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             WellFormed(Foo<Baz>)
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             WellFormed(Foo<Foo<Baz>>)
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -85,7 +85,7 @@ fn recursive_where_clause_on_type() {
         goal {
             WellFormed(S)
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -103,7 +103,7 @@ fn drop_compatible() {
         goal {
             compatible { not { exists<T> { S<T>: Drop } } }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -114,7 +114,7 @@ fn placeholder_wf() {
         goal {
             forall<T> { WellFormed(T) }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }

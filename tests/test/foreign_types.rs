@@ -12,7 +12,7 @@ fn foreign_ty_trait_impl() {
             impl Foo for A {}
         }
 
-        goal { A: Foo } yields { "Unique" }
+        goal { A: Foo } yields { expect![["Unique"]] }
     }
 }
 
@@ -33,7 +33,7 @@ fn foreign_ty_is_well_formed() {
             extern type A;
         }
 
-        goal { WellFormed(A) } yields { "Unique" }
+        goal { WellFormed(A) } yields { expect![["Unique"]] }
     }
 }
 
@@ -46,7 +46,7 @@ fn foreign_ty_is_not_sized() {
             extern type A;
         }
 
-        goal { not { A: Sized } } yields { "Unique" }
+        goal { not { A: Sized } } yields { expect![["Unique"]] }
     }
 }
 
@@ -59,7 +59,7 @@ fn foreign_ty_is_not_copy() {
             extern type A;
         }
 
-        goal { not { A: Copy } } yields { "Unique" }
+        goal { not { A: Copy } } yields { expect![["Unique"]] }
     }
 }
 
@@ -72,6 +72,6 @@ fn foreign_ty_is_not_clone() {
             extern type A;
         }
 
-        goal { not { A: Clone } } yields { "Unique" }
+        goal { not { A: Clone } } yields { expect![["Unique"]] }
     }
 }

@@ -13,7 +13,7 @@ fn arrays_are_sized() {
                 [u32; N]: Sized
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
     }
@@ -35,7 +35,7 @@ fn arrays_are_copy_if_element_copy() {
                 [Foo; N]: Copy
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -55,7 +55,7 @@ fn arrays_are_not_copy_if_element_not_copy() {
                 [Foo; N]: Copy
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -76,7 +76,7 @@ fn arrays_are_clone_if_element_clone() {
                 [Foo; N]: Clone
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -96,7 +96,7 @@ fn arrays_are_not_clone_if_element_not_clone() {
                 [Foo; N]: Clone
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -116,7 +116,7 @@ fn arrays_are_well_formed_if_elem_sized() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -124,7 +124,7 @@ fn arrays_are_well_formed_if_elem_sized() {
                 WellFormed([T; N])
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -132,7 +132,7 @@ fn arrays_are_well_formed_if_elem_sized() {
                 WellFormed([T; N])
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }

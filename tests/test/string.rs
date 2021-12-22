@@ -8,14 +8,14 @@ fn str_trait_impl() {
             impl Foo for str {}
         }
 
-        goal { str: Foo } yields { "Unique" }
+        goal { str: Foo } yields { expect![["Unique"]] }
     }
 }
 
 #[test]
 fn str_is_well_formed() {
     test! {
-        goal { WellFormed(str) } yields { "Unique" }
+        goal { WellFormed(str) } yields { expect![["Unique"]] }
     }
 }
 
@@ -26,7 +26,7 @@ fn str_is_not_sized() {
             #[lang(sized)] trait Sized {}
         }
 
-        goal { not { str: Sized } } yields { "Unique" }
+        goal { not { str: Sized } } yields { expect![["Unique"]] }
     }
 }
 
@@ -37,7 +37,7 @@ fn str_is_not_copy() {
             #[lang(copy)] trait Copy {}
         }
 
-        goal { not { str: Copy } } yields { "Unique" }
+        goal { not { str: Copy } } yields { expect![["Unique"]] }
     }
 }
 
@@ -48,6 +48,6 @@ fn str_is_not_clone() {
             #[lang(clone)] trait Clone {}
         }
 
-        goal { not { str: Clone } } yields { "Unique" }
+        goal { not { str: Clone } } yields { expect![["Unique"]] }
     }
 }

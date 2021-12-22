@@ -16,7 +16,7 @@ fn opaque_bounds() {
         goal {
             T: Clone
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
     }
 }
@@ -39,13 +39,13 @@ fn opaque_reveal() {
                 T: Trait
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
 
         goal {
             T: Trait
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -77,13 +77,13 @@ fn opaque_where_clause() {
                 WellFormed(T)
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
 
         goal {
             WellFormed(T)
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -93,7 +93,7 @@ fn opaque_where_clause() {
                 }
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
 
         goal {
@@ -101,7 +101,7 @@ fn opaque_where_clause() {
                 WellFormed(S<U>)
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -124,7 +124,7 @@ fn opaque_generics_simple() {
         goal {
             Foo<Bar>: Iterator
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
 
     }
@@ -149,7 +149,7 @@ fn opaque_generics() {
         goal {
             Foo<Bar>: Iterator<Item = Bar>
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
 
         goal {
@@ -157,7 +157,7 @@ fn opaque_generics() {
                 Foo<T>: Iterator<Item = T>
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique; substitution []"]]
         }
 
         goal {
@@ -165,9 +165,9 @@ fn opaque_generics() {
                 <Foo<Bar> as Iterator>::Item = T
             }
         } yields[SolverChoice::slg_default()] {
-            "Ambiguous" // #234
+            expect![["Ambiguous"]] // #234
         } yields[SolverChoice::recursive_default()] {
-            "Unique; substitution [?0 := Bar], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Bar], lifetime constraints []"]]
         }
     }
 }
@@ -188,7 +188,7 @@ fn opaque_trait_generic() {
                 Bar: Trait<T>
             }
         } yields {
-            "Unique; substitution [?0 := Uint(U32)]"
+            expect![["Unique; substitution [?0 := Uint(U32)]"]]
         }
     }
 }
@@ -216,13 +216,13 @@ fn opaque_auto_traits() {
         goal {
             Opaque1: Send
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Opaque2: Send
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -253,13 +253,13 @@ fn opaque_auto_traits_indirect() {
         goal {
             Opaque1: SendDerived
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Opaque2: SendDerived
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -279,7 +279,7 @@ fn opaque_super_trait() {
         goal {
             Opaque: Base
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }

@@ -12,17 +12,17 @@ fn closure_is_well_formed() {
         goal {
             WellFormed(foo)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             WellFormed(bar)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             WellFormed(baz)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -40,7 +40,7 @@ fn closure_is_sized() {
         goal {
             foo: Sized
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -76,17 +76,17 @@ fn closure_is_copy() {
         goal {
             foo: Copy
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             bar: Copy
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             baz: Copy
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // A closure with non-Copy upvars is not copy
@@ -95,7 +95,7 @@ fn closure_is_copy() {
                 foobuzz<'a>: Copy
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         // A closure with only Copy upvars is copy
         goal {
@@ -103,17 +103,17 @@ fn closure_is_copy() {
                 foobar<'a>: Copy
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             forall<T> { with_ty<T>: Copy }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         goal {
             forall<T> { if (T: Copy) { with_ty<T>: Copy } }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -132,17 +132,17 @@ fn closure_is_clone() {
         goal {
             foo: Clone
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             bar: Clone
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             baz: Clone
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -181,66 +181,66 @@ fn closure_implements_fn_traits() {
         goal {
             foo: Fn<()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         goal {
             foo: FnMut<()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         goal {
             foo: FnOnce<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             Normalize(<foo as FnOnce<()>>::Output -> ())
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // A closure with kind `Fn` implements all `Fn` traits
         goal {
             bar: Fn<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             bar: FnMut<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             bar: FnOnce<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             Normalize(<bar as FnOnce<()>>::Output -> ())
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // A closure with kind `FnMut` implements `FnMut` and `FnOnce`
         goal {
             baz: Fn<()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         goal {
             baz: FnMut<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             baz: FnOnce<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             Normalize(<baz as FnOnce<()>>::Output -> ())
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         // A closure also implements the `Fn` traits regardless of upvars
         goal {
@@ -248,35 +248,35 @@ fn closure_implements_fn_traits() {
                 foobar<'a>: FnOnce<(u8, f32)>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             forall<'a> {
                 Normalize(<foobar<'a> as FnOnce<(u8, f32)>>::Output -> u32)
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             forall<'a> {
                 Normalize(<foobar<'a> as FnOnce<(u8, f32)>>::Output -> u32)
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             forall<'a> {
                 foobuzz<'a>: FnOnce<(u8, f32)>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
         goal {
             forall<'a> {
                 Normalize(<foobuzz<'a> as FnOnce<(u8, f32)>>::Output -> u32)
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }

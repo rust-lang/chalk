@@ -13,7 +13,7 @@ fn simple_negation() {
         goal {
             not { Bar: Foo }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -21,7 +21,7 @@ fn simple_negation() {
                 not { Bar: Foo }
             }
         } yields {
-            "No"
+            expect![["No"]]
         }
 
         goal {
@@ -31,7 +31,7 @@ fn simple_negation() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -39,7 +39,7 @@ fn simple_negation() {
                 not { T: Foo }
             }
         } yields {
-            "Ambig"
+            expect![["Ambig"]]
         }
 
         goal {
@@ -47,7 +47,7 @@ fn simple_negation() {
                 not { T: Foo }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -55,7 +55,7 @@ fn simple_negation() {
                 exists<T> { T: Foo }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -63,7 +63,7 @@ fn simple_negation() {
                 forall<T> { T: Foo }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -84,7 +84,7 @@ fn deep_negation() {
                 exists<T> { T: Baz }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -92,7 +92,7 @@ fn deep_negation() {
                 exists<T> { Foo<T>: Bar }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -112,7 +112,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -122,7 +122,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "No"
+            expect![["No"]]
         }
 
         goal {
@@ -132,7 +132,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            "No"
+            expect![["No"]]
         }
     }
 }
@@ -153,7 +153,7 @@ fn negation_free_vars() {
                 not { Vec<T>: Foo }
             }
         } yields {
-            "Ambig"
+            expect![["Ambig"]]
         }
     }
 }
@@ -176,7 +176,7 @@ fn negative_loop() {
             Alice: P
         } yields_all[SolverChoice::slg(10, None)] {
             // Negative cycle -> panic
-            ""
+            expect![[""]]
         }
     }
 }
@@ -204,7 +204,7 @@ fn example_2_2_EWFS() {
         goal {
             c: M
         } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [], lifetime constraints []"
+            expect![["substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -234,7 +234,7 @@ fn example_2_3_EWFS() {
             a: W
         } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
-            ""
+            expect![[""]]
         }
     }
 }
@@ -260,7 +260,7 @@ fn example_3_3_EWFS() {
             a: S
         } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
-            ""
+            expect![[""]]
         }
     }
 }
@@ -282,7 +282,7 @@ fn contradiction() {
             Alice: P
         } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
-            ""
+            expect![[""]]
         }
     }
 }
@@ -305,7 +305,7 @@ fn negative_answer_ambiguous() {
             Alice: P
         } yields_all[SolverChoice::slg(3, None)] {
             // Negative cycle -> panic
-            ""
+            expect![[""]]
         }
     }
 }
@@ -343,14 +343,14 @@ fn negative_reorder() {
         goal {
             exists<A> { A: Debug1 }
         } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [?0 := Bar], lifetime constraints []"
+            expect![["substitution [?0 := Bar], lifetime constraints []"]]
         }
 
 
         goal {
             exists<A> { A: Debug2 }
         } yields_all[SolverChoice::slg(3, None)] {
-            "substitution [?0 := Bar], lifetime constraints []"
+            expect![["substitution [?0 := Bar], lifetime constraints []"]]
         }
     }
 }

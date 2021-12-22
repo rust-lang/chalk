@@ -11,7 +11,7 @@ fn slices_are_not_sized() {
         goal {
             forall<T> { not { [T]: Sized } }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -27,13 +27,13 @@ fn slices_are_well_formed_if_elem_sized() {
         goal {
             forall<T> { if (T: Sized) { WellFormed([T]) } }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
 
         goal {
             forall<T> { WellFormed([T]) }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -49,7 +49,7 @@ fn slices_are_not_copy() {
         goal {
             forall<T> { not { [T]: Copy } }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
@@ -65,7 +65,7 @@ fn slices_are_not_clone() {
         goal {
             forall<T> { not { [T]: Clone } }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique; substitution [], lifetime constraints []"]]
         }
     }
 }
