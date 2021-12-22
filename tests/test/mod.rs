@@ -1,5 +1,7 @@
 #![allow(non_snake_case)]
 
+use expect_test::{Expect, expect};
+
 use crate::test_util::assert_same;
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
@@ -17,7 +19,7 @@ mod bench;
 mod coherence;
 mod wf_lowering;
 
-pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, interner: ChalkIr) {
+fn format_solution(mut result: Option<Solution<ChalkIr>>, interner: ChalkIr) -> String {
     // sort constraints, since the different solvers may output them in different order
     match &mut result {
         Some(Solution::Unique(solution)) => {
@@ -27,23 +29,31 @@ pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, inte
         }
         _ => {}
     }
-    let result = match result {
+    match result {
         Some(v) => format!("{}", v.display(ChalkIr)),
         None => format!("No possible solution"),
-    };
+    }
+}
 
+pub fn assert_result(result: Option<Solution<ChalkIr>>, expected: &Expect, interner: ChalkIr) {
+    let result = format_solution(result, interner);
+    expected.assert_eq(&result);
+}
+
+pub fn assert_result_str(result: Option<Solution<ChalkIr>>, expected: &str, interner: ChalkIr) {
+    let result = format_solution(result, interner);
     assert_same(&result, expected);
 }
 
 // different goals
 #[derive(Clone)]
-pub enum TestGoal {
+pub enum TestGoal<T = Expect> {
     // solver should produce same aggregated single solution
-    Aggregated(&'static str),
+    Aggregated(T),
     // solver should produce exactly multiple solutions
-    All(Vec<&'static str>),
+    All(Vec<T>),
     // solver should produce first same multiple solutions
-    First(Vec<&'static str>),
+    First(Vec<T>),
 }
 
 macro_rules! test {
@@ -267,7 +277,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
 
                 println!("using solver: {:?}", solver_choice);
                 let peeled_goal = goal.into_peeled_goal(db.interner());
-                match expected {
+                match &expected {
                     TestGoal::Aggregated(expected) => {
                         let result = db.solve(&peeled_goal);
                         assert_result(result, expected, db.interner());
@@ -278,13 +288,11 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                             db.solve_multiple(&peeled_goal, &mut |result, next_result| {
                                 match expected.next() {
                                     Some(expected) => {
-                                        assert_same(
-                                            &format!(
-                                                "{}",
-                                                result.as_ref().map(|v| v.display(ChalkIr))
-                                            ),
-                                            expected,
+                                        let actual = format!(
+                                            "{}",
+                                            result.as_ref().map(|v| v.display(ChalkIr))
                                         );
+                                        expected.assert_eq(&actual)
                                     }
                                     None => {
                                         assert!(!next_result, "Unexpected next solution");
@@ -304,10 +312,9 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                             .next()
                         {
                             Some(solution) => {
-                                assert_same(
-                                    &format!("{}", result.as_ref().map(|v| v.display(ChalkIr))),
-                                    solution,
-                                );
+                                let actual =
+                                    format!("{}", result.as_ref().map(|v| v.display(ChalkIr)));
+                                solution.assert_eq(&actual);
                                 if !next_result {
                                     assert!(
                                         expected.next().is_none(),

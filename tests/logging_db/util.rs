@@ -12,7 +12,9 @@ use chalk_solve::ext::*;
 use chalk_solve::logging_db::LoggingRustIrDatabase;
 use chalk_solve::RustIrDatabase;
 
-use crate::test::{assert_result, TestGoal};
+use crate::test::assert_result_str;
+
+type TestGoal = crate::test::TestGoal<&'static str>;
 
 macro_rules! logging_db_output_sufficient {
     ($($arg:tt)*) => {{
@@ -59,7 +61,7 @@ pub fn logging_db_output_sufficient(
                 match expected {
                     TestGoal::Aggregated(expected) => {
                         let result = solver.solve(&wrapped, &peeled_goal);
-                        assert_result(result, expected, db.interner());
+                        assert_result_str(result, expected, db.interner());
                     }
                     _ => panic!("only aggregated test goals supported for logger goals"),
                 }
@@ -101,7 +103,7 @@ pub fn logging_db_output_sufficient(
             match expected {
                 TestGoal::Aggregated(expected) => {
                     let result = solver.solve(&db, &peeled_goal);
-                    assert_result(result, expected, db.interner());
+                    assert_result_str(result, expected, db.interner());
                 }
                 _ => panic!("only aggregated test goals supported for logger goals"),
             }
