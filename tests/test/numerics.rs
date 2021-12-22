@@ -129,8 +129,6 @@ fn float_ambiguity() {
 #[test]
 fn integer_and_float_are_specialized_ty_kinds() {
     test! {
-        program {}
-
         goal {
             exists<T, int N> {
                 T = N, N = usize
@@ -154,8 +152,6 @@ fn integer_and_float_are_specialized_ty_kinds() {
 #[test]
 fn general_ty_kind_becomes_specific() {
     test! {
-        program {}
-
         goal {
             exists<T, int N> {
                 T = N, T = char
@@ -178,8 +174,6 @@ fn general_ty_kind_becomes_specific() {
 #[test]
 fn integers_are_not_floats() {
     test! {
-        program {}
-
         goal {
             exists<int I, float F> {
                 I = F

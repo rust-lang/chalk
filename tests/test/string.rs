@@ -15,7 +15,6 @@ fn str_trait_impl() {
 #[test]
 fn str_is_well_formed() {
     test! {
-        program {}
         goal { WellFormed(str) } yields { "Unique" }
     }
 }

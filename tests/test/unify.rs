@@ -180,9 +180,6 @@ fn forall_equality() {
 #[test]
 fn unify_quantified_lifetimes() {
     test! {
-        program {
-        }
-
         // Check that `'a` (here, `'^0.0`) is not unified
         // with `'!1_0`, because they belong to incompatible
         // universes.

@@ -55,9 +55,6 @@ fn struct_lifetime_variance() {
 #[test]
 fn ref_lifetime_variance() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 Subtype(&'a u32, &'b u32)
@@ -74,9 +71,6 @@ fn ref_lifetime_variance() {
 #[test]
 fn fn_lifetime_variance_args() {
     test! {
-        program {
-        }
-
         goal {
             for<'a, 'b> fn(&'a u32, &'b u32) = for<'a> fn(&'a u32, &'a u32)
         } yields[SolverChoice::recursive_default()] {
@@ -100,9 +94,6 @@ fn fn_lifetime_variance_args() {
 #[test]
 fn fn_lifetime_variance_with_return_type() {
     test! {
-        program {
-        }
-
         goal {
             Subtype(for<'a, 'b> fn(&'a u32, &'b u32) -> &'a u32, for<'a> fn(&'a u32, &'a u32) -> &'a u32)
         } yields {
@@ -151,8 +142,6 @@ fn generalize() {
 #[test]
 fn multi_lifetime() {
     test! {
-        program {}
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -183,8 +172,6 @@ fn multi_lifetime() {
 #[test]
 fn multi_lifetime_inverted() {
     test! {
-        program {}
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -347,9 +334,6 @@ fn multi_lifetime_invariant_struct() {
 #[test]
 fn multi_lifetime_slice() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -385,9 +369,6 @@ fn multi_lifetime_slice() {
 #[test]
 fn multi_lifetime_tuple() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -423,9 +404,6 @@ fn multi_lifetime_tuple() {
 #[test]
 fn multi_lifetime_array() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -543,9 +521,6 @@ fn generalize_invariant_struct() {
 #[test]
 fn generalize_slice() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -581,9 +556,6 @@ fn generalize_slice() {
 #[test]
 fn generalize_tuple() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
@@ -619,9 +591,6 @@ fn generalize_tuple() {
 #[test]
 fn generalize_2tuple() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b, 'c, 'd> {
                 exists<U> {
@@ -659,9 +628,6 @@ fn generalize_2tuple() {
 #[test]
 fn generalize_array() {
     test! {
-        program {
-        }
-
         goal {
             forall<'a, 'b> {
                 exists<U> {
