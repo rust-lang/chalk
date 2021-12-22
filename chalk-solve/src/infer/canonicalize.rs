@@ -41,14 +41,12 @@ impl<I: Interner> InferenceTable<I> {
         };
         let value = value.fold_with(&mut q, DebruijnIndex::INNERMOST).unwrap();
         let free_vars = q.free_vars.clone();
-        let max_universe = q.max_universe;
 
         Canonicalized {
             quantified: Canonical {
                 value,
                 binders: q.into_binders(),
             },
-            max_universe,
             free_vars,
         }
     }
@@ -61,10 +59,6 @@ pub struct Canonicalized<T: HasInterner> {
 
     /// The free existential variables, along with the universes they inhabit.
     pub free_vars: Vec<ParameterEnaVariable<T::Interner>>,
-
-    /// The maximum universe of any universally quantified variables
-    /// encountered.
-    max_universe: UniverseIndex,
 }
 
 struct Canonicalizer<'q, I: Interner> {
