@@ -1,10 +1,11 @@
+use indexmap::IndexMap;
 use petgraph::prelude::*;
+use rustc_hash::FxHashMap;
 
 use crate::solve::Solver;
 use crate::RustIrDatabase;
 use chalk_ir::interner::Interner;
 use chalk_ir::{self, ImplId, TraitId};
-use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::Arc;
 
@@ -42,13 +43,13 @@ impl<I: Interner> std::error::Error for CoherenceError<I> {}
 /// This basically encodes which impls specialize one another.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SpecializationPriorities<I: Interner> {
-    map: BTreeMap<ImplId<I>, SpecializationPriority>,
+    map: IndexMap<ImplId<I>, SpecializationPriority>,
 }
 
 impl<I: Interner> SpecializationPriorities<I> {
     pub fn new() -> Self {
         Self {
-            map: BTreeMap::new(),
+            map: IndexMap::new(),
         }
     }
 
@@ -106,18 +107,22 @@ where
 
     // Build the forest of specialization relationships.
     fn build_specialization_forest(&self) -> Result<Graph<ImplId<I>, ()>, CoherenceError<I>> {
-        // The forest is returned as a graph but built as a GraphMap; this is
-        // so that we never add multiple nodes with the same ItemId.
-        let mut forest = DiGraphMap::new();
+        let mut forest = DiGraph::new();
+        let mut node_map = FxHashMap::default();
 
-        // Find all specializations (implemented in coherence/solve)
-        // Record them in the forest by adding an edge from the less special
-        // to the more special.
+        // Find all specializations. Record them in the forest
+        // by adding an edge from the less special to the more special.
         self.visit_specializations_of_trait(|less_special, more_special| {
-            forest.add_edge(less_special, more_special, ());
+            let less_special_node = *node_map
+                .entry(less_special)
+                .or_insert_with(|| forest.add_node(less_special));
+            let more_special_node = *node_map
+                .entry(more_special)
+                .or_insert_with(|| forest.add_node(more_special));
+            forest.update_edge(less_special_node, more_special_node, ());
         })?;
 
-        Ok(forest.into_graph())
+        Ok(forest)
     }
 
     // Recursively set priorities for those node and all of its children.

@@ -2,8 +2,6 @@
 //! `.chalk` files containing those definitions.
 use std::{
     borrow::Borrow,
-    cmp::{Ord, Ordering},
-    collections::BTreeSet,
     fmt::{self, Debug, Display},
     io::Write,
     marker::PhantomData,
@@ -17,6 +15,8 @@ use crate::{
     RustIrDatabase,
 };
 use chalk_ir::{interner::Interner, *};
+
+use indexmap::IndexSet;
 
 mod id_collector;
 
@@ -36,7 +36,7 @@ where
     I: Interner,
 {
     ws: WriterState<I, DB, P>,
-    def_ids: Mutex<BTreeSet<RecordedItemId<I>>>,
+    def_ids: Mutex<IndexSet<RecordedItemId<I>>>,
     _phantom: PhantomData<DB>,
 }
 
@@ -535,7 +535,7 @@ where
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
 pub enum RecordedItemId<I: Interner> {
     Adt(AdtId<I>),
     Trait(TraitId<I>),
@@ -578,40 +578,5 @@ impl<I: Interner> From<FnDefId<I>> for RecordedItemId<I> {
 impl<I: Interner> From<GeneratorId<I>> for RecordedItemId<I> {
     fn from(v: GeneratorId<I>) -> Self {
         RecordedItemId::Generator(v)
-    }
-}
-
-/// Utility for implementing Ord for RecordedItemId.
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-enum OrderedItemId<'a, DefId, AdtId> {
-    DefId(&'a DefId),
-    AdtId(&'a AdtId),
-}
-
-impl<I: Interner> RecordedItemId<I> {
-    /// Extract internal identifier. Allows for absolute ordering matching the
-    /// order in which chalk saw things (and thus reproducing that order in
-    /// printed programs)
-    fn ordered_item_id(&self) -> OrderedItemId<'_, I::DefId, I::InternedAdtId> {
-        match self {
-            RecordedItemId::Trait(TraitId(x))
-            | RecordedItemId::Impl(ImplId(x))
-            | RecordedItemId::OpaqueTy(OpaqueTyId(x))
-            | RecordedItemId::Generator(GeneratorId(x))
-            | RecordedItemId::FnDef(FnDefId(x)) => OrderedItemId::DefId(x),
-            RecordedItemId::Adt(AdtId(x)) => OrderedItemId::AdtId(x),
-        }
-    }
-}
-
-impl<I: Interner> PartialOrd for RecordedItemId<I> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl<I: Interner> Ord for RecordedItemId<I> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.ordered_item_id().cmp(&other.ordered_item_id())
     }
 }

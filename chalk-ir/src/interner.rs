@@ -57,7 +57,7 @@ use std::sync::Arc;
 /// (e.g., `SourceI` and `TargetI`) -- even if those type parameters
 /// wind up being mapped to the same underlying type families in the
 /// end.
-pub trait Interner: Debug + Copy + Eq + Ord + Hash + Sized {
+pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     /// "Interned" representation of types.  In normal user code,
     /// `Self::InternedType` is not referenced. Instead, we refer to
     /// `Ty<Self>`, which wraps this type.
@@ -188,10 +188,10 @@ pub trait Interner: Debug + Copy + Eq + Ord + Hash + Sized {
     type InternedVariances: Debug + Clone + Eq + Hash;
 
     /// The core "id" type used for trait-ids and the like.
-    type DefId: Debug + Copy + Eq + Ord + Hash;
+    type DefId: Debug + Copy + Eq + Hash;
 
     /// The ID type for ADTs
-    type InternedAdtId: Debug + Copy + Eq + Ord + Hash;
+    type InternedAdtId: Debug + Copy + Eq + Hash;
 
     /// Representation of identifiers.
     type Identifier: Debug + Clone + Eq + Hash;
