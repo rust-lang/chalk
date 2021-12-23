@@ -774,8 +774,10 @@ fn ambiguous_unification_in_fn() {
             exists<int T, U> {
                 MyClosure<fn(&'static U) -> ()>: FnOnce<(&'static T,)>
             }
-        } yields {
-            expect![["Unique"]]
+        } yields[SolverChoice::slg_default()] {
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: 'static: 'static }, InEnvironment { environment: Env([]), goal: 'static: 'static }] }"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: 'static: 'static }] }"]]
         }
     }
 }

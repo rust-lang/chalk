@@ -260,8 +260,10 @@ fn shl_ice() {
             exists<U> {
                 u32: Shl<U>
             }
-        } yields {
-            expect![["Ambiguous"]]
+        } yields[SolverChoice::slg_default()] {
+            expect![["Ambiguous; definite substitution for<?U0,?U0> { [?0 := (&'^0.0 ^0.1)] }"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
