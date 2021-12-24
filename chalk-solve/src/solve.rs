@@ -159,12 +159,20 @@ pub struct SolutionDisplay<'a, I: Interner> {
 }
 
 impl<'a, I: Interner> fmt::Display for SolutionDisplay<'a, I> {
+    #[rustfmt::skip]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let SolutionDisplay { solution, interner } = self;
         match solution {
-            Solution::Unique(constrained) => {
-                write!(f, "Unique; {}", constrained.display(*interner))
-            }
+            // If a `Unique` solution has no associated data, omit the trailing semicolon.
+            // This makes blessed test output nicer to read.
+            Solution::Unique(Canonical { binders, value: ConstrainedSubst { subst, constraints } } )
+                if interner.constraints_data(constraints.interned()).is_empty()
+                    && interner.substitution_data(subst.interned()).is_empty()
+                    && interner.canonical_var_kinds_data(binders.interned()).is_empty()
+                => write!(f, "Unique"),
+
+            Solution::Unique(constrained) => write!(f, "Unique; {}", constrained.display(*interner)),
+
             Solution::Ambig(Guidance::Definite(subst)) => write!(
                 f,
                 "Ambiguous; definite substitution {}",
