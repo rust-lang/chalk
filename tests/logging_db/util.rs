@@ -34,6 +34,7 @@ pub fn logging_db_output_sufficient(
     let output_text = {
         let db = ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
+            |_, _| panic!(),
             SolverChoice::default(),
         );
 
@@ -72,7 +73,7 @@ pub fn logging_db_output_sufficient(
     println!("----------------------------------------------------------------------");
     println!("logging db output program:\n{}\n", output_text);
 
-    let db = ChalkDatabase::with(&output_text, SolverChoice::default());
+    let db = ChalkDatabase::with(&output_text, |_, _| panic!(), SolverChoice::default());
 
     // Note: we are explicitly not calling `.checked_program()`, as our output
     // is not intended to be well formed.

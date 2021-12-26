@@ -187,14 +187,14 @@ pub fn reparse_into_different_test<'a>(
     program_text: &'a str,
     target_text: &'a str,
 ) -> ReparseTestResult<'a> {
-    let original_db = chalk_integration::db::ChalkDatabase::with(program_text, <_>::default());
+    let original_db = chalk_integration::db::ChalkDatabase::with(program_text, |_, _| panic!(), <_>::default());
     let original_program = original_db.program_ir().unwrap_or_else(|e| {
         panic!(
             "unable to lower test program:\n{}\nSource:\n{}\n",
             e, program_text
         )
     });
-    let target_db = chalk_integration::db::ChalkDatabase::with(target_text, <_>::default());
+    let target_db = chalk_integration::db::ChalkDatabase::with(target_text,  |_, _| panic!(), <_>::default());
     let target_program = target_db.program_ir().unwrap_or_else(|e| {
         panic!(
             "unable to lower test program:\n{}\nSource:\n{}\n",
@@ -203,7 +203,7 @@ pub fn reparse_into_different_test<'a>(
     });
     let output_text =
         tls::set_current_program(&original_program, || write_program(&original_program));
-    let output_db = chalk_integration::db::ChalkDatabase::with(&output_text, <_>::default());
+    let output_db = chalk_integration::db::ChalkDatabase::with(&output_text, |_, _| panic!(), <_>::default());
     let output_program = output_db.program_ir().unwrap_or_else(|e| {
         panic!(
             "error lowering writer output:\n{}\nNew source:\n{}\n",

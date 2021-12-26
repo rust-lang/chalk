@@ -1098,13 +1098,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
 
             // Unifying an inference variables with a non-inference variable.
             (&ConstValue::InferenceVar(var), &ConstValue::Concrete(_))
-            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_)) => {
+            | (&ConstValue::InferenceVar(var), &ConstValue::Placeholder(_))
+            | (&ConstValue::InferenceVar(var), &ConstValue::Function(..)) => {
                 debug!(?var, ty=?b, "unify_var_ty");
                 self.unify_var_const(var, b)
             }
 
             (&ConstValue::Concrete(_), &ConstValue::InferenceVar(var))
-            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var)) => {
+            | (&ConstValue::Placeholder(_), &ConstValue::InferenceVar(var))
+            | (&ConstValue::Function(..), &ConstValue::InferenceVar(var)) => {
                 debug!(?var, ty=?a, "unify_var_ty");
                 self.unify_var_const(var, a)
             }
@@ -1121,8 +1123,18 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
-            (&ConstValue::Concrete(_), &ConstValue::Placeholder(_))
-            | (&ConstValue::Placeholder(_), &ConstValue::Concrete(_)) => Err(NoSolution),
+            (ConstValue::Function(name1, args1), ConstValue::Function(name2, args2)) => {
+                if name1 == name2 && args1.len() == args2.len() {
+                    todo!()
+                } else {
+                    Err(NoSolution)    
+                }
+            }
+
+            (&ConstValue::Concrete(_), &ConstValue::Placeholder(_) | &ConstValue::Function(..))
+            | (&ConstValue::Placeholder(_) | &ConstValue::Function(..), &ConstValue::Concrete(_))
+            | (&ConstValue::Placeholder(_), &ConstValue::Function(..))
+            | (&ConstValue::Function(..), &ConstValue::Placeholder(_)) => Err(NoSolution),
 
             (ConstValue::BoundVar(_), _) | (_, ConstValue::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",

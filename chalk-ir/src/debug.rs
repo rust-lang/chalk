@@ -359,6 +359,7 @@ impl<I: Interner> Debug for ConstData<I> {
             ConstValue::InferenceVar(var) => write!(fmt, "{:?}", var),
             ConstValue::Placeholder(index) => write!(fmt, "{:?}", index),
             ConstValue::Concrete(evaluated) => write!(fmt, "{:?}", evaluated),
+            ConstValue::Function(name, _) => write!(fmt, "#{}(<some args>)", name),
         }
     }
 }

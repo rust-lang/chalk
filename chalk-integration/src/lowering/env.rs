@@ -54,6 +54,7 @@ pub struct Env<'k> {
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     pub parameter_map: ParameterMap,
+    pub interner: ChalkIr,
 }
 
 /// Information about an associated type **declaration** (i.e., an
@@ -88,7 +89,7 @@ pub enum TypeLookup<'k> {
 
 impl Env<'_> {
     pub fn interner(&self) -> ChalkIr {
-        ChalkIr
+        self.interner
     }
 
     pub fn lookup_generic_arg(

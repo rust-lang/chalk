@@ -3,6 +3,7 @@
 use crate::test_util::assert_same;
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
+use chalk_integration::interner::ConstEval;
 use chalk_integration::lowering::lower_goal;
 use chalk_integration::query::LoweringDatabase;
 use chalk_integration::SolverChoice;
@@ -28,7 +29,7 @@ pub fn assert_result(mut result: Option<Solution<ChalkIr>>, expected: &str, inte
         _ => {}
     }
     let result = match result {
-        Some(v) => format!("{}", v.display(ChalkIr)),
+        Some(v) => format!("{}", v.display(ChalkIr::default())),
         None => format!("No possible solution"),
     };
 
@@ -49,11 +50,17 @@ pub enum TestGoal {
 macro_rules! test {
     (program $program:tt $($goals:tt)*) => {{
         let (program, goals) = parse_test_data!(program $program $($goals)*);
-        solve_goal(program, goals, true)
+        solve_goal(program, goals, |_, _| panic!("const eval not provided"), true)
     }};
+
+    (const_eval $const_eval:tt program $program:tt $($goals:tt)*) => {{
+        let (program, goals) = parse_test_data!(program $program $($goals)*);
+        solve_goal(program, goals, $const_eval, true)
+    }};
+
     (disable_coherence; program $program:tt $($goals:tt)*) => {{
         let (program, goals) = parse_test_data!(program $program $($goals)*);
-        solve_goal(program, goals, false)
+        solve_goal(program, goals, |_, _| panic!("const eval not provided"), false)
     }};
 
     // If `program` is omitted, default to an empty one.
@@ -224,7 +231,12 @@ macro_rules! parse_test_data {
     };
 }
 
-fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, coherence: bool) {
+fn solve_goal(
+    program_text: &str,
+    goals: Vec<(&str, SolverChoice, TestGoal)>,
+    const_eval: ConstEval,
+    coherence: bool,
+) {
     with_tracing_logs(|| {
         println!("program {}", program_text);
         assert!(program_text.starts_with("{"));
@@ -232,6 +244,7 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
 
         let mut db = ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
+            const_eval,
             SolverChoice::default(),
         );
 
@@ -278,10 +291,11 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                             db.solve_multiple(&peeled_goal, &mut |result, next_result| {
                                 match expected.next() {
                                     Some(expected) => {
+                                        let interner = ChalkIr::default();
                                         assert_same(
                                             &format!(
                                                 "{}",
-                                                result.as_ref().map(|v| v.display(ChalkIr))
+                                                result.as_ref().map(|v| v.display(interner))
                                             ),
                                             expected,
                                         );
@@ -304,8 +318,9 @@ fn solve_goal(program_text: &str, goals: Vec<(&str, SolverChoice, TestGoal)>, co
                             .next()
                         {
                             Some(solution) => {
+                                let interner = ChalkIr::default();
                                 assert_same(
-                                    &format!("{}", result.as_ref().map(|v| v.display(ChalkIr))),
+                                    &format!("{}", result.as_ref().map(|v| v.display(interner))),
                                     solution,
                                 );
                                 if !next_result {

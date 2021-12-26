@@ -218,7 +218,7 @@ pub fn write_program_duplicated_names(db: &Program) -> String {
 /// Only checks that the resulting program parses, not that it matches any
 /// particular format. Use returned data to perform further checks.
 pub fn run_reparse_with_duplicate_names<'a>(program_text: &'a str) -> ReparseTestResult<'a> {
-    let original_db = chalk_integration::db::ChalkDatabase::with(program_text, <_>::default());
+    let original_db = chalk_integration::db::ChalkDatabase::with(program_text, |_, _| panic!(), <_>::default());
     let original_program = original_db.program_ir().unwrap_or_else(|e| {
         panic!(
             "unable to lower test program:\n{}\nSource:\n{}\n",
@@ -228,7 +228,7 @@ pub fn run_reparse_with_duplicate_names<'a>(program_text: &'a str) -> ReparseTes
     let output_text = tls::set_current_program(&original_program, || {
         write_program_duplicated_names(&*original_program)
     });
-    let output_db = chalk_integration::db::ChalkDatabase::with(&output_text, <_>::default());
+    let output_db = chalk_integration::db::ChalkDatabase::with(&output_text, |_, _| panic!(), <_>::default());
     let output_program = output_db.program_ir().unwrap_or_else(|e| {
         panic!(
             "error lowering writer output:\n{}\nNew source:\n{}\n",

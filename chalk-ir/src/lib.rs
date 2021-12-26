@@ -681,6 +681,22 @@ where
 {
 }
 
+impl<I: Interner> ConstData<I> {
+    fn compute_flags(&self, interner: I) -> TypeFlags {
+        self.ty.data(interner).flags | match self.value {
+            ConstValue::BoundVar(_) | ConstValue::Concrete(_) => TypeFlags::empty(),
+            ConstValue::InferenceVar(_) => {
+                TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+            }
+            ConstValue::Placeholder(_) => {
+                TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+            }
+            // FIXME: we should iterate over each parameter
+            ConstValue::Function(..) => TypeFlags::empty(),
+        }
+    }
+}
+
 impl<I: Interner> TyKind<I> {
     /// Casts the type data to a type.
     pub fn intern(self, interner: I) -> Ty<I> {
@@ -710,16 +726,7 @@ impl<I: Interner> TyKind<I> {
                 let flags = ty.data(interner).flags;
                 let const_data = const_ty.data(interner);
                 flags
-                    | const_data.ty.data(interner).flags
-                    | match const_data.value {
-                        ConstValue::BoundVar(_) | ConstValue::Concrete(_) => TypeFlags::empty(),
-                        ConstValue::InferenceVar(_) => {
-                            TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                        }
-                        ConstValue::Placeholder(_) => {
-                            TypeFlags::HAS_CT_PLACEHOLDER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                        }
-                    }
+                    | const_data.compute_flags(interner)
             }
             TyKind::Placeholder(_) => TypeFlags::HAS_TY_PLACEHOLDER,
             TyKind::Dyn(dyn_ty) => {
@@ -1181,6 +1188,7 @@ impl<I: Interner> Const<I> {
             ConstValue::InferenceVar(_) => false,
             ConstValue::Placeholder(_) => false,
             ConstValue::Concrete(_) => false,
+            ConstValue::Function(..) => false,
         }
     }
 }
@@ -1205,9 +1213,10 @@ pub enum ConstValue<I: Interner> {
     Placeholder(PlaceholderIndex),
     /// Concrete constant value.
     Concrete(ConcreteConst<I>),
+    /// A mapping from Some other constants. Used for storing abstract const expressions
+    /// like `N+1` in `impl<N> Trait for Foo<N+1>`
+    Function(String, Vec<Const<I>>),
 }
-
-impl<I: Interner> Copy for ConstValue<I> where I::InternedConcreteConst: Copy {}
 
 impl<I: Interner> ConstData<I> {
     /// Wraps the constant data in a `Const`.
@@ -1503,19 +1512,7 @@ impl<I: Interner> GenericArg<I> {
             GenericArgData::Lifetime(lifetime) => lifetime.compute_flags(interner),
             GenericArgData::Const(constant) => {
                 let data = constant.data(interner);
-                let flags = data.ty.data(interner).flags;
-                match data.value {
-                    ConstValue::BoundVar(_) => flags,
-                    ConstValue::InferenceVar(_) => {
-                        flags | TypeFlags::HAS_CT_INFER | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                    }
-                    ConstValue::Placeholder(_) => {
-                        flags
-                            | TypeFlags::HAS_CT_PLACEHOLDER
-                            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                    }
-                    ConstValue::Concrete(_) => flags,
-                }
+                data.compute_flags(interner)
             }
         }
     }

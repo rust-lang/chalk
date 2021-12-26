@@ -105,6 +105,9 @@ pub struct Program {
 
     /// For each foreign type `extern { type A; }`
     pub foreign_ty_ids: BTreeMap<Identifier, ForeignDefId<ChalkIr>>,
+
+    /// interner of this program
+    pub interner: ChalkIr,
 }
 
 impl Program {
@@ -528,7 +531,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     }
 
     fn interner(&self) -> ChalkIr {
-        ChalkIr
+        self.interner
     }
 
     fn is_object_safe(&self, trait_id: TraitId<ChalkIr>) -> bool {

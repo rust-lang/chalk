@@ -8,6 +8,7 @@ macro_rules! lowering_success {
         let result = chalk_solve::logging::with_tracing_logs(|| {
             chalk_integration::db::ChalkDatabase::with(
                 &program_text[1..program_text.len() - 1],
+                |_, _| panic!("no const eval available"),
                 chalk_integration::SolverChoice::default(),
             )
             .checked_program()
@@ -27,6 +28,7 @@ macro_rules! lowering_error {
         let error = chalk_solve::logging::with_tracing_logs(|| {
             chalk_integration::db::ChalkDatabase::with(
                 &program_text[1..program_text.len() - 1],
+                |_, _| panic!("no const eval available"),
                 chalk_integration::SolverChoice::default(),
             )
             .checked_program()
