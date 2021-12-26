@@ -90,7 +90,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chalk"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "chalk-derive",
  "chalk-engine",
@@ -112,7 +112,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-derive"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -122,7 +122,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-engine"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "chalk-derive",
  "chalk-integration",
@@ -134,7 +134,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-integration"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "chalk-derive",
  "chalk-engine",
@@ -150,7 +150,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-ir"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "bitflags",
  "chalk-derive",
@@ -159,7 +159,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-parse"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "lalrpop",
  "lalrpop-util",
@@ -169,7 +169,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-recursive"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "chalk-derive",
  "chalk-integration",
@@ -181,7 +181,7 @@ dependencies = [
 
 [[package]]
 name = "chalk-solve"
-version = "0.76.0-dev.0"
+version = "0.76.0"
 dependencies = [
  "chalk-derive",
  "chalk-integration",
