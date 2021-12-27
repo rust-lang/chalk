@@ -36,7 +36,7 @@ fn futures_ambiguity() {
         goal {
             forall<T> { if (T: FutureResult) { exists<I, E> { T: Future<Output = Result<I, E>> } } }
         } yields {
-            expect![["Unique; substitution [?0 := (FutureResult::Item)<!1_0>, ?1 := (FutureResult::Error)<!1_0>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := (FutureResult::Item)<!1_0>, ?1 := (FutureResult::Error)<!1_0>]"]]
         }
     }
 }
@@ -54,7 +54,7 @@ fn basic() {
         goal {
             forall<T> { if (T: Sized) { T: Sized } }
         } yields_all[SolverChoice::slg(10, None)] {
-            expect![["substitution [], lifetime constraints []"]]
+            expect![[""]]
         }
     }
 }
@@ -119,11 +119,11 @@ fn only_draw_so_many() {
         goal {
             exists<T> { T: Sized }
         } yields_first[SolverChoice::slg(10, None)] {
-            expect![["substitution [?0 := Foo], lifetime constraints []"]],
-            expect![["substitution [?0 := Slice<Foo>], lifetime constraints []"]],
-            expect![["substitution [?0 := Vec<Foo>], lifetime constraints []"]],
-            expect![["substitution [?0 := Slice<Slice<Foo>>], lifetime constraints []"]],
-            expect![["substitution [?0 := Vec<Slice<Foo>>], lifetime constraints []"]]
+            expect![["substitution [?0 := Foo]"]],
+            expect![["substitution [?0 := Slice<Foo>]"]],
+            expect![["substitution [?0 := Vec<Foo>]"]],
+            expect![["substitution [?0 := Slice<Slice<Foo>>]"]],
+            expect![["substitution [?0 := Vec<Slice<Foo>>]"]]
         }
 
         goal {
@@ -180,7 +180,7 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(2, None)] {
-            expect![["Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"]]
+            expect![["Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>] })"]]
         }
 
         // Unsurprisingly, applying negation also flounders.
@@ -202,22 +202,22 @@ fn subgoal_cycle_uninhabited() {
         goal {
             exists<T> { T = Vec<Alice>, not { Vec<Vec<T>>: Foo } }
         } yields_first[SolverChoice::slg(2, None)] {
-            expect![["Ambiguous(substitution [?0 := Vec<Alice>], lifetime constraints [])"]]
+            expect![["Ambiguous(substitution [?0 := Vec<Alice>])"]]
         }
 
         // Same query with larger threshold works fine, though.
         goal {
             exists<T> { T = Vec<Alice>, not { Vec<Vec<T>>: Foo } }
         } yields_all[SolverChoice::slg(4, None)] {
-            expect![["substitution [?0 := Vec<Alice>], lifetime constraints []"]]
+            expect![["substitution [?0 := Vec<Alice>]"]]
         }
 
         // Here, due to the hypothesis, there does indeed exist a suitable T, `U`.
         goal {
             forall<U> { if (U: Foo) { exists<T> { T: Foo } } }
         } yields_first[SolverChoice::slg(2, None)] {
-            expect![["substitution [?0 := !1_0], lifetime constraints []"]],
-            expect![["Ambiguous(for<?U1> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"]]
+            expect![["substitution [?0 := !1_0]"]],
+            expect![["Ambiguous(for<?U1> { substitution [?0 := Box<^0.0>] })"]]
         }
     }
 }
@@ -239,8 +239,8 @@ fn subgoal_cycle_inhabited() {
         goal {
             exists<T> { T: Foo }
         } yields_first[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := Alice], lifetime constraints []"]],
-            expect![["Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>], lifetime constraints [] })"]]
+            expect![["substitution [?0 := Alice]"]],
+            expect![["Ambiguous(for<?U0> { substitution [?0 := Box<^0.0>] })"]]
         }
     }
 }
@@ -258,10 +258,7 @@ fn basic_region_constraint_from_positive_impl() {
         goal {
             forall<'a, 'b, T> { Ref<'a, 'b, T>: Foo }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 } \
-            ]"]]
+            expect![["lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
         }
     }
 }
@@ -287,9 +284,9 @@ fn example_2_1_EWFS() {
         goal {
             exists<V> { a: TransitiveClosure<V> }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := b], lifetime constraints []"]],
-            expect![["substitution [?0 := c], lifetime constraints []"]],
-            expect![["substitution [?0 := a], lifetime constraints []"]]
+            expect![["substitution [?0 := b]"]],
+            expect![["substitution [?0 := c]"]],
+            expect![["substitution [?0 := a]"]]
         }
     }
 }
@@ -323,10 +320,10 @@ fn cached_answers_1() {
         goal {
             exists<T> { T: Sour }
         } yields_first[SolverChoice::slg(2, None)] {
-            expect![["substitution [?0 := Lemon], lifetime constraints []"]],
-            expect![["substitution [?0 := Vinegar], lifetime constraints []"]],
-            expect![["substitution [?0 := HotSauce<Lemon>], lifetime constraints []"]],
-            expect![["substitution [?0 := HotSauce<Vinegar>], lifetime constraints []"]],
+            expect![["substitution [?0 := Lemon]"]],
+            expect![["substitution [?0 := Vinegar]"]],
+            expect![["substitution [?0 := HotSauce<Lemon>]"]],
+            expect![["substitution [?0 := HotSauce<Vinegar>]"]],
             expect![["Floundered"]]
         }
     }
@@ -350,10 +347,10 @@ fn cached_answers_2() {
         goal {
             exists<T> { T: Sour }
         } yields_first[SolverChoice::slg(2, None)] {
-            expect![["substitution [?0 := Lemon], lifetime constraints []"]],
-            expect![["substitution [?0 := Vinegar], lifetime constraints []"]],
-            expect![["substitution [?0 := HotSauce<Lemon>], lifetime constraints []"]],
-            expect![["substitution [?0 := HotSauce<Vinegar>], lifetime constraints []"]],
+            expect![["substitution [?0 := Lemon]"]],
+            expect![["substitution [?0 := Vinegar]"]],
+            expect![["substitution [?0 := HotSauce<Lemon>]"]],
+            expect![["substitution [?0 := HotSauce<Vinegar>]"]],
             expect![["Floundered"]]
         }
     }
@@ -377,9 +374,9 @@ fn cached_answers_3() {
         goal {
             exists<T> { T: Sour }
         } yields_first[SolverChoice::slg(2, None)] {
-            expect![["substitution [?0 := Lemon], lifetime constraints []"]],
-            expect![["substitution [?0 := HotSauce<Lemon>], lifetime constraints []"]],
-            expect![["substitution [?0 := Vinegar], lifetime constraints []"]],
+            expect![["substitution [?0 := Lemon]"]],
+            expect![["substitution [?0 := HotSauce<Lemon>]"]],
+            expect![["substitution [?0 := Vinegar]"]],
             expect![["Floundered"]]
         }
     }
@@ -411,14 +408,14 @@ fn non_enumerable_traits_direct() {
         goal {
             exists<A> { A: Enumerable }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := Foo], lifetime constraints []"]],
-            expect![["substitution [?0 := Bar], lifetime constraints []"]]
+            expect![["substitution [?0 := Foo]"]],
+            expect![["substitution [?0 := Bar]"]]
         }
 
         goal {
             Foo: NonEnumerable
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [], lifetime constraints []"]]
+            expect![[""]]
         }
     }
 }
@@ -506,14 +503,14 @@ fn non_enumerable_traits_reorder() {
         goal {
             exists<A> { A: Debug1 }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := Foo], lifetime constraints []"]]
+            expect![["substitution [?0 := Foo]"]]
         }
 
 
         goal {
             exists<A> { A: Debug2 }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := Foo], lifetime constraints []"]]
+            expect![["substitution [?0 := Foo]"]]
         }
     }
 }
@@ -692,7 +689,7 @@ fn not_really_ambig() {
         goal {
             exists<T> { Vec<T>: A }
         } yields[SolverChoice::slg_default()] {
-            expect![["Unique; substitution [?0 := Uint(U32)], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Uint(U32)]"]]
         } yields[SolverChoice::recursive_default()] {
             expect![["Ambiguous; no inference guidance"]]
         }
@@ -720,7 +717,7 @@ fn canonicalization_regression() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := !2_0], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := !2_0]"]]
         }
     }
 }
@@ -752,7 +749,7 @@ fn empty_definite_guidance() {
         } yields[SolverChoice::slg_default()] {
             expect![["Unique"]]
         } yields[SolverChoice::recursive_default()] {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; suggested substitution []"]]
         }
     }
 }
@@ -801,7 +798,7 @@ fn endless_loop() {
                 <MyClosure<fn() -> T> as FnOnce>::Output = T
             }
         } yields {
-            expect![["Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
     }
 }
@@ -825,7 +822,7 @@ fn env_bound_vars() {
                 }
             }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: 0: '^0.0 }] }"]]
         }
     }
 }

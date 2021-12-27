@@ -12,7 +12,7 @@ fn immut_refs_are_well_formed() {
                 WellFormed(&'a T)
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: !1_1: '!1_0 }]"]]
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: !1_1: '!1_0 }]"]]
         }
 
         goal {
@@ -36,7 +36,7 @@ fn immut_refs_are_sized() {
         goal {
             forall<'a, T> { &'a T: Sized }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -47,7 +47,7 @@ fn mut_refs_are_well_formed() {
         goal {
             forall<'a, T> { WellFormed(&'a mut T) }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: !1_1: '!1_0 }]"]]
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: !1_1: '!1_0 }]"]]
         }
     }
 }
@@ -63,7 +63,7 @@ fn mut_refs_are_sized() {
         goal {
             forall<'a, T> { &'a mut T: Sized }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }

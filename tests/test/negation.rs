@@ -21,7 +21,7 @@ fn simple_negation() {
                 not { Bar: Foo }
             }
         } yields {
-            expect![["No"]]
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -39,7 +39,7 @@ fn simple_negation() {
                 not { T: Foo }
             }
         } yields {
-            expect![["Ambig"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -122,7 +122,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            expect![["No"]]
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -132,7 +132,7 @@ fn negation_quantifiers() {
                 }
             }
         } yields {
-            expect![["No"]]
+            expect![["No possible solution"]]
         }
     }
 }
@@ -153,7 +153,7 @@ fn negation_free_vars() {
                 not { Vec<T>: Foo }
             }
         } yields {
-            expect![["Ambig"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -204,7 +204,7 @@ fn example_2_2_EWFS() {
         goal {
             c: M
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [], lifetime constraints []"]]
+            expect![[""]]
         }
     }
 }
@@ -343,14 +343,14 @@ fn negative_reorder() {
         goal {
             exists<A> { A: Debug1 }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := Bar], lifetime constraints []"]]
+            expect![["substitution [?0 := Bar]"]]
         }
 
 
         goal {
             exists<A> { A: Debug2 }
         } yields_all[SolverChoice::slg(3, None)] {
-            expect![["substitution [?0 := Bar], lifetime constraints []"]]
+            expect![["substitution [?0 := Bar]"]]
         }
     }
 }

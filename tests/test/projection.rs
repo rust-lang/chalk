@@ -21,7 +21,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := !1_0], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := !1_0]"]]
         }
 
         goal {
@@ -29,7 +29,7 @@ fn normalize_basic() {
                 Vec<T>: Iterator<Item = T>
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -39,7 +39,7 @@ fn normalize_basic() {
                 }
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -86,7 +86,7 @@ fn normalize_basic() {
             }
         } yields {
             // True for `U = T`, of course, but also true for `U = Vec<<T as Iterator>::Item>`.
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -114,7 +114,7 @@ fn normalize_into_iterator() {
                 }
             }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; substitution [?0 := !1_0]"]]
         }
     }
 }
@@ -141,7 +141,7 @@ fn projection_equality() {
             }
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
             expect![["Unique; substitution [?0 := Uint(U32)]"]]
         }
@@ -152,7 +152,7 @@ fn projection_equality() {
             }
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
             expect![["Unique; substitution [?0 := Uint(U32)]"]]
         }
@@ -182,7 +182,7 @@ fn projection_equality_priority1() {
             }
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; definite substitution for<?U0> { [?0 := S2, ?1 := ^0.0] }"]]
         } yields[SolverChoice::recursive_default()] {
             // This is.. interesting, but not necessarily wrong.
             // It's certainly true that based on the impls we see
@@ -240,7 +240,7 @@ fn projection_equality_priority2() {
             }
         } yields {
             // Constraining Out1 = Y gives us only one choice.
-            expect![["Unique; substitution [?0 := !1_1, ?1 := (Trait1::Type)<!1_0, !1_1>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := !1_1, ?1 := (Trait1::Type)<!1_0, !1_1>]"]]
         }
 
         goal {
@@ -254,7 +254,7 @@ fn projection_equality_priority2() {
             }
         } yields {
             // Constraining Out1 = Y gives us only one choice.
-            expect![["Unique; substitution [?0 := !1_1, ?1 := (Trait1::Type)<!1_0, !1_1>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := !1_1, ?1 := (Trait1::Type)<!1_0, !1_1>]"]]
         }
 
         goal {
@@ -274,7 +274,7 @@ fn projection_equality_priority2() {
         } yields[SolverChoice::recursive_default()] {
             // Constraining Out1 = S1 gives us only one choice, use the impl,
             // and the recursive solver prefers the normalized form.
-            expect![["Unique; substitution [?0 := S1, ?1 := Uint(U32)], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := S1, ?1 := Uint(U32)]"]]
         }
     }
 }
@@ -297,7 +297,7 @@ fn projection_equality_from_env() {
             }
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
             expect![["Unique; substitution [?0 := Uint(U32)]"]]
         }
@@ -325,7 +325,7 @@ fn projection_equality_nested() {
             }
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }  yields[SolverChoice::recursive_default()] {
             expect![["Unique; substitution [?0 := Uint(U32)]"]]
         }
@@ -367,7 +367,7 @@ fn iterator_flatten() {
             }
         } yields[SolverChoice::slg_default()] {
             // this is wrong, chalk#234
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
             expect![["Unique; substitution [?0 := Uint(U32)]"]]
         }
@@ -409,7 +409,7 @@ fn normalize_gat1() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := Iter<'!2_0, !1_0>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Iter<'!2_0, !1_0>]"]]
         }
     }
 }
@@ -434,7 +434,7 @@ fn normalize_gat2() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := Span<'!1_0, !1_1>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Span<'!1_0, !1_1>]"]]
         }
 
         goal {
@@ -442,7 +442,7 @@ fn normalize_gat2() {
                 <StreamIterMut<T> as StreamingIterator<T>>::Item<'a> = Span<'a, T>
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -452,7 +452,7 @@ fn normalize_gat2() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -476,7 +476,7 @@ fn normalize_gat_const() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := Span<!1_0, !1_1>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Span<!1_0, !1_1>]"]]
         }
 
         goal {
@@ -484,7 +484,7 @@ fn normalize_gat_const() {
                 <StreamIterMut<T> as StreamingIterator<T>>::Item<N> = Span<N, T>
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -494,7 +494,7 @@ fn normalize_gat_const() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -604,7 +604,7 @@ fn normalize_gat_with_higher_ranked_trait_bound() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := Baz], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Baz]"]]
         }
     }
 }
@@ -626,7 +626,7 @@ fn forall_projection() {
         goal {
             for<'a> fn(<Unit as DropLt<'a>>::Item): Eq<fn(Unit)>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -664,7 +664,7 @@ fn forall_projection_gat() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -682,7 +682,7 @@ fn forall_projection_gat() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -719,9 +719,9 @@ fn normalize_under_binder() {
             }
         } yields[SolverChoice::slg_default()] {
             // chalk#234, I think
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
-            expect![["Unique; substitution [?0 := I32], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := I32]"]]
         }
 
         goal {
@@ -731,7 +731,7 @@ fn normalize_under_binder() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := I32], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := I32]"]]
         }
 
         goal {
@@ -742,9 +742,9 @@ fn normalize_under_binder() {
             }
         } yields[SolverChoice::slg_default()] {
             // chalk#234, I think
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
-            expect![["Unique; substitution [?0 := Ref<'!1_0, I32>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Ref<'!1_0, I32>]"]]
         }
 
         goal {
@@ -754,7 +754,7 @@ fn normalize_under_binder() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := Ref<'!1_0, I32>], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Ref<'!1_0, I32>]"]]
         }
 
         goal {
@@ -797,7 +797,7 @@ fn normalize_under_binder_multi() {
                 }
             }
         } yields_all {
-            expect![["substitution [?0 := I32], lifetime constraints []"]],
+            expect![["substitution [?0 := I32]"]],
             expect![["for<?U0,?U0> { substitution [?0 := (Deref::Item)<Ref<'^0.0, I32>, '^0.1>], lifetime constraints [\
             InEnvironment { environment: Env([]), goal: '!1_0: '^0.1 }, \
             InEnvironment { environment: Env([]), goal: '^0.1: '!1_0 }, \
@@ -812,7 +812,7 @@ fn normalize_under_binder_multi() {
                 }
             }
         } yields_first {
-            expect![["substitution [?0 := I32], lifetime constraints []"]]
+            expect![["substitution [?0 := I32]"]]
         }
     }
 }
@@ -1063,7 +1063,7 @@ fn projection_to_dyn() {
         goal {
             <() as AsDyn>::Dyn: Debug
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -1097,13 +1097,13 @@ fn projection_to_opaque() {
         goal {
             <A as AsProj>::Proj: Debug
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             <<A as AsProj>::Proj as Debug>::Output = ()
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }

@@ -105,13 +105,13 @@ fn generator_test() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"]]
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"]]
         }
 
         goal {
             not_send_resume_yield: Send
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -121,7 +121,7 @@ fn generator_test() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {

@@ -48,7 +48,7 @@ fn auto_semantics() {
                 T: Send
             }
         } yields {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -201,7 +201,7 @@ fn enum_auto_trait() {
         goal {
             A: Send
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -239,46 +239,46 @@ fn builtin_auto_trait() {
 
         // The following types only contain AutoTrait-types, and thus implement AutoTrait themselves.
         goal { (i32, f32): AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { [(); 1]: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { [()]: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { u32: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { *const (): AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { *mut (): AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { forall<'a> { &'a (): AutoTrait } }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { forall<'a> { &'a mut (): AutoTrait } }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { str: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { !: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { Enum: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { func: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { good_closure: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
         goal { fn(Marker) -> Marker: AutoTrait }
-        yields { expect![["Unique; substitution [], lifetime constraints []"]] }
+        yields { expect![["Unique"]] }
 
 
         // foreign types do not implement AutoTraits automatically
@@ -317,7 +317,7 @@ fn adt_auto_trait() {
             Yes: AutoTrait
         }
         yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -331,7 +331,7 @@ fn adt_auto_trait() {
             X: AutoTrait
         }
         yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {

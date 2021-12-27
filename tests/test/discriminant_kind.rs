@@ -160,7 +160,7 @@ fn discriminant_kind_assoc() {
                 }
             }
         } yields {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }

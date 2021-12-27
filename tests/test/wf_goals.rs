@@ -25,13 +25,13 @@ fn struct_wf() {
         goal {
             WellFormed(Foo<Baz>)
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed(Foo<Foo<Baz>>)
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -59,13 +59,13 @@ fn enum_wf() {
         goal {
             WellFormed(Foo<Baz>)
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed(Foo<Foo<Baz>>)
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -103,7 +103,7 @@ fn drop_compatible() {
         goal {
             compatible { not { exists<T> { S<T>: Drop } } }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -114,7 +114,7 @@ fn placeholder_wf() {
         goal {
             forall<T> { WellFormed(T) }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }

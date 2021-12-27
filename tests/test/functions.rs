@@ -11,13 +11,13 @@ fn functions_are_sized() {
         goal {
             fn(()): Sized
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             fn([u8]): Sized
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -33,13 +33,13 @@ fn functions_are_copy() {
         goal {
             fn(()): Copy
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             fn([u8]): Copy
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -73,21 +73,21 @@ fn function_implement_fn_traits() {
         goal {
             fn(u8): FnOnce<(u8,)>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Same as above, but for FnMut
         goal {
             fn(u8): FnMut<(u8,)>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Same as above, but for Fn
         goal {
             fn(u8): Fn<(u8,)>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Make sure unsafe function pointers don't implement FnOnce
@@ -115,14 +115,14 @@ fn function_implement_fn_traits() {
         goal {
             Normalize(<fn(u8) as FnOnce<(u8,)>>::Output -> ())
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Tests normalizing when an explicit return type is used
         goal {
             Normalize(<fn(u8) -> bool as FnOnce<(u8,)>>::Output -> bool)
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Tests that we fail to normalize when there's a mismatch with
@@ -152,7 +152,7 @@ fn function_implement_fn_traits() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := !1_0], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := !1_0]"]]
         }
 
         // Tests that we properly tuple function arguments when constrcting
@@ -160,7 +160,7 @@ fn function_implement_fn_traits() {
         goal {
             fn(u8, u32): FnOnce<(u8,u32)>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Tests that we don't find a solution when fully monomorphic
@@ -179,7 +179,7 @@ fn function_implement_fn_traits() {
                 for<'b> fn(&'b u8): FnOnce<(&'a u8,)>
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Tests that a 'stricter' function (requires lifetimes to be the same)
@@ -191,7 +191,7 @@ fn function_implement_fn_traits() {
                 for<'c> fn(&'c u8, &'c i32): FnOnce<(&'a u8, &'b i32)>
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
         }
 
         // Tests the opposite case as the previous test: a 'less strict' function
@@ -203,7 +203,7 @@ fn function_implement_fn_traits() {
                 for<'b, 'c> fn(&'b u8, &'c i32): FnOnce<(&'a u8, &'a i32)>
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Similiar to the above test, but for types instead of lifetimes:

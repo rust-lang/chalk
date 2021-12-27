@@ -18,7 +18,7 @@ fn implied_bounds() {
                 }
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -39,7 +39,7 @@ fn gat_implied_bounds() {
                 }
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
     }
 

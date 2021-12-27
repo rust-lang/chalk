@@ -68,31 +68,31 @@ fn tuples_are_copy() {
         goal {
             (): Copy
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (u8,): Copy
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (u8, u8): Copy
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             exists<T> { (T, u8): Copy }
         } yields {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
             forall<T> { if (T: Copy) { (T, u8): Copy } }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -122,37 +122,37 @@ fn tuples_are_sized() {
         goal {
             ([u8], u8): Sized
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (): Sized
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (u8,): Sized
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (u8, u8): Sized
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             exists<T> { (T, u8): Sized }
         } yields {
-            expect![["Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
 
         goal {
             forall<T> { (T, u8): Sized }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -164,7 +164,7 @@ fn tuples_are_sized() {
         goal {
             forall<T> { if (T: Sized) { (u8, T): Sized } }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -202,31 +202,31 @@ fn tuples_are_clone() {
         goal {
             (): Clone
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (u8,): Clone
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             (u8, u8): Clone
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             exists<T> { (T, u8): Clone }
         } yields {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
             forall<T> { if (T: Clone) { (T, u8): Clone } }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -242,31 +242,31 @@ fn tuples_are_wf() {
         goal {
             WellFormed(())
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed((u8,))
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed((u8, u8))
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed(([u8],))
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed((u8, [u8]))
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -290,7 +290,7 @@ fn tuples_are_wf() {
         goal {
             forall<T> { if (T: Sized) { WellFormed((T, u8)) } }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }

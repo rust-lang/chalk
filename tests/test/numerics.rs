@@ -134,7 +134,7 @@ fn integer_and_float_are_specialized_ty_kinds() {
                 T = N, N = usize
             }
         } yields {
-            expect![["Unique; substitution [?0 := Uint(Usize), ?1 := Uint(Usize)], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Uint(Usize), ?1 := Uint(Usize)]"]]
         }
 
         goal {
@@ -142,7 +142,7 @@ fn integer_and_float_are_specialized_ty_kinds() {
                 T = N, N = f32
             }
         } yields {
-            expect![["Unique; substitution [?0 := Float(F32), ?1 := Float(F32)], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Float(F32), ?1 := Float(F32)]"]]
         }
     }
 }
@@ -197,7 +197,7 @@ fn integers_are_copy() {
                 I: Copy
             }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
     }
 }
@@ -215,7 +215,7 @@ fn integers_are_sized() {
                 I: Sized
             }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
     }
 }
@@ -286,7 +286,7 @@ fn unify_general_then_specific_ty() {
                 Bar<(N, T, T, T)>: Foo
             }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; substitution [?0 := Int(I32), ?1 := Int(I32)]"]]
         }
     }
 }

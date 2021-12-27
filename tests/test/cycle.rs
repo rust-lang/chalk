@@ -31,7 +31,7 @@ fn inner_cycle() {
         goal {
             exists<T> { T: A }
         } yields {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -141,7 +141,7 @@ fn multiple_ambiguous_cycles() {
                 T: WF
             }
         } yields {
-            expect![["Ambig"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }

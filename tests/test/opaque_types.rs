@@ -16,7 +16,7 @@ fn opaque_bounds() {
         goal {
             T: Clone
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -39,7 +39,7 @@ fn opaque_reveal() {
                 T: Trait
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -77,7 +77,7 @@ fn opaque_where_clause() {
                 WellFormed(T)
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -93,7 +93,7 @@ fn opaque_where_clause() {
                 }
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -124,7 +124,7 @@ fn opaque_generics_simple() {
         goal {
             Foo<Bar>: Iterator
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
     }
@@ -149,7 +149,7 @@ fn opaque_generics() {
         goal {
             Foo<Bar>: Iterator<Item = Bar>
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -157,7 +157,7 @@ fn opaque_generics() {
                 Foo<T>: Iterator<Item = T>
             }
         } yields {
-            expect![["Unique; substitution []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -165,9 +165,9 @@ fn opaque_generics() {
                 <Foo<Bar> as Iterator>::Item = T
             }
         } yields[SolverChoice::slg_default()] {
-            expect![["Ambiguous"]] // #234
+            expect![["Ambiguous; no inference guidance"]] // #234
         } yields[SolverChoice::recursive_default()] {
-            expect![["Unique; substitution [?0 := Bar], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Bar]"]]
         }
     }
 }

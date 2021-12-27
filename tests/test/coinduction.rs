@@ -126,7 +126,7 @@ fn coinductive_trivial_variant1() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            expect![["Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := X, ?1 := X]"]]
         }
     }
 }
@@ -150,7 +150,7 @@ fn coinductive_trivial_variant2() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            expect![["Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := X, ?1 := X]"]]
         }
     }
 }
@@ -168,7 +168,7 @@ fn coinductive_trivial_variant3() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            expect![["Unique; for<?U0,?U0> { substitution [?0 := ^0.0, ?1 := ^0.1], lifetime constraints [] }"]]
+            expect![["Unique; for<?U0,?U0> { substitution [?0 := ^0.0, ?1 := ^0.1] }"]]
         }
     }
 }
@@ -494,7 +494,7 @@ fn coinductive_multicycle1() {
         goal {
             forall<X> { X: Any }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -534,7 +534,7 @@ fn coinductive_multicycle2() {
         goal {
             forall<X> { X: Any }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }

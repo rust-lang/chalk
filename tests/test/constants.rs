@@ -18,7 +18,7 @@ fn single_impl() {
                 S<N>: Trait
             }
         } yields {
-            expect![["Unique; substitution [?0 := 3], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := 3]"]]
         }
 
         goal {
@@ -92,7 +92,7 @@ fn generic_impl() {
                 S<N>: Trait
             }
         } yields {
-            expect![["Unique; for<?U0> { substitution [?0 := ^0.0], lifetime constraints [] }"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
 
         goal {
@@ -100,7 +100,7 @@ fn generic_impl() {
                 S<N>: Trait
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -133,7 +133,7 @@ fn placeholders_eq() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := !1_0], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := !1_0]"]]
         }
 
         goal {

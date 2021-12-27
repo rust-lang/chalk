@@ -144,7 +144,7 @@ fn generic_fn_implements_fn_traits() {
         goal {
             exists<T> { foo<T>: Fn<(T,)> }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
 
         goal {
@@ -156,7 +156,7 @@ fn generic_fn_implements_fn_traits() {
         goal {
             exists<T> { Normalize(<foo<T> as FnOnce<(T,)>>::Output -> T) }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
 
         goal {

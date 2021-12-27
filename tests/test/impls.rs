@@ -18,13 +18,13 @@ fn prove_clone() {
         goal {
             Vec<Foo>: Clone
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             Foo: Clone
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -67,13 +67,13 @@ fn prove_infer() {
         goal {
             exists<A> { A: Map<Bar> }
         } yields {
-            expect![["Unique; substitution [?0 := Foo], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Foo]"]]
         }
 
         goal {
             exists<A> { Foo: Map<A> }
         } yields {
-            expect![["Unique; substitution [?0 := Bar], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := Bar]"]]
         }
     }
 }
@@ -111,7 +111,7 @@ fn prove_forall() {
         goal {
             forall<T> { not { T: Marker } }
         } yields {
-            expect![["No"]]
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -124,7 +124,7 @@ fn prove_forall() {
         goal {
             forall<T> { if (T: Marker) { T: Marker } }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // We don't have to know anything about `T` to know that
@@ -132,7 +132,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Marker }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         // Here, we don't know that `T: Clone`, so we can't prove that
@@ -151,7 +151,7 @@ fn prove_forall() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
     }
 }
@@ -173,7 +173,7 @@ fn higher_ranked() {
                 }
             }
         } yields {
-            expect![["Unique; substitution [?0 := BestType], lifetime constraints []"]]
+            expect![["Unique; substitution [?0 := BestType]"]]
         }
     }
 }
@@ -262,13 +262,13 @@ fn generic_trait() {
         goal {
             Int: Eq<Int>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
             Uint: Eq<Uint>
         } yields {
-            expect![["Unique; substitution [], lifetime constraints []"]]
+            expect![["Unique"]]
         }
 
         goal {
@@ -507,7 +507,7 @@ fn inapplicable_assumption_does_not_shadow() {
                 }
             }
         } yields {
-            expect![["Unique"]]
+            expect![["Unique; substitution [?0 := A]"]]
         }
     }
 }
@@ -534,7 +534,7 @@ fn partial_overlap_2() {
                 }
             }
         } yields {
-            expect![["Ambiguous"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -673,7 +673,7 @@ fn unify_types_in_impl() {
         goal {
             exists<T,U> { A<T>: Trait<U> }
         } yields {
-            expect![["Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0], lifetime constraints [] }"]]
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0] }"]]
         }
     }
 }
