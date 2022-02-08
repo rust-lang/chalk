@@ -282,7 +282,7 @@ macro_rules! eq_zip {
 
 eq_zip!(I => AdtId<I>);
 eq_zip!(I => TraitId<I>);
-eq_zip!(I => AssocTypeId<I>);
+eq_zip!(I => AssocItemId<I>);
 eq_zip!(I => OpaqueTyId<I>);
 eq_zip!(I => GeneratorId<I>);
 eq_zip!(I => ForeignDefId<I>);
@@ -457,7 +457,7 @@ impl<I: Interner> Zip<I> for TraitRef<I> {
     }
 }
 
-impl<I: Interner> Zip<I> for ProjectionTy<I> {
+impl<I: Interner> Zip<I> for ProjectionTerm<I> {
     fn zip_with<Z: Zipper<I>>(
         zipper: &mut Z,
         variance: Variance,
@@ -465,7 +465,12 @@ impl<I: Interner> Zip<I> for ProjectionTy<I> {
         b: &Self,
     ) -> Fallible<()> {
         let interner = zipper.interner();
-        Zip::zip_with(zipper, variance, &a.associated_ty_id, &b.associated_ty_id)?;
+        Zip::zip_with(
+            zipper,
+            variance,
+            &a.associated_term_id,
+            &b.associated_term_id,
+        )?;
         zipper.zip_substs(
             variance,
             None,

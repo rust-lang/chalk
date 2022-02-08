@@ -54,7 +54,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         vec![]
     }
 
-    fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         unimplemented!()
     }
 

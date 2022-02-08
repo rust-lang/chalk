@@ -1,7 +1,7 @@
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
-    AliasTy, Floundered, Normalize, ProjectionTy, Substitution, Ty, TyKind, TyVariableKind,
+    AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind, TyVariableKind,
 };
 
 pub fn add_discriminant_clauses<I: Interner>(
@@ -59,8 +59,8 @@ pub fn add_discriminant_clauses<I: Interner>(
     };
 
     let normalize = Normalize {
-        alias: AliasTy::Projection(ProjectionTy {
-            associated_ty_id,
+        alias: AliasTy::Projection(ProjectionTerm {
+            associated_term_id: associated_ty_id,
             substitution,
         }),
         ty: disc_ty,

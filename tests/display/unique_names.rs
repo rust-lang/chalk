@@ -46,7 +46,7 @@ where
     fn adt_name(&self, _adt_id: chalk_ir::AdtId<I>) -> String {
         "Foo".to_owned()
     }
-    fn assoc_type_name(&self, _assoc_ty_id: chalk_ir::AssocTypeId<I>) -> String {
+    fn assoc_type_name(&self, _assoc_ty_id: chalk_ir::AssocItemId<I>) -> String {
         "Foo".to_owned()
     }
     fn opaque_type_name(&self, _opaque_ty_id: chalk_ir::OpaqueTyId<I>) -> String {
@@ -60,7 +60,7 @@ where
     }
     fn associated_ty_data(
         &self,
-        ty: chalk_ir::AssocTypeId<I>,
+        ty: chalk_ir::AssocItemId<I>,
     ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyDatum<I>> {
         self.db.associated_ty_data(ty)
     }

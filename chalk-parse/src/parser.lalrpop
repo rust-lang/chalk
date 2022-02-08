@@ -429,7 +429,7 @@ TyWithoutId: Ty = {
         lifetime: l,
     },
     <n:Id> "<" <a:Comma<GenericArg>> ">" => Ty::Apply { name: n, args: a },
-    <p:ProjectionTy> => Ty::Projection { proj: p },
+    <p:ProjectionTerm> => Ty::Projection { proj: p },
     "(" <t:TupleOrParensInner> ")" => t,
     "*" <m: RawMutability> <t:Ty> => Ty::Raw{ mutability: m, ty: Box::new(t) },
     "&" <l: Lifetime> "mut" <t:Ty> => Ty::Ref{ mutability: Mutability::Mut, lifetime: l, ty: Box::new(t) },
@@ -467,7 +467,7 @@ FloatTy: FloatTy = {
 ScalarType: ScalarType = {
     <i:IntTy> => ScalarType::Int(i),
     <u:UintTy> => ScalarType::Uint(u),
-    <f:FloatTy> => ScalarType::Float(f), 
+    <f:FloatTy> => ScalarType::Float(f),
     "bool" => ScalarType::Bool,
     "char" => ScalarType::Char,
 };
@@ -511,8 +511,8 @@ GenericArg: GenericArg = {
     ConstWithoutId => GenericArg::Const(<>),
 };
 
-ProjectionTy: ProjectionTy = {
-    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => ProjectionTy {
+ProjectionTerm: ProjectionTerm = {
+    "<" <t:TraitRef<"as">> ">" "::" <n:Id> <a:Angle<GenericArg>> => ProjectionTerm {
         trait_ref: t, name: n, args: a
     },
 };
@@ -576,7 +576,7 @@ WhereClause: WhereClause = {
         let mut args = vec![GenericArg::Ty(s)];
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
-        let projection = ProjectionTy { trait_ref, name, args: a2 };
+        let projection = ProjectionTerm { trait_ref, name, args: a2 };
         WhereClause::ProjectionEq { projection, ty }
     },
 
@@ -620,7 +620,7 @@ DomainGoal: DomainGoal = {
     "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
 
     // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <s:ProjectionTy> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
+    "Normalize" "(" <s:ProjectionTerm> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },

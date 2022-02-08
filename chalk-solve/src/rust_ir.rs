@@ -7,8 +7,8 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId,
-    GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
+    try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocItemId, Binders, DebruijnIndex, FnDefId,
+    GenericArg, ImplId, OpaqueTyId, ProjectionTerm, QuantifiedWhereClause, Substitution,
     ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
@@ -249,7 +249,7 @@ pub struct TraitDatum<I: Interner> {
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
 
-    pub associated_ty_ids: Vec<AssocTypeId<I>>,
+    pub associated_ty_ids: Vec<AssocItemId<I>>,
 
     /// If this is a well-known trait, which one? If `None`, this is a regular,
     /// user-defined trait.
@@ -423,7 +423,7 @@ impl<I: Interner> TraitBound<I> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
 pub struct AliasEqBound<I: Interner> {
     pub trait_bound: TraitBound<I>,
-    pub associated_ty_id: AssocTypeId<I>,
+    pub associated_ty_id: AssocItemId<I>,
     /// Does not include trait parameters.
     pub parameters: Vec<GenericArg<I>>,
     pub value: Ty<I>,
@@ -444,8 +444,8 @@ impl<I: Interner> AliasEqBound<I> {
         vec![
             WhereClause::Implemented(trait_ref),
             WhereClause::AliasEq(AliasEq {
-                alias: AliasTy::Projection(ProjectionTy {
-                    associated_ty_id: self.associated_ty_id,
+                alias: AliasTy::Projection(ProjectionTerm {
+                    associated_term_id: self.associated_ty_id,
                     substitution,
                 }),
                 ty: self.value.clone(),
@@ -490,7 +490,7 @@ pub struct AssociatedTyDatum<I: Interner> {
     pub trait_id: TraitId<I>,
 
     /// The ID of this associated type
-    pub id: AssocTypeId<I>,
+    pub id: AssocItemId<I>,
 
     /// Name of this associated type.
     pub name: I::Identifier,
@@ -552,8 +552,8 @@ impl<I: Interner> AssociatedTyDatum<I> {
         );
 
         // The self type will be `<P0 as Foo<P1..Pn>>::Item<Pn..Pm>` etc
-        let self_ty = TyKind::Alias(AliasTy::Projection(ProjectionTy {
-            associated_ty_id: self.id,
+        let self_ty = TyKind::Alias(AliasTy::Projection(ProjectionTerm {
+            associated_term_id: self.id,
             substitution,
         }))
         .intern(interner);
@@ -604,7 +604,7 @@ pub struct AssociatedTyValue<I: Interner> {
     ///     type Item; // <-- refers to this declaration here!
     /// }
     /// ```
-    pub associated_ty_id: AssocTypeId<I>,
+    pub associated_ty_id: AssocItemId<I>,
 
     /// Additional binders declared on the associated type itself,
     /// beyond those from the impl. This would be empty for normal

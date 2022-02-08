@@ -213,7 +213,7 @@ macro_rules! id_fold {
 id_fold!(ImplId);
 id_fold!(AdtId);
 id_fold!(TraitId);
-id_fold!(AssocTypeId);
+id_fold!(AssocItemId);
 id_fold!(OpaqueTyId);
 id_fold!(FnDefId);
 id_fold!(ClosureId);

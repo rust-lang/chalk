@@ -7,7 +7,7 @@ use crate::{
     tls, SolverChoice,
 };
 use chalk_ir::{
-    AdtId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,
+    AdtId, AssocItemId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,
     Environment, FnDefId, GeneratorId, GenericArg, Goal, ImplId, InEnvironment, OpaqueTyId,
     ProgramClause, ProgramClauses, Substitution, TraitId, Ty, TyKind, UCanonical,
     UnificationDatabase, Variances,
@@ -87,7 +87,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().custom_clauses()
     }
 
-    fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_data(ty)
     }
 
@@ -235,7 +235,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().adt_name(struct_id)
     }
 
-    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<ChalkIr>) -> String {
+    fn assoc_type_name(&self, assoc_ty_id: AssocItemId<ChalkIr>) -> String {
         self.program_ir().unwrap().assoc_type_name(assoc_ty_id)
     }
 

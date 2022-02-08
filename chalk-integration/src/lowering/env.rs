@@ -71,7 +71,7 @@ pub struct Env<'k> {
 /// ```
 #[derive(Debug, PartialEq, Eq)]
 pub struct AssociatedTyLookup {
-    pub id: chalk_ir::AssocTypeId<ChalkIr>,
+    pub id: chalk_ir::AssocItemId<ChalkIr>,
     pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
 }
 

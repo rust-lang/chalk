@@ -39,8 +39,8 @@ macro_rules! ty {
     };
 
     (projection (item $n:tt) $($arg:tt)*) => {
-            chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTy  {
-            associated_ty_id: AssocTypeId(chalk_integration::interner::RawId { index: $n }),
+            chalk_ir::AliasTy::Projection(chalk_ir::ProjectionTerm  {
+            associated_term_id: AssocItemId(chalk_integration::interner::RawId { index: $n }),
             substitution: chalk_ir::Substitution::from_iter(
                 chalk_integration::interner::ChalkIr,
                 vec![$(arg!($arg)),*] as Vec<chalk_ir::GenericArg<_>>

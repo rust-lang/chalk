@@ -807,8 +807,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
              }| {
                 let substitution = builder.substitution_in_scope();
 
-                let projection = ProjectionTy {
-                    associated_ty_id: self.id,
+                let projection = ProjectionTerm {
+                    associated_term_id: self.id,
                     substitution: substitution.clone(),
                 };
                 let projection_ty = AliasTy::Projection(projection.clone()).intern(interner);

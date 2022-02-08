@@ -2,7 +2,7 @@ use crate::clauses::ClauseBuilder;
 use crate::rust_ir::WellKnownTrait;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
-use chalk_ir::{AliasTy, Floundered, Normalize, ProjectionTy, Substitution, Ty, TyKind};
+use chalk_ir::{AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind};
 
 /// Add implicit impls of the generator trait, i.e., add a clause that all generators implement
 /// `Generator` and clauses for `Generator`'s associated types.
@@ -46,8 +46,8 @@ pub fn add_generator_program_clauses<I: Interner>(
 
             // `Generator::Yield`
             let yield_id = trait_datum.associated_ty_ids[0];
-            let yield_alias = AliasTy::Projection(ProjectionTy {
-                associated_ty_id: yield_id,
+            let yield_alias = AliasTy::Projection(ProjectionTerm {
+                associated_term_id: yield_id,
                 substitution: substitution.clone(),
             });
             builder.push_fact(Normalize {
@@ -57,8 +57,8 @@ pub fn add_generator_program_clauses<I: Interner>(
 
             // `Generator::Return`
             let return_id = trait_datum.associated_ty_ids[1];
-            let return_alias = AliasTy::Projection(ProjectionTy {
-                associated_ty_id: return_id,
+            let return_alias = AliasTy::Projection(ProjectionTerm {
+                associated_term_id: return_id,
                 substitution,
             });
             builder.push_fact(Normalize {

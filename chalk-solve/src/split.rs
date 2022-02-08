@@ -16,19 +16,19 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// any type parameters itself.
     fn split_projection<'p>(
         &self,
-        projection: &'p ProjectionTy<I>,
+        projection: &'p ProjectionTerm<I>,
     ) -> (
         Arc<AssociatedTyDatum<I>>,
         &'p [GenericArg<I>],
         &'p [GenericArg<I>],
     ) {
         let interner = self.interner();
-        let ProjectionTy {
-            associated_ty_id,
+        let ProjectionTerm {
+            associated_term_id,
             ref substitution,
         } = *projection;
         let parameters = substitution.as_slice(interner);
-        let associated_ty_data = &self.associated_ty_data(associated_ty_id);
+        let associated_ty_data = &self.associated_ty_data(associated_term_id);
         let (trait_params, other_params) =
             self.split_associated_ty_parameters(parameters, &**associated_ty_data);
         (associated_ty_data.clone(), trait_params, other_params)
@@ -39,7 +39,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// `split_projection`).
     fn trait_parameters_from_projection<'p>(
         &self,
-        projection: &'p ProjectionTy<I>,
+        projection: &'p ProjectionTerm<I>,
     ) -> &'p [GenericArg<I>] {
         let (_, trait_params, _) = self.split_projection(projection);
         trait_params
@@ -48,7 +48,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_ref_from_projection(&self, projection: &ProjectionTy<I>) -> TraitRef<I> {
+    fn trait_ref_from_projection(&self, projection: &ProjectionTerm<I>) -> TraitRef<I> {
         let interner = self.interner();
         let (associated_ty_data, trait_params, _) = self.split_projection(projection);
         TraitRef {
@@ -124,7 +124,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         &self,
         parameters: &'p [GenericArg<I>],
         associated_ty_value: &AssociatedTyValue<I>,
-    ) -> (&'p [GenericArg<I>], ProjectionTy<I>) {
+    ) -> (&'p [GenericArg<I>], ProjectionTerm<I>) {
         let interner = self.interner();
 
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
@@ -150,8 +150,8 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
                 .cloned(),
         );
 
-        let projection = ProjectionTy {
-            associated_ty_id: associated_ty_value.associated_ty_id,
+        let projection = ProjectionTerm {
+            associated_term_id: associated_ty_value.associated_ty_id,
             substitution: projection_substitution,
         };
 

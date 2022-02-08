@@ -618,11 +618,11 @@ impl Lower for TraitFlags {
     }
 }
 
-impl LowerWithEnv for ProjectionTy {
-    type Lowered = chalk_ir::ProjectionTy<ChalkIr>;
+impl LowerWithEnv for ProjectionTerm {
+    type Lowered = chalk_ir::ProjectionTerm<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let ProjectionTy {
+        let ProjectionTerm {
             ref trait_ref,
             ref name,
             ref args,
@@ -658,8 +658,8 @@ impl LowerWithEnv for ProjectionTy {
 
         args.extend(trait_substitution.iter(interner).cloned());
 
-        Ok(chalk_ir::ProjectionTy {
-            associated_ty_id: lookup.id,
+        Ok(chalk_ir::ProjectionTerm {
+            associated_term_id: lookup.id,
             substitution: chalk_ir::Substitution::from_iter(interner, args),
         })
     }

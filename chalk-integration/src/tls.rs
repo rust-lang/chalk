@@ -1,8 +1,8 @@
 use crate::interner::ChalkIr;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, Constraints, FnDefId,
+    debug::SeparatorTraitRef, AdtId, AliasTy, AssocItemId, CanonicalVarKinds, Constraints, FnDefId,
     GenericArg, Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution,
+    ProgramClauseImplication, ProgramClauses, ProjectionTerm, QuantifiedWhereClauses, Substitution,
     TraitId, Ty, VariableKinds, Variances,
 };
 use std::cell::RefCell;
@@ -28,7 +28,7 @@ pub trait DebugContext {
 
     fn debug_assoc_type_id(
         &self,
-        id: AssocTypeId<ChalkIr>,
+        id: AssocItemId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 
@@ -58,7 +58,7 @@ pub trait DebugContext {
 
     fn debug_projection_ty(
         &self,
-        proj: &ProjectionTy<ChalkIr>,
+        proj: &ProjectionTerm<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error>;
 

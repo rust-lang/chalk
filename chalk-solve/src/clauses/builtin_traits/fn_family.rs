@@ -3,7 +3,7 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, Binders, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty, TyKind,
+    AliasTy, Binders, Normalize, ProjectionTerm, Safety, Substitution, TraitId, Ty, TyKind,
 };
 
 fn push_clauses<I: Interner>(
@@ -36,8 +36,8 @@ fn push_clauses<I: Interner>(
         // Constructs the alias. For `Fn`, for example, this would look like
         // `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
         let output_id = trait_datum.associated_ty_ids[0];
-        let alias = AliasTy::Projection(ProjectionTy {
-            associated_ty_id: output_id,
+        let alias = AliasTy::Projection(ProjectionTerm {
+            associated_term_id: output_id,
             substitution,
         });
         builder.push_fact(Normalize {

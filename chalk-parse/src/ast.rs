@@ -300,7 +300,7 @@ pub enum Ty {
         args: Vec<GenericArg>,
     },
     Projection {
-        proj: ProjectionTy,
+        proj: ProjectionTerm,
     },
     ForAll {
         lifetime_names: Vec<Identifier>,
@@ -395,7 +395,7 @@ pub enum Lifetime {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct ProjectionTy {
+pub struct ProjectionTerm {
     pub trait_ref: TraitRef,
     pub name: Identifier,
     pub args: Vec<GenericArg>,
@@ -441,7 +441,7 @@ impl fmt::Display for Identifier {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WhereClause {
     Implemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTy, ty: Ty },
+    ProjectionEq { projection: ProjectionTerm, ty: Ty },
     LifetimeOutlives { a: Lifetime, b: Lifetime },
     TypeOutlives { ty: Ty, lifetime: Lifetime },
 }
@@ -449,7 +449,7 @@ pub enum WhereClause {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
     Holds { where_clause: WhereClause },
-    Normalize { projection: ProjectionTy, ty: Ty },
+    Normalize { projection: ProjectionTerm, ty: Ty },
     TraitRefWellFormed { trait_ref: TraitRef },
     TyWellFormed { ty: Ty },
     TyFromEnv { ty: Ty },

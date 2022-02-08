@@ -45,8 +45,8 @@ fn opaque_ty_flags_correct() {
 #[test]
 fn dyn_ty_flags_correct() {
     let internal_ty = TyKind::Scalar(chalk_ir::Scalar::Bool).intern(ChalkIr);
-    let projection_ty = chalk_ir::ProjectionTy {
-        associated_ty_id: chalk_ir::AssocTypeId(chalk_integration::interner::RawId { index: 0 }),
+    let projection_ty = chalk_ir::ProjectionTerm {
+        associated_term_id: chalk_ir::AssocItemId(chalk_integration::interner::RawId { index: 0 }),
         substitution: empty_substitution!(),
     };
     let bounds = chalk_ir::Binders::<chalk_ir::QuantifiedWhereClauses<ChalkIr>>::empty(

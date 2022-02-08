@@ -1,6 +1,6 @@
 //! Encapsulates the concrete representation of core types such as types and goals.
 use crate::AliasTy;
-use crate::AssocTypeId;
+use crate::AssocItemId;
 use crate::CanonicalVarKind;
 use crate::CanonicalVarKinds;
 use crate::ClosureId;
@@ -23,7 +23,7 @@ use crate::ProgramClause;
 use crate::ProgramClauseData;
 use crate::ProgramClauseImplication;
 use crate::ProgramClauses;
-use crate::ProjectionTy;
+use crate::ProjectionTerm;
 use crate::QuantifiedWhereClause;
 use crate::QuantifiedWhereClauses;
 use crate::SeparatorTraitRef;
@@ -221,7 +221,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_assoc_type_id(
-        type_id: AssocTypeId<Self>,
+        type_id: AssocItemId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None
@@ -289,11 +289,11 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
         None
     }
 
-    /// Prints the debug representation of a ProjectionTy.
+    /// Prints the debug representation of a ProjectionTerm.
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
     fn debug_projection_ty(
-        projection_ty: &ProjectionTy<Self>,
+        projection_ty: &ProjectionTerm<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None

@@ -121,7 +121,7 @@ where
 
     fn associated_ty_data(
         &self,
-        ty: chalk_ir::AssocTypeId<I>,
+        ty: chalk_ir::AssocItemId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         let ty_datum = self.ws.db().associated_ty_data(ty);
         self.record(ty_datum.trait_id);
@@ -240,7 +240,7 @@ where
         self.ws.db().adt_name(adt_id)
     }
 
-    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
+    fn assoc_type_name(&self, assoc_ty_id: AssocItemId<I>) -> String {
         self.ws.db().assoc_type_name(assoc_ty_id)
     }
 
@@ -397,7 +397,7 @@ where
 
     fn associated_ty_data(
         &self,
-        ty: chalk_ir::AssocTypeId<I>,
+        ty: chalk_ir::AssocItemId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         self.db.associated_ty_data(ty)
     }
@@ -500,7 +500,7 @@ where
         self.db.adt_name(adt_id)
     }
 
-    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
+    fn assoc_type_name(&self, assoc_ty_id: AssocItemId<I>) -> String {
         self.db.assoc_type_name(assoc_ty_id)
     }
 

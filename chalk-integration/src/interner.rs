@@ -4,9 +4,9 @@ use chalk_ir::{
     TyKind,
 };
 use chalk_ir::{
-    AdtId, AliasTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData, Constraint,
+    AdtId, AliasTy, AssocItemId, CanonicalVarKind, CanonicalVarKinds, ConstData, Constraint,
     Constraints, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
+    ProgramClauseImplication, ProgramClauses, ProjectionTerm, QuantifiedWhereClauses,
     SeparatorTraitRef, Substitution, TraitId, Ty, TyData, VariableKind, VariableKinds, Variances,
 };
 use chalk_ir::{
@@ -91,7 +91,7 @@ impl Interner for ChalkIr {
     }
 
     fn debug_assoc_type_id(
-        id: AssocTypeId<ChalkIr>,
+        id: AssocItemId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| Some(prog?.debug_assoc_type_id(id, fmt)))
@@ -113,7 +113,7 @@ impl Interner for ChalkIr {
     }
 
     fn debug_projection_ty(
-        proj: &ProjectionTy<ChalkIr>,
+        proj: &ProjectionTerm<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         tls::with_current_program(|prog| Some(prog?.debug_projection_ty(proj, fmt)))

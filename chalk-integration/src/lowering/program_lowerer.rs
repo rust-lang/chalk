@@ -1,6 +1,6 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
+    self, AdtId, AssocItemId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
     GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
 };
 use chalk_parse::ast::*;
@@ -64,7 +64,7 @@ impl ProgramLowerer {
                     for defn in &d.assoc_ty_defns {
                         let addl_variable_kinds = defn.all_parameters();
                         let lookup = AssociatedTyLookup {
-                            id: AssocTypeId(self.next_item_id()),
+                            id: AssocItemId(self.next_item_id()),
                             addl_variable_kinds: addl_variable_kinds.anonymize(),
                         };
                         self.associated_ty_lookups

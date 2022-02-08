@@ -31,7 +31,7 @@ impl<I: Interner> RenderAsRust<I> for TraitId<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for AssocTypeId<I> {
+impl<I: Interner> RenderAsRust<I> for AssocItemId<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // TODO: use debug methods?
         write!(

@@ -306,15 +306,15 @@ impl<I: Interner> MayInvalidate<I> {
 
     fn aggregate_projection_tys(
         &mut self,
-        new: &ProjectionTy<I>,
-        current: &ProjectionTy<I>,
+        new: &ProjectionTerm<I>,
+        current: &ProjectionTerm<I>,
     ) -> bool {
-        let ProjectionTy {
-            associated_ty_id: new_name,
+        let ProjectionTerm {
+            associated_term_id: new_name,
             substitution: new_substitution,
         } = new;
-        let ProjectionTy {
-            associated_ty_id: current_name,
+        let ProjectionTerm {
+            associated_term_id: current_name,
             substitution: current_substitution,
         } = current;
 

@@ -647,9 +647,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                             })
                                         }
                                         AliasTy::Projection(projection_ty) => {
-                                            let ProjectionTy {
+                                            let ProjectionTerm {
                                                 ref substitution,
-                                                associated_ty_id,
+                                                associated_term_id,
                                             } = *projection_ty;
                                             // TODO: We should be skipping "self", which
                                             // would be the first element of
@@ -662,9 +662,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                                 universe_index,
                                                 |_| variance,
                                             );
-                                            AliasTy::Projection(ProjectionTy {
+                                            AliasTy::Projection(ProjectionTerm {
                                                 substitution,
-                                                associated_ty_id,
+                                                associated_term_id,
                                             })
                                         }
                                     };

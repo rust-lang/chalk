@@ -134,7 +134,7 @@ impl<I: Interner> RenderAsRust<I> for AliasTy<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
+impl<I: Interner> RenderAsRust<I> for ProjectionTerm<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // <X as Y<A1, A2, A3>>::Z<B1, B2, B3>
 

@@ -30,10 +30,10 @@ impl<I: Interner> Debug for AdtId<I> {
     }
 }
 
-impl<I: Interner> Debug for AssocTypeId<I> {
+impl<I: Interner> Debug for AssocItemId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_assoc_type_id(*self, fmt)
-            .unwrap_or_else(|| write!(fmt, "AssocTypeId({:?})", self.0))
+            .unwrap_or_else(|| write!(fmt, "AssocItemId({:?})", self.0))
     }
 }
 
@@ -150,10 +150,10 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
     }
 }
 
-impl<I: Interner> Debug for ProjectionTy<I> {
+impl<I: Interner> Debug for ProjectionTerm<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format ProjectionTy without setting Program in tls")
+            unimplemented!("cannot format ProjectionTerm without setting Program in tls")
         })
     }
 }
@@ -694,30 +694,30 @@ impl<I: Interner> Debug for TypeOutlives<I> {
 
 /// Helper struct for showing debug output for projection types.
 pub struct ProjectionTyDebug<'a, I: Interner> {
-    projection_ty: &'a ProjectionTy<I>,
+    projection_term: &'a ProjectionTerm<I>,
     interner: I,
 }
 
 impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         let ProjectionTyDebug {
-            projection_ty,
+            projection_term,
             interner,
         } = self;
         write!(
             fmt,
             "({:?}){:?}",
-            projection_ty.associated_ty_id,
-            projection_ty.substitution.with_angle(*interner)
+            projection_term.associated_term_id,
+            projection_term.substitution.with_angle(*interner)
         )
     }
 }
 
-impl<I: Interner> ProjectionTy<I> {
+impl<I: Interner> ProjectionTerm<I> {
     /// Show debug output for the projection type.
     pub fn debug(&self, interner: I) -> ProjectionTyDebug<'_, I> {
         ProjectionTyDebug {
-            projection_ty: self,
+            projection_term: self,
             interner,
         }
     }

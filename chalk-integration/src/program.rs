@@ -3,9 +3,9 @@ use crate::{tls, Identifier, TypeKind};
 use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
 use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
+    debug::SeparatorTraitRef, AdtId, AliasTy, AssocItemId, Binders, CanonicalVarKinds, ClosureId,
     FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals, ImplId, IntTy, Lifetime, OpaqueTy,
-    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, Scalar,
+    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTerm, Scalar,
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
@@ -97,7 +97,7 @@ pub struct Program {
     pub well_known_traits: BTreeMap<WellKnownTrait, TraitId<ChalkIr>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
-    pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+    pub associated_ty_data: BTreeMap<AssocItemId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -151,13 +151,13 @@ impl tls::DebugContext for Program {
 
     fn debug_assoc_type_id(
         &self,
-        assoc_type_id: AssocTypeId<ChalkIr>,
+        assoc_type_id: AssocItemId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         if let Some(d) = self.associated_ty_data.get(&assoc_type_id) {
             write!(fmt, "({:?}::{})", d.trait_id, d.name)
         } else {
-            fmt.debug_struct("InvalidAssocTypeId")
+            fmt.debug_struct("InvalidAssocItemId")
                 .field("index", &assoc_type_id.0)
                 .finish()
         }
@@ -204,7 +204,7 @@ impl tls::DebugContext for Program {
 
     fn debug_projection_ty(
         &self,
-        projection_ty: &ProjectionTy<ChalkIr>,
+        projection_ty: &ProjectionTerm<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
         let (associated_ty_data, trait_params, other_params) = self.split_projection(projection_ty);
@@ -386,7 +386,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.custom_clauses.clone()
     }
 
-    fn associated_ty_data(&self, ty: AssocTypeId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.associated_ty_data[&ty].clone()
     }
 
@@ -587,7 +587,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     // normally acceptable, but causes the re-parse tests for the .chalk syntax
     // writer to fail. This is because they use the `Eq` implementation on
     // Program, which checks for name equality.
-    fn assoc_type_name(&self, assoc_type_id: AssocTypeId<ChalkIr>) -> String {
+    fn assoc_type_name(&self, assoc_type_id: AssocItemId<ChalkIr>) -> String {
         self.associated_ty_data
             .get(&assoc_type_id)
             .unwrap()

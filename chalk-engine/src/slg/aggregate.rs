@@ -382,23 +382,23 @@ impl<I: Interner> AntiUnifier<'_, I> {
 
     fn aggregate_projection_tys(
         &mut self,
-        proj1: &ProjectionTy<I>,
-        proj2: &ProjectionTy<I>,
+        proj1: &ProjectionTerm<I>,
+        proj2: &ProjectionTerm<I>,
     ) -> Ty<I> {
         let interner = self.interner;
-        let ProjectionTy {
-            associated_ty_id: name1,
+        let ProjectionTerm {
+            associated_term_id: name1,
             substitution: substitution1,
         } = proj1;
-        let ProjectionTy {
-            associated_ty_id: name2,
+        let ProjectionTerm {
+            associated_term_id: name2,
             substitution: substitution2,
         } = proj2;
 
         self.aggregate_name_and_substs(name1, substitution1, name2, substitution2)
-            .map(|(&associated_ty_id, substitution)| {
-                TyKind::Alias(AliasTy::Projection(ProjectionTy {
-                    associated_ty_id,
+            .map(|(&associated_term_id, substitution)| {
+                TyKind::Alias(AliasTy::Projection(ProjectionTerm {
+                    associated_term_id,
                     substitution,
                 }))
                 .intern(interner)

@@ -47,7 +47,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn custom_clauses(&self) -> Vec<ProgramClause<I>>;
 
     /// Returns the datum for the associated type with the given id.
-    fn associated_ty_data(&self, ty: AssocTypeId<I>) -> Arc<AssociatedTyDatum<I>>;
+    fn associated_ty_data(&self, ty: AssocItemId<I>) -> Arc<AssociatedTyDatum<I>>;
 
     /// Returns the datum for the definition with the given id.
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
@@ -180,7 +180,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
 
     /// Retrieves the name of an associated type. No uniqueness guarantees, but must
     /// a valid Rust identifier.
-    fn assoc_type_name(&self, assoc_ty_id: AssocTypeId<I>) -> String {
+    fn assoc_type_name(&self, assoc_ty_id: AssocItemId<I>) -> String {
         sanitize_debug_name(|f| I::debug_assoc_type_id(assoc_ty_id, f))
     }
 

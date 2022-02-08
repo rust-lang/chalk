@@ -382,7 +382,7 @@ pub struct ClauseId<I: Interner>(pub I::DefId);
 ///
 /// [`associated_ty_data`]: ../chalk_solve/trait.RustIrDatabase.html#tymethod.associated_ty_data
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssocTypeId<I: Interner>(pub I::DefId);
+pub struct AssocItemId<I: Interner>(pub I::DefId);
 
 /// Id for an opaque type.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -582,7 +582,7 @@ pub enum TyKind<I: Interner> {
     Adt(AdtId<I>, Substitution<I>),
 
     /// an associated type like `Iterator::Item`; see `AssociatedType` for details
-    AssociatedType(AssocTypeId<I>, Substitution<I>),
+    AssociatedType(AssocItemId<I>, Substitution<I>),
 
     /// a scalar type like `bool` or `u32`
     Scalar(Scalar),
@@ -1604,7 +1604,7 @@ pub type CanonicalVarKind<I: Interner> = WithKind<I, UniverseIndex>;
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner, Zip)]
 pub enum AliasTy<I: Interner> {
     /// An associated type projection.
-    Projection(ProjectionTy<I>),
+    Projection(ProjectionTerm<I>),
     /// An opaque type.
     Opaque(OpaqueTy<I>),
 }
@@ -1632,16 +1632,16 @@ impl<I: Interner> AliasTy<I> {
 
 /// A projection `<P0 as TraitName<P1..Pn>>::AssocItem<Pn+1..Pm>`.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct ProjectionTy<I: Interner> {
+pub struct ProjectionTerm<I: Interner> {
     /// The id for the associated type member.
-    pub associated_ty_id: AssocTypeId<I>,
+    pub associated_term_id: AssocItemId<I>,
     /// The substitution for the projection.
     pub substitution: Substitution<I>,
 }
 
-impl<I: Interner> Copy for ProjectionTy<I> where I::InternedSubstitution: Copy {}
+impl<I: Interner> Copy for ProjectionTerm<I> where I::InternedSubstitution: Copy {}
 
-impl<I: Interner> ProjectionTy<I> {
+impl<I: Interner> ProjectionTerm<I> {
     /// Gets the type parameters of the `Self` type in this alias type.
     pub fn self_type_parameter(&self, interner: I) -> Ty<I> {
         self.substitution

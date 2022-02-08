@@ -531,7 +531,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                     _ => {}
                 }
 
-                db.associated_ty_data(proj.associated_ty_id)
+                db.associated_ty_data(proj.associated_term_id)
                     .to_program_clauses(builder, environment)
             }
             AliasTy::Opaque(opaque_ty) => db
@@ -599,7 +599,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 //     type Item = Bar; // <-- associated type value
                 // }
                 // ```
-                let associated_ty_datum = db.associated_ty_data(proj.associated_ty_id);
+                let associated_ty_datum = db.associated_ty_data(proj.associated_term_id);
                 let trait_id = associated_ty_datum.trait_id;
                 let trait_parameters = db.trait_parameters_from_projection(proj);
 
@@ -639,7 +639,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                         builder,
                         interner,
                         trait_id,
-                        proj.associated_ty_id,
+                        proj.associated_term_id,
                     );
                 }
             }
@@ -665,13 +665,13 @@ fn push_clauses_for_compatible_normalize<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     interner: I,
     trait_id: TraitId<I>,
-    associated_ty_id: AssocTypeId<I>,
+    associated_ty_id: AssocItemId<I>,
 ) {
     let trait_datum = db.trait_datum(trait_id);
     let trait_binders = trait_datum.binders.map_ref(|b| &b.where_clauses).cloned();
     builder.push_binders(trait_binders, |builder, where_clauses| {
-        let projection = ProjectionTy {
-            associated_ty_id,
+        let projection = ProjectionTerm {
+            associated_term_id: associated_ty_id,
             substitution: builder.substitution_in_scope(),
         };
         let trait_ref = TraitRef {
@@ -797,7 +797,7 @@ fn push_alias_implemented_clause<I: Interner>(
 
 fn push_alias_alias_eq_clause<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
-    projection_ty: ProjectionTy<I>,
+    projection_ty: ProjectionTerm<I>,
     ty: Ty<I>,
     alias: AliasTy<I>,
 ) {
@@ -824,8 +824,8 @@ fn push_alias_alias_eq_clause<I: Interner>(
                         .cloned(),
                 ),
             );
-            let fresh_alias = AliasTy::Projection(ProjectionTy {
-                associated_ty_id: projection_ty.associated_ty_id,
+            let fresh_alias = AliasTy::Projection(ProjectionTerm {
+                associated_term_id: projection_ty.associated_term_id,
                 substitution: fresh_self_subst,
             });
             builder.push_clause(
@@ -1033,7 +1033,7 @@ fn match_ty<I: Interner>(
         }
         TyKind::Alias(AliasTy::Projection(proj)) => builder
             .db
-            .associated_ty_data(proj.associated_ty_id)
+            .associated_ty_data(proj.associated_term_id)
             .to_program_clauses(builder, environment),
         TyKind::Alias(AliasTy::Opaque(opaque_ty)) => builder
             .db
@@ -1089,10 +1089,10 @@ fn match_alias_ty<I: Interner>(
     environment: &Environment<I>,
     alias: &AliasTy<I>,
 ) {
-    if let AliasTy::Projection(projection_ty) = alias {
+    if let AliasTy::Projection(projection_term) = alias {
         builder
             .db
-            .associated_ty_data(projection_ty.associated_ty_id)
+            .associated_ty_data(projection_term.associated_term_id)
             .to_program_clauses(builder, environment)
     }
 }
