@@ -14,7 +14,7 @@ fn dyn_Clone_is_Clone() {
                 dyn Clone + 's: Clone
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique"]]
         }
     }
 }
@@ -32,7 +32,7 @@ fn dyn_Clone_is_not_Send() {
                 dyn Clone + 's: Send
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -50,7 +50,7 @@ fn dyn_Clone_Send_is_Send() {
                 (dyn Clone + Send + 's): Send
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique"]]
         }
     }
 }
@@ -70,7 +70,7 @@ fn dyn_Foo_Bar() {
                 dyn Foo<Bar> + 's: Foo<Baz>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -80,7 +80,7 @@ fn dyn_Foo_Bar() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Bar], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Bar]"]]
         }
     }
 }
@@ -101,7 +101,7 @@ fn dyn_super_trait_simple() {
                 dyn Bar<A> + 's: Bar<A>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -109,7 +109,7 @@ fn dyn_super_trait_simple() {
                 dyn Bar<A> + 's: Foo<A>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -117,7 +117,7 @@ fn dyn_super_trait_simple() {
                 dyn Bar<A> + 's: Foo<B>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -127,7 +127,7 @@ fn dyn_super_trait_simple() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := B], lifetime constraints []"
+            expect![["Unique; substitution [?0 := B]"]]
         }
     }
 }
@@ -150,7 +150,7 @@ fn dyn_super_trait_cycle() {
                 dyn Bar<A> + 's: Bar<A>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -172,7 +172,7 @@ fn dyn_super_trait_not_a_cycle() {
                 dyn Bar + 's: Foo
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -180,7 +180,7 @@ fn dyn_super_trait_not_a_cycle() {
                 dyn Bar + 's: Thing<A>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -188,7 +188,7 @@ fn dyn_super_trait_not_a_cycle() {
                 dyn Bar + 's: Thing<B>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -212,7 +212,7 @@ fn dyn_super_trait_higher_ranked() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -222,7 +222,7 @@ fn dyn_super_trait_higher_ranked() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -230,7 +230,7 @@ fn dyn_super_trait_higher_ranked() {
                 dyn Bar<'y> + 's: Foo<'x>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -251,7 +251,7 @@ fn dyn_super_trait_non_super_trait_clause() {
                 dyn Foo + 's: Foo
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -259,7 +259,7 @@ fn dyn_super_trait_non_super_trait_clause() {
                 dyn Foo + 's: Bar
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -279,7 +279,7 @@ fn dyn_higher_ranked_type_arguments() {
                 dyn forall<'a> Foo<Ref<'a>> + 's: Foo<Ref<'s>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
@@ -287,7 +287,7 @@ fn dyn_higher_ranked_type_arguments() {
                 dyn forall<'a> Foo<Ref<'a>> + Bar + 's: Foo<Ref<'s>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
@@ -295,7 +295,7 @@ fn dyn_higher_ranked_type_arguments() {
                 dyn forall<'a> Foo<Ref<'a>> + Bar + 's: Bar
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
@@ -306,10 +306,7 @@ fn dyn_higher_ranked_type_arguments() {
             }
         } yields {
             // Note that this requires 'a == 's, so it would be resolveable later on.
-            "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, \
-            InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }\
-            ]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }]"]]
         }
     }
 }
@@ -336,10 +333,7 @@ fn dyn_binders_reverse() {
                 >
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-                InEnvironment { environment: Env([]), goal: '!5_0: '!5_1 }, \
-                InEnvironment { environment: Env([]), goal: '!5_1: '!5_0 }\
-            ]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!5_0: '!5_1 }, InEnvironment { environment: Env([]), goal: '!5_1: '!5_0 }]"]]
         }
 
         // Note: these constraints are ultimately unresolveable (we
@@ -351,10 +345,7 @@ fn dyn_binders_reverse() {
                 >
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-                InEnvironment { environment: Env([]), goal: '!3_0: '!3_1 }, \
-                InEnvironment { environment: Env([]), goal: '!3_1: '!3_0 }\
-            ]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!3_0: '!3_1 }, InEnvironment { environment: Env([]), goal: '!3_1: '!3_0 }]"]]
         }
 
         // Note: ordering of parameters is reversed here, but that's no problem
@@ -365,7 +356,7 @@ fn dyn_binders_reverse() {
                 >
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
     }
 }
@@ -388,10 +379,7 @@ fn dyn_lifetime_bound() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, \
-            InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }\
-            ]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }]"]]
         }
     }
 }
@@ -410,10 +398,10 @@ fn dyn_associated_type_binding() {
                 }
             }
         } yields[SolverChoice::recursive_default()] {
-            "Unique; substitution [?0 := Int(I32)], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Int(I32)]"]]
         } yields[SolverChoice::slg_default()] {
             // #234
-            "Ambiguous"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -430,7 +418,7 @@ fn dyn_well_formed() {
                 WellFormed(dyn MyTrait + 's)
             }
         } yields {
-            "Unique"
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0] }"]]
         }
     }
 }

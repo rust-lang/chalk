@@ -18,25 +18,25 @@ fn prove_clone() {
         goal {
             Vec<Foo>: Clone
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             Foo: Clone
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             Bar: Clone
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             Vec<Bar>: Clone
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -61,19 +61,19 @@ fn prove_infer() {
         goal {
             exists<A, B> { A: Map<B> }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
             exists<A> { A: Map<Bar> }
         } yields {
-            "Unique; substitution [?0 := Foo], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Foo]"]]
         }
 
         goal {
             exists<A> { Foo: Map<A> }
         } yields {
-            "Unique; substitution [?0 := Bar], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Bar]"]]
         }
     }
 }
@@ -105,26 +105,26 @@ fn prove_forall() {
         goal {
             forall<T> { T: Marker }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             forall<T> { not { T: Marker } }
         } yields {
-            "No"
+            expect![["No possible solution"]]
         }
 
         goal {
             not { forall<T> { T: Marker } }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // If we assume `T: Marker`, then obviously `T: Marker`.
         goal {
             forall<T> { if (T: Marker) { T: Marker } }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         // We don't have to know anything about `T` to know that
@@ -132,7 +132,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Marker }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         // Here, we don't know that `T: Clone`, so we can't prove that
@@ -140,7 +140,7 @@ fn prove_forall() {
         goal {
             forall<T> { Vec<T>: Clone }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Here, we do know that `T: Clone`, so we can.
@@ -151,7 +151,7 @@ fn prove_forall() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
     }
 }
@@ -173,7 +173,7 @@ fn higher_ranked() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := BestType], lifetime constraints []"
+            expect![["Unique; substitution [?0 := BestType]"]]
         }
     }
 }
@@ -193,7 +193,7 @@ fn ordering() {
                 }
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -216,7 +216,7 @@ fn normalize_rev_infer() {
                 T: Identity<Item = A>
             }
         } yields {
-            "Unique; substitution [?0 := A]"
+            expect![["Unique; substitution [?0 := A]"]]
         }
     }
 }
@@ -241,7 +241,7 @@ fn normalize_rev_infer_gat() {
             }
         } yields {
             // T is ?1 and U is ?0, so this is surprising, but correct! (See #126.)
-            "Unique; substitution [?0 := B, ?1 := A]"
+            expect![["Unique; substitution [?0 := B, ?1 := A]"]]
         }
     }
 }
@@ -262,19 +262,19 @@ fn generic_trait() {
         goal {
             Int: Eq<Int>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             Uint: Eq<Uint>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             Int: Eq<Uint>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -295,13 +295,13 @@ fn deep_failure() {
         goal {
             exists<T> { T: Baz }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             exists<T> { Foo<T>: Bar }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -324,7 +324,7 @@ fn deep_success() {
         goal {
             exists<T> { Foo<T>: Bar }
         } yields {
-            "Unique; substitution [?0 := ImplsBaz]"
+            expect![["Unique; substitution [?0 := ImplsBaz]"]]
         }
     }
 }
@@ -350,7 +350,7 @@ fn definite_guidance() {
                 T: Debug
             }
         } yields {
-            "Ambiguous; definite substitution for<?U0> { [?0 := Foo<^0.0>] }"
+            expect![["Ambiguous; definite substitution for<?U0> { [?0 := Foo<^0.0>] }"]]
         }
     }
 }
@@ -374,7 +374,7 @@ fn suggested_subst() {
                 Foo: SomeTrait<T>
             }
         } yields {
-            "Unique; substitution [?0 := Baz]"
+            expect![["Unique; substitution [?0 := Baz]"]]
         }
 
         goal {
@@ -384,7 +384,7 @@ fn suggested_subst() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Qux]"
+            expect![["Unique; substitution [?0 := Qux]"]]
         }
 
         goal {
@@ -394,7 +394,7 @@ fn suggested_subst() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Baz]"
+            expect![["Unique; substitution [?0 := Baz]"]]
         }
 
         goal {
@@ -404,7 +404,7 @@ fn suggested_subst() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := Baz]"
+            expect![["Unique; substitution [?0 := Baz]"]]
         }
 
         goal {
@@ -416,7 +416,7 @@ fn suggested_subst() {
         } yields {
             // FIXME: we need to rework the "favor environment" heuristic.
             // Should be: "Ambiguous; suggested substitution [?0 := bool]"
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -428,7 +428,7 @@ fn suggested_subst() {
                 }
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -436,7 +436,7 @@ fn suggested_subst() {
                 Bar: SomeTrait<T>
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -446,8 +446,8 @@ fn suggested_subst() {
                 }
             }
         } yields {
-            // FIXME: same as above, should be: "Ambiguous; suggested substitution [?0 := bool]"
-            "Ambiguous; no inference guidance"
+            // FIXME: same as above, should be: expect![["Ambiguous; suggested substitution [?0 := bool]"]]
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -459,7 +459,7 @@ fn suggested_subst() {
                 }
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -481,7 +481,7 @@ fn where_clause_trumps() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -507,7 +507,7 @@ fn inapplicable_assumption_does_not_shadow() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique; substitution [?0 := A]"]]
         }
     }
 }
@@ -534,7 +534,7 @@ fn partial_overlap_2() {
                 }
             }
         } yields {
-            "Ambiguous"
+            expect![["Ambiguous; no inference guidance"]]
         }
 
         goal {
@@ -544,7 +544,7 @@ fn partial_overlap_2() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -554,7 +554,7 @@ fn partial_overlap_2() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -580,13 +580,13 @@ fn partial_overlap_3() {
                 if (T: Foo; T: Bar) { T: Marker }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Struct: Marker
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -605,7 +605,7 @@ fn clauses_in_if_goals() {
                 forall<T> { T: Foo }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -617,7 +617,7 @@ fn clauses_in_if_goals() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -627,7 +627,7 @@ fn clauses_in_if_goals() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -635,7 +635,7 @@ fn clauses_in_if_goals() {
                 Vec<A>: Foo
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -654,7 +654,7 @@ fn unify_types_in_ambiguous_impl() {
         goal {
             exists<T,U> { A<T>: Trait<U> }
         } yields {
-            "Ambiguous; definite substitution for<?U0> { [?0 := ^0.0, ?1 := ^0.0] }"
+            expect![["Ambiguous; definite substitution for<?U0> { [?0 := ^0.0, ?1 := ^0.0] }"]]
         }
     }
 }
@@ -673,7 +673,7 @@ fn unify_types_in_impl() {
         goal {
             exists<T,U> { A<T>: Trait<U> }
         } yields {
-            "Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0], lifetime constraints [] }"
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0, ?1 := ^0.0] }"]]
         }
     }
 }

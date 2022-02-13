@@ -18,7 +18,7 @@ fn implied_bounds() {
                 }
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique"]]
         }
     }
 }
@@ -39,7 +39,7 @@ fn gat_implied_bounds() {
                 }
             }
         } yields {
-            "Unique; substitution []"
+            expect![["Unique"]]
         }
     }
 
@@ -58,7 +58,7 @@ fn gat_implied_bounds() {
                 }
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 
@@ -82,7 +82,7 @@ fn gat_implied_bounds() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -102,7 +102,7 @@ fn implied_from_env() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -112,7 +112,7 @@ fn implied_from_env() {
                 }
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -134,7 +134,7 @@ fn higher_ranked_implied_bounds() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 
@@ -153,7 +153,7 @@ fn higher_ranked_implied_bounds() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }

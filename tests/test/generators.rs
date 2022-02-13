@@ -51,19 +51,19 @@ fn generator_test() {
         goal {
             WellFormed(empty_gen)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             empty_gen: Send
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             empty_gen: Generator<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -71,7 +71,7 @@ fn generator_test() {
                 gen_with_types<T>: Generator<T>
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -79,7 +79,7 @@ fn generator_test() {
                 Normalize(<gen_with_types<T> as Generator<T>>::Yield -> StructOne)
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -87,7 +87,7 @@ fn generator_test() {
                 Normalize(<gen_with_types<T> as Generator<T>>::Return -> NotSend)
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -95,7 +95,7 @@ fn generator_test() {
                 upvar_lifetime_restrict<T>: Send
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -105,13 +105,13 @@ fn generator_test() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"]]
         }
 
         goal {
             not_send_resume_yield: Send
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
@@ -121,7 +121,7 @@ fn generator_test() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
@@ -129,7 +129,7 @@ fn generator_test() {
                 send_any_lifetime<T>: Send
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }

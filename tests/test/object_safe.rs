@@ -9,7 +9,7 @@ fn object_safe_flag() {
             trait Bar {}
         }
 
-        goal { ObjectSafe(Foo) } yields { "Unique" }
-        goal { not { ObjectSafe(Bar) } } yields { "Unique" }
+        goal { ObjectSafe(Foo) } yields { expect![["Unique"]] }
+        goal { not { ObjectSafe(Bar) } } yields { expect![["Unique"]] }
     }
 }

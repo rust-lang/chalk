@@ -9,7 +9,7 @@ fn fn_def_is_well_formed() {
         goal {
             WellFormed(foo)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -26,7 +26,7 @@ fn fn_def_is_sized() {
         goal {
             foo: Sized
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -43,7 +43,7 @@ fn fn_def_is_copy() {
         goal {
             foo: Copy
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -60,7 +60,7 @@ fn fn_def_is_clone() {
         goal {
             foo: Clone
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -88,37 +88,37 @@ fn fn_def_implements_fn_traits() {
         goal {
             foo: Fn<()>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Normalize(<foo as FnOnce<()>>::Output -> ())
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             bar: Fn<(i32,)>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Normalize(<bar as FnOnce<(i32,)>>::Output -> ())
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             baz: Fn<(i32,)>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Normalize(<baz as FnOnce<(i32,)>>::Output -> u8)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -144,25 +144,25 @@ fn generic_fn_implements_fn_traits() {
         goal {
             exists<T> { foo<T>: Fn<(T,)> }
         } yields {
-            "Unique"
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
 
         goal {
             forall<T> { foo<T>: Fn<(T,)> }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             exists<T> { Normalize(<foo<T> as FnOnce<(T,)>>::Output -> T) }
         } yields {
-            "Unique"
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
 
         goal {
             forall<T> { Normalize(<foo<T> as FnOnce<(T,)>>::Output -> T) }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -187,19 +187,19 @@ fn fn_defs() {
         goal {
             WellFormed(baz<Bar>)
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             WellFormed(baz<Xyzzy>)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             WellFormed(garply)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
     }
@@ -221,7 +221,7 @@ fn fn_def_implied_bounds_from_env() {
                 Bar: Foo
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }

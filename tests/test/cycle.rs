@@ -31,7 +31,7 @@ fn inner_cycle() {
         goal {
             exists<T> { T: A }
         } yields {
-            "Ambiguous"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -51,7 +51,7 @@ fn cycle_no_solution() {
                 T: Foo
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -73,7 +73,7 @@ fn cycle_many_solutions() {
                 T: Foo
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -95,7 +95,7 @@ fn cycle_unique_solution() {
                 T: Foo
             }
         } yields {
-            "Unique; substitution [?0 := Zero]"
+            expect![["Unique; substitution [?0 := Zero]"]]
         }
     }
 }
@@ -141,7 +141,7 @@ fn multiple_ambiguous_cycles() {
                 T: WF
             }
         } yields {
-            "Ambig"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -164,9 +164,9 @@ fn overflow() {
         goal {
             S<Z>: Q
         } yields[SolverChoice::slg(10, None)] {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         } yields[SolverChoice::recursive_default()] {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -193,7 +193,7 @@ fn overflow_universe() {
             // solver means that when we are asked to solve (e.g.)
             // `!1_1: Bar`, we rewrite that to `!1_0: Bar`, identifying a
             // cycle.
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -256,7 +256,7 @@ fn cycle_with_ambiguity() {
                 Rc<S>: From<T>
             }
         } yields[SolverChoice::slg_default()] {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }

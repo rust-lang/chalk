@@ -6,7 +6,7 @@ fn never_is_well_formed() {
         goal {
             WellFormed(!)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -21,7 +21,7 @@ fn never_is_sized() {
         goal {
             !: Sized
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }

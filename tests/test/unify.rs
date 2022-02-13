@@ -21,11 +21,7 @@ fn region_equality() {
                 Ref<'a, Unit>: Eq<Ref<'b, Unit>>
             }
         } yields {
-            "Unique; substitution [],
-                     lifetime constraints \
-                     [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-                     InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]
-                     "
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
         }
 
         goal {
@@ -35,7 +31,7 @@ fn region_equality() {
                 }
             }
         } yields {
-            "Unique; substitution [?0 := '!1_0], lifetime constraints []"
+            expect![["Unique; substitution [?0 := '!1_0]"]]
         }
     }
 }
@@ -59,7 +55,7 @@ fn forall_equality_solveable_simple() {
             // all in a valid universe to do so (universe 4).
             for<'a> fn(Ref<'a, Unit>): Eq<for<'c> fn(Ref<'c, Unit>)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
     }
 }
@@ -85,11 +81,7 @@ fn forall_equality_unsolveable_simple() {
             for<'a, 'b> fn(Ref<'a, Ref<'b, Ref<'a, Unit>>>): Eq<
                 for<'c, 'd> fn(Ref<'c, Ref<'d, Ref<'d, Unit>>>)>
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
-            InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
-            InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"]]
         }
     }
 }
@@ -114,7 +106,7 @@ fn forall_equality() {
             // all in a valid universe to do so (universe 4).
             for<'a, 'b> fn(Ref<'a, Ref<'b, Unit>>): Eq<for<'c, 'd> fn(Ref<'c, Ref<'d, Unit>>)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
@@ -126,53 +118,49 @@ fn forall_equality() {
             for<'a, 'b> fn(Ref<'a, Ref<'b, Ref<'a, Unit>>>): Eq<
                 for<'c, 'd> fn(Ref<'c, Ref<'d, Ref<'d, Unit>>>)>
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-            InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-            InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, \
-            InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
-            InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }, InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"]]
         }
 
         goal {
             // Function pointers with different ABIs should not be equal.
             extern "Rust" fn(): Eq<extern "C" fn()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             // Function pointers with identical ABIs should be equal.
             extern "Rust" fn(): Eq<extern "Rust" fn()>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             // Function pointers with different safety should not be equal.
             unsafe fn(): Eq<fn()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             // Function pointers with identical safety should be equal.
             unsafe fn(): Eq<unsafe fn()>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             // Variadic function pointers should not be equal to non-variadic fn pointers.
             fn(u8, ...): Eq<fn(u8)>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             // Variadic function pointers should be equal to variadic fn pointers.
             fn(u8, ...): Eq<fn(u8, ...)>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
     }
 }
@@ -190,13 +178,13 @@ fn unify_quantified_lifetimes() {
                 }
             }
         } yields {
-            "Unique; for<?U0> { \
+            expect![["Unique; for<?U0> { \
              substitution [?0 := '^0.0], \
              lifetime constraints [\
              InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
              InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }\
              ] \
-             }"
+             }"]]
         }
 
         // Similar to the previous test, but indirect.
@@ -210,22 +198,22 @@ fn unify_quantified_lifetimes() {
                 }
             }
         } yields[SolverChoice::slg(10, None)] {
-            "Unique; for<?U0> { \
+            expect![["Unique; for<?U0> { \
              substitution [?0 := '^0.0, ?1 := '!1_0], \
              lifetime constraints [\
              InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
              InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }\
              ] \
-             }"
+             }"]]
         } yields[SolverChoice::recursive_default()] {
             // only difference is in the value of ?1, which is equivalent
-            "Unique; for<?U0> { \
+            expect![["Unique; for<?U0> { \
              substitution [?0 := '^0.0, ?1 := '^0.0], \
              lifetime constraints [\
              InEnvironment { environment: Env([]), goal: '!1_0: '^0.0 }, \
              InEnvironment { environment: Env([]), goal: '^0.0: '!1_0 }\
              ] \
-             }"
+             }"]]
         }
     }
 }
@@ -247,13 +235,13 @@ fn equality_binder() {
                 }
             }
         } yields {
-            "Unique; for<?U1> { \
+            expect![["Unique; for<?U1> { \
                  substitution [?0 := '^0.0], \
                  lifetime constraints [\
                  InEnvironment { environment: Env([]), goal: '!2_0: '^0.0 }, \
                  InEnvironment { environment: Env([]), goal: '^0.0: '!2_0 }\
                  ] \
-             }"
+             }"]]
         }
     }
 }
@@ -268,19 +256,13 @@ fn equality_binder2() {
         goal {
             for<'b, 'c> fn(Ref<'b, 'c>) = for<'a> fn(Ref<'a, 'a>)
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-             InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, \
-             InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }\
-             ]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
         }
 
         goal {
             for<'a> fn(Ref<'a, 'a>) = for<'b, 'c> fn(Ref<'b, 'c>)
         } yields {
-            "Unique; substitution [], lifetime constraints [\
-             InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, \
-             InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }\
-             ]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!2_0: '!2_1 }, InEnvironment { environment: Env([]), goal: '!2_1: '!2_0 }]"]]
         }
     }
 }
@@ -301,10 +283,7 @@ fn mixed_indices_unify() {
                 }
             }
         } yields {
-            "Unique; for<?U0,?U0> { \
-                 substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.1], \
-                 lifetime constraints []\
-             }"
+            expect![["Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.1] }"]]
         }
     }
 }
@@ -328,10 +307,7 @@ fn mixed_indices_match_program() {
                 }
             }
         } yields {
-            "Unique; for<?U0> { \
-                 substitution [?0 := '^0.0, ?1 := S, ?2 := S], \
-                 lifetime constraints [] \
-             }"
+            expect![["Unique; for<?U0> { substitution [?0 := '^0.0, ?1 := S, ?2 := S] }"]]
         }
     }
 }
@@ -359,7 +335,7 @@ fn mixed_indices_normalize_application() {
                 }
             }
         } yields {
-            "Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.1], "
+            expect![["Unique; for<?U0,?U0> { substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.1] }"]]
         }
     }
 }
@@ -386,8 +362,7 @@ fn mixed_indices_normalize_gat_application() {
         } yields {
             // Our GAT parameter <X> is mapped to ?0; all others appear left to right
             // in our Normalize(...) goal.
-            "Unique; for<?U0,?U0,?U0> { \
-                substitution [?0 := ^0.0, ?1 := '^0.1, ?2 := ^0.2, ?3 := ^0.0, ?4 := ^0.2], "
+            expect![["Unique; for<?U0,?U0,?U0> { substitution [?0 := ^0.0, ?1 := '^0.1, ?2 := ^0.2, ?3 := ^0.0, ?4 := ^0.2] }"]]
         }
     }
 }
@@ -405,22 +380,20 @@ fn quantified_types() {
         goal {
             for<'a> fn(fn1<'a>): Foo
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             for<'a, 'b> fn(fn2<'a, 'b>) = for<'b, 'a> fn(fn2<'a, 'b>)
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             forall<'a> { fn(fn1<'a>): Foo }
         } yields {
             // Lifetime constraints are unsatisfiable
-            "Unique; substitution [], lifetime constraints [\
-                InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, \
-                InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }, InEnvironment { environment: Env([]), goal: '!2_0: '!1_0 }]"]]
         }
     }
 }

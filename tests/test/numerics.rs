@@ -28,7 +28,7 @@ fn integer_index() {
                 Slice: Index<N>
             }
         } yields {
-            "Unique; substitution [?0 := Uint(Usize)]"
+            expect![["Unique; substitution [?0 := Uint(Usize)]"]]
         }
     }
 }
@@ -54,7 +54,7 @@ fn integer_kind_trait() {
                 N: Foo
             }
         } yields {
-            "Unique; substitution [?0 := Uint(Usize)]"
+            expect![["Unique; substitution [?0 := Uint(Usize)]"]]
         }
     }
 }
@@ -77,7 +77,7 @@ fn float_kind_trait() {
                 N: Foo
             }
         } yields {
-            "Unique; substitution [?0 := Float(F32)]"
+            expect![["Unique; substitution [?0 := Float(F32)]"]]
         }
     }
 }
@@ -98,7 +98,7 @@ fn integer_ambiguity() {
                 N: Foo
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -119,7 +119,7 @@ fn float_ambiguity() {
                 N: Foo
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -134,7 +134,7 @@ fn integer_and_float_are_specialized_ty_kinds() {
                 T = N, N = usize
             }
         } yields {
-            "Unique; substitution [?0 := Uint(Usize), ?1 := Uint(Usize)], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Uint(Usize), ?1 := Uint(Usize)]"]]
         }
 
         goal {
@@ -142,7 +142,7 @@ fn integer_and_float_are_specialized_ty_kinds() {
                 T = N, N = f32
             }
         } yields {
-            "Unique; substitution [?0 := Float(F32), ?1 := Float(F32)], lifetime constraints []"
+            expect![["Unique; substitution [?0 := Float(F32), ?1 := Float(F32)]"]]
         }
     }
 }
@@ -157,7 +157,7 @@ fn general_ty_kind_becomes_specific() {
                 T = N, T = char
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -165,7 +165,7 @@ fn general_ty_kind_becomes_specific() {
                 T = N, T = char
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -179,7 +179,7 @@ fn integers_are_not_floats() {
                 I = F
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -197,7 +197,7 @@ fn integers_are_copy() {
                 I: Copy
             }
         } yields {
-            "Unique"
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
     }
 }
@@ -215,7 +215,7 @@ fn integers_are_sized() {
                 I: Sized
             }
         } yields {
-            "Unique"
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
         }
     }
 }
@@ -238,7 +238,7 @@ fn ambiguous_add() {
                 <T as Add<U>>::Output = V
             }
         } yields {
-            "Ambiguous; no inference guidance"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -260,8 +260,10 @@ fn shl_ice() {
             exists<U> {
                 u32: Shl<U>
             }
-        } yields {
-            "Ambiguous"
+        } yields[SolverChoice::slg_default()] {
+            expect![["Ambiguous; definite substitution for<?U0,?U0> { [?0 := (&'^0.0 ^0.1)] }"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -284,7 +286,7 @@ fn unify_general_then_specific_ty() {
                 Bar<(N, T, T, T)>: Foo
             }
         } yields {
-            "Unique"
+            expect![["Unique; substitution [?0 := Int(I32), ?1 := Int(I32)]"]]
         }
     }
 }

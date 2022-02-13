@@ -1,8 +1,22 @@
 //! Debug impls for types.
 
-use std::fmt::{Debug, Display, Error, Formatter};
+use std::fmt::{self, Debug, Display, Error, Formatter};
 
 use super::*;
+
+/// Wrapper to allow forwarding to `Display::fmt`, `Debug::fmt`, etc.
+pub struct Fmt<F>(pub F)
+where
+    F: Fn(&mut fmt::Formatter<'_>) -> fmt::Result;
+
+impl<F> fmt::Display for Fmt<F>
+where
+    F: Fn(&mut fmt::Formatter<'_>) -> fmt::Result,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self.0)(f)
+    }
+}
 
 impl<I: Interner> Debug for TraitId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
@@ -959,14 +973,27 @@ impl<I: Interner> Debug for Constraint<I> {
 }
 
 impl<I: Interner> Display for ConstrainedSubst<I> {
+    #[rustfmt::skip]
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         let ConstrainedSubst { subst, constraints } = self;
 
-        write!(
-            f,
-            "substitution {}, lifetime constraints {:?}",
-            subst, constraints,
-        )
+        let mut first = true;
+
+        let subst = format!("{}", Fmt(|f| Display::fmt(subst, f)));
+        if subst != "[]" {
+            write!(f, "substitution {}", subst)?;
+            first = false;
+        }
+
+        let constraints = format!("{}", Fmt(|f| Debug::fmt(constraints, f)));
+        if constraints != "[]" {
+            if !first { write!(f, ", ")?; }
+            write!(f, "lifetime constraints {}", constraints)?;
+            first = false;
+        }
+
+        let _ = first;
+        Ok(())
     }
 }
 

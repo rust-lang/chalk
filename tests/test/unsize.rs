@@ -37,7 +37,7 @@ fn dyn_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }]"]]
         }
 
         goal {
@@ -47,7 +47,7 @@ fn dyn_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!2_0 }]"]]
         }
 
         // Target has a subset of source auto traits
@@ -56,7 +56,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto1 + Auto2 + 'a: Unsize<dyn Principal + Auto1 + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]]
         }
 
         // Both target and source don't have principal as their first trait
@@ -65,7 +65,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Auto1 + Principal + 'a: Unsize<dyn Auto1 + Principal + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]]
         }
 
         // Different order of traits in target and source
@@ -74,7 +74,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto1 + 'a: Unsize<dyn Auto1 + Principal + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]]
         }
 
         // See above
@@ -83,7 +83,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto2 + Auto1 + 'a: Unsize<dyn Principal + Auto1 + Auto2 + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]]
         }
 
         // Source has a subset of auto traits of target
@@ -92,7 +92,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto2 + 'a: Unsize<dyn Principal + Auto1 + Auto2 + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Source and target have different set of auto traits
@@ -101,7 +101,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto1 + Auto2 + 'a: Unsize<dyn Principal + Auto1 + Auto3 + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Source has a principal trait, while target doesnt, both have the same auto traits.
@@ -110,7 +110,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto1 + 'a: Unsize<dyn Auto1 + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Non-matching principal traits
@@ -119,7 +119,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + 'a: Unsize<dyn OtherPrincipal + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Matching generic principal traits
@@ -128,7 +128,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn GenericPrincipal<u64, Item = u64> + 'a: Unsize<dyn GenericPrincipal<u64, Item = u64> + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]]
         }
 
         // Non-matching generic principal traits
@@ -137,7 +137,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn GenericPrincipal<u32, Item = u32> + 'a: Unsize<dyn GenericPrincipal<u32, Item = u64> + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -192,7 +192,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn Principal + Auto + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // Principal is not the first trait
@@ -201,7 +201,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn Auto + Principal + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // Auto-only trait object
@@ -210,7 +210,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn Auto + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // TypeOutlives test
@@ -219,7 +219,7 @@ fn ty_to_dyn_unsizing() {
                 FooLifetime<'a>: Unsize<dyn Principal + Auto + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: FooLifetime<'!1_0>: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: FooLifetime<'!1_0>: '!1_0 }]"]]
         }
 
         // See above
@@ -230,7 +230,7 @@ fn ty_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: FooLifetime<'!1_0>: '^0.0 }] }"
+            expect![["Unique; for<?U1> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: FooLifetime<'!1_0>: '^0.0 }] }"]]
         }
 
         // Source does not implement auto trait (with principal)
@@ -239,7 +239,7 @@ fn ty_to_dyn_unsizing() {
                 Bar: Unsize<dyn Principal + Auto + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Source does not implement auto trait (without principal)
@@ -248,7 +248,7 @@ fn ty_to_dyn_unsizing() {
                 Bar: Unsize<dyn Auto + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Source does not implement principal
@@ -257,7 +257,7 @@ fn ty_to_dyn_unsizing() {
                 Baz: Unsize<dyn Principal + Auto + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Implemeted generic principal
@@ -266,7 +266,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn GenericPrincipal<u32, Item = u32> + 'a>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
 
@@ -276,7 +276,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn GenericPrincipal<u32, Item = u64> + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Not object-safe principal trait
@@ -285,7 +285,7 @@ fn ty_to_dyn_unsizing() {
                 Foo: Unsize<dyn UnsafePrincipal + 'a>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Source ty is not Sized
@@ -296,7 +296,7 @@ fn ty_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Sized counterpart for the previous test
@@ -309,7 +309,7 @@ fn ty_to_dyn_unsizing() {
                 }
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: FooNotSized<!2_0>: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: FooNotSized<!2_0>: '!1_0 }]"]]
         }
     }
 }
@@ -336,13 +336,13 @@ fn tuple_unsizing() {
         goal {
             (): Unsize<()>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             (u32, u32): Unsize<(u32, u32)>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -350,7 +350,7 @@ fn tuple_unsizing() {
                (u32, Foo): Unsize<(u32, dyn Principal + 'a)>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // Last field does not implement `Unsize`
@@ -359,7 +359,7 @@ fn tuple_unsizing() {
                (u32, Foo): Unsize<(u32, dyn OtherPrincipal + 'a)>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Mismatch of head fields
@@ -368,7 +368,7 @@ fn tuple_unsizing() {
                (u32, Foo): Unsize<(u64, dyn Principal + 'a)>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Tuple length mismatch
@@ -377,7 +377,7 @@ fn tuple_unsizing() {
                (u32, u32, Foo): Unsize<(u32, dyn Principal + 'a)>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Multilevel tuple test
@@ -386,7 +386,7 @@ fn tuple_unsizing() {
                (u32, (u32, Foo)): Unsize<(u32, (u32, dyn Principal + 'a))>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
     }
 }
@@ -404,13 +404,13 @@ fn array_unsizing() {
         goal {
             [Foo<u8>; 2]: Unsize<[Foo<u8>]>
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             [Foo<u8>; 5]: Unsize<[Foo<u16>]>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -489,7 +489,7 @@ fn struct_unsizing() {
         goal {
             Foo: Unsize<Foo>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
@@ -497,7 +497,7 @@ fn struct_unsizing() {
                 S1<Foo>: Unsize<S1<dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         goal {
@@ -505,7 +505,7 @@ fn struct_unsizing() {
                 S1<Foo>: Unsize<S1<dyn OtherPrincipal + 'a>>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Unsizing parameter is used in head fields
@@ -515,7 +515,7 @@ fn struct_unsizing() {
                     Unsize<SParamsInMultipleFields<dyn Principal + 'a>>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Two-field struct test
@@ -524,7 +524,7 @@ fn struct_unsizing() {
                 S12<Foo, Foo>: Unsize<S12<Foo, dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // Test for the unsizing parameters collector
@@ -534,7 +534,7 @@ fn struct_unsizing() {
                 SWithBinders<Foo, Foo>: Unsize<SWithBinders<dyn Principal + 'a, Foo>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // Non-trivial unsizing of the last field
@@ -543,7 +543,7 @@ fn struct_unsizing() {
                 SNested<Foo, Bar<Foo>, Foo>: Unsize<SNested<Foo, Bar<Foo>, dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         goal {
@@ -551,7 +551,7 @@ fn struct_unsizing() {
                 SBad<Foo, Foo>: Unsize<SBad<Foo, dyn Principal + 'a>>
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Check that lifetimes can't be used as unsizing parameters
@@ -560,14 +560,14 @@ fn struct_unsizing() {
                 SLifetime<'a, Foo>: Unsize<SLifetime<'a, dyn Principal + 'a>>
             }
         } yields {
-            "Unique; substitution [], lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: Foo: '!1_0 }]"]]
         }
 
         // Tests with constant as an unsizing parameter
         goal {
             SGoodConst<5, [u32; 2]>: Unsize<SGoodConst<5, [u32]>>
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
 
@@ -575,14 +575,14 @@ fn struct_unsizing() {
         goal {
             SGoodConst<4, [u32; 2]>: Unsize<SGoodConst<5, [u32]>>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         // Unsizing parameter is used in head fields
         goal {
             SBadConst<5, [u32; 2]>: Unsize<SBadConst<5, [u32]>>
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }

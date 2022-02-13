@@ -20,13 +20,13 @@ fn mixed_semantics() {
         goal {
             Bar: Send
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             Bar: Foo
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -53,7 +53,7 @@ fn coinductive_unification_forall() {
         goal {
             forall<T> { T: C1 }
         } yields {
-            r"No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -80,7 +80,7 @@ fn coinductive_unification_exists() {
         goal {
             exists<T> { T: C1 }
         } yields {
-            r"No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -103,7 +103,7 @@ fn coinductive_nontrivial() {
         goal {
             exists<T> { T: C1 }
         } yields {
-            r"No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -126,7 +126,7 @@ fn coinductive_trivial_variant1() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            r"Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"
+            expect![["Unique; substitution [?0 := X, ?1 := X]"]]
         }
     }
 }
@@ -150,7 +150,7 @@ fn coinductive_trivial_variant2() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            r"Unique; substitution [?0 := X, ?1 := X], lifetime constraints []"
+            expect![["Unique; substitution [?0 := X, ?1 := X]"]]
         }
     }
 }
@@ -168,7 +168,7 @@ fn coinductive_trivial_variant3() {
         goal {
             exists<T, U> { T: C1<U> }
         } yields {
-            r"Unique; for<?U0,?U0> { substitution [?0 := ^0.0, ?1 := ^0.1], lifetime constraints [] }"
+            expect![["Unique; for<?U0,?U0> { substitution [?0 := ^0.0, ?1 := ^0.1] }"]]
         }
     }
 }
@@ -214,7 +214,7 @@ fn coinductive_unsound1() {
         goal {
             forall<X> { X: C1orC2 }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -256,7 +256,7 @@ fn coinductive_unsound2() {
         goal {
             forall<X> { X: C1orC2 }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -305,7 +305,7 @@ fn coinductive_unsound_nested() {
         goal {
             forall<X> { X: C1orC2 }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -376,7 +376,7 @@ fn coinductive_unsound_nested2() {
         goal {
             forall<X> { X: C1andC2 }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -446,7 +446,7 @@ fn coinductive_unsound_inter_cycle_dependency() {
         goal {
             forall<X> { X: C1andC2 }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -494,7 +494,7 @@ fn coinductive_multicycle1() {
         goal {
             forall<X> { X: Any }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
     }
 }
@@ -534,7 +534,7 @@ fn coinductive_multicycle2() {
         goal {
             forall<X> { X: Any }
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
     }
 }
@@ -584,7 +584,7 @@ fn coinductive_multicycle3() {
         goal {
             forall<X> { X: Any }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -634,7 +634,7 @@ fn coinductive_multicycle4() {
         goal {
             forall<X> { X: Any }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }

@@ -25,7 +25,7 @@ fn auto_semantics() {
                 List<T>: Send
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
         goal {
             forall<T> {
@@ -34,13 +34,13 @@ fn auto_semantics() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             List<TypeA>: Send
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -48,7 +48,7 @@ fn auto_semantics() {
                 T: Send
             }
         } yields {
-            "Ambiguous"
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
@@ -71,7 +71,7 @@ fn auto_trait_without_impls() {
         goal {
             TypeA: Send
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         // No fields so `Useless<T>` is `Send`.
@@ -80,7 +80,7 @@ fn auto_trait_without_impls() {
                 Useless<T>: Send
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -90,7 +90,7 @@ fn auto_trait_without_impls() {
                 }
             }
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
     }
 }
@@ -112,25 +112,25 @@ fn auto_trait_with_impls() {
         goal {
             TypeA: Send
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             TypeB: Send
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
             Vec<TypeA>: Send
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             Vec<TypeB>: Send
         } yields {
-            "Unique"
+            expect![["Unique"]]
         }
 
         goal {
@@ -138,7 +138,7 @@ fn auto_trait_with_impls() {
                 Vec<T>: Send
             }
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -158,7 +158,7 @@ fn auto_traits_flounder() {
         goal {
             exists<A> { A: Send }
         } yields_first[SolverChoice::slg(3, None)] {
-            "Floundered"
+            expect![["Floundered"]]
         }
     }
 }
@@ -201,19 +201,19 @@ fn enum_auto_trait() {
         goal {
             A: Send
         } yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             B: Send
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             C: Send
         } yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -239,61 +239,61 @@ fn builtin_auto_trait() {
 
         // The following types only contain AutoTrait-types, and thus implement AutoTrait themselves.
         goal { (i32, f32): AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { [(); 1]: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { [()]: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { u32: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { *const (): AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { *mut (): AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { forall<'a> { &'a (): AutoTrait } }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { forall<'a> { &'a mut (): AutoTrait } }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { str: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { !: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { Enum: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { func: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { good_closure: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
         goal { fn(Marker) -> Marker: AutoTrait }
-        yields { "Unique; substitution [], lifetime constraints []" }
+        yields { expect![["Unique"]] }
 
 
         // foreign types do not implement AutoTraits automatically
         goal { Ext: AutoTrait }
-        yields { "No possible solution" }
+        yields { expect![["No possible solution"]] }
 
         // The following types do contain non-AutoTrait types, and thus do not implement AutoTrait.
         goal { bad_closure: AutoTrait }
-        yields { "No possible solution" }
+        yields { expect![["No possible solution"]] }
 
         goal { ExtEnum: AutoTrait }
-        yields { "No possible solution" }
+        yields { expect![["No possible solution"]] }
 
         goal { (Struct, Marker): AutoTrait }
-        yields { "No possible solution" }
+        yields { expect![["No possible solution"]] }
     }
 }
 
@@ -317,35 +317,35 @@ fn adt_auto_trait() {
             Yes: AutoTrait
         }
         yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             No: AutoTrait
         }
         yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             X: AutoTrait
         }
         yields {
-            "Unique; substitution [], lifetime constraints []"
+            expect![["Unique"]]
         }
 
         goal {
             WrapperNo<Yes>: AutoTrait
         }
         yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
 
         goal {
             WrapperYes<No>: AutoTrait
         }
         yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
@@ -364,7 +364,7 @@ fn phantom_auto_trait() {
             PhantomData<Bad>: AutoTrait
         }
         yields {
-            "No possible solution"
+            expect![["No possible solution"]]
         }
     }
 }
