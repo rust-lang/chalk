@@ -20,4 +20,4 @@ chalk-solve = { version = "0.77.0-dev.0", path = "../chalk-solve" }
 chalk-recursive = { version = "0.77.0-dev.0", path = "../chalk-recursive" }
 chalk-engine = { version = "0.77.0-dev.0", path = "../chalk-engine" }
 chalk-parse = { version = "0.77.0-dev.0", path = "../chalk-parse" }
-indexmap = "1.7.0"
+indexmap = "1.8.0"
