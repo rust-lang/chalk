@@ -119,6 +119,24 @@ fn closure_is_copy() {
 }
 
 #[test]
+fn deadfeed() {
+    test! {
+        program {
+            #[auto]
+            trait Send { }
+
+            closure with_ty<T>(self,) { T }
+        }
+
+        goal {
+            forall<T> { if (T: Send) { with_ty<T>: Send } }
+        } yields {
+            expect![["Unique"]]
+        }
+    }
+}
+
+#[test]
 fn closure_is_clone() {
     test! {
         program {
