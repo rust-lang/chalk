@@ -826,3 +826,22 @@ fn env_bound_vars() {
         }
     }
 }
+
+#[test]
+fn recursive_hang() {
+    test! {
+        program {}
+
+        goal {
+            exists<'a, T> {
+                if(T: 'a) {
+                    WellFormed(&'a T)
+                }
+            }
+        } yields[SolverChoice::slg_default()] {
+            expect![["Ambiguous; definite substitution for<?U0,?U0> { [?0 := ^0.0, ?1 := '^0.1] }"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![["Ambiguous; suggested substitution for<?U0,?U0> { [?0 := ^0.0, ?1 := '^0.1] }"]]
+        }
+    }
+}
