@@ -31,12 +31,14 @@ Options:
   --goal=GOAL         Specifies a goal to evaluate (may be given more than once).
   --overflow-depth=N  Specifies the overflow depth [default: 10].
   --multiple          Output multiple answers instead of ambiguous solution.
+  --solver=S          Specifies the solver to use. `slg` or `recursive`. Default is SLG.
 ";
 
 /// This struct represents the various command line options available.
 #[derive(Debug, Deserialize)]
 struct Args {
     flag_program: Option<String>,
+    flag_solver: Option<String>,
     flag_goal: Vec<String>,
     flag_overflow_depth: usize,
     flag_multiple: bool,
@@ -288,9 +290,17 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 
 impl Args {
     fn solver_choice(&self) -> SolverChoice {
-        SolverChoice::SLG {
-            max_size: self.flag_overflow_depth,
-            expected_answers: None,
+        match self.flag_solver.as_ref().map(String::as_str) {
+            None | Some("slg") => SolverChoice::SLG {
+                max_size: self.flag_overflow_depth,
+                expected_answers: None,
+            },
+            Some("recursive") => SolverChoice::Recursive {
+                overflow_depth: 100,
+                caching_enabled: true,
+                max_size: 30,
+            },
+            Some(s) => panic!("invalid solver {}", s),
         }
     }
 }
