@@ -6,10 +6,10 @@ use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::Visit;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
-    Binders, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal, Environment, EqGoal,
-    Fallible, GenericArg, Goal, GoalData, InEnvironment, NoSolution, ProgramClauseImplication,
-    QuantifierKind, Substitution, SubtypeGoal, TyKind, TyVariableKind, UCanonical,
-    UnificationDatabase, UniverseMap, Variance,
+    Binders, BoundVar, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal,
+    Environment, EqGoal, Fallible, GenericArg, GenericArgData, Goal, GoalData, InEnvironment,
+    NoSolution, ProgramClauseImplication, QuantifierKind, Substitution, SubtypeGoal, TyKind,
+    TyVariableKind, UCanonical, UnificationDatabase, UniverseMap, Variance,
 };
 use chalk_solve::debug_span;
 use chalk_solve::infer::{InferenceTable, ParameterEnaVariableExt};
@@ -466,17 +466,19 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                         } = self.prove(wc.clone(), minimums)?;
 
                         if let Some(constrained_subst) = solution.definite_subst(self.interner()) {
-                            // If the substitution is empty, we won't actually make any progress by applying it!
+                            // If the substitution is trivial, we won't actually make any progress by applying it!
                             // So we need to check this to prevent endless loops.
-                            // (An ambiguous solution with empty substitution
-                            // can probably not happen in valid code, but it can
-                            // happen e.g. when there are overlapping impls.)
-                            if !constrained_subst.value.subst.is_empty(self.interner())
-                                || !constrained_subst
-                                    .value
-                                    .constraints
-                                    .is_empty(self.interner())
-                            {
+                            let nontrivial_subst = !is_trivial_canonical_subst(
+                                self.interner(),
+                                &constrained_subst.value.subst,
+                            );
+
+                            let has_constraints = !constrained_subst
+                                .value
+                                .constraints
+                                .is_empty(self.interner());
+
+                            if nontrivial_subst || has_constraints {
                                 self.apply_solution(free_vars, universes, constrained_subst);
                                 progress = true;
                             }
@@ -607,4 +609,29 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
     fn interner(&self) -> I {
         self.solver.interner()
     }
+}
+
+fn is_trivial_canonical_subst<I: Interner>(interner: I, subst: &Substitution<I>) -> bool {
+    // A subst is trivial if..
+    subst.iter(interner).enumerate().all(|(index, parameter)| {
+        let is_trivial = |b: Option<BoundVar>| match b {
+            None => false,
+            Some(bound_var) => {
+                if let Some(index1) = bound_var.index_if_innermost() {
+                    index == index1
+                } else {
+                    false
+                }
+            }
+        };
+
+        match parameter.data(interner) {
+            // All types and consts are mapped to distinct variables. Since this
+            // has been canonicalized, those will also be the first N
+            // variables.
+            GenericArgData::Ty(t) => is_trivial(t.bound_var(interner)),
+            GenericArgData::Const(t) => is_trivial(t.bound_var(interner)),
+            GenericArgData::Lifetime(t) => is_trivial(t.bound_var(interner)),
+        }
+    })
 }
