@@ -1,7 +1,8 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::{
     self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
-    GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
+    GeneratorId, ImplId, OpaqueTyId, ProgramClauseData, ProgramClauseImplication, TraitId,
+    TyVariableKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
@@ -159,6 +160,10 @@ impl ProgramLowerer {
         let mut generator_witness_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
+
+        // We can't check which impls are closure overrides until we've accumulated well-known
+        // traits
+        let mut possible_closure_overrides = Vec::new();
 
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             let empty_env = Env {
@@ -346,6 +351,13 @@ impl ProgramLowerer {
                             }),
                         );
                     }
+                    if let Some(GenericArg::Ty(Ty::Id { name } | Ty::Apply { name, .. })) =
+                        impl_defn.trait_ref.args.get(0)
+                    {
+                        if self.closure_ids.contains_key(&name.str) {
+                            possible_closure_overrides.push(impl_datum);
+                        }
+                    }
                 }
                 Item::Clause(ref clause) => {
                     custom_clauses.extend(clause.lower(&empty_env)?);
@@ -465,6 +477,33 @@ impl ProgramLowerer {
                     generator_witness_data.insert(id, Arc::new(generator_witness));
                 }
                 Item::Foreign(_) => {}
+            }
+        }
+
+        for imp in possible_closure_overrides {
+            if [
+                chalk_solve::rust_ir::WellKnownTrait::FnOnce,
+                chalk_solve::rust_ir::WellKnownTrait::FnMut,
+                chalk_solve::rust_ir::WellKnownTrait::Fn,
+            ]
+            .iter()
+            .filter_map(|t| well_known_traits.get(t))
+            .any(|id| id == &imp.binders.skip_binders().trait_ref.trait_id)
+            {
+                custom_clauses.push(
+                    ProgramClauseData(chalk_ir::Binders::new(
+                        imp.binders.binders.clone(),
+                        ProgramClauseImplication {
+                            consequence: chalk_ir::DomainGoal::LocalImplAllowed(
+                                imp.binders.skip_binders().trait_ref.clone(),
+                            ),
+                            conditions: chalk_ir::Goals::empty(&ChalkIr),
+                            constraints: chalk_ir::Constraints::empty(&ChalkIr),
+                            priority: chalk_ir::ClausePriority::Low,
+                        },
+                    ))
+                    .intern(&ChalkIr),
+                );
             }
         }
 
