@@ -93,7 +93,7 @@ impl<I: Interner> Fold<I> for Substitution<I> {
             .iter(interner)
             .cloned()
             .map(|p| p.fold_with(folder, outer_binder));
-        Ok(Substitution::from_fallible(interner, folded)?)
+        Substitution::from_fallible(interner, folded)
     }
 }
 
@@ -109,7 +109,7 @@ impl<I: Interner> Fold<I> for Goals<I> {
             .iter(interner)
             .cloned()
             .map(|p| p.fold_with(folder, outer_binder));
-        Ok(Goals::from_fallible(interner, folded)?)
+        Goals::from_fallible(interner, folded)
     }
 }
 
@@ -125,7 +125,7 @@ impl<I: Interner> Fold<I> for ProgramClauses<I> {
             .iter(interner)
             .cloned()
             .map(|p| p.fold_with(folder, outer_binder));
-        Ok(ProgramClauses::from_fallible(interner, folded)?)
+        ProgramClauses::from_fallible(interner, folded)
     }
 }
 
@@ -141,7 +141,7 @@ impl<I: Interner> Fold<I> for QuantifiedWhereClauses<I> {
             .iter(interner)
             .cloned()
             .map(|p| p.fold_with(folder, outer_binder));
-        Ok(QuantifiedWhereClauses::from_fallible(interner, folded)?)
+        QuantifiedWhereClauses::from_fallible(interner, folded)
     }
 }
 
@@ -157,7 +157,7 @@ impl<I: Interner> Fold<I> for Constraints<I> {
             .iter(interner)
             .cloned()
             .map(|p| p.fold_with(folder, outer_binder));
-        Ok(Constraints::from_fallible(interner, folded)?)
+        Constraints::from_fallible(interner, folded)
     }
 }
 
