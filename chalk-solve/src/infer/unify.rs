@@ -755,30 +755,26 @@ impl<'t, I: Interner> Unifier<'t, I> {
         universe_index: UniverseIndex,
         variance: Variance,
     ) -> Lifetime<I> {
-        let interner = self.interner;
-        match lifetime.data(interner) {
-            LifetimeData::BoundVar(_) => lifetime.clone(),
-            _ => {
-                if matches!(variance, Variance::Invariant) {
-                    lifetime.clone()
-                } else {
-                    let ena_var = self.table.new_variable(universe_index);
-                    ena_var.to_lifetime(interner)
-                }
-            }
+        if matches!(lifetime.data(self.interner), LifetimeData::BoundVar(_))
+            || matches!(variance, Variance::Invariant)
+        {
+            lifetime.clone()
+        } else {
+            self.table
+                .new_variable(universe_index)
+                .to_lifetime(self.interner)
         }
     }
 
     #[instrument(level = "debug", skip(self))]
     fn generalize_const(&mut self, const_: &Const<I>, universe_index: UniverseIndex) -> Const<I> {
-        let interner = self.interner;
-        let data = const_.data(interner);
-        match data.value {
-            ConstValue::BoundVar(_) => const_.clone(),
-            _ => {
-                let ena_var = self.table.new_variable(universe_index);
-                ena_var.to_const(interner, data.ty.clone())
-            }
+        let data = const_.data(self.interner);
+        if matches!(data.value, ConstValue::BoundVar(_)) {
+            const_.clone()
+        } else {
+            self.table
+                .new_variable(universe_index)
+                .to_const(self.interner, data.ty.clone())
         }
     }
 
