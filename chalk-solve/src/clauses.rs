@@ -865,7 +865,7 @@ fn match_ty<I: Interner>(
     ty: &Ty<I>,
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
-    Ok(match ty.kind(interner) {
+    match ty.kind(interner) {
         TyKind::InferenceVar(_, _) => {
             panic!("Inference vars not allowed when getting program clauses")
         }
@@ -1080,7 +1080,8 @@ fn match_ty<I: Interner>(
                 builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
             });
         }
-    })
+    }
+    Ok(())
 }
 
 fn match_alias_ty<I: Interner>(

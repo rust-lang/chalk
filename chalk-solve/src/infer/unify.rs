@@ -360,11 +360,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_var_var(&mut self, a: InferenceVar, b: InferenceVar) -> Fallible<()> {
         let var1 = EnaVariable::from(a);
         let var2 = EnaVariable::from(b);
-        Ok(self
-            .table
+        self.table
             .unify
             .unify_var_var(var1, var2)
-            .expect("unification of two unbound variables cannot fail"))
+            .expect("unification of two unbound variables cannot fail");
+        Ok(())
     }
 
     /// Unify a general inference variable with a specific inference variable
@@ -1001,7 +1001,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&LifetimeData::Erased, &LifetimeData::Placeholder(_))
             | (&LifetimeData::Erased, &LifetimeData::Empty(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_outlives_goals(variance, a.clone(), b.clone()))
+                    self.push_lifetime_outlives_goals(variance, a.clone(), b.clone());
+                    Ok(())
                 } else {
                     Ok(())
                 }
@@ -1041,11 +1042,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_outlives_goals(
+            self.push_lifetime_outlives_goals(
                 variance,
                 var.to_lifetime(self.interner),
                 value.clone(),
-            ))
+            );
+            Ok(())
         }
     }
 
@@ -1082,11 +1084,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 debug!(?var1, ?var2, "relate_ty_ty");
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
-                Ok(self
-                    .table
+                self.table
                     .unify
                     .unify_var_var(var1, var2)
-                    .expect("unification of two unbound variables cannot fail"))
+                    .expect("unification of two unbound variables cannot fail");
+                Ok(())
             }
 
             // Unifying an inference variables with a non-inference variable.
