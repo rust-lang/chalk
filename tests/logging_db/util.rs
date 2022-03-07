@@ -30,8 +30,8 @@ pub fn logging_db_output_sufficient(
     goals: Vec<(&str, Vec<SolverChoice>, TestGoal)>,
 ) {
     println!("program {}", program_text);
-    assert!(program_text.starts_with("{"));
-    assert!(program_text.ends_with("}"));
+    assert!(program_text.starts_with('{'));
+    assert!(program_text.ends_with('}'));
 
     let goals = goals
         .iter()
@@ -53,8 +53,8 @@ pub fn logging_db_output_sufficient(
                 println!("----------------------------------------------------------------------");
                 println!("---- first run on original test code ---------------------------------");
                 println!("goal {}", goal_text);
-                assert!(goal_text.starts_with("{"));
-                assert!(goal_text.ends_with("}"));
+                assert!(goal_text.starts_with('{'));
+                assert!(goal_text.ends_with('}'));
                 let goal = lower_goal(
                     &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
                     &*program,
@@ -95,8 +95,8 @@ pub fn logging_db_output_sufficient(
             println!("----------------------------------------------------------------------");
             println!("---- second run on code output by logger -----------------------------");
             println!("goal {}", goal_text);
-            assert!(goal_text.starts_with("{"));
-            assert!(goal_text.ends_with("}"));
+            assert!(goal_text.starts_with('{'));
+            assert!(goal_text.ends_with('}'));
             let goal = lower_goal(
                 &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
                 &*new_program,

@@ -243,8 +243,8 @@ fn solve_goal(
 ) {
     with_tracing_logs(|| {
         println!("program {}", program_text);
-        assert!(program_text.starts_with("{"));
-        assert!(program_text.ends_with("}"));
+        assert!(program_text.starts_with('{'));
+        assert!(program_text.ends_with('}'));
 
         let mut db = ChalkDatabase::with(
             &program_text[1..program_text.len() - 1],
@@ -294,8 +294,8 @@ fn solve_goal(
             chalk_integration::tls::set_current_program(&program, || {
                 println!("----------------------------------------------------------------------");
                 println!("goal {}", goal_text);
-                assert!(goal_text.starts_with("{"));
-                assert!(goal_text.ends_with("}"));
+                assert!(goal_text.starts_with('{'));
+                assert!(goal_text.ends_with('}'));
                 let goal = lower_goal(
                     &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
                     &*program,
@@ -377,8 +377,8 @@ fn solve_aggregated(
         chalk_integration::tls::set_current_program(&program, || {
             println!("----------------------------------------------------------------------");
             println!("goal {}", goal_text);
-            assert!(goal_text.starts_with("{"));
-            assert!(goal_text.ends_with("}"));
+            assert!(goal_text.starts_with('{'));
+            assert!(goal_text.ends_with('}'));
             let goal = lower_goal(
                 &*chalk_parse::parse_goal(&goal_text[1..goal_text.len() - 1]).unwrap(),
                 &*program,

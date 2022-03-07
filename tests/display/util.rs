@@ -12,8 +12,8 @@ use regex::Regex;
 use std::{fmt::Debug, sync::Arc};
 
 pub fn strip_leading_trailing_braces(input: &str) -> &str {
-    assert!(input.starts_with("{"));
-    assert!(input.ends_with("}"));
+    assert!(input.starts_with('{'));
+    assert!(input.ends_with('}'));
 
     &input[1..input.len() - 1]
 }
