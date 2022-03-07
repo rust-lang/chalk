@@ -687,7 +687,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                         ex_clause.answer_time.increment();
 
                         // Ok, we've applied the answer to this Strand.
-                        return Ok(());
+                        Ok(())
                     }
 
                     // This answer led nowhere. Give up for now, but of course
@@ -700,7 +700,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
 
                         // Now we want to propogate back to the up with `QuantumExceeded`
                         self.unwind_stack();
-                        return Err(RootSearchFail::QuantumExceeded);
+                        Err(RootSearchFail::QuantumExceeded)
                     }
                 }
             }
@@ -749,9 +749,9 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
-                return Ok(());
+                Ok(())
             }
-        };
+        }
     }
 
     /// This is called when the selected subgoal for a strand has floundered.
@@ -1224,7 +1224,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
 
             // Now we yield with `QuantumExceeded`
             self.unwind_stack();
-            return Err(RootSearchFail::QuantumExceeded);
+            Err(RootSearchFail::QuantumExceeded)
         } else {
             debug!("table part of a cycle");
 
@@ -1267,7 +1267,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             self.forest.tables[table].enqueue_strand(active_strand);
 
             // The strand isn't active, but the table is, so just continue
-            return Ok(());
+            Ok(())
         }
     }
 

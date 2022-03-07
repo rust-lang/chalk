@@ -760,9 +760,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
     ) -> Lifetime<I> {
         let interner = self.interner;
         match lifetime.data(interner) {
-            LifetimeData::BoundVar(_) => {
-                return lifetime.clone();
-            }
+            LifetimeData::BoundVar(_) => lifetime.clone(),
             _ => {
                 if matches!(variance, Variance::Invariant) {
                     lifetime.clone()
@@ -779,9 +777,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         let interner = self.interner;
         let data = const_.data(interner);
         match data.value {
-            ConstValue::BoundVar(_) => {
-                return const_.clone();
-            }
+            ConstValue::BoundVar(_) => const_.clone(),
             _ => {
                 let ena_var = self.table.new_variable(universe_index);
                 ena_var.to_const(interner, data.ty.clone())
