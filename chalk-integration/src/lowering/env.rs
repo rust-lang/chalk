@@ -253,7 +253,7 @@ impl Env<'_> {
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
-            Err(RustIrError::DuplicateOrShadowedParameters)?;
+            return Err(RustIrError::DuplicateOrShadowedParameters);
         }
         Ok(Env {
             parameter_map,

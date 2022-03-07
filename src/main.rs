@@ -184,7 +184,7 @@ where
             Err(ReadlineError::Eof) => break,
 
             // Some other error occurred.
-            Err(e) => Err(e)?,
+            Err(e) => return Err(e.into()),
         }
     }
 

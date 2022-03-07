@@ -16,14 +16,14 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 pub fn parse_program(text: &str) -> Result<ast::Program> {
     match parser::ProgramParser::new().parse(text) {
         Ok(v) => Ok(v),
-        Err(e) => Err(format!("parse error: {}", e))?,
+        Err(e) => Err(format!("parse error: {}", e).into()),
     }
 }
 
 pub fn parse_ty(text: &str) -> Result<ast::Ty> {
     match parser::TyParser::new().parse(text) {
         Ok(v) => Ok(v),
-        Err(e) => Err(format!("error parsing `{}`: {}", text, e))?,
+        Err(e) => Err(format!("error parsing `{}`: {}", text, e).into()),
     }
 }
 
@@ -45,24 +45,17 @@ pub fn parse_goal(text: &str) -> Result<Box<ast::Goal>> {
                     "parse error: {}\n{}",
                     e,
                     position_string(location, location + 1)
-                ))?,
+                )
+                .into()),
                 ParseError::UnrecognizedToken {
                     token: (start, _, end),
                     ..
-                } => Err(format!(
-                    "parse error: {}\n{}",
-                    e,
-                    position_string(start, end)
-                ))?,
+                } => Err(format!("parse error: {}\n{}", e, position_string(start, end)).into()),
                 ParseError::ExtraToken {
                     token: (start, _, end),
                     ..
-                } => Err(format!(
-                    "parse error: {}\n{}",
-                    e,
-                    position_string(start, end)
-                ))?,
-                _ => Err(format!("parse error: {}", e))?,
+                } => Err(format!("parse error: {}\n{}", e, position_string(start, end)).into()),
+                _ => Err(format!("parse error: {}", e).into()),
             }
         }
     }

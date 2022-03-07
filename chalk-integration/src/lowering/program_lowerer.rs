@@ -59,7 +59,7 @@ impl ProgramLowerer {
             match item {
                 Item::TraitDefn(d) => {
                     if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                        Err(RustIrError::AutoTraitAssociatedTypes(d.name.clone()))?;
+                        return Err(RustIrError::AutoTraitAssociatedTypes(d.name.clone()));
                     }
                     for defn in &d.assoc_ty_defns {
                         let addl_variable_kinds = defn.all_parameters();

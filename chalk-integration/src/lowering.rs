@@ -282,9 +282,9 @@ impl LowerWithEnv for (&AdtDefn, chalk_ir::AdtId<ChalkIr>) {
         let (adt_defn, adt_id) = self;
 
         if adt_defn.flags.fundamental && adt_defn.all_parameters().len() < 1 {
-            Err(RustIrError::InvalidFundamentalTypesParameters(
+            return Err(RustIrError::InvalidFundamentalTypesParameters(
                 adt_defn.name.clone(),
-            ))?;
+            ));
         }
 
         let binders = env.in_binders(adt_defn.all_parameters(), |env| {
@@ -448,7 +448,7 @@ impl LowerWithEnv for TraitBound {
 
         let k = env.trait_kind(trait_id);
         if k.sort != TypeSort::Trait {
-            Err(RustIrError::NotTrait(self.trait_name.clone()))?;
+            return Err(RustIrError::NotTrait(self.trait_name.clone()));
         }
 
         let parameters = self
@@ -458,20 +458,20 @@ impl LowerWithEnv for TraitBound {
             .collect::<LowerResult<Vec<_>>>()?;
 
         if parameters.len() != k.binders.len(interner) {
-            Err(RustIrError::IncorrectNumberOfTypeParameters {
+            return Err(RustIrError::IncorrectNumberOfTypeParameters {
                 identifier: self.trait_name.clone(),
                 expected: k.binders.len(interner),
                 actual: parameters.len(),
-            })?;
+            });
         }
 
         for (binder, param) in k.binders.binders.iter(interner).zip(parameters.iter()) {
             if binder.kind() != param.kind() {
-                Err(RustIrError::IncorrectTraitParameterKind {
+                return Err(RustIrError::IncorrectTraitParameterKind {
                     identifier: self.trait_name.clone(),
                     expected: binder.kind(),
                     actual: param.kind(),
-                })?;
+                });
             }
         }
 
@@ -495,20 +495,20 @@ impl LowerWithEnv for AliasEqBound {
             .collect::<LowerResult<_>>()?;
 
         if args.len() != lookup.addl_variable_kinds.len() {
-            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+            return Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
                 identifier: self.name.clone(),
                 expected: lookup.addl_variable_kinds.len(),
                 actual: args.len(),
-            })?;
+            });
         }
 
         for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
             if param.kind() != arg.kind() {
-                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                return Err(RustIrError::IncorrectAssociatedTypeParameterKind {
                     identifier: self.name.clone(),
                     expected: param.kind(),
                     actual: arg.kind(),
-                })?;
+                });
             }
         }
 
@@ -631,20 +631,20 @@ impl LowerWithEnv for ProjectionTy {
             .collect::<LowerResult<_>>()?;
 
         if args.len() != lookup.addl_variable_kinds.len() {
-            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+            return Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
                 identifier: self.name.clone(),
                 expected: lookup.addl_variable_kinds.len(),
                 actual: args.len(),
-            })?;
+            });
         }
 
         for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
             if param.kind() != arg.kind() {
-                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                return Err(RustIrError::IncorrectAssociatedTypeParameterKind {
                     identifier: self.name.clone(),
                     expected: param.kind(),
                     actual: arg.kind(),
-                })?;
+                });
             }
         }
 
@@ -707,16 +707,16 @@ impl LowerWithEnv for Ty {
                 macro_rules! tykind {
                     ($k:expr, $tykind:ident, $id:expr) => {{
                         if $k.binders.len(interner) != args.len() {
-                            Err(RustIrError::IncorrectNumberOfTypeParameters {
+                            return Err(RustIrError::IncorrectNumberOfTypeParameters {
                                 identifier: name.clone(),
                                 expected: $k.binders.len(interner),
                                 actual: args.len(),
-                            })?;
+                            });
                         }
 
                         let substitution = chalk_ir::Substitution::from_fallible(
                             interner,
-                            args.iter().map(|t| Ok(t.lower(env)?)),
+                            args.iter().map(|t| t.lower(env)),
                         )?;
 
                         for (param, arg) in $k
@@ -726,11 +726,11 @@ impl LowerWithEnv for Ty {
                             .zip(substitution.iter(interner))
                         {
                             if param.kind() != arg.kind() {
-                                Err(RustIrError::IncorrectParameterKind {
+                                return Err(RustIrError::IncorrectParameterKind {
                                     identifier: name.clone(),
                                     expected: param.kind(),
                                     actual: arg.kind(),
-                                })?;
+                                });
                             }
                         }
                         chalk_ir::TyKind::$tykind($id, substitution).intern(interner)
@@ -896,9 +896,9 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
             debug!(?trait_ref);
 
             if !polarity.is_positive() && !impl_.assoc_ty_values.is_empty() {
-                Err(RustIrError::NegativeImplAssociatedValues(
+                return Err(RustIrError::NegativeImplAssociatedValues(
                     impl_.trait_ref.trait_name.clone(),
-                ))?;
+                ));
             }
 
             let where_clauses = impl_.where_clauses.lower(env)?;
@@ -980,10 +980,10 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
         let binders = env.in_binders(all_parameters, |env| {
             if trait_defn.flags.auto {
                 if all_parameters_len > 1 {
-                    Err(RustIrError::AutoTraitParameters(trait_defn.name.clone()))?;
+                    return Err(RustIrError::AutoTraitParameters(trait_defn.name.clone()));
                 }
                 if !trait_defn.where_clauses.is_empty() {
-                    Err(RustIrError::AutoTraitWhereClauses(trait_defn.name.clone()))?;
+                    return Err(RustIrError::AutoTraitWhereClauses(trait_defn.name.clone()));
                 }
             }
 
