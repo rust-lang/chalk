@@ -26,10 +26,7 @@ enum Outcome {
 
 impl Outcome {
     fn is_complete(&self) -> bool {
-        match *self {
-            Outcome::Complete => true,
-            _ => false,
-        }
+        matches!(self, Outcome::Complete)
     }
 }
 

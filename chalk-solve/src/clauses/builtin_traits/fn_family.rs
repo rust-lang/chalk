@@ -111,13 +111,12 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         }
         TyKind::Closure(closure_id, substitution) => {
             let closure_kind = db.closure_kind(*closure_id, substitution);
-            let trait_matches = match (well_known, closure_kind) {
-                (WellKnownTrait::Fn, ClosureKind::Fn) => true,
-                (WellKnownTrait::FnMut, ClosureKind::FnMut)
-                | (WellKnownTrait::FnMut, ClosureKind::Fn) => true,
-                (WellKnownTrait::FnOnce, _) => true,
-                _ => false,
-            };
+            let trait_matches = matches!(
+                (well_known, closure_kind),
+                (WellKnownTrait::Fn, ClosureKind::Fn)
+                    | (WellKnownTrait::FnMut, ClosureKind::FnMut | ClosureKind::Fn)
+                    | (WellKnownTrait::FnOnce, _)
+            );
             if !trait_matches {
                 return Ok(());
             }

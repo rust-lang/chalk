@@ -525,10 +525,7 @@ pub enum FnArgs {
 
 impl FnArgs {
     pub fn is_variadic(&self) -> bool {
-        match self {
-            Self::Variadic(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Variadic(..))
     }
 
     pub fn to_tys(self) -> Vec<Ty> {
