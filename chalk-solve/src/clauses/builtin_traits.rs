@@ -105,7 +105,7 @@ pub fn needs_impl_for_tys<I: Interner>(
     builder.push_clause(
         trait_ref,
         tys.map(|ty| TraitRef {
-            trait_id: trait_id,
+            trait_id,
             substitution: Substitution::from1(db.interner(), ty),
         }),
     );

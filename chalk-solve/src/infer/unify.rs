@@ -677,10 +677,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                     let lifetime = lifetime_var.to_lifetime(interner);
                                     let ty_var = self.table.new_variable(universe_index);
                                     let ty = ty_var.to_ty(interner);
-                                    WhereClause::TypeOutlives(TypeOutlives {
-                                        ty: ty,
-                                        lifetime: lifetime,
-                                    })
+                                    WhereClause::TypeOutlives(TypeOutlives { ty, lifetime })
                                 }
                                 WhereClause::LifetimeOutlives(_) => {
                                     unreachable!("dyn Trait never contains LifetimeOutlive bounds")
