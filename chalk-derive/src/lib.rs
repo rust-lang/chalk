@@ -84,7 +84,7 @@ fn find_interner(s: &mut synstructure::Structure) -> (TokenStream, DeriveKind) {
 
     let generic_param0 = get_generic_param(input);
 
-    if let Some(param) = has_interner(&generic_param0) {
+    if let Some(param) = has_interner(generic_param0) {
         // HasInterner bound:
         //
         // Example:
@@ -98,7 +98,7 @@ fn find_interner(s: &mut synstructure::Structure) -> (TokenStream, DeriveKind) {
         );
 
         (quote! { _I }, DeriveKind::FromHasInterner)
-    } else if let Some(i) = is_interner(&generic_param0) {
+    } else if let Some(i) = is_interner(generic_param0) {
         // Interner bound:
         //
         // Example:

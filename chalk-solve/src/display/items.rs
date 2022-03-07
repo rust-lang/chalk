@@ -442,7 +442,7 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
             .split_associated_ty_value_parameters(&display_params, self);
 
         write!(f, "{}type {}", s.indent(), assoc_ty_data.id.display(s))?;
-        write_joined_non_empty_list!(f, "<{}>", &assoc_ty_value_display, ", ")?;
+        write_joined_non_empty_list!(f, "<{}>", assoc_ty_value_display, ", ")?;
         write!(f, " = {};", value.ty.display(s))?;
         Ok(())
     }

@@ -485,7 +485,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 let generalized = generalize::Generalize::apply(db.interner(), trait_ref.clone());
                 builder.push_binders(generalized, |builder, trait_ref| {
                     let ty = trait_ref.self_type_parameter(interner);
-                    push_auto_trait_impls(builder, trait_id, &ty.kind(interner))
+                    push_auto_trait_impls(builder, trait_id, ty.kind(interner))
                 })?;
             }
 
@@ -584,7 +584,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::DownstreamType(ty)
         | DomainGoal::IsFullyVisible(ty)
-        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, &ty)?,
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {

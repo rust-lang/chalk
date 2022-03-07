@@ -40,7 +40,7 @@ impl ChalkDatabase {
 
     pub fn with_program<R>(&self, op: impl FnOnce(&Program) -> R) -> R {
         let program = &self.checked_program().unwrap();
-        tls::set_current_program(&program, || op(&program))
+        tls::set_current_program(program, || op(program))
     }
 
     pub fn parse_and_lower_goal(&self, text: &str) -> Result<Goal<ChalkIr>, ChalkError> {

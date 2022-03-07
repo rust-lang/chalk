@@ -142,7 +142,7 @@ impl<I: Interner> RenderAsRust<I> for ProjectionTy<I> {
         // trait_params is X, A1, A2, A3,
         // assoc_type_params is B1, B2, B3,
         // assoc_ty_datum stores info about Y and Z.
-        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db().split_projection(&self);
+        let (assoc_ty_datum, trait_params, assoc_type_params) = s.db().split_projection(self);
         write!(
             f,
             "<{} as {}>::{}",

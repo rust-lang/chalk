@@ -317,7 +317,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                 self.push_obligation(Obligation::Prove(in_env));
             }
             GoalData::EqGoal(EqGoal { a, b }) => {
-                self.unify(&environment, Variance::Invariant, &a, &b)?;
+                self.unify(environment, Variance::Invariant, &a, &b)?;
             }
             GoalData::SubtypeGoal(SubtypeGoal { a, b }) => {
                 let a_norm = self.infer.normalize_ty_shallow(interner, a);
@@ -334,7 +334,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                 ) {
                     self.cannot_prove = true;
                 } else {
-                    self.unify(&environment, Variance::Covariant, &a, &b)?;
+                    self.unify(environment, Variance::Covariant, &a, &b)?;
                 }
             }
             GoalData::CannotProve => {

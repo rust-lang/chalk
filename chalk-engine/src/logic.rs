@@ -951,7 +951,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 Ok(_) => {
                     debug!(?strand, "merged answer into current strand");
                     canonical_strand =
-                        Forest::canonicalize_strand_from(&self.context, &mut infer, &strand);
+                        Forest::canonicalize_strand_from(self.context, &mut infer, &strand);
                     self.stack.top().active_strand = Some(canonical_strand);
                     return Ok(());
                 }

@@ -41,7 +41,7 @@ where
     /// Record a cache result.
     pub fn get(&self, goal: &K) -> Option<V> {
         let data = self.data.lock().unwrap();
-        if let Some(result) = data.cache.get(&goal) {
+        if let Some(result) = data.cache.get(goal) {
             debug!(?goal, ?result, "Cache hit");
             Some(result.clone())
         } else {

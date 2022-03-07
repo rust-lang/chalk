@@ -50,7 +50,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// `split_projection`).
     fn trait_ref_from_projection<'p>(&self, projection: &'p ProjectionTy<I>) -> TraitRef<I> {
         let interner = self.interner();
-        let (associated_ty_data, trait_params, _) = self.split_projection(&projection);
+        let (associated_ty_data, trait_params, _) = self.split_projection(projection);
         TraitRef {
             trait_id: associated_ty_data.trait_id,
             substitution: Substitution::from_iter(interner, trait_params),
@@ -132,7 +132,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         // Get the trait ref from the impl -- so in our example above
         // this would be `Box<!T>: Foo`.
         let (impl_parameters, atv_parameters) =
-            self.split_associated_ty_value_parameters(&parameters, associated_ty_value);
+            self.split_associated_ty_value_parameters(parameters, associated_ty_value);
         let trait_ref = {
             let opaque_ty_ref = impl_datum.binders.map_ref(|b| &b.trait_ref).cloned();
             debug!(?opaque_ty_ref);

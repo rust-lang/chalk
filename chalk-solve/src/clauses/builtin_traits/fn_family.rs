@@ -110,7 +110,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             Ok(())
         }
         TyKind::Closure(closure_id, substitution) => {
-            let closure_kind = db.closure_kind(*closure_id, &substitution);
+            let closure_kind = db.closure_kind(*closure_id, substitution);
             let trait_matches = match (well_known, closure_kind) {
                 (WellKnownTrait::Fn, ClosureKind::Fn) => true,
                 (WellKnownTrait::FnMut, ClosureKind::FnMut)
@@ -121,8 +121,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             if !trait_matches {
                 return Ok(());
             }
-            let closure_inputs_and_output =
-                db.closure_inputs_and_output(*closure_id, &substitution);
+            let closure_inputs_and_output = db.closure_inputs_and_output(*closure_id, substitution);
             push_clauses_for_apply(
                 db,
                 builder,

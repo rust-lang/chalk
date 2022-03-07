@@ -135,7 +135,7 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<I> for IdCollector<'i, I, D
             TyKind::Adt(adt, _) => self.record(*adt),
             TyKind::FnDef(fn_def, _) => self.record(*fn_def),
             TyKind::OpaqueType(opaque, _) => self.record(*opaque),
-            TyKind::Alias(alias) => self.visit_alias(&alias),
+            TyKind::Alias(alias) => self.visit_alias(alias),
             TyKind::BoundVar(..) => (),
             TyKind::Dyn(..) => (),
             TyKind::Function(..) => (),

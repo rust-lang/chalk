@@ -123,14 +123,14 @@ where
     ) -> V {
         // First check the cache.
         if let Some(cache) = &self.cache {
-            if let Some(value) = cache.get(&goal) {
+            if let Some(value) = cache.get(goal) {
                 debug!("solve_reduced_goal: cache hit, value={:?}", value);
                 return value.clone();
             }
         }
 
         // Next, check if the goal is in the search tree already.
-        if let Some(dfn) = self.search_graph.lookup(&goal) {
+        if let Some(dfn) = self.search_graph.lookup(goal) {
             // Check if this table is still on the stack.
             if let Some(depth) = self.search_graph[dfn].stack_depth {
                 self.stack[depth].flag_cycle();
@@ -157,9 +157,9 @@ where
             let coinductive_goal = solver_stuff.is_coinductive_goal(goal);
             let initial_solution = solver_stuff.initial_value(goal, coinductive_goal);
             let depth = self.stack.push(coinductive_goal);
-            let dfn = self.search_graph.insert(&goal, depth, initial_solution);
+            let dfn = self.search_graph.insert(goal, depth, initial_solution);
 
-            let subgoal_minimums = self.solve_new_subgoal(&goal, depth, dfn, solver_stuff);
+            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn, solver_stuff);
 
             self.search_graph[dfn].links = subgoal_minimums;
             self.search_graph[dfn].stack_depth = None;
@@ -209,7 +209,7 @@ where
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let current_answer = solver_stuff.solve_iteration(self, &canonical_goal, minimums);
+            let current_answer = solver_stuff.solve_iteration(self, canonical_goal, minimums);
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",

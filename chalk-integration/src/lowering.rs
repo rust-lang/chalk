@@ -526,8 +526,8 @@ impl LowerWithEnv for InlineBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         Ok(match self {
-            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
-            InlineBound::AliasEqBound(b) => rust_ir::InlineBound::AliasEqBound(b.lower(&env)?),
+            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(env)?),
+            InlineBound::AliasEqBound(b) => rust_ir::InlineBound::AliasEqBound(b.lower(env)?),
         })
     }
 }
@@ -664,7 +664,7 @@ impl LowerWithEnv for Ty {
         let interner = env.interner();
         Ok(match self {
             Ty::Id { name } => {
-                let parameter = env.lookup_generic_arg(&name)?;
+                let parameter = env.lookup_generic_arg(name)?;
                 parameter.ty(interner).map(|ty| ty.clone()).ok_or_else(|| {
                     RustIrError::IncorrectParameterKind {
                         identifier: name.clone(),
@@ -736,7 +736,7 @@ impl LowerWithEnv for Ty {
                         chalk_ir::TyKind::$tykind($id, substitution).intern(interner)
                     }};
                 }
-                match env.lookup_type(&name)? {
+                match env.lookup_type(name)? {
                     TypeLookup::Parameter(_) => {
                         return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
                     }
@@ -846,7 +846,7 @@ impl LowerWithEnv for GenericArg {
         match self {
             GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
             GenericArg::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
-            GenericArg::Id(name) => env.lookup_generic_arg(&name),
+            GenericArg::Id(name) => env.lookup_generic_arg(name),
             GenericArg::Const(c) => Ok(c.lower(env)?.cast(interner)),
         }
     }
@@ -859,7 +859,7 @@ impl LowerWithEnv for Lifetime {
         let interner = env.interner();
         match self {
             Lifetime::Id { name } => {
-                let parameter = env.lookup_generic_arg(&name)?;
+                let parameter = env.lookup_generic_arg(name)?;
                 parameter.lifetime(interner).copied().ok_or_else(|| {
                     RustIrError::IncorrectParameterKind {
                         identifier: name.clone(),
@@ -901,7 +901,7 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
                 ))?;
             }
 
-            let where_clauses = impl_.where_clauses.lower(&env)?;
+            let where_clauses = impl_.where_clauses.lower(env)?;
             debug!(where_clauses = ?trait_ref);
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
@@ -1065,8 +1065,8 @@ impl LowerWithEnv for Goal {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
-            Goal::ForAll(ids, g) => (&**g, chalk_ir::QuantifierKind::ForAll, ids).lower(&env),
-            Goal::Exists(ids, g) => (&**g, chalk_ir::QuantifierKind::Exists, ids).lower(&env),
+            Goal::ForAll(ids, g) => (&**g, chalk_ir::QuantifierKind::ForAll, ids).lower(env),
+            Goal::Exists(ids, g) => (&**g, chalk_ir::QuantifierKind::Exists, ids).lower(env),
             Goal::Implies(hyp, g) => {
                 // We "elaborate" implied bounds by lowering goals like `T: Trait` and
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`

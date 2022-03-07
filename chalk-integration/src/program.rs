@@ -213,7 +213,7 @@ impl tls::DebugContext for Program {
             associated_ty_data.trait_id,
             Angle(&trait_params[1..]),
             associated_ty_data.name,
-            Angle(&other_params)
+            Angle(other_params)
         )
     }
 
@@ -448,10 +448,10 @@ impl RustIrDatabase<ChalkIr> for Program {
                 trait_id == trait_ref.trait_id && {
                     assert_eq!(trait_ref.substitution.len(interner), parameters.len());
                     <[_] as CouldMatch<[_]>>::could_match(
-                        &parameters,
+                        parameters,
                         interner,
                         self.unification_database(),
-                        &trait_ref.substitution.as_slice(interner),
+                        trait_ref.substitution.as_slice(interner),
                     )
                 }
             })

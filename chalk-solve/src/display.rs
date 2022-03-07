@@ -153,7 +153,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                             WhereClause::AliasEq(alias_eq) => match &alias_eq.alias {
                                 AliasTy::Projection(projection_ty) => {
                                     let (assoc_ty_datum, trait_params, assoc_type_params) =
-                                        s.db().split_projection(&projection_ty);
+                                        s.db().split_projection(projection_ty);
                                     display_trait_with_assoc_ty_value(
                                         s,
                                         assoc_ty_datum,
