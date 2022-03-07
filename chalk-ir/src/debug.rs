@@ -320,7 +320,7 @@ impl<I: Interner> VariableKinds<I> {
     }
 
     /// Helper method for debugging variable kinds.
-    pub fn inner_debug<'a>(&'a self, interner: I) -> VariableKindsInnerDebug<'a, I> {
+    pub fn inner_debug(&self, interner: I) -> VariableKindsInnerDebug<'_, I> {
         VariableKindsInnerDebug {
             variable_kinds: self,
             interner,
@@ -420,7 +420,7 @@ impl<'a, I: Interner> Debug for GoalsDebug<'a, I> {
 
 impl<I: Interner> Goals<I> {
     /// Show debug output for `Goals`.
-    pub fn debug<'a>(&'a self, interner: I) -> GoalsDebug<'a, I> {
+    pub fn debug(&self, interner: I) -> GoalsDebug<'_, I> {
         GoalsDebug {
             goals: self,
             interner,
@@ -476,7 +476,7 @@ impl<'a, I: Interner> Debug for ProgramClauseImplicationDebug<'a, I> {
 
 impl<I: Interner> ProgramClauseImplication<I> {
     /// Show debug output for the program clause implication.
-    pub fn debug<'a>(&'a self, interner: I) -> ProgramClauseImplicationDebug<'a, I> {
+    pub fn debug(&self, interner: I) -> ProgramClauseImplicationDebug<'_, I> {
         ProgramClauseImplicationDebug {
             pci: self,
             interner,
@@ -556,7 +556,7 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
 
 impl<I: Interner> TyKind<I> {
     /// Show debug output for the application type.
-    pub fn debug<'a>(&'a self, interner: I) -> TyKindDebug<'a, I> {
+    pub fn debug(&self, interner: I) -> TyKindDebug<'_, I> {
         TyKindDebug { ty: self, interner }
     }
 }
@@ -595,7 +595,7 @@ impl<'a, I: Interner> Debug for SubstitutionDebug<'a, I> {
 
 impl<I: Interner> Substitution<I> {
     /// Show debug output for the substitution.
-    pub fn debug<'a>(&'a self, interner: I) -> SubstitutionDebug<'a, I> {
+    pub fn debug(&self, interner: I) -> SubstitutionDebug<'_, I> {
         SubstitutionDebug {
             substitution: self,
             interner,
@@ -715,7 +715,7 @@ impl<'a, I: Interner> Debug for ProjectionTyDebug<'a, I> {
 
 impl<I: Interner> ProjectionTy<I> {
     /// Show debug output for the projection type.
-    pub fn debug<'a>(&'a self, interner: I) -> ProjectionTyDebug<'a, I> {
+    pub fn debug(&self, interner: I) -> ProjectionTyDebug<'_, I> {
         ProjectionTyDebug {
             projection_ty: self,
             interner,
@@ -746,7 +746,7 @@ impl<'a, I: Interner> Debug for OpaqueTyDebug<'a, I> {
 
 impl<I: Interner> OpaqueTy<I> {
     /// Show debug output for the opaque type.
-    pub fn debug<'a>(&'a self, interner: I) -> OpaqueTyDebug<'a, I> {
+    pub fn debug(&self, interner: I) -> OpaqueTyDebug<'_, I> {
         OpaqueTyDebug {
             opaque_ty: self,
             interner,
@@ -880,7 +880,7 @@ impl<I: Interner> Debug for CanonicalVarKinds<I> {
 
 impl<T: HasInterner + Display> Canonical<T> {
     /// Display the canonicalized item.
-    pub fn display<'a>(&'a self, interner: T::Interner) -> CanonicalDisplay<'a, T> {
+    pub fn display(&self, interner: T::Interner) -> CanonicalDisplay<'_, T> {
         CanonicalDisplay {
             canonical: self,
             interner,

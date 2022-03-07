@@ -48,7 +48,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     /// Given a projection `<P0 as Trait<P1..Pn>>::Item<Pn..Pm>`,
     /// returns the trait parameters `[P0..Pn]` (see
     /// `split_projection`).
-    fn trait_ref_from_projection<'p>(&self, projection: &'p ProjectionTy<I>) -> TraitRef<I> {
+    fn trait_ref_from_projection(&self, projection: &ProjectionTy<I>) -> TraitRef<I> {
         let interner = self.interner();
         let (associated_ty_data, trait_params, _) = self.split_projection(projection);
         TraitRef {

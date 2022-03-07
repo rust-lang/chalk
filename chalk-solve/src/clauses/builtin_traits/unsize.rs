@@ -136,9 +136,9 @@ fn uses_outer_binder_params<I: Interner>(
     matches!(flow, ControlFlow::Break(_))
 }
 
-fn principal_id<'a, I: Interner>(
+fn principal_id<I: Interner>(
     db: &dyn RustIrDatabase<I>,
-    bounds: &'a Binders<QuantifiedWhereClauses<I>>,
+    bounds: &Binders<QuantifiedWhereClauses<I>>,
 ) -> Option<TraitId<I>> {
     let interner = db.interner();
 

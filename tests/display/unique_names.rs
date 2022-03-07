@@ -217,7 +217,7 @@ pub fn write_program_duplicated_names(db: &Program) -> String {
 ///
 /// Only checks that the resulting program parses, not that it matches any
 /// particular format. Use returned data to perform further checks.
-pub fn run_reparse_with_duplicate_names<'a>(program_text: &'a str) -> ReparseTestResult<'a> {
+pub fn run_reparse_with_duplicate_names(program_text: &str) -> ReparseTestResult<'_> {
     let original_db = chalk_integration::db::ChalkDatabase::with(program_text, <_>::default());
     let original_program = original_db.program_ir().unwrap_or_else(|e| {
         panic!(

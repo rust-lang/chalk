@@ -33,8 +33,8 @@ use indexmap::IndexSet;
 /// references parent. IdCollector solves this by collecting all of the directly
 /// related identifiers, allowing those to be rendered as well, ensuring name
 /// resolution is successful.
-pub fn collect_unrecorded_ids<'i, I: Interner, DB: RustIrDatabase<I>>(
-    db: &'i DB,
+pub fn collect_unrecorded_ids<I: Interner, DB: RustIrDatabase<I>>(
+    db: &DB,
     identifiers: &'_ IndexSet<RecordedItemId<I>>,
 ) -> IndexSet<RecordedItemId<I>> {
     let mut collector = IdCollector {
