@@ -42,7 +42,11 @@ impl Lower for Program {
 
         // Make a vector mapping each thing in `items` to an id,
         // based just on its position:
-        let raw_ids = self.items.iter().map(|_| lowerer.next_item_id()).collect();
+        let raw_ids = self
+            .items
+            .iter()
+            .map(|_| lowerer.next_item_id())
+            .collect::<Vec<_>>();
 
         lowerer.extract_associated_types(self, &raw_ids)?;
         lowerer.extract_ids(self, &raw_ids)?;

@@ -53,7 +53,7 @@ impl ProgramLowerer {
     pub fn extract_associated_types(
         &mut self,
         program: &Program,
-        raw_ids: &Vec<RawId>,
+        raw_ids: &[RawId],
     ) -> LowerResult<()> {
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
@@ -86,7 +86,7 @@ impl ProgramLowerer {
         Ok(())
     }
 
-    pub fn extract_ids(&mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<()> {
+    pub fn extract_ids(&mut self, program: &Program, raw_ids: &[RawId]) -> LowerResult<()> {
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::AdtDefn(defn) => {
@@ -140,7 +140,7 @@ impl ProgramLowerer {
         Ok(())
     }
 
-    pub fn lower(self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
+    pub fn lower(self, program: &Program, raw_ids: &[RawId]) -> LowerResult<LoweredProgram> {
         let mut adt_data = BTreeMap::new();
         let mut adt_reprs = BTreeMap::new();
         let mut adt_variances = BTreeMap::new();
