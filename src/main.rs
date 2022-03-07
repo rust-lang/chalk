@@ -213,17 +213,17 @@ fn process(
         // Let's do a sanity check before going forward.
         let _ = chalk_prog.db.checked_program()?;
         *prog = Some(chalk_prog);
-    } else if command.starts_with("load ") {
+    } else if let Some(filename) = command.strip_prefix("load ") {
         // Load a .chalk file.
-        let filename = &command["load ".len()..];
         let chalk_prog = load_program(args, filename)?;
         // Let's do a sanity check before going forward.
         let _ = chalk_prog.db.checked_program()?;
         *prog = Some(chalk_prog);
-    } else if command.starts_with("debug ") {
-        match command.split_whitespace().nth(1) {
-            Some(level) => std::env::set_var("CHALK_DEBUG", level),
-            None => println!("debug <level> set debug level to <level>"),
+    } else if let Some(level) = command.strip_prefix("debug ") {
+        if level.is_empty() {
+            println!("debug <level> set debug level to <level>");
+        } else {
+            std::env::set_var("CHALK_DEBUG", level);
         }
     } else {
         // The command is either "print", "lowered", or a goal.
