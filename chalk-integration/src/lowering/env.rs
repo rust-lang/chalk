@@ -177,12 +177,12 @@ impl Env<'_> {
     }
 
     pub fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
-        if let Some(_) = self.parameter_map.get(&name.str) {
+        if let Some(&id) = self.trait_ids.get(&name.str) {
+            Ok(id)
+        } else if self.parameter_map.get(&name.str).is_some()
+            || self.adt_ids.get(&name.str).is_some()
+        {
             Err(RustIrError::NotTrait(name.clone()))
-        } else if let Some(_) = self.adt_ids.get(&name.str) {
-            Err(RustIrError::NotTrait(name.clone()))
-        } else if let Some(id) = self.trait_ids.get(&name.str) {
-            Ok(*id)
         } else {
             Err(RustIrError::InvalidTraitName(name.clone()))
         }
