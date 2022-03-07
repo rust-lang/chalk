@@ -1483,7 +1483,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
             .collect();
 
         let subst = Canonical {
-            binders: binders.clone(),
+            binders: binders,
             value: AnswerSubst {
                 subst,
                 constraints: Constraints::from_iter(self.context.program().interner(), constraints),

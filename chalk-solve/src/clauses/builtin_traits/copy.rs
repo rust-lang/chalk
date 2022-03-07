@@ -43,7 +43,7 @@ pub fn add_copy_program_clauses<I: Interner>(
             push_tuple_copy_conditions(db, builder, trait_ref, arity, substitution)
         }
         TyKind::Array(ty, _) => {
-            needs_impl_for_tys(db, builder, trait_ref, iter::once(ty.clone()));
+            needs_impl_for_tys(db, builder, trait_ref, iter::once(ty));
         }
         TyKind::FnDef(_, _) => {
             builder.push_fact(trait_ref);

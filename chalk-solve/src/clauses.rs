@@ -1025,7 +1025,7 @@ fn match_ty<I: Interner>(
         TyKind::Closure(_, _) | TyKind::Generator(_, _) | TyKind::GeneratorWitness(_, _) => {
             let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
             builder.push_binders(ty, |builder, ty| {
-                builder.push_fact(WellFormed::Ty(ty.clone()));
+                builder.push_fact(WellFormed::Ty(ty));
             });
         }
         TyKind::Placeholder(_) => {
@@ -1041,9 +1041,7 @@ fn match_ty<I: Interner>(
             .to_program_clauses(builder, environment),
         TyKind::Function(_quantified_ty) => {
             let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
-            builder.push_binders(ty, |builder, ty| {
-                builder.push_fact(WellFormed::Ty(ty.clone()))
-            });
+            builder.push_binders(ty, |builder, ty| builder.push_fact(WellFormed::Ty(ty)));
         }
         TyKind::BoundVar(_) => return Err(Floundered),
         TyKind::Dyn(dyn_ty) => {
@@ -1062,7 +1060,6 @@ fn match_ty<I: Interner>(
             builder.push_binders(generalized_ty, |builder, dyn_ty| {
                 let bounds = dyn_ty
                     .bounds
-                    .clone()
                     .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
 
                 let mut wf_goals = Vec::new();

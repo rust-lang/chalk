@@ -289,7 +289,7 @@ impl<'i, I: Interner> Folder<I> for UMapToCanonical<'i, I> {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_const(self.interner(), ty.clone()))
+        .to_const(self.interner(), ty))
     }
 
     fn interner(&self) -> I {

@@ -125,7 +125,7 @@ where
         if let Some(cache) = &self.cache {
             if let Some(value) = cache.get(goal) {
                 debug!("solve_reduced_goal: cache hit, value={:?}", value);
-                return value.clone();
+                return value;
             }
         }
 

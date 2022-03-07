@@ -1290,7 +1290,7 @@ impl<'i, I: Interner> Folder<I> for OccursCheck<'_, 'i, I> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_const(interner, ty.clone())) // no need to shift, not relative to depth
+            Ok(universe.to_const(interner, ty)) // no need to shift, not relative to depth
         }
     }
 
