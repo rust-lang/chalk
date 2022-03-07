@@ -200,7 +200,7 @@ impl LowerWithEnv for QuantifiedWhereClause {
     /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
-        let binders = env.in_binders(variable_kinds, |env| Ok(self.where_clause.lower(env)?))?;
+        let binders = env.in_binders(variable_kinds, |env| self.where_clause.lower(env))?;
         Ok(binders.into_iter().collect())
     }
 }
@@ -785,7 +785,7 @@ impl LowerWithEnv for Ty {
                 types.len(),
                 chalk_ir::Substitution::from_fallible(
                     interner,
-                    types.iter().map(|t| Ok(t.lower(env)?)),
+                    types.iter().map(|t| t.lower(env)),
                 )?,
             )
             .intern(interner),

@@ -260,7 +260,7 @@ fn process(
 fn load_program(args: &Args, filename: &str) -> Result<LoadedProgram> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(LoadedProgram::new(text, args.solver_choice())?)
+    LoadedProgram::new(text, args.solver_choice())
 }
 
 /// Print out help for commands in interpreter mode.
