@@ -3,8 +3,7 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, Binders, Floundered, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty,
-    TyKind,
+    AliasTy, Binders, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty, TyKind,
 };
 
 fn push_clauses<I: Interner>(
@@ -86,7 +85,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     well_known: WellKnownTrait,
     self_ty: Ty<I>,
-) -> Result<(), Floundered> {
+) {
     let interner = db.interner();
     let trait_id = db.well_known_trait_id(well_known).unwrap();
 
@@ -107,7 +106,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     bound.inputs_and_output,
                 );
             }
-            Ok(())
         }
         TyKind::Closure(closure_id, substitution) => {
             let closure_kind = db.closure_kind(*closure_id, substitution);
@@ -118,7 +116,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     | (WellKnownTrait::FnOnce, _)
             );
             if !trait_matches {
-                return Ok(());
+                return;
             }
             let closure_inputs_and_output = db.closure_inputs_and_output(*closure_id, substitution);
             push_clauses_for_apply(
@@ -129,7 +127,6 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                 self_ty,
                 closure_inputs_and_output,
             );
-            Ok(())
         }
         TyKind::Function(fn_val) if fn_val.sig.safety == Safety::Safe && !fn_val.sig.variadic => {
             let bound_ref = fn_val.clone().into_binders(interner);
@@ -152,8 +149,7 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
                     output_ty,
                 );
             });
-            Ok(())
         }
-        _ => Ok(()),
+        _ => {}
     }
 }
