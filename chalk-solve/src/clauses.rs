@@ -1089,12 +1089,11 @@ fn match_alias_ty<I: Interner>(
     environment: &Environment<I>,
     alias: &AliasTy<I>,
 ) {
-    match alias {
-        AliasTy::Projection(projection_ty) => builder
+    if let AliasTy::Projection(projection_ty) = alias {
+        builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)
-            .to_program_clauses(builder, environment),
-        _ => (),
+            .to_program_clauses(builder, environment)
     }
 }
 

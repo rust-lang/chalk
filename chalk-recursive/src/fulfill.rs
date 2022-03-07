@@ -495,7 +495,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                 }
             }
 
-            self.obligations.extend(obligations.drain(..));
+            self.obligations.append(&mut obligations);
             debug!("end of round, {} obligations left", self.obligations.len());
         }
 

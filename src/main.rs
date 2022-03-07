@@ -71,7 +71,7 @@ impl LoadedProgram {
         let goal = lower_goal(&*chalk_parse::parse_goal(text)?, &*program)?;
         let peeled_goal = goal.into_peeled_goal(self.db.interner());
         if multiple_answers {
-            if self.db.solve_multiple(&peeled_goal, &mut |v, has_next| {
+            let no_more_solutions = self.db.solve_multiple(&peeled_goal, &mut |v, has_next| {
                 println!("{}\n", v.as_ref().map(|v| v.display(ChalkIr)));
                 if has_next {
                     if let Some(ref mut rl) = rl {
@@ -94,7 +94,8 @@ impl LoadedProgram {
                 } else {
                     true
                 }
-            }) {
+            });
+            if no_more_solutions {
                 println!("No more solutions");
             }
         } else {
@@ -290,7 +291,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 
 impl Args {
     fn solver_choice(&self) -> SolverChoice {
-        match self.flag_solver.as_ref().map(String::as_str) {
+        match self.flag_solver.as_deref() {
             None | Some("slg") => SolverChoice::SLG {
                 max_size: self.flag_overflow_depth,
                 expected_answers: None,

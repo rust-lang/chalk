@@ -24,17 +24,14 @@ mod wf_lowering;
 
 fn format_solution(mut result: Option<Solution<ChalkIr>>, interner: ChalkIr) -> String {
     // sort constraints, since the different solvers may output them in different order
-    match &mut result {
-        Some(Solution::Unique(solution)) => {
-            let mut sorted = solution.value.constraints.as_slice(interner).to_vec();
-            sorted.sort_by_key(|c| format!("{:?}", c));
-            solution.value.constraints = Constraints::from_iter(interner, sorted);
-        }
-        _ => {}
+    if let Some(Solution::Unique(solution)) = &mut result {
+        let mut sorted = solution.value.constraints.as_slice(interner).to_vec();
+        sorted.sort_by_key(|c| format!("{:?}", c));
+        solution.value.constraints = Constraints::from_iter(interner, sorted);
     }
     match result {
-        Some(v) => format!("{}", v.display(ChalkIr)),
-        None => format!("No possible solution"),
+        Some(v) => v.display(ChalkIr).to_string(),
+        None => "No possible solution".to_string(),
     }
 }
 
@@ -310,7 +307,7 @@ fn solve_goal(
                         assert_result(result, expected, db.interner());
                     }
                     TestGoal::All(expected) => {
-                        let mut expected = expected.into_iter();
+                        let mut expected = expected.iter();
                         assert!(
                             db.solve_multiple(&peeled_goal, &mut |result, next_result| {
                                 match expected.next() {
@@ -334,7 +331,7 @@ fn solve_goal(
                         }
                     }
                     TestGoal::First(expected) => {
-                        let mut expected = expected.into_iter();
+                        let mut expected = expected.iter();
                         db.solve_multiple(&peeled_goal, &mut |result, next_result| match expected
                             .next()
                         {

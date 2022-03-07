@@ -285,7 +285,7 @@ impl LowerWithEnv for (&AdtDefn, chalk_ir::AdtId<ChalkIr>) {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let (adt_defn, adt_id) = self;
 
-        if adt_defn.flags.fundamental && adt_defn.all_parameters().len() < 1 {
+        if adt_defn.flags.fundamental && adt_defn.all_parameters().is_empty() {
             return Err(RustIrError::InvalidFundamentalTypesParameters(
                 adt_defn.name.clone(),
             ));
@@ -669,7 +669,7 @@ impl LowerWithEnv for Ty {
         Ok(match self {
             Ty::Id { name } => {
                 let parameter = env.lookup_generic_arg(name)?;
-                parameter.ty(interner).map(|ty| ty.clone()).ok_or_else(|| {
+                parameter.ty(interner).cloned().ok_or_else(|| {
                     RustIrError::IncorrectParameterKind {
                         identifier: name.clone(),
                         expected: Kind::Ty,

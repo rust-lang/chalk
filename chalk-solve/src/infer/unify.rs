@@ -184,11 +184,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (_, &TyKind::Alias(ref alias)) => self.relate_alias_ty(variance.invert(), alias, a),
             (&TyKind::Alias(ref alias), _) => self.relate_alias_ty(variance, alias, b),
 
-            (&TyKind::InferenceVar(var, kind), ty_data @ _) => {
+            (&TyKind::InferenceVar(var, kind), ty_data) => {
                 let ty = ty_data.clone().intern(interner);
                 self.relate_var_ty(variance, var, kind, &ty)
             }
-            (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
+            (ty_data, &TyKind::InferenceVar(var, kind)) => {
                 // We need to invert the variance if inference var is `b` because we pass it in
                 // as `a` to relate_var_ty
                 let ty = ty_data.clone().intern(interner);

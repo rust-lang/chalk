@@ -219,7 +219,7 @@ impl Env<'_> {
     ) -> LowerResult<&AssociatedTyLookup> {
         self.associated_ty_lookups
             .get(&(trait_id, ident.str.clone()))
-            .ok_or(RustIrError::MissingAssociatedType(ident.clone()))
+            .ok_or_else(|| RustIrError::MissingAssociatedType(ident.clone()))
     }
 
     /// Introduces new parameters, shifting the indices of existing

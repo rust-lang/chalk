@@ -35,7 +35,7 @@ pub fn logging_db_output_sufficient(
 
     let goals = goals
         .iter()
-        .flat_map(|(a, bs, c)| bs.into_iter().map(move |b| (a, b, c)));
+        .flat_map(|(a, bs, c)| bs.iter().map(move |b| (a, b, c)));
 
     let output_text = {
         let db = ChalkDatabase::with(
