@@ -31,7 +31,7 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
         should_continue: impl std::ops::Fn() -> bool,
     ) -> Option<Solution<I>> {
         let interner = self.program.interner();
-        let CompleteAnswer { subst, ambiguous } = match answers.next_answer(|| should_continue()) {
+        let CompleteAnswer { subst, ambiguous } = match answers.next_answer(&should_continue) {
             AnswerResult::NoMoreSolutions => {
                 // No answers at all
                 return None;
@@ -47,7 +47,7 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
         };
 
         // Exactly 1 unconditional answer?
-        let next_answer = answers.peek_answer(|| should_continue());
+        let next_answer = answers.peek_answer(&should_continue);
         if next_answer.is_quantum_exceeded() {
             if subst.value.subst.is_identity_subst(interner) {
                 return Some(Solution::Ambig(Guidance::Unknown));
@@ -95,7 +95,7 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
                 }
             }
 
-            let new_subst = match answers.next_answer(|| should_continue()) {
+            let new_subst = match answers.next_answer(&should_continue) {
                 AnswerResult::Answer(answer1) => answer1.subst,
                 AnswerResult::Floundered => {
                     // FIXME: this doesn't trigger for any current tests

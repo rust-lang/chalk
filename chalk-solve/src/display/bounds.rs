@@ -131,7 +131,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
         match &self.alias {
             AliasTy::Projection(projection_ty) => {
                 let (assoc_ty_datum, trait_params, assoc_type_params) =
-                    s.db().split_projection(&projection_ty);
+                    s.db().split_projection(projection_ty);
                 // An alternate form might be `<{} as {}<{}>>::{}<{}> = {}` (with same
                 // parameter ordering). This alternate form would require type equality
                 // constraints (https://github.com/rust-lang/rust/issues/20041).

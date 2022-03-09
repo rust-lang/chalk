@@ -239,7 +239,7 @@ where
         let interner = visitor.interner();
         match self.kind(interner) {
             TyKind::BoundVar(bound_var) => {
-                if let Some(_) = bound_var.shifted_out_to(outer_binder) {
+                if bound_var.shifted_out_to(outer_binder).is_some() {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
                     ControlFlow::Continue(())
@@ -320,7 +320,7 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
         let interner = visitor.interner();
         match self.data(interner) {
             LifetimeData::BoundVar(bound_var) => {
-                if let Some(_) = bound_var.shifted_out_to(outer_binder) {
+                if bound_var.shifted_out_to(outer_binder).is_some() {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
                     ControlFlow::Continue(())
@@ -357,7 +357,7 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
         let interner = visitor.interner();
         match &self.data(interner).value {
             ConstValue::BoundVar(bound_var) => {
-                if let Some(_) = bound_var.shifted_out_to(outer_binder) {
+                if bound_var.shifted_out_to(outer_binder).is_some() {
                     visitor.visit_free_var(*bound_var, outer_binder)
                 } else {
                     ControlFlow::Continue(())

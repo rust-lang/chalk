@@ -53,13 +53,13 @@ impl ProgramLowerer {
     pub fn extract_associated_types(
         &mut self,
         program: &Program,
-        raw_ids: &Vec<RawId>,
+        raw_ids: &[RawId],
     ) -> LowerResult<()> {
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::TraitDefn(d) => {
                     if d.flags.auto && !d.assoc_ty_defns.is_empty() {
-                        Err(RustIrError::AutoTraitAssociatedTypes(d.name.clone()))?;
+                        return Err(RustIrError::AutoTraitAssociatedTypes(d.name.clone()));
                     }
                     for defn in &d.assoc_ty_defns {
                         let addl_variable_kinds = defn.all_parameters();
@@ -86,7 +86,7 @@ impl ProgramLowerer {
         Ok(())
     }
 
-    pub fn extract_ids(&mut self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<()> {
+    pub fn extract_ids(&mut self, program: &Program, raw_ids: &[RawId]) -> LowerResult<()> {
         for (item, &raw_id) in program.items.iter().zip(raw_ids) {
             match item {
                 Item::AdtDefn(defn) => {
@@ -140,7 +140,7 @@ impl ProgramLowerer {
         Ok(())
     }
 
-    pub fn lower(self, program: &Program, raw_ids: &Vec<RawId>) -> LowerResult<LoweredProgram> {
+    pub fn lower(self, program: &Program, raw_ids: &[RawId]) -> LowerResult<LoweredProgram> {
         let mut adt_data = BTreeMap::new();
         let mut adt_reprs = BTreeMap::new();
         let mut adt_variances = BTreeMap::new();
@@ -246,7 +246,7 @@ impl ProgramLowerer {
                     let upvars =
                         empty_env.in_binders(defn.all_parameters(), |env| {
                             let upvar_tys: LowerResult<Vec<chalk_ir::Ty<ChalkIr>>> =
-                                defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
+                                defn.upvars.iter().map(|ty| ty.lower(env)).collect();
                             let substitution = chalk_ir::Substitution::from_iter(
                                 ChalkIr,
                                 upvar_tys?.into_iter().map(|ty| ty.cast(ChalkIr)),
@@ -295,8 +295,8 @@ impl ProgramLowerer {
 
                         let binders = empty_env.in_binders(variable_kinds, |env| {
                             Ok(rust_ir::AssociatedTyDatumBound {
-                                bounds: assoc_ty_defn.bounds.lower(&env)?,
-                                where_clauses: assoc_ty_defn.where_clauses.lower(&env)?,
+                                bounds: assoc_ty_defn.bounds.lower(env)?,
+                                where_clauses: assoc_ty_defn.where_clauses.lower(env)?,
                             })
                         })?;
 
@@ -361,7 +361,7 @@ impl ProgramLowerer {
                         // Introduce the parameters declared on the opaque type definition.
                         // So if we have `type Foo<P1..Pn> = impl Trait<T1..Tn>`, this would introduce `P1..Pn`
                         let binders = empty_env.in_binders(variable_kinds, |env| {
-                            let hidden_ty = opaque_ty.ty.lower(&env)?;
+                            let hidden_ty = opaque_ty.ty.lower(env)?;
                             hidden_opaque_types.insert(opaque_ty_id, Arc::new(hidden_ty));
 
                             // Introduce a variable to represent the hidden "self type". This will be used in the bounds.
@@ -376,7 +376,7 @@ impl ProgramLowerer {
                                         let interner = env.interner();
                                         Ok(opaque_ty
                                             .bounds
-                                            .lower(&env)?
+                                            .lower(env)?
                                             .iter()
                                             .flat_map(|qil| {
                                                 // Instantiate the bounds with the innermost bound variable, which represents Self, as the self type.
@@ -430,11 +430,11 @@ impl ProgramLowerer {
                         .collect::<Vec<_>>();
 
                     let input_output = empty_env.in_binders(variable_kinds.clone(), |env| {
-                        let yield_type = defn.yield_ty.lower(&env)?;
-                        let resume_type = defn.resume_ty.lower(&env)?;
-                        let return_type = defn.return_ty.lower(&env)?;
+                        let yield_type = defn.yield_ty.lower(env)?;
+                        let resume_type = defn.resume_ty.lower(env)?;
+                        let return_type = defn.return_ty.lower(env)?;
                         let upvars: Result<Vec<_>, _> =
-                            defn.upvars.iter().map(|ty| ty.lower(&env)).collect();
+                            defn.upvars.iter().map(|ty| ty.lower(env)).collect();
 
                         Ok(GeneratorInputOutputDatum {
                             resume_type,
@@ -447,7 +447,7 @@ impl ProgramLowerer {
                     let inner_types = empty_env.in_binders(variable_kinds, |env| {
                         let witnesses = env.in_binders(witness_lifetimes, |env| {
                             let witnesses: Result<Vec<_>, _> =
-                                defn.witness_types.iter().map(|ty| ty.lower(&env)).collect();
+                                defn.witness_types.iter().map(|ty| ty.lower(env)).collect();
                             witnesses
                         })?;
 

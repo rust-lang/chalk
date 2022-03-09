@@ -26,10 +26,7 @@ enum Outcome {
 
 impl Outcome {
     fn is_complete(&self) -> bool {
-        match *self {
-            Outcome::Complete => true,
-            _ => false,
-        }
+        matches!(self, Outcome::Complete)
     }
 }
 
@@ -317,7 +314,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                 self.push_obligation(Obligation::Prove(in_env));
             }
             GoalData::EqGoal(EqGoal { a, b }) => {
-                self.unify(&environment, Variance::Invariant, &a, &b)?;
+                self.unify(environment, Variance::Invariant, &a, &b)?;
             }
             GoalData::SubtypeGoal(SubtypeGoal { a, b }) => {
                 let a_norm = self.infer.normalize_ty_shallow(interner, a);
@@ -334,7 +331,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                 ) {
                     self.cannot_prove = true;
                 } else {
-                    self.unify(&environment, Variance::Covariant, &a, &b)?;
+                    self.unify(environment, Variance::Covariant, &a, &b)?;
                 }
             }
             GoalData::CannotProve => {
@@ -498,7 +495,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                 }
             }
 
-            self.obligations.extend(obligations.drain(..));
+            self.obligations.append(&mut obligations);
             debug!("end of round, {} obligations left", self.obligations.len());
         }
 

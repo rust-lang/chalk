@@ -213,7 +213,7 @@ impl tls::DebugContext for Program {
             associated_ty_data.trait_id,
             Angle(&trait_params[1..]),
             associated_ty_data.name,
-            Angle(&other_params)
+            Angle(other_params)
         )
     }
 
@@ -447,11 +447,10 @@ impl RustIrDatabase<ChalkIr> for Program {
                 let trait_ref = &impl_datum.binders.skip_binders().trait_ref;
                 trait_id == trait_ref.trait_id && {
                     assert_eq!(trait_ref.substitution.len(interner), parameters.len());
-                    <[_] as CouldMatch<[_]>>::could_match(
-                        &parameters,
+                    parameters.could_match(
                         interner,
                         self.unification_database(),
-                        &trait_ref.substitution.as_slice(interner),
+                        trait_ref.substitution.as_slice(interner),
                     )
                 }
             })
@@ -594,12 +593,11 @@ impl RustIrDatabase<ChalkIr> for Program {
     fn discriminant_type(&self, ty: Ty<ChalkIr>) -> Ty<ChalkIr> {
         let interner = self.interner();
         match ty.data(interner).kind {
-            TyKind::Adt(id, _) => {
-                let repr = self.adt_repr(id);
-                repr.int
-                    .clone()
-                    .unwrap_or(TyKind::Scalar(Scalar::Int(IntTy::Isize)).intern(interner))
-            }
+            TyKind::Adt(id, _) => self
+                .adt_repr(id)
+                .int
+                .clone()
+                .unwrap_or_else(|| TyKind::Scalar(Scalar::Int(IntTy::Isize)).intern(interner)),
             TyKind::Generator(..) => TyKind::Scalar(Scalar::Uint(UintTy::U32)).intern(interner),
             _ => TyKind::Scalar(Scalar::Uint(UintTy::U8)).intern(interner),
         }

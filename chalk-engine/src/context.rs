@@ -27,10 +27,7 @@ pub enum AnswerResult<I: Interner> {
 
 impl<I: Interner> AnswerResult<I> {
     pub fn is_answer(&self) -> bool {
-        match self {
-            Self::Answer(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Answer(_))
     }
 
     pub fn answer(self) -> CompleteAnswer<I> {
@@ -41,17 +38,11 @@ impl<I: Interner> AnswerResult<I> {
     }
 
     pub fn is_no_more_solutions(&self) -> bool {
-        match self {
-            Self::NoMoreSolutions => true,
-            _ => false,
-        }
+        matches!(self, Self::NoMoreSolutions)
     }
 
     pub fn is_quantum_exceeded(&self) -> bool {
-        match self {
-            Self::QuantumExceeded => true,
-            _ => false,
-        }
+        matches!(self, Self::QuantumExceeded)
     }
 }
 

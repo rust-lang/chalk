@@ -241,7 +241,7 @@ impl Interner for ChalkIr {
         Arc::new(TyData { kind, flags })
     }
 
-    fn ty_data<'a>(self, ty: &'a Arc<TyData<ChalkIr>>) -> &'a TyData<Self> {
+    fn ty_data(self, ty: &Arc<TyData<ChalkIr>>) -> &TyData<Self> {
         ty
     }
 
@@ -249,7 +249,7 @@ impl Interner for ChalkIr {
         lifetime
     }
 
-    fn lifetime_data<'a>(self, lifetime: &'a LifetimeData<ChalkIr>) -> &'a LifetimeData<ChalkIr> {
+    fn lifetime_data(self, lifetime: &LifetimeData<ChalkIr>) -> &LifetimeData<ChalkIr> {
         lifetime
     }
 
@@ -257,7 +257,7 @@ impl Interner for ChalkIr {
         Arc::new(constant)
     }
 
-    fn const_data<'a>(self, constant: &'a Arc<ConstData<ChalkIr>>) -> &'a ConstData<ChalkIr> {
+    fn const_data(self, constant: &Arc<ConstData<ChalkIr>>) -> &ConstData<ChalkIr> {
         constant
     }
 
@@ -269,10 +269,7 @@ impl Interner for ChalkIr {
         generic_arg
     }
 
-    fn generic_arg_data<'a>(
-        self,
-        generic_arg: &'a GenericArgData<ChalkIr>,
-    ) -> &'a GenericArgData<ChalkIr> {
+    fn generic_arg_data(self, generic_arg: &GenericArgData<ChalkIr>) -> &GenericArgData<ChalkIr> {
         generic_arg
     }
 
@@ -280,7 +277,7 @@ impl Interner for ChalkIr {
         Arc::new(goal)
     }
 
-    fn goal_data<'a>(self, goal: &'a Arc<GoalData<ChalkIr>>) -> &'a GoalData<ChalkIr> {
+    fn goal_data(self, goal: &Arc<GoalData<ChalkIr>>) -> &GoalData<ChalkIr> {
         goal
     }
 
@@ -291,7 +288,7 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn goals_data<'a>(self, goals: &'a Vec<Goal<ChalkIr>>) -> &'a [Goal<ChalkIr>] {
+    fn goals_data(self, goals: &Vec<Goal<ChalkIr>>) -> &[Goal<ChalkIr>] {
         goals
     }
 
@@ -302,10 +299,7 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn substitution_data<'a>(
-        self,
-        substitution: &'a Vec<GenericArg<ChalkIr>>,
-    ) -> &'a [GenericArg<ChalkIr>] {
+    fn substitution_data(self, substitution: &Vec<GenericArg<ChalkIr>>) -> &[GenericArg<ChalkIr>] {
         substitution
     }
 
@@ -313,10 +307,7 @@ impl Interner for ChalkIr {
         data
     }
 
-    fn program_clause_data<'a>(
-        self,
-        clause: &'a ProgramClauseData<Self>,
-    ) -> &'a ProgramClauseData<Self> {
+    fn program_clause_data(self, clause: &ProgramClauseData<Self>) -> &ProgramClauseData<Self> {
         clause
     }
 
@@ -327,10 +318,7 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn program_clauses_data<'a>(
-        self,
-        clauses: &'a Vec<ProgramClause<Self>>,
-    ) -> &'a [ProgramClause<Self>] {
+    fn program_clauses_data(self, clauses: &Vec<ProgramClause<Self>>) -> &[ProgramClause<Self>] {
         clauses
     }
 
@@ -341,10 +329,10 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn quantified_where_clauses_data<'a>(
+    fn quantified_where_clauses_data(
         self,
-        clauses: &'a Self::InternedQuantifiedWhereClauses,
-    ) -> &'a [QuantifiedWhereClause<Self>] {
+        clauses: &Self::InternedQuantifiedWhereClauses,
+    ) -> &[QuantifiedWhereClause<Self>] {
         clauses
     }
     fn intern_generic_arg_kinds<E>(
@@ -354,10 +342,10 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn variable_kinds_data<'a>(
+    fn variable_kinds_data(
         self,
-        variable_kinds: &'a Self::InternedVariableKinds,
-    ) -> &'a [VariableKind<ChalkIr>] {
+        variable_kinds: &Self::InternedVariableKinds,
+    ) -> &[VariableKind<ChalkIr>] {
         variable_kinds
     }
 
@@ -368,10 +356,10 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn canonical_var_kinds_data<'a>(
+    fn canonical_var_kinds_data(
         self,
-        canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
-    ) -> &'a [CanonicalVarKind<ChalkIr>] {
+        canonical_var_kinds: &Self::InternedCanonicalVarKinds,
+    ) -> &[CanonicalVarKind<ChalkIr>] {
         canonical_var_kinds
     }
 
@@ -382,10 +370,10 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn constraints_data<'a>(
+    fn constraints_data(
         self,
-        constraints: &'a Self::InternedConstraints,
-    ) -> &'a [InEnvironment<Constraint<Self>>] {
+        constraints: &Self::InternedConstraints,
+    ) -> &[InEnvironment<Constraint<Self>>] {
         constraints
     }
 
@@ -396,7 +384,7 @@ impl Interner for ChalkIr {
         data.into_iter().collect()
     }
 
-    fn variances_data<'a>(self, variances: &'a Self::InternedVariances) -> &'a [Variance] {
+    fn variances_data(self, variances: &Self::InternedVariances) -> &[Variance] {
         variances
     }
 }

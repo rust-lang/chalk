@@ -83,7 +83,7 @@ impl<I: Interner> Table<I> {
     }
 
     pub(crate) fn take_strands(&mut self) -> VecDeque<CanonicalStrand<I>> {
-        mem::replace(&mut self.strands, VecDeque::new())
+        mem::take(&mut self.strands)
     }
 
     /// Remove the next strand from the queue that meets the given criteria

@@ -41,7 +41,7 @@ where
                 let matches = |a: &Substitution<I>, b: &Substitution<I>| {
                     a.iter(interner)
                         .zip(b.iter(interner))
-                        .all(|(p_a, p_b)| p_a.could_match(interner, self.db, &p_b))
+                        .all(|(p_a, p_b)| p_a.could_match(interner, self.db, p_b))
                 };
                 let could_match = match (a.kind(interner), b.kind(interner)) {
                     (TyKind::Adt(id_a, substitution_a), TyKind::Adt(id_b, substitution_b)) => {
@@ -91,11 +91,11 @@ where
                         TyKind::Ref(mutability_b, lifetime_b, ty_b),
                     ) => {
                         mutability_a == mutability_b
-                            && lifetime_a.could_match(interner, self.db, &lifetime_b)
-                            && ty_a.could_match(interner, self.db, &ty_b)
+                            && lifetime_a.could_match(interner, self.db, lifetime_b)
+                            && ty_a.could_match(interner, self.db, ty_b)
                     }
                     (TyKind::Raw(mutability_a, ty_a), TyKind::Raw(mutability_b, ty_b)) => {
-                        mutability_a == mutability_b && ty_a.could_match(interner, self.db, &ty_b)
+                        mutability_a == mutability_b && ty_a.could_match(interner, self.db, ty_b)
                     }
                     (TyKind::Never, TyKind::Never) => true,
                     (TyKind::Array(ty_a, const_a), TyKind::Array(ty_b, const_b)) => {

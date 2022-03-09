@@ -177,12 +177,12 @@ impl Env<'_> {
     }
 
     pub fn lookup_trait(&self, name: &Identifier) -> LowerResult<TraitId<ChalkIr>> {
-        if let Some(_) = self.parameter_map.get(&name.str) {
+        if let Some(&id) = self.trait_ids.get(&name.str) {
+            Ok(id)
+        } else if self.parameter_map.get(&name.str).is_some()
+            || self.adt_ids.get(&name.str).is_some()
+        {
             Err(RustIrError::NotTrait(name.clone()))
-        } else if let Some(_) = self.adt_ids.get(&name.str) {
-            Err(RustIrError::NotTrait(name.clone()))
-        } else if let Some(id) = self.trait_ids.get(&name.str) {
-            Ok(*id)
         } else {
             Err(RustIrError::InvalidTraitName(name.clone()))
         }
@@ -219,7 +219,7 @@ impl Env<'_> {
     ) -> LowerResult<&AssociatedTyLookup> {
         self.associated_ty_lookups
             .get(&(trait_id, ident.str.clone()))
-            .ok_or(RustIrError::MissingAssociatedType(ident.clone()))
+            .ok_or_else(|| RustIrError::MissingAssociatedType(ident.clone()))
     }
 
     /// Introduces new parameters, shifting the indices of existing
@@ -253,7 +253,7 @@ impl Env<'_> {
             .chain(binders)
             .collect();
         if parameter_map.len() != self.parameter_map.len() + len {
-            Err(RustIrError::DuplicateOrShadowedParameters)?;
+            return Err(RustIrError::DuplicateOrShadowedParameters);
         }
         Ok(Env {
             parameter_map,

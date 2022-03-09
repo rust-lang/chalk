@@ -15,9 +15,7 @@ fn placeholder_ty_flags_correct() {
 #[test]
 fn opaque_ty_flags_correct() {
     let opaque_ty = TyKind::Alias(chalk_ir::AliasTy::Opaque(chalk_ir::OpaqueTy {
-        opaque_ty_id: chalk_ir::OpaqueTyId {
-            0: chalk_integration::interner::RawId { index: 0 },
-        },
+        opaque_ty_id: chalk_ir::OpaqueTyId(chalk_integration::interner::RawId { index: 0 }),
         substitution: chalk_ir::Substitution::from_iter(
             ChalkIr,
             Some(
@@ -48,9 +46,7 @@ fn opaque_ty_flags_correct() {
 fn dyn_ty_flags_correct() {
     let internal_ty = TyKind::Scalar(chalk_ir::Scalar::Bool).intern(ChalkIr);
     let projection_ty = chalk_ir::ProjectionTy {
-        associated_ty_id: chalk_ir::AssocTypeId {
-            0: chalk_integration::interner::RawId { index: 0 },
-        },
+        associated_ty_id: chalk_ir::AssocTypeId(chalk_integration::interner::RawId { index: 0 }),
         substitution: empty_substitution!(),
     };
     let bounds = chalk_ir::Binders::<chalk_ir::QuantifiedWhereClauses<ChalkIr>>::empty(
@@ -110,9 +106,7 @@ fn static_and_bound_lifetimes() {
     );
 
     let ty = TyKind::Adt(
-        chalk_ir::AdtId {
-            0: chalk_integration::interner::RawId { index: 0 },
-        },
+        chalk_ir::AdtId(chalk_integration::interner::RawId { index: 0 }),
         substitutions,
     )
     .intern(ChalkIr);

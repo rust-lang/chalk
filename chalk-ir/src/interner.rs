@@ -473,7 +473,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     fn intern_ty(self, kind: TyKind<Self>) -> Self::InternedType;
 
     /// Lookup the `TyKind` from an interned type.
-    fn ty_data<'a>(self, ty: &'a Self::InternedType) -> &'a TyData<Self>;
+    fn ty_data(self, ty: &Self::InternedType) -> &TyData<Self>;
 
     /// Create an "interned" lifetime from `lifetime`. This is not
     /// normally invoked directly; instead, you invoke
@@ -482,7 +482,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     fn intern_lifetime(self, lifetime: LifetimeData<Self>) -> Self::InternedLifetime;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn lifetime_data<'a>(self, lifetime: &'a Self::InternedLifetime) -> &'a LifetimeData<Self>;
+    fn lifetime_data(self, lifetime: &Self::InternedLifetime) -> &LifetimeData<Self>;
 
     /// Create an "interned" const from `const`. This is not
     /// normally invoked directly; instead, you invoke
@@ -491,7 +491,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     fn intern_const(self, constant: ConstData<Self>) -> Self::InternedConst;
 
     /// Lookup the `ConstData` that was interned to create a `InternedConst`.
-    fn const_data<'a>(self, constant: &'a Self::InternedConst) -> &'a ConstData<Self>;
+    fn const_data(self, constant: &Self::InternedConst) -> &ConstData<Self>;
 
     /// Determine whether two concrete const values are equal.
     fn const_eq(
@@ -508,10 +508,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     fn intern_generic_arg(self, data: GenericArgData<Self>) -> Self::InternedGenericArg;
 
     /// Lookup the `LifetimeData` that was interned to create a `InternedLifetime`.
-    fn generic_arg_data<'a>(
-        self,
-        lifetime: &'a Self::InternedGenericArg,
-    ) -> &'a GenericArgData<Self>;
+    fn generic_arg_data(self, lifetime: &Self::InternedGenericArg) -> &GenericArgData<Self>;
 
     /// Create an "interned" goal from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -520,7 +517,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     fn intern_goal(self, data: GoalData<Self>) -> Self::InternedGoal;
 
     /// Lookup the `GoalData` that was interned to create a `InternedGoal`.
-    fn goal_data<'a>(self, goal: &'a Self::InternedGoal) -> &'a GoalData<Self>;
+    fn goal_data(self, goal: &Self::InternedGoal) -> &GoalData<Self>;
 
     /// Create an "interned" goals from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -532,7 +529,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     ) -> Result<Self::InternedGoals, E>;
 
     /// Lookup the `GoalsData` that was interned to create a `InternedGoals`.
-    fn goals_data<'a>(self, goals: &'a Self::InternedGoals) -> &'a [Goal<Self>];
+    fn goals_data(self, goals: &Self::InternedGoals) -> &[Goal<Self>];
 
     /// Create an "interned" substitution from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -544,10 +541,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     ) -> Result<Self::InternedSubstitution, E>;
 
     /// Lookup the `SubstitutionData` that was interned to create a `InternedSubstitution`.
-    fn substitution_data<'a>(
-        self,
-        substitution: &'a Self::InternedSubstitution,
-    ) -> &'a [GenericArg<Self>];
+    fn substitution_data(self, substitution: &Self::InternedSubstitution) -> &[GenericArg<Self>];
 
     /// Create an "interned" program clause from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -556,10 +550,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     fn intern_program_clause(self, data: ProgramClauseData<Self>) -> Self::InternedProgramClause;
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
-    fn program_clause_data<'a>(
-        self,
-        clause: &'a Self::InternedProgramClause,
-    ) -> &'a ProgramClauseData<Self>;
+    fn program_clause_data(self, clause: &Self::InternedProgramClause) -> &ProgramClauseData<Self>;
 
     /// Create an "interned" program clauses from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -571,10 +562,8 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     ) -> Result<Self::InternedProgramClauses, E>;
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
-    fn program_clauses_data<'a>(
-        self,
-        clauses: &'a Self::InternedProgramClauses,
-    ) -> &'a [ProgramClause<Self>];
+    fn program_clauses_data(self, clauses: &Self::InternedProgramClauses)
+        -> &[ProgramClause<Self>];
 
     /// Create an "interned" quantified where clauses from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -587,10 +576,10 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 
     /// Lookup the slice of `QuantifiedWhereClause` that was interned to
     /// create a `QuantifiedWhereClauses`.
-    fn quantified_where_clauses_data<'a>(
+    fn quantified_where_clauses_data(
         self,
-        clauses: &'a Self::InternedQuantifiedWhereClauses,
-    ) -> &'a [QuantifiedWhereClause<Self>];
+        clauses: &Self::InternedQuantifiedWhereClauses,
+    ) -> &[QuantifiedWhereClause<Self>];
 
     /// Create an "interned" parameter kinds from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -603,10 +592,10 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 
     /// Lookup the slice of `VariableKinds` that was interned to
     /// create a `VariableKinds`.
-    fn variable_kinds_data<'a>(
+    fn variable_kinds_data(
         self,
-        variable_kinds: &'a Self::InternedVariableKinds,
-    ) -> &'a [VariableKind<Self>];
+        variable_kinds: &Self::InternedVariableKinds,
+    ) -> &[VariableKind<Self>];
 
     /// Create "interned" variable kinds with universe index from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -619,10 +608,10 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 
     /// Lookup the slice of `CanonicalVariableKind` that was interned to
     /// create a `CanonicalVariableKinds`.
-    fn canonical_var_kinds_data<'a>(
+    fn canonical_var_kinds_data(
         self,
-        canonical_var_kinds: &'a Self::InternedCanonicalVarKinds,
-    ) -> &'a [CanonicalVarKind<Self>];
+        canonical_var_kinds: &Self::InternedCanonicalVarKinds,
+    ) -> &[CanonicalVarKind<Self>];
 
     /// Create "interned" constraints from `data`. This is not
     /// normally invoked dirctly; instead, you invoke
@@ -635,10 +624,10 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 
     /// Lookup the slice of `Constraint` that was interned to
     /// create a `Constraints`.
-    fn constraints_data<'a>(
+    fn constraints_data(
         self,
-        constraints: &'a Self::InternedConstraints,
-    ) -> &'a [InEnvironment<Constraint<Self>>];
+        constraints: &Self::InternedConstraints,
+    ) -> &[InEnvironment<Constraint<Self>>];
 
     /// Create "interned" variances from `data`. This is not
     /// normally invoked directly; instead, you invoke
@@ -651,7 +640,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 
     /// Lookup the slice of `Variance` that was interned to
     /// create a `Variances`.
-    fn variances_data<'a>(self, variances: &'a Self::InternedVariances) -> &'a [Variance];
+    fn variances_data(self, variances: &Self::InternedVariances) -> &[Variance];
 }
 
 /// Implemented by types that have an associated interner (which

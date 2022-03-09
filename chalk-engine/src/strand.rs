@@ -45,7 +45,7 @@ impl<I: Interner> Fold<I> for Strand<I> {
         Ok(Strand {
             ex_clause: self.ex_clause.fold_with(folder, outer_binder)?,
             last_pursued_time: self.last_pursued_time,
-            selected_subgoal: self.selected_subgoal.clone(),
+            selected_subgoal: self.selected_subgoal,
         })
     }
 }

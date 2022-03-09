@@ -182,7 +182,7 @@ pub trait Folder<I: Interner> {
         } else {
             let bound_var = bound_var.shifted_in_from(outer_binder);
             Ok(ConstData {
-                ty: ty.clone().fold_with(self.as_dyn(), outer_binder)?,
+                ty: ty.fold_with(self.as_dyn(), outer_binder)?,
                 value: ConstValue::<I>::BoundVar(bound_var),
             }
             .intern(self.interner()))

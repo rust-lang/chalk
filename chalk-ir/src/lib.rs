@@ -486,26 +486,20 @@ impl<I: Interner> Ty<I> {
 
     /// Returns true if this is an `Alias`.
     pub fn is_alias(&self, interner: I) -> bool {
-        match self.kind(interner) {
-            TyKind::Alias(..) => true,
-            _ => false,
-        }
+        matches!(self.kind(interner), TyKind::Alias(..))
     }
 
     /// Returns true if this is an `IntTy` or `UintTy`.
     pub fn is_integer(&self, interner: I) -> bool {
-        match self.kind(interner) {
-            TyKind::Scalar(Scalar::Int(_)) | TyKind::Scalar(Scalar::Uint(_)) => true,
-            _ => false,
-        }
+        matches!(
+            self.kind(interner),
+            TyKind::Scalar(Scalar::Int(_) | Scalar::Uint(_))
+        )
     }
 
     /// Returns true if this is a `FloatTy`.
     pub fn is_float(&self, interner: I) -> bool {
-        match self.kind(interner) {
-            TyKind::Scalar(Scalar::Float(_)) => true,
-            _ => false,
-        }
+        matches!(self.kind(interner), TyKind::Scalar(Scalar::Float(_)))
     }
 
     /// Returns `Some(adt_id)` if this is an ADT, `None` otherwise
@@ -1687,7 +1681,7 @@ impl<I: Interner> Copy for TraitRef<I> where I::InternedSubstitution: Copy {}
 
 impl<I: Interner> TraitRef<I> {
     /// Gets all type parameters in this trait ref, including `Self`.
-    pub fn type_parameters<'a>(&'a self, interner: I) -> impl Iterator<Item = Ty<I>> + 'a {
+    pub fn type_parameters(&self, interner: I) -> impl Iterator<Item = Ty<I>> + '_ {
         self.substitution
             .iter(interner)
             .filter_map(move |p| p.ty(interner))
@@ -2720,7 +2714,7 @@ impl<I: Interner> Substitution<I> {
     }
 
     /// Gets an iterator of all type parameters.
-    pub fn type_parameters<'a>(&'a self, interner: I) -> impl Iterator<Item = Ty<I>> + 'a {
+    pub fn type_parameters(&self, interner: I) -> impl Iterator<Item = Ty<I>> + '_ {
         self.iter(interner)
             .filter_map(move |p| p.ty(interner))
             .cloned()

@@ -210,7 +210,9 @@ where
         well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
         let trait_id = self.ws.db().well_known_trait_id(well_known_trait);
-        trait_id.map(|id| self.record(id));
+        if let Some(id) = trait_id {
+            self.record(id);
+        }
         trait_id
     }
 

@@ -42,7 +42,7 @@ pub fn add_builtin_program_clauses<I: Interner>(
                 clone::add_clone_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
             WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
-                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
+                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty);
             }
             WellKnownTrait::Unsize => {
                 unsize::add_unsize_program_clauses(db, builder, trait_ref, ty)
@@ -72,7 +72,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
             let generalized = generalize::Generalize::apply(db.interner(), self_ty);
 
             builder.push_binders(generalized, |builder, self_ty| {
-                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty)?;
+                fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty);
                 Ok(())
             })
         }
@@ -105,7 +105,7 @@ pub fn needs_impl_for_tys<I: Interner>(
     builder.push_clause(
         trait_ref,
         tys.map(|ty| TraitRef {
-            trait_id: trait_id,
+            trait_id,
             substitution: Substitution::from1(db.interner(), ty),
         }),
     );

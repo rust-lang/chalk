@@ -358,7 +358,7 @@ where
         // We make a goal like
         //
         // forall<T>
-        let goal = gb.forall(&bound, opaque_ty_id, |gb, _, bound, opaque_ty_id| {
+        let goal = gb.forall(bound, opaque_ty_id, |gb, _, bound, opaque_ty_id| {
             let interner = gb.interner();
 
             let subst = Substitution::from1(interner, gb.db().hidden_opaque_type(opaque_ty_id));
@@ -460,7 +460,7 @@ fn impl_header_wf_goal<I: Interner>(
 
         // if (WC && input types are well formed) { ... }
         gb.implies(
-            impl_wf_environment(interner, &where_clauses, &trait_ref),
+            impl_wf_environment(interner, where_clauses, trait_ref),
             |gb| {
                 // We retrieve all the input types of the where clauses appearing on the trait impl,
                 // e.g. in:
@@ -574,7 +574,7 @@ fn compute_assoc_ty_goal<I: Interner>(
 
             let (impl_parameters, projection) = db
                 .impl_parameters_and_projection_from_associated_ty_value(
-                    &assoc_ty_substitution.as_slice(interner),
+                    assoc_ty_substitution.as_slice(interner),
                     assoc_ty,
                 );
 
@@ -739,7 +739,7 @@ impl WfWellKnownConstraints {
 
                 // if (WC) { ... }
                 gb.implies(
-                    impl_wf_environment(interner, &where_clauses, &trait_ref),
+                    impl_wf_environment(interner, where_clauses, trait_ref),
                     |gb| -> Goal<I> {
                         let db = gb.db();
 
@@ -954,7 +954,7 @@ impl WfWellKnownConstraints {
                 |gb, _, (goal, trait_ref, where_clauses), ()| {
                     let interner = gb.interner();
                     gb.implies(
-                        impl_wf_environment(interner, &where_clauses, &trait_ref),
+                        impl_wf_environment(interner, where_clauses, trait_ref),
                         |_| goal,
                     )
                 },

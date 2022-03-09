@@ -136,7 +136,7 @@ impl<'i, I: Interner> Folder<I> for Canonicalizer<'i, I> {
     ) -> Fallible<Const<I>> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_const(interner, ty.clone()))
+        Ok(universe.to_const(interner, ty))
     }
 
     fn forbid_free_vars(&self) -> bool {

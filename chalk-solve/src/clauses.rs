@@ -485,7 +485,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 let generalized = generalize::Generalize::apply(db.interner(), trait_ref.clone());
                 builder.push_binders(generalized, |builder, trait_ref| {
                     let ty = trait_ref.self_type_parameter(interner);
-                    push_auto_trait_impls(builder, trait_id, &ty.kind(interner))
+                    push_auto_trait_impls(builder, trait_id, ty.kind(interner))
                 })?;
             }
 
@@ -584,7 +584,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
         | DomainGoal::IsUpstream(ty)
         | DomainGoal::DownstreamType(ty)
         | DomainGoal::IsFullyVisible(ty)
-        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, &ty)?,
+        | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
         DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
             AliasTy::Projection(proj) => {
@@ -865,7 +865,7 @@ fn match_ty<I: Interner>(
     ty: &Ty<I>,
 ) -> Result<(), Floundered> {
     let interner = builder.interner();
-    Ok(match ty.kind(interner) {
+    match ty.kind(interner) {
         TyKind::InferenceVar(_, _) => {
             panic!("Inference vars not allowed when getting program clauses")
         }
@@ -1025,7 +1025,7 @@ fn match_ty<I: Interner>(
         TyKind::Closure(_, _) | TyKind::Generator(_, _) | TyKind::GeneratorWitness(_, _) => {
             let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
             builder.push_binders(ty, |builder, ty| {
-                builder.push_fact(WellFormed::Ty(ty.clone()));
+                builder.push_fact(WellFormed::Ty(ty));
             });
         }
         TyKind::Placeholder(_) => {
@@ -1041,9 +1041,7 @@ fn match_ty<I: Interner>(
             .to_program_clauses(builder, environment),
         TyKind::Function(_quantified_ty) => {
             let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
-            builder.push_binders(ty, |builder, ty| {
-                builder.push_fact(WellFormed::Ty(ty.clone()))
-            });
+            builder.push_binders(ty, |builder, ty| builder.push_fact(WellFormed::Ty(ty)));
         }
         TyKind::BoundVar(_) => return Err(Floundered),
         TyKind::Dyn(dyn_ty) => {
@@ -1062,7 +1060,6 @@ fn match_ty<I: Interner>(
             builder.push_binders(generalized_ty, |builder, dyn_ty| {
                 let bounds = dyn_ty
                     .bounds
-                    .clone()
                     .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
 
                 let mut wf_goals = Vec::new();
@@ -1083,7 +1080,8 @@ fn match_ty<I: Interner>(
                 builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
             });
         }
-    })
+    }
+    Ok(())
 }
 
 fn match_alias_ty<I: Interner>(
@@ -1091,12 +1089,11 @@ fn match_alias_ty<I: Interner>(
     environment: &Environment<I>,
     alias: &AliasTy<I>,
 ) {
-    match alias {
-        AliasTy::Projection(projection_ty) => builder
+    if let AliasTy::Projection(projection_ty) = alias {
+        builder
             .db
             .associated_ty_data(projection_ty.associated_ty_id)
-            .to_program_clauses(builder, environment),
-        _ => (),
+            .to_program_clauses(builder, environment)
     }
 }
 

@@ -71,7 +71,7 @@ impl LoadedProgram {
         let goal = lower_goal(&*chalk_parse::parse_goal(text)?, &*program)?;
         let peeled_goal = goal.into_peeled_goal(self.db.interner());
         if multiple_answers {
-            if self.db.solve_multiple(&peeled_goal, &mut |v, has_next| {
+            let no_more_solutions = self.db.solve_multiple(&peeled_goal, &mut |v, has_next| {
                 println!("{}\n", v.as_ref().map(|v| v.display(ChalkIr)));
                 if has_next {
                     if let Some(ref mut rl) = rl {
@@ -94,7 +94,8 @@ impl LoadedProgram {
                 } else {
                     true
                 }
-            }) {
+            });
+            if no_more_solutions {
                 println!("No more solutions");
             }
         } else {
@@ -184,7 +185,7 @@ where
             Err(ReadlineError::Eof) => break,
 
             // Some other error occurred.
-            Err(e) => Err(e)?,
+            Err(e) => return Err(e.into()),
         }
     }
 
@@ -213,17 +214,17 @@ fn process(
         // Let's do a sanity check before going forward.
         let _ = chalk_prog.db.checked_program()?;
         *prog = Some(chalk_prog);
-    } else if command.starts_with("load ") {
+    } else if let Some(filename) = command.strip_prefix("load ") {
         // Load a .chalk file.
-        let filename = &command["load ".len()..];
         let chalk_prog = load_program(args, filename)?;
         // Let's do a sanity check before going forward.
         let _ = chalk_prog.db.checked_program()?;
         *prog = Some(chalk_prog);
-    } else if command.starts_with("debug ") {
-        match command.split_whitespace().nth(1) {
-            Some(level) => std::env::set_var("CHALK_DEBUG", level),
-            None => println!("debug <level> set debug level to <level>"),
+    } else if let Some(level) = command.strip_prefix("debug ") {
+        if level.is_empty() {
+            println!("debug <level> set debug level to <level>");
+        } else {
+            std::env::set_var("CHALK_DEBUG", level);
         }
     } else {
         // The command is either "print", "lowered", or a goal.
@@ -260,7 +261,7 @@ fn process(
 fn load_program(args: &Args, filename: &str) -> Result<LoadedProgram> {
     let mut text = String::new();
     File::open(filename)?.read_to_string(&mut text)?;
-    Ok(LoadedProgram::new(text, args.solver_choice())?)
+    LoadedProgram::new(text, args.solver_choice())
 }
 
 /// Print out help for commands in interpreter mode.
@@ -290,7 +291,7 @@ fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
 
 impl Args {
     fn solver_choice(&self) -> SolverChoice {
-        match self.flag_solver.as_ref().map(String::as_str) {
+        match self.flag_solver.as_deref() {
             None | Some("slg") => SolverChoice::SLG {
                 max_size: self.flag_overflow_depth,
                 expected_answers: None,

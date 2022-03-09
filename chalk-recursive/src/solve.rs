@@ -142,7 +142,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             }
         }
 
-        let (infer, subst, goal) = self.new_inference_table(&canonical_goal);
+        let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         clauses.extend(
             db.program_clauses_for_env(&goal.environment)
                 .iter(db.interner())
@@ -163,7 +163,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             let infer = infer.clone();
             let subst = subst.clone();
             let goal = goal.clone();
-            let res = match Fulfill::new_with_clause(self, infer, subst, goal, &implication) {
+            let res = match Fulfill::new_with_clause(self, infer, subst, goal, implication) {
                 Ok(fulfill) => (fulfill.solve(minimums), implication.skip_binders().priority),
                 Err(e) => (Err(e), ClausePriority::High),
             };

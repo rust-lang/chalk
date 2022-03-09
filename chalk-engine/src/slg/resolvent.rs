@@ -329,7 +329,7 @@ impl<I: Interner> AnswerSubstitutor<'_, I> {
         let result = self.table.relate(
             interner,
             db,
-            &self.environment,
+            self.environment,
             variance,
             answer_param,
             &GenericArg::new(interner, pending_shifted),

@@ -12,8 +12,8 @@ use regex::Regex;
 use std::{fmt::Debug, sync::Arc};
 
 pub fn strip_leading_trailing_braces(input: &str) -> &str {
-    assert!(input.starts_with("{"));
-    assert!(input.ends_with("}"));
+    assert!(input.starts_with('{'));
+    assert!(input.ends_with('}'));
 
     &input[1..input.len() - 1]
 }
@@ -74,9 +74,7 @@ pub fn program_item_ids(program: &Program) -> impl Iterator<Item = RecordedItemI
 
     // then discard the RawId since the RecordedItemId has the same information,
     // and is what we actually want to consume.
-    let ids = ids.into_iter().map(|(_, id)| id);
-
-    ids
+    ids.into_iter().map(|(_, id)| id)
 }
 
 /// Sends all items in a `chalk_integration::Program` through `display` code and
@@ -146,9 +144,9 @@ fn program_diff(original: &impl Debug, produced: &impl Debug) -> String {
     let produced = format!("{:#?}", produced);
     for line in diff::lines(&original, &produced) {
         match line {
-            diff::Result::Left(l) => write!(out, "-{}\n", l),
-            diff::Result::Both(l, _) => write!(out, " {}\n", l),
-            diff::Result::Right(r) => write!(out, "+{}\n", r),
+            diff::Result::Left(l) => writeln!(out, "-{}", l),
+            diff::Result::Both(l, _) => writeln!(out, " {}", l),
+            diff::Result::Right(r) => writeln!(out, "+{}", r),
         }
         .expect("writing to string never fails");
     }

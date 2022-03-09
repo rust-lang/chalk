@@ -42,7 +42,11 @@ impl Lower for Program {
 
         // Make a vector mapping each thing in `items` to an id,
         // based just on its position:
-        let raw_ids = self.items.iter().map(|_| lowerer.next_item_id()).collect();
+        let raw_ids = self
+            .items
+            .iter()
+            .map(|_| lowerer.next_item_id())
+            .collect::<Vec<_>>();
 
         lowerer.extract_associated_types(self, &raw_ids)?;
         lowerer.extract_ids(self, &raw_ids)?;
@@ -196,7 +200,7 @@ impl LowerWithEnv for QuantifiedWhereClause {
     /// `Implemented(T: Foo)` and `ProjectionEq(<T as Foo>::Item = U)`.
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let variable_kinds = self.variable_kinds.iter().map(|k| k.lower());
-        let binders = env.in_binders(variable_kinds, |env| Ok(self.where_clause.lower(env)?))?;
+        let binders = env.in_binders(variable_kinds, |env| self.where_clause.lower(env))?;
         Ok(binders.into_iter().collect())
     }
 }
@@ -281,10 +285,10 @@ impl LowerWithEnv for (&AdtDefn, chalk_ir::AdtId<ChalkIr>) {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let (adt_defn, adt_id) = self;
 
-        if adt_defn.flags.fundamental && adt_defn.all_parameters().len() < 1 {
-            Err(RustIrError::InvalidFundamentalTypesParameters(
+        if adt_defn.flags.fundamental && adt_defn.all_parameters().is_empty() {
+            return Err(RustIrError::InvalidFundamentalTypesParameters(
                 adt_defn.name.clone(),
-            ))?;
+            ));
         }
 
         let binders = env.in_binders(adt_defn.all_parameters(), |env| {
@@ -448,7 +452,7 @@ impl LowerWithEnv for TraitBound {
 
         let k = env.trait_kind(trait_id);
         if k.sort != TypeSort::Trait {
-            Err(RustIrError::NotTrait(self.trait_name.clone()))?;
+            return Err(RustIrError::NotTrait(self.trait_name.clone()));
         }
 
         let parameters = self
@@ -458,20 +462,20 @@ impl LowerWithEnv for TraitBound {
             .collect::<LowerResult<Vec<_>>>()?;
 
         if parameters.len() != k.binders.len(interner) {
-            Err(RustIrError::IncorrectNumberOfTypeParameters {
+            return Err(RustIrError::IncorrectNumberOfTypeParameters {
                 identifier: self.trait_name.clone(),
                 expected: k.binders.len(interner),
                 actual: parameters.len(),
-            })?;
+            });
         }
 
         for (binder, param) in k.binders.binders.iter(interner).zip(parameters.iter()) {
             if binder.kind() != param.kind() {
-                Err(RustIrError::IncorrectTraitParameterKind {
+                return Err(RustIrError::IncorrectTraitParameterKind {
                     identifier: self.trait_name.clone(),
                     expected: binder.kind(),
                     actual: param.kind(),
-                })?;
+                });
             }
         }
 
@@ -495,20 +499,20 @@ impl LowerWithEnv for AliasEqBound {
             .collect::<LowerResult<_>>()?;
 
         if args.len() != lookup.addl_variable_kinds.len() {
-            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+            return Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
                 identifier: self.name.clone(),
                 expected: lookup.addl_variable_kinds.len(),
                 actual: args.len(),
-            })?;
+            });
         }
 
         for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
             if param.kind() != arg.kind() {
-                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                return Err(RustIrError::IncorrectAssociatedTypeParameterKind {
                     identifier: self.name.clone(),
                     expected: param.kind(),
                     actual: arg.kind(),
-                })?;
+                });
             }
         }
 
@@ -526,8 +530,8 @@ impl LowerWithEnv for InlineBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         Ok(match self {
-            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(&env)?),
-            InlineBound::AliasEqBound(b) => rust_ir::InlineBound::AliasEqBound(b.lower(&env)?),
+            InlineBound::TraitBound(b) => rust_ir::InlineBound::TraitBound(b.lower(env)?),
+            InlineBound::AliasEqBound(b) => rust_ir::InlineBound::AliasEqBound(b.lower(env)?),
         })
     }
 }
@@ -631,20 +635,20 @@ impl LowerWithEnv for ProjectionTy {
             .collect::<LowerResult<_>>()?;
 
         if args.len() != lookup.addl_variable_kinds.len() {
-            Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
+            return Err(RustIrError::IncorrectNumberOfAssociatedTypeParameters {
                 identifier: self.name.clone(),
                 expected: lookup.addl_variable_kinds.len(),
                 actual: args.len(),
-            })?;
+            });
         }
 
         for (param, arg) in lookup.addl_variable_kinds.iter().zip(args.iter()) {
             if param.kind() != arg.kind() {
-                Err(RustIrError::IncorrectAssociatedTypeParameterKind {
+                return Err(RustIrError::IncorrectAssociatedTypeParameterKind {
                     identifier: self.name.clone(),
                     expected: param.kind(),
                     actual: arg.kind(),
-                })?;
+                });
             }
         }
 
@@ -664,8 +668,8 @@ impl LowerWithEnv for Ty {
         let interner = env.interner();
         Ok(match self {
             Ty::Id { name } => {
-                let parameter = env.lookup_generic_arg(&name)?;
-                parameter.ty(interner).map(|ty| ty.clone()).ok_or_else(|| {
+                let parameter = env.lookup_generic_arg(name)?;
+                parameter.ty(interner).cloned().ok_or_else(|| {
                     RustIrError::IncorrectParameterKind {
                         identifier: name.clone(),
                         expected: Kind::Ty,
@@ -707,16 +711,16 @@ impl LowerWithEnv for Ty {
                 macro_rules! tykind {
                     ($k:expr, $tykind:ident, $id:expr) => {{
                         if $k.binders.len(interner) != args.len() {
-                            Err(RustIrError::IncorrectNumberOfTypeParameters {
+                            return Err(RustIrError::IncorrectNumberOfTypeParameters {
                                 identifier: name.clone(),
                                 expected: $k.binders.len(interner),
                                 actual: args.len(),
-                            })?;
+                            });
                         }
 
                         let substitution = chalk_ir::Substitution::from_fallible(
                             interner,
-                            args.iter().map(|t| Ok(t.lower(env)?)),
+                            args.iter().map(|t| t.lower(env)),
                         )?;
 
                         for (param, arg) in $k
@@ -726,17 +730,17 @@ impl LowerWithEnv for Ty {
                             .zip(substitution.iter(interner))
                         {
                             if param.kind() != arg.kind() {
-                                Err(RustIrError::IncorrectParameterKind {
+                                return Err(RustIrError::IncorrectParameterKind {
                                     identifier: name.clone(),
                                     expected: param.kind(),
                                     actual: arg.kind(),
-                                })?;
+                                });
                             }
                         }
                         chalk_ir::TyKind::$tykind($id, substitution).intern(interner)
                     }};
                 }
-                match env.lookup_type(&name)? {
+                match env.lookup_type(name)? {
                     TypeLookup::Parameter(_) => {
                         return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
                     }
@@ -781,7 +785,7 @@ impl LowerWithEnv for Ty {
                 types.len(),
                 chalk_ir::Substitution::from_fallible(
                     interner,
-                    types.iter().map(|t| Ok(t.lower(env)?)),
+                    types.iter().map(|t| t.lower(env)),
                 )?,
             )
             .intern(interner),
@@ -846,7 +850,7 @@ impl LowerWithEnv for GenericArg {
         match self {
             GenericArg::Ty(ref t) => Ok(t.lower(env)?.cast(interner)),
             GenericArg::Lifetime(ref l) => Ok(l.lower(env)?.cast(interner)),
-            GenericArg::Id(name) => env.lookup_generic_arg(&name),
+            GenericArg::Id(name) => env.lookup_generic_arg(name),
             GenericArg::Const(c) => Ok(c.lower(env)?.cast(interner)),
         }
     }
@@ -859,7 +863,7 @@ impl LowerWithEnv for Lifetime {
         let interner = env.interner();
         match self {
             Lifetime::Id { name } => {
-                let parameter = env.lookup_generic_arg(&name)?;
+                let parameter = env.lookup_generic_arg(name)?;
                 parameter.lifetime(interner).copied().ok_or_else(|| {
                     RustIrError::IncorrectParameterKind {
                         identifier: name.clone(),
@@ -896,12 +900,12 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
             debug!(?trait_ref);
 
             if !polarity.is_positive() && !impl_.assoc_ty_values.is_empty() {
-                Err(RustIrError::NegativeImplAssociatedValues(
+                return Err(RustIrError::NegativeImplAssociatedValues(
                     impl_.trait_ref.trait_name.clone(),
-                ))?;
+                ));
             }
 
-            let where_clauses = impl_.where_clauses.lower(&env)?;
+            let where_clauses = impl_.where_clauses.lower(env)?;
             debug!(where_clauses = ?trait_ref);
             Ok(rust_ir::ImplDatumBound {
                 trait_ref,
@@ -980,10 +984,10 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
         let binders = env.in_binders(all_parameters, |env| {
             if trait_defn.flags.auto {
                 if all_parameters_len > 1 {
-                    Err(RustIrError::AutoTraitParameters(trait_defn.name.clone()))?;
+                    return Err(RustIrError::AutoTraitParameters(trait_defn.name.clone()));
                 }
                 if !trait_defn.where_clauses.is_empty() {
-                    Err(RustIrError::AutoTraitWhereClauses(trait_defn.name.clone()))?;
+                    return Err(RustIrError::AutoTraitWhereClauses(trait_defn.name.clone()));
                 }
             }
 
@@ -1065,8 +1069,8 @@ impl LowerWithEnv for Goal {
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let interner = env.interner();
         match self {
-            Goal::ForAll(ids, g) => (&**g, chalk_ir::QuantifierKind::ForAll, ids).lower(&env),
-            Goal::Exists(ids, g) => (&**g, chalk_ir::QuantifierKind::Exists, ids).lower(&env),
+            Goal::ForAll(ids, g) => (&**g, chalk_ir::QuantifierKind::ForAll, ids).lower(env),
+            Goal::Exists(ids, g) => (&**g, chalk_ir::QuantifierKind::Exists, ids).lower(env),
             Goal::Implies(hyp, g) => {
                 // We "elaborate" implied bounds by lowering goals like `T: Trait` and
                 // `T: Trait<Assoc = U>` to `FromEnv(T: Trait)` and `FromEnv(T: Trait<Assoc = U>)`

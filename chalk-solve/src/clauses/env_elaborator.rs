@@ -67,7 +67,7 @@ impl<'me, 'builder, I: Interner> Visitor<I> for EnvElaborator<'me, 'builder, I> 
 
             _ => {
                 // This shouldn't fail because of the above clauses
-                match_ty(self.builder, self.environment, &ty)
+                match_ty(self.builder, self.environment, ty)
                     .map_err(|_| ())
                     .unwrap()
             }

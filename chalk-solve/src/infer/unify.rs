@@ -184,11 +184,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (_, &TyKind::Alias(ref alias)) => self.relate_alias_ty(variance.invert(), alias, a),
             (&TyKind::Alias(ref alias), _) => self.relate_alias_ty(variance, alias, b),
 
-            (&TyKind::InferenceVar(var, kind), ty_data @ _) => {
+            (&TyKind::InferenceVar(var, kind), ty_data) => {
                 let ty = ty_data.clone().intern(interner);
                 self.relate_var_ty(variance, var, kind, &ty)
             }
-            (ty_data @ _, &TyKind::InferenceVar(var, kind)) => {
+            (ty_data, &TyKind::InferenceVar(var, kind)) => {
                 // We need to invert the variance if inference var is `b` because we pass it in
                 // as `a` to relate_var_ty
                 let ty = ty_data.clone().intern(interner);
@@ -360,11 +360,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
     fn unify_var_var(&mut self, a: InferenceVar, b: InferenceVar) -> Fallible<()> {
         let var1 = EnaVariable::from(a);
         let var2 = EnaVariable::from(b);
-        Ok(self
-            .table
+        self.table
             .unify
             .unify_var_var(var1, var2)
-            .expect("unification of two unbound variables cannot fail"))
+            .expect("unification of two unbound variables cannot fail");
+        Ok(())
     }
 
     /// Unify a general inference variable with a specific inference variable
@@ -677,10 +677,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                     let lifetime = lifetime_var.to_lifetime(interner);
                                     let ty_var = self.table.new_variable(universe_index);
                                     let ty = ty_var.to_ty(interner);
-                                    WhereClause::TypeOutlives(TypeOutlives {
-                                        ty: ty,
-                                        lifetime: lifetime,
-                                    })
+                                    WhereClause::TypeOutlives(TypeOutlives { ty, lifetime })
                                 }
                                 WhereClause::LifetimeOutlives(_) => {
                                     unreachable!("dyn Trait never contains LifetimeOutlive bounds")
@@ -758,34 +755,26 @@ impl<'t, I: Interner> Unifier<'t, I> {
         universe_index: UniverseIndex,
         variance: Variance,
     ) -> Lifetime<I> {
-        let interner = self.interner;
-        match lifetime.data(interner) {
-            LifetimeData::BoundVar(_) => {
-                return lifetime.clone();
-            }
-            _ => {
-                if matches!(variance, Variance::Invariant) {
-                    lifetime.clone()
-                } else {
-                    let ena_var = self.table.new_variable(universe_index);
-                    ena_var.to_lifetime(interner)
-                }
-            }
+        if matches!(lifetime.data(self.interner), LifetimeData::BoundVar(_))
+            || matches!(variance, Variance::Invariant)
+        {
+            lifetime.clone()
+        } else {
+            self.table
+                .new_variable(universe_index)
+                .to_lifetime(self.interner)
         }
     }
 
     #[instrument(level = "debug", skip(self))]
     fn generalize_const(&mut self, const_: &Const<I>, universe_index: UniverseIndex) -> Const<I> {
-        let interner = self.interner;
-        let data = const_.data(interner);
-        match data.value {
-            ConstValue::BoundVar(_) => {
-                return const_.clone();
-            }
-            _ => {
-                let ena_var = self.table.new_variable(universe_index);
-                ena_var.to_const(interner, data.ty.clone())
-            }
+        let data = const_.data(self.interner);
+        if matches!(data.value, ConstValue::BoundVar(_)) {
+            const_.clone()
+        } else {
+            self.table
+                .new_variable(universe_index)
+                .to_const(self.interner, data.ty.clone())
         }
     }
 
@@ -1008,7 +997,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&LifetimeData::Erased, &LifetimeData::Placeholder(_))
             | (&LifetimeData::Erased, &LifetimeData::Empty(_)) => {
                 if a != b {
-                    Ok(self.push_lifetime_outlives_goals(variance, a.clone(), b.clone()))
+                    self.push_lifetime_outlives_goals(variance, a.clone(), b.clone());
+                    Ok(())
                 } else {
                     Ok(())
                 }
@@ -1048,11 +1038,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 "{:?} in {:?} cannot see {:?}; pushing constraint",
                 var, var_ui, value_ui
             );
-            Ok(self.push_lifetime_outlives_goals(
+            self.push_lifetime_outlives_goals(
                 variance,
                 var.to_lifetime(self.interner),
                 value.clone(),
-            ))
+            );
+            Ok(())
         }
     }
 
@@ -1089,11 +1080,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 debug!(?var1, ?var2, "relate_ty_ty");
                 let var1 = EnaVariable::from(var1);
                 let var2 = EnaVariable::from(var2);
-                Ok(self
-                    .table
+                self.table
                     .unify
                     .unify_var_var(var1, var2)
-                    .expect("unification of two unbound variables cannot fail"))
+                    .expect("unification of two unbound variables cannot fail");
+                Ok(())
             }
 
             // Unifying an inference variables with a non-inference variable.
@@ -1290,7 +1281,7 @@ impl<'i, I: Interner> Folder<I> for OccursCheck<'_, 'i, I> {
         if self.universe_index < universe.ui {
             Err(NoSolution)
         } else {
-            Ok(universe.to_const(interner, ty.clone())) // no need to shift, not relative to depth
+            Ok(universe.to_const(interner, ty)) // no need to shift, not relative to depth
         }
     }
 

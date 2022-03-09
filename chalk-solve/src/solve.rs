@@ -145,7 +145,7 @@ impl<I: Interner> Solution<I> {
         matches!(*self, Solution::Ambig(_))
     }
 
-    pub fn display<'a>(&'a self, interner: I) -> SolutionDisplay<'a, I> {
+    pub fn display(&self, interner: I) -> SolutionDisplay<'_, I> {
         SolutionDisplay {
             solution: self,
             interner,
