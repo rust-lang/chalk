@@ -95,7 +95,7 @@ fn issue_727_2() {
         } yields[SolverChoice::slg_default()] {
             expect![["Unique"]]
         } yields[SolverChoice::recursive_default()] {
-            expect![["Unique"]]
+            expect![[r#"Ambiguous; no inference guidance"#]] // FIXME rust-lang/chalk#727
         }
     );
 }
