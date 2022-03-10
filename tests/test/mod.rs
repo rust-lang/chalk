@@ -404,6 +404,7 @@ fn solve_aggregated(
     expected.assert_eq(head);
 }
 
+mod ambiguity_issue_727;
 mod arrays;
 mod auto_traits;
 mod closures;
