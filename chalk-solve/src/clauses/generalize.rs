@@ -9,8 +9,8 @@
 use chalk_ir::{
     fold::{Fold, Folder},
     interner::{HasInterner, Interner},
-    Binders, BoundVar, DebruijnIndex, Fallible, Lifetime, LifetimeData, NoSolution, Ty, TyKind,
-    TyVariableKind, VariableKind, VariableKinds,
+    Binders, BoundVar, Const, ConstData, ConstValue, DebruijnIndex, Fallible, Lifetime,
+    LifetimeData, NoSolution, Ty, TyKind, TyVariableKind, VariableKind, VariableKinds,
 };
 use rustc_hash::FxHashMap;
 
@@ -61,6 +61,26 @@ impl<I: Interner> Folder<I> for Generalize<I> {
         });
         let new_var = BoundVar::new(outer_binder, *new_index);
         Ok(TyKind::BoundVar(new_var).intern(self.interner()))
+    }
+
+    fn fold_free_var_const(
+        &mut self,
+        ty: Ty<I>,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Fallible<Const<I>> {
+        let binder_vec = &mut self.binders;
+        let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
+            let i = binder_vec.len();
+            binder_vec.push(VariableKind::Const(ty.clone()));
+            i
+        });
+        let new_var = BoundVar::new(outer_binder, *new_index);
+        Ok(ConstData {
+            ty,
+            value: ConstValue::BoundVar(new_var),
+        }
+        .intern(self.interner()))
     }
 
     fn fold_free_var_lifetime(
