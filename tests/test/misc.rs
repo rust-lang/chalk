@@ -749,7 +749,7 @@ fn empty_definite_guidance() {
         } yields[SolverChoice::slg_default()] {
             expect![["Unique"]]
         } yields[SolverChoice::recursive_default()] {
-            expect![["Ambiguous; suggested substitution []"]]
+            expect![[r#"Unique"#]]
         }
     }
 }
@@ -812,8 +812,10 @@ fn env_bound_vars() {
                     WellFormed(&'a ())
                 }
             }
-        } yields {
+        } yields[SolverChoice::slg_default()] {
             expect![["Ambiguous; definite substitution for<?U0> { [?0 := '^0.0] }"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![[r#"Unique; for<?U0> { substitution [?0 := '^0.0] }"#]]
         }
         goal {
             exists<'a> {
@@ -841,7 +843,7 @@ fn recursive_hang() {
         } yields[SolverChoice::slg_default()] {
             expect![["Ambiguous; definite substitution for<?U0,?U0> { [?0 := ^0.0, ?1 := '^0.1] }"]]
         } yields[SolverChoice::recursive_default()] {
-            expect![["Ambiguous; suggested substitution for<?U0,?U0> { [?0 := ^0.0, ?1 := '^0.1] }"]]
+            expect![[r#"Ambiguous; no inference guidance"#]]
         }
     }
 }

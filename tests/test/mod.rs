@@ -394,11 +394,11 @@ fn solve_aggregated(
         .expect("Test requires at least one solver");
     for (i, other) in tail.iter().enumerate() {
         println!(
-            "\ncomparing solvers:\n\tleft: {:?}\n\tright: {:?}\n",
+            "\ncomparing solvers:\n\texpected: {:?}\n\tactual: {:?}\n",
             &choices[0],
             &choices[i + 1]
         );
-        assert_same(head, other);
+        assert_same(other, head);
     }
 
     expected.assert_eq(head);
