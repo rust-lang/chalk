@@ -101,7 +101,7 @@ impl<I: Interner> Solution<I> {
         Solution::Ambig(guidance)
     }
 
-    fn is_trivial_and_always_true(&self, interner: I) -> bool {
+    pub fn is_trivial_and_always_true(&self, interner: I) -> bool {
         match self {
             Solution::Unique(constrained_subst) => {
                 constrained_subst.value.subst.is_identity_subst(interner)

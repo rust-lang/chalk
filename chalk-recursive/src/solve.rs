@@ -179,6 +179,12 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             } else {
                 debug!("Error");
             }
+
+            if let Some((cur_solution, _)) = &cur_solution {
+                if cur_solution.is_trivial_and_always_true(self.interner()) {
+                    break;
+                }
+            }
         }
 
         if let Some((s, _)) = cur_solution {
