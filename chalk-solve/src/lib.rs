@@ -67,6 +67,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the representation for the ADT definition with the given id.
     fn adt_repr(&self, id: AdtId<I>) -> Arc<AdtRepr<I>>;
 
+    /// Returns the siza and alignment of the ADT definition with the given id.
+    fn adt_size_align(&self, id: AdtId<I>) -> Arc<AdtSizeAlign>;
+
     /// Returns the datum for the fn definition with the given id.
     fn fn_def_datum(&self, fn_def_id: FnDefId<I>) -> Arc<FnDefDatum<I>>;
 

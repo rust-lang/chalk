@@ -79,6 +79,9 @@ where
     fn adt_repr(&self, id: chalk_ir::AdtId<I>) -> Arc<chalk_solve::rust_ir::AdtRepr<I>> {
         self.db.adt_repr(id)
     }
+    fn adt_size_align(&self, id: chalk_ir::AdtId<I>) -> Arc<chalk_solve::rust_ir::AdtSizeAlign> {
+        self.db.adt_size_align(id)
+    }
     fn fn_def_datum(
         &self,
         fn_def_id: chalk_ir::FnDefId<I>,

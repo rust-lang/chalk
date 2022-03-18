@@ -420,6 +420,13 @@ where
                     &impl_datum,
                 )
             }
+            WellKnownTrait::DispatchFromDyn => {
+                WfWellKnownConstraints::dispatch_from_dyn_constraint(
+                    &mut *solver,
+                    self.db,
+                    &impl_datum,
+                )
+            }
             WellKnownTrait::Clone | WellKnownTrait::Unpin => true,
             // You can't add a manual implementation for the following traits:
             WellKnownTrait::Fn
@@ -1057,6 +1064,136 @@ impl WfWellKnownConstraints {
                 let coerce_unsized_goal = place_in_environment(coerce_unsized_goal);
 
                 solver.has_unique_solution(db, &coerce_unsized_goal.into_closed_goal(interner))
+            }
+            _ => false,
+        }
+    }
+
+    /// Verify constraints of a DispatchFromDyn impl.
+    ///
+    /// Rules for DispatchFromDyn impl to be considered well-formed:
+    ///
+    /// * Self and the type parameter must both be references or raw pointers with the same mutabilty
+    /// * OR all the following hold:
+    ///   - Self and the type parameter must be structs
+    ///   - Self and the type parameter must have the same definitions
+    ///   - Self must not be `#[repr(packed)]` or `#[repr(C)]`
+    ///   - Self must have exactly one field which is not a 1-ZST (there may be any number of 1-ZST
+    ///     fields), and that field must have a different type in the type parameter (i.e., it is
+    ///     the field being coerced)
+    ///   - `DispatchFromDyn` is implemented for the type of the field being coerced.
+    fn dispatch_from_dyn_constraint<I: Interner>(
+        solver: &mut dyn Solver<I>,
+        db: &dyn RustIrDatabase<I>,
+        impl_datum: &ImplDatum<I>,
+    ) -> bool {
+        let interner = db.interner();
+        let mut gb = GoalBuilder::new(db);
+
+        let (binders, impl_datum) = impl_datum.binders.as_ref().into();
+
+        let trait_ref: &TraitRef<I> = &impl_datum.trait_ref;
+
+        // DispatchFromDyn specifies that Self (source) can be coerced to T (target; its single type parameter).
+        let source = trait_ref.self_type_parameter(interner);
+        let target = trait_ref
+            .substitution
+            .at(interner, 1)
+            .assert_ty_ref(interner)
+            .clone();
+
+        let mut place_in_environment = |goal| -> Goal<I> {
+            gb.forall(
+                &Binders::new(
+                    binders.clone(),
+                    (goal, trait_ref, &impl_datum.where_clauses),
+                ),
+                (),
+                |gb, _, (goal, trait_ref, where_clauses), ()| {
+                    let interner = gb.interner();
+                    gb.implies(
+                        impl_wf_environment(interner, &where_clauses, &trait_ref),
+                        |_| goal,
+                    )
+                },
+            )
+        };
+
+        match (source.kind(interner), target.kind(interner)) {
+            (TyKind::Ref(s_m, _, _), TyKind::Ref(t_m, _, _))
+            | (TyKind::Raw(s_m, _), TyKind::Raw(t_m, _))
+                if s_m == t_m =>
+            {
+                true
+            }
+            (TyKind::Adt(source_id, subst_a), TyKind::Adt(target_id, subst_b)) => {
+                let adt_datum = db.adt_datum(*source_id);
+
+                // Definitions are equal and are structs.
+                if source_id != target_id || adt_datum.kind != AdtKind::Struct {
+                    return false;
+                }
+
+                // Not repr(C) or repr(packed).
+                let repr = db.adt_repr(*source_id);
+                if repr.c || repr.packed {
+                    return false;
+                }
+
+                // Collect non 1-ZST fields; there must be exactly one.
+                let fields = adt_datum
+                    .binders
+                    .map_ref(|bound| &bound.variants.last().unwrap().fields)
+                    .cloned();
+
+                let (source_fields, target_fields) = (
+                    fields.clone().substitute(interner, subst_a),
+                    fields.substitute(interner, subst_b),
+                );
+
+                let mut non_zst_fields: Vec<_> = source_fields
+                    .iter()
+                    .zip(target_fields.iter())
+                    .filter(|(sf, _)| match sf.adt_id(interner) {
+                        Some(adt) => !db.adt_size_align(adt).one_zst(),
+                        None => true,
+                    })
+                    .collect();
+
+                if non_zst_fields.len() != 1 {
+                    return false;
+                }
+
+                // The field being coerced (the interesting field).
+                let (field_src, field_tgt) = non_zst_fields.pop().unwrap();
+
+                // The interesting field is different in the source and target types.
+                let eq_goal: Goal<I> = EqGoal {
+                    a: field_src.clone().cast(interner),
+                    b: field_tgt.clone().cast(interner),
+                }
+                .cast(interner);
+                let eq_goal = place_in_environment(eq_goal);
+                if solver.has_unique_solution(db, &eq_goal.into_closed_goal(interner)) {
+                    return false;
+                }
+
+                // Type(field_src): DispatchFromDyn<Type(field_tgt)>
+                let field_dispatch_goal: Goal<I> = TraitRef {
+                    trait_id: trait_ref.trait_id,
+                    substitution: Substitution::from_iter(
+                        interner,
+                        [field_src.clone(), field_tgt.clone()].iter().cloned(),
+                    ),
+                }
+                .cast(interner);
+                let field_dispatch_goal = place_in_environment(field_dispatch_goal);
+                if !solver.has_unique_solution(db, &field_dispatch_goal.into_closed_goal(interner))
+                {
+                    return false;
+                }
+
+                true
             }
             _ => false,
         }

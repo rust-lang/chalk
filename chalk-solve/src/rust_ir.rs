@@ -121,6 +121,22 @@ pub struct AdtRepr<I: Interner> {
     pub int: Option<chalk_ir::Ty<I>>,
 }
 
+/// Information about the size and alignment of an ADT.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AdtSizeAlign {
+    one_zst: bool,
+}
+
+impl AdtSizeAlign {
+    pub fn from_one_zst(one_zst: bool) -> AdtSizeAlign {
+        AdtSizeAlign { one_zst }
+    }
+
+    pub fn one_zst(&self) -> bool {
+        self.one_zst
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// A rust intermediate represention (rust_ir) of a function definition/declaration.
 /// For example, in the following rust code:
@@ -259,6 +275,7 @@ pub enum WellKnownTrait {
     CoerceUnsized,
     DiscriminantKind,
     Generator,
+    DispatchFromDyn,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);

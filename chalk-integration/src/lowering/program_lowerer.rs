@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
 
-use super::{env::*, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
+use super::{env::*, lower_adt_size_align, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
 use crate::RawId;
@@ -143,6 +143,7 @@ impl ProgramLowerer {
     pub fn lower(self, program: &Program, raw_ids: &[RawId]) -> LowerResult<LoweredProgram> {
         let mut adt_data = BTreeMap::new();
         let mut adt_reprs = BTreeMap::new();
+        let mut adt_size_aligns = BTreeMap::new();
         let mut adt_variances = BTreeMap::new();
         let mut fn_def_data = BTreeMap::new();
         let mut fn_def_variances = BTreeMap::new();
@@ -186,6 +187,7 @@ impl ProgramLowerer {
                     let adt_id = AdtId(raw_id);
                     adt_data.insert(adt_id, Arc::new((d, adt_id).lower(&empty_env)?));
                     adt_reprs.insert(adt_id, Arc::new(d.repr.lower(&empty_env)?));
+                    adt_size_aligns.insert(adt_id, Arc::new(lower_adt_size_align(&d.flags)));
                     let n_params = d.all_parameters().len();
                     let variances = match d.variances.clone() {
                         Some(v) => {
@@ -480,6 +482,7 @@ impl ProgramLowerer {
             trait_kinds: self.trait_kinds,
             adt_data,
             adt_reprs,
+            adt_size_aligns,
             adt_variances,
             fn_def_data,
             fn_def_variances,

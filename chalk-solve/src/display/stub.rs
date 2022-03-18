@@ -90,6 +90,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         self.db.adt_repr(id)
     }
 
+    fn adt_size_align(&self, id: chalk_ir::AdtId<I>) -> Arc<crate::rust_ir::AdtSizeAlign> {
+        self.db.adt_size_align(id)
+    }
+
     fn fn_def_datum(
         &self,
         fn_def_id: chalk_ir::FnDefId<I>,
