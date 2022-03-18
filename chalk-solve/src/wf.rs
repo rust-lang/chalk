@@ -1078,8 +1078,9 @@ impl WfWellKnownConstraints {
     ///   - Self and the type parameter must be structs
     ///   - Self and the type parameter must have the same definitions
     ///   - Self must not be `#[repr(packed)]` or `#[repr(C)]`
-    ///   - Self must have exactly one field which is not a 1-ZST, and that field must have a
-    /// different type in the type parameter (i.e., it is a field being coerced)
+    ///   - Self must have exactly one field which is not a 1-ZST (there may be any number of 1-ZST
+    ///     fields), and that field must have a different type in the type parameter (i.e., it is
+    ///     the field being coerced)
     ///   - `DispatchFromDyn` is implemented for the type of the field being coerced.
     fn dispatch_from_dyn_constraint<I: Interner>(
         solver: &mut dyn Solver<I>,
