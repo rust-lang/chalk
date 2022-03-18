@@ -46,8 +46,16 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
             }
         };
 
+        // If the answer is trivially true and thus subsumes all others, then that's a unique-enough answer for us :)
+        if subst.value.is_identity_subst_with_no_constraints(interner) {
+            return Some(Solution::Unique(subst));
+        }
+
+        tracing::debug!("subst = {:?}", subst);
+
         // Exactly 1 unconditional answer?
         let next_answer = answers.peek_answer(&should_continue);
+        tracing::debug!("next_answer = {:?}", next_answer);
         if next_answer.is_quantum_exceeded() {
             if subst.value.subst.is_identity_subst(interner) {
                 return Some(Solution::Ambig(Guidance::Unknown));
@@ -83,9 +91,11 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
                 break Guidance::Unknown;
             }
 
+            // FIXME: This may cause us to miss some "trivially true" answers maybe? Haven't investigated very deeply.
             if !answers
                 .any_future_answer(|ref mut new_subst| new_subst.may_invalidate(interner, &subst))
             {
+                tracing::debug!("any_future_answer: false");
                 break Guidance::Definite(subst);
             }
 
@@ -96,7 +106,17 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
             }
 
             let new_subst = match answers.next_answer(&should_continue) {
-                AnswerResult::Answer(answer1) => answer1.subst,
+                AnswerResult::Answer(answer1) => {
+                    if answer1
+                        .subst
+                        .value
+                        .is_identity_subst_with_no_constraints(interner)
+                    {
+                        // If the answer is trivially true and thus subsumes all others, then that's a unique-enough answer for us :)
+                        return Some(Solution::Unique(answer1.subst));
+                    }
+                    answer1.subst
+                }
                 AnswerResult::Floundered => {
                     // FIXME: this doesn't trigger for any current tests
                     self.identity_constrained_subst(root_goal)
@@ -108,6 +128,7 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
                     break Guidance::Suggested(subst);
                 }
             };
+            tracing::debug!("new_subst = {:?}", new_subst);
             subst = merge_into_guidance(interner, &root_goal.canonical, subst, &new_subst);
             num_answers += 1;
         };

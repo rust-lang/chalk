@@ -103,10 +103,9 @@ impl<I: Interner> Solution<I> {
 
     pub fn is_trivial_and_always_true(&self, interner: I) -> bool {
         match self {
-            Solution::Unique(constrained_subst) => {
-                constrained_subst.value.subst.is_identity_subst(interner)
-                    && constrained_subst.value.constraints.is_empty(interner)
-            }
+            Solution::Unique(constrained_subst) => constrained_subst
+                .value
+                .is_identity_subst_with_no_constraints(interner),
             Solution::Ambig(_) => false,
         }
     }

@@ -812,9 +812,7 @@ fn env_bound_vars() {
                     WellFormed(&'a ())
                 }
             }
-        } yields[SolverChoice::slg_default()] {
-            expect![["Ambiguous; definite substitution for<?U0> { [?0 := '^0.0] }"]]
-        } yields[SolverChoice::recursive_default()] {
+        } yields {
             expect![[r#"Unique; for<?U0> { substitution [?0 := '^0.0] }"#]]
         }
         goal {
