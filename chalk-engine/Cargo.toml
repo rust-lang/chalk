@@ -2,7 +2,7 @@
 name = "chalk-engine"
 version = "0.81.0-dev.0"
 description = "Core trait engine from Chalk project"
-license = "Apache-2.0/MIT"
+license = "MIT OR Apache-2.0"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"
