@@ -2,7 +2,7 @@
 name = "chalk"
 version = "0.81.0-dev.0"
 description = "Model of the Rust trait system"
-license = "Apache-2.0/MIT"
+license = "MIT OR Apache-2.0"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"

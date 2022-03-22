@@ -2,7 +2,7 @@
 name = "chalk-derive"
 version = "0.81.0-dev.0"
 description = "A helper crate for use by chalk crates for `derive` macros."
-license = "Apache-2.0/MIT"
+license = "MIT OR Apache-2.0"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
 readme = "README.md"

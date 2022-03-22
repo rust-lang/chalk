@@ -1,7 +1,7 @@
 [package]
 name = "chalk-integration"
 version = "0.81.0-dev.0"
-license = "Apache-2.0/MIT"
+license = "MIT OR Apache-2.0"
 description = "Sample solver setup for Chalk"
 authors = ["Rust Compiler Team", "Chalk developers"]
 repository = "https://github.com/rust-lang/chalk"
