@@ -524,16 +524,13 @@ impl<I: Interner> Zip<I> for FnSubst<I> {
         b: &Self,
     ) -> Fallible<()> {
         let interner = zipper.interner();
-        if a.0.len(interner) != b.0.len(interner) {
-            return Err(NoSolution);
-        }
         // Parameters
-        for (a, b) in a.0.as_slice(interner)[..a.0.len(interner) - 1]
-            .iter()
-            .zip(b.0.as_slice(interner)[..b.0.len(interner) - 1].iter())
-        {
-            Zip::zip_with(zipper, variance.xform(Variance::Contravariant), a, b)?;
-        }
+        Zip::zip_with(
+            zipper,
+            variance.xform(Variance::Contravariant),
+            &a.0.as_slice(interner)[..a.0.len(interner) - 1],
+            &b.0.as_slice(interner)[..b.0.len(interner) - 1],
+        )?;
         // Return type
         Zip::zip_with(
             zipper,
