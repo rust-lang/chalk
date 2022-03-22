@@ -524,6 +524,9 @@ impl<I: Interner> Zip<I> for FnSubst<I> {
         b: &Self,
     ) -> Fallible<()> {
         let interner = zipper.interner();
+        if a.0.len(interner) != b.0.len(interner) {
+            return Err(NoSolution);
+        }
         // Parameters
         for (a, b) in a.0.as_slice(interner)[..a.0.len(interner) - 1]
             .iter()

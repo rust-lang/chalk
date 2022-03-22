@@ -150,6 +150,13 @@ fn forall_equality() {
         }
 
         goal {
+            // Function pointers with different parameters should not be equal.
+            fn(u32): Eq<fn(u32, u32)>
+        } yields {
+            expect![["No possible solution"]]
+        }
+
+        goal {
             // Variadic function pointers should not be equal to non-variadic fn pointers.
             fn(u8, ...): Eq<fn(u8)>
         } yields {
