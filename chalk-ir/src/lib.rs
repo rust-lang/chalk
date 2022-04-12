@@ -3048,15 +3048,6 @@ pub struct ConstrainedSubst<I: Interner> {
     pub constraints: Constraints<I>,
 }
 
-impl<I: Interner> ConstrainedSubst<I> {
-    /// True if this is an identity subst (it maps variable 0 to variable 0 etc)
-    /// and has no constraints. This represents an "unconditionally true" answer which
-    /// is a convenient thing to recognize.
-    pub fn is_identity_subst_with_no_constraints(&self, interner: I) -> bool {
-        self.subst.is_identity_subst(interner) && self.constraints.is_empty(interner)
-    }
-}
-
 /// The resulting substitution after solving a goal.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
 pub struct AnswerSubst<I: Interner> {
