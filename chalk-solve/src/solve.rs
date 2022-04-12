@@ -44,28 +44,41 @@ impl<I: Interner> Solution<I> {
     /// There are multiple candidate solutions, which may or may not agree on
     /// the values for existential variables; attempt to combine them. This
     /// operation does not depend on the order of its arguments.
-    //
-    // This actually isn't as precise as it could be, in two ways:
-    //
-    // a. It might be that while there are multiple distinct candidates, they
-    //    all agree about *some things*. To be maximally precise, we would
-    //    compute the intersection of what they agree on. It's not clear though
-    //    that this is actually what we want Rust's inference to do, and it's
-    //    certainly not what it does today.
-    //
-    // b. There might also be an ambiguous candidate and a successful candidate,
-    //    both with the same refined-goal. In that case, we could probably claim
-    //    success, since if the conditions of the ambiguous candidate were met,
-    //    we know the success would apply.  Example: `?0: Clone` yields ambiguous
-    //    candidate `Option<?0>: Clone` and successful candidate `Option<?0>:
-    //    Clone`.
-    //
-    // But you get the idea.
+    ///
+    /// This actually isn't as precise as it could be, in two ways:
+    ///
+    /// a. It might be that while there are multiple distinct candidates, they
+    ///    all agree about *some things*. To be maximally precise, we would
+    ///    compute the intersection of what they agree on. It's not clear though
+    ///    that this is actually what we want Rust's inference to do, and it's
+    ///    certainly not what it does today.
+    ///
+    /// b. There might also be an ambiguous candidate and a successful candidate,
+    ///    both with the same refined-goal. In that case, we could probably claim
+    ///    success, since if the conditions of the ambiguous candidate were met,
+    ///    we know the success would apply.  Example: `?0: Clone` yields ambiguous
+    ///    candidate `Option<?0>: Clone` and successful candidate `Option<?0>:
+    ///    Clone`.
+    ///
+    /// But you get the idea.
     pub fn combine(self, other: Solution<I>, interner: I) -> Solution<I> {
         use self::Guidance::*;
 
         if self == other {
             return self;
+        }
+
+        // Special case hack: if one solution is "true" without any constraints,
+        // that is always the combined result.
+        //
+        // This is not as general as it could be: ideally, if we had one solution
+        // that is Unique with a simpler substitution than the other one, or region constraints
+        // which are a subset, we'd combine them.
+        if self.is_trivial_and_always_true(interner) {
+            return self;
+        }
+        if other.is_trivial_and_always_true(interner) {
+            return other;
         }
 
         debug!(
@@ -86,6 +99,16 @@ impl<I: Interner> Solution<I> {
             _ => Unknown,
         };
         Solution::Ambig(guidance)
+    }
+
+    pub fn is_trivial_and_always_true(&self, interner: I) -> bool {
+        match self {
+            Solution::Unique(constrained_subst) => {
+                constrained_subst.value.subst.is_identity_subst(interner)
+                    && constrained_subst.value.constraints.is_empty(interner)
+            }
+            Solution::Ambig(_) => false,
+        }
     }
 
     /// View this solution purely in terms of type inference guidance

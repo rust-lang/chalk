@@ -154,11 +154,6 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         for program_clause in clauses {
             debug_span!("solve_from_clauses", clause = ?program_clause);
 
-            // If we have a completely ambiguous answer, it's not going to get better, so stop
-            if cur_solution == Some((Solution::Ambig(Guidance::Unknown), ClausePriority::High)) {
-                return Ok(Solution::Ambig(Guidance::Unknown));
-            }
-
             let ProgramClauseData(implication) = program_clause.data(self.interner());
             let infer = infer.clone();
             let subst = subst.clone();
@@ -184,11 +179,19 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             } else {
                 debug!("Error");
             }
+
+            if let Some((cur_solution, _)) = &cur_solution {
+                if cur_solution.is_trivial_and_always_true(self.interner()) {
+                    break;
+                }
+            }
         }
 
         if let Some((s, _)) = cur_solution {
+            debug!("solve_from_clauses: result = {:?}", s);
             Ok(s)
         } else {
+            debug!("solve_from_clauses: error");
             Err(NoSolution)
         }
     }

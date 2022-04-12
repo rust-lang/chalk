@@ -4,6 +4,7 @@ use tracing::debug;
 use chalk_ir::interner::Interner;
 use chalk_ir::{ClausePriority, DomainGoal, GenericArg};
 
+#[tracing::instrument(level = "Debug", skip(interner))]
 pub(super) fn with_priorities<I: Interner>(
     interner: I,
     domain_goal: &DomainGoal<I>,
@@ -12,7 +13,7 @@ pub(super) fn with_priorities<I: Interner>(
     b: Solution<I>,
     prio_b: ClausePriority,
 ) -> (Solution<I>, ClausePriority) {
-    match (prio_a, prio_b, a, b) {
+    let result = match (prio_a, prio_b, a, b) {
         (ClausePriority::High, ClausePriority::Low, higher, lower)
         | (ClausePriority::Low, ClausePriority::High, lower, higher) => {
             // if we have a high-priority solution and a low-priority solution,
@@ -34,7 +35,9 @@ pub(super) fn with_priorities<I: Interner>(
             }
         }
         (_, _, a, b) => (a.combine(b, interner), prio_a),
-    }
+    };
+    debug!(?result, "combined result");
+    result
 }
 
 fn calculate_inputs<I: Interner>(
