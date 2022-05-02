@@ -257,12 +257,13 @@ ClosureArgs: Vec<Ty> = {
 
 TraitDefn: TraitDefn = {
     <auto:AutoKeyword?> <marker:MarkerKeyword?> <upstream:UpstreamKeyword?> <fundamental:FundamentalKeyword?> <non_enumerable:NonEnumerableKeyword?> <coinductive:CoinductiveKeyword?> <object_safe:ObjectSafeKeyword?> <well_known:WellKnownTrait?> "trait" <n:Id><p:Angle<VariableKind>>
-        <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> "}" => TraitDefn
+        <w:QuantifiedWhereClauses> "{" <a:AssocTyDefn*> <ac:AssocConstDefn*> "}" => TraitDefn
     {
         name: n,
         variable_kinds: p,
         where_clauses: w,
         assoc_ty_defns: a,
+        assoc_const_defns: ac,
         well_known,
         flags: TraitFlags {
             auto: auto.is_some(),
@@ -287,6 +288,15 @@ AssocTyDefn: AssocTyDefn = {
             bounds: b.unwrap_or(vec![]),
         }
     }
+};
+
+AssocConstDefn: AssocConstDefn = {
+  "const" <name:Id> ":" <ty:Ty> ";" => {
+    AssocConstDefn {
+      name: name,
+      ty: ty,
+    }
+  }
 };
 
 OpaqueTyDefn: OpaqueTyDefn = {

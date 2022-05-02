@@ -142,6 +142,7 @@ pub struct TraitDefn {
     pub variable_kinds: Vec<VariableKind>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_defns: Vec<AssocTyDefn>,
+    pub assoc_const_defns: Vec<AssocConstDefn>,
     pub flags: TraitFlags,
     pub well_known: Option<WellKnownTrait>,
 }
@@ -180,6 +181,12 @@ pub struct AssocTyDefn {
     pub variable_kinds: Vec<VariableKind>,
     pub bounds: Vec<QuantifiedInlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssocConstDefn {
+    pub name: Identifier,
+    pub ty: Ty,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
