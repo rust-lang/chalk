@@ -276,6 +276,7 @@ pub struct Impl {
     pub polarity: Polarity,
     pub where_clauses: Vec<QuantifiedWhereClause>,
     pub assoc_ty_values: Vec<AssocTyValue>,
+    pub assoc_const_values: Vec<AssocConstValue>,
     pub impl_type: ImplType,
 }
 
@@ -291,6 +292,13 @@ pub struct AssocTyValue {
     pub variable_kinds: Vec<VariableKind>,
     pub value: Ty,
     pub default: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct AssocConstValue {
+    pub name: Identifier,
+    pub ty: Ty,
+    pub value: Const,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

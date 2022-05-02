@@ -1107,3 +1107,27 @@ fn projection_to_opaque() {
         }
     }
 }
+
+#[test]
+fn const_projection() {
+    test! {
+        program {
+          trait ConstTrait {
+              const ID: usize;
+          }
+          trait OtherTrait {}
+          impl OtherTrait for U where U: ConstTrait<ID = 3> {}
+          impl ConstTrait for () {
+            const ID: usize = 3;
+          }
+          impl ConstTrait for i32 {
+            const ID: usize = 5;
+          }
+        }
+
+        goal {
+        } yields {
+          expect![["Unique"]]
+        }
+    }
+}

@@ -354,7 +354,7 @@ QuantifiedInlineBound: QuantifiedInlineBound = {
 
 Impl: Impl = {
     <external:UpstreamKeyword?> "impl" <p:Angle<VariableKind>> <mark:"!"?> <t:Id> <a:Angle<GenericArg>> "for" <s:Ty>
-        <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> "}" =>
+        <w:QuantifiedWhereClauses> "{" <assoc:AssocTyValue*> <assoc_const:AssocConstValue*> "}" =>
     {
         let mut args = vec![GenericArg::Ty(s)];
         args.extend(a);
@@ -367,6 +367,7 @@ Impl: Impl = {
             },
             where_clauses: w,
             assoc_ty_values: assoc,
+            assoc_const_values: assoc_const,
             impl_type: external.map(|_| ImplType::External).unwrap_or(ImplType::Local),
         }
     },
@@ -395,6 +396,14 @@ AssocTyValue: AssocTyValue = {
         value: v,
         default: default.is_some(),
     },
+};
+
+AssocConstValue: AssocConstValue = {
+  "const" <n: Id> ":" <ty:Ty> "=" <v:Const> ";" => AssocConstValue {
+    name:n,
+    ty: ty,
+    value:v,
+  },
 };
 
 pub Ty: Ty = {

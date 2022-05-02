@@ -892,11 +892,18 @@ impl LowerWithEnv for Lifetime {
     }
 }
 
-impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
+impl LowerWithEnv
+    for (
+        &Impl,
+        ImplId<ChalkIr>,
+        &AssociatedTyValueIds,
+        &AssociatedConstValueIds,
+    )
+{
     type Lowered = rust_ir::ImplDatum<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let (impl_, impl_id, associated_ty_value_ids) = self;
+        let (impl_, impl_id, associated_ty_value_ids, associated_const_value_ids) = self;
 
         let polarity = impl_.polarity.lower();
         let binders = env.in_binders(impl_.all_parameters(), |env| {
@@ -926,6 +933,12 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
             .map(|atv| associated_ty_value_ids[&(*impl_id, atv.name.str.clone())])
             .collect();
 
+        let associated_const_value_ids = impl_
+            .assoc_const_values
+            .iter()
+            .map(|acv| associated_const_value_ids[&(*impl_id, acv.name.str.clone())])
+            .collect();
+
         debug!(?associated_ty_value_ids);
 
         Ok(rust_ir::ImplDatum {
@@ -933,6 +946,7 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTyValueIds) {
             binders,
             impl_type: impl_.impl_type.lower(),
             associated_ty_value_ids,
+            associated_const_value_ids,
         })
     }
 }

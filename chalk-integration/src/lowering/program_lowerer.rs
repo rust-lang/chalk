@@ -25,6 +25,10 @@ pub(super) struct ProgramLowerer {
 
     associated_ty_lookups: AssociatedTyLookups,
     associated_ty_value_ids: AssociatedTyValueIds,
+
+    associated_const_lookups: AssociatedConstLookups,
+    associated_const_value_ids: AssociatedConstValueIds,
+
     adt_ids: AdtIds,
     fn_def_ids: FnDefIds,
     closure_ids: ClosureIds,
@@ -153,6 +157,7 @@ impl ProgramLowerer {
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
+        let mut associated_const_values = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
@@ -316,7 +321,13 @@ impl ProgramLowerer {
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
                     let impl_datum = Arc::new(
-                        (impl_defn, impl_id, &self.associated_ty_value_ids).lower(&empty_env)?,
+                        (
+                            impl_defn,
+                            impl_id,
+                            &self.associated_ty_value_ids,
+                            &self.associated_const_value_ids,
+                        )
+                            .lower(&empty_env)?,
                     );
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
@@ -346,6 +357,19 @@ impl ProgramLowerer {
                                 associated_ty_id: lookup.id,
                                 value,
                             }),
+                        );
+                    }
+
+                    for acv in &impl_defn.assoc_const_values {
+                        let acv_id = self.associated_const_value_ids[&(impl_id, acv.name.str.clone())];
+                        let lookup = &self.associated_const_lookups[&(trait_id, acv.name.str.clone())];
+
+                        associated_const_values.insert(
+                          acv_id,
+                          Arc::new(rust_ir::AssociatedConstValue {
+                            impl_id,
+                            associated_const_id: lookup.id,
+                          }),
                         );
                     }
                 }
@@ -495,6 +519,7 @@ impl ProgramLowerer {
             trait_data,
             well_known_traits,
             impl_data,
+            associated_const_values,
             associated_ty_values,
             associated_ty_data,
             opaque_ty_ids: self.opaque_ty_ids,

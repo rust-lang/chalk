@@ -115,6 +115,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             binders,
             impl_type: ImplType::Local,
             associated_ty_value_ids: vec![],
+            associated_const_value_ids: vec![],
         })
     }
 

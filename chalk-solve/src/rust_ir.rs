@@ -18,8 +18,15 @@ use std::ops::ControlFlow;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 
+/// Identifier for an "associated const value" found in some impl.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AssociatedConstValueId<I: Interner>(pub I::DefId);
+
 chalk_ir::id_visit!(AssociatedTyValueId);
 chalk_ir::id_fold!(AssociatedTyValueId);
+
+chalk_ir::id_visit!(AssociatedConstValueId);
+chalk_ir::id_fold!(AssociatedConstValueId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
 pub struct ImplDatum<I: Interner> {
@@ -27,6 +34,7 @@ pub struct ImplDatum<I: Interner> {
     pub binders: Binders<ImplDatumBound<I>>,
     pub impl_type: ImplType,
     pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
+    pub associated_const_value_ids: Vec<AssociatedConstValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {
@@ -617,6 +625,33 @@ pub struct AssociatedTyValue<I: Interner> {
     /// }
     /// ```
     pub value: Binders<AssociatedTyValueBound<I>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+pub struct AssociatedConstValue<I: Interner> {
+    /// Impl in which this associated type value is found.  You might
+    /// need to look at this to find the generic parameters defined on
+    /// the impl, for example.
+    ///
+    /// ```ignore
+    /// impl Iterator for Foo { // <-- refers to this impl
+    ///     const Item: usize = XXX; // <-- (where this is self)
+    /// }
+    /// ```
+    pub impl_id: ImplId<I>,
+
+    /// Associated type being defined.
+    ///
+    /// ```ignore
+    /// impl Iterator for Foo {
+    ///     const Item: usize = XXX; // <-- (where this is self)
+    /// }
+    /// ...
+    /// trait Iterator {
+    ///     const Item: usize; // <-- refers to this declaration here!
+    /// }
+    /// ```
+    pub associated_const_id: AssocItemId<I>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]

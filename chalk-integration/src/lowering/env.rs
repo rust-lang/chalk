@@ -5,7 +5,7 @@ use chalk_ir::{
 };
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
-use chalk_solve::rust_ir::AssociatedTyValueId;
+use chalk_solve::rust_ir::{AssociatedConstValueId, AssociatedTyValueId};
 use std::collections::BTreeMap;
 
 use crate::error::RustIrError;
@@ -28,6 +28,10 @@ pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
+
+pub type AssociatedConstLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedConstLookup>;
+pub type AssociatedConstValueIds =
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedConstValueId<ChalkIr>>;
 pub type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
 
 pub type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
@@ -73,6 +77,21 @@ pub struct Env<'k> {
 pub struct AssociatedTyLookup {
     pub id: chalk_ir::AssocItemId<ChalkIr>,
     pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
+}
+
+/// Information about an associated const **declaration** (i.e., an
+/// `AssociatedConstDatum`). This information is gathered in the first
+/// phase of creating the Rust IR and is then later used to lookup the
+/// "id" of an associated const.
+///
+/// ```ignore
+/// trait Foo {
+///     const Bar: <Ty> = XXX; // <-- associated const declaration
+/// }
+/// ```
+#[derive(Debug, PartialEq, Eq)]
+pub struct AssociatedConstLookup {
+    pub id: chalk_ir::AssocItemId<ChalkIr>,
 }
 
 pub enum TypeLookup<'k> {

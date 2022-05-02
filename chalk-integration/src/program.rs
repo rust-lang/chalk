@@ -10,6 +10,7 @@ use chalk_ir::{
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
+    AssociatedConstValue, AssociatedConstValueId,
     ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum,
     ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
@@ -77,6 +78,10 @@ pub struct Program {
     /// For each associated ty value `type Foo = XXX` found in an impl:
     pub associated_ty_values:
         BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
+
+    /// For each associated const value `const Foo: <Ty> = XXX` found in an impl:
+    pub associated_const_values:
+        BTreeMap<AssociatedConstValueId<ChalkIr>, Arc<AssociatedConstValue<ChalkIr>>>,
 
     // From opaque type name to item-id. Used during lowering only.
     pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
