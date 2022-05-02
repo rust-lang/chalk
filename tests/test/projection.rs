@@ -1116,7 +1116,7 @@ fn const_projection() {
               const ID: usize;
           }
           trait OtherTrait {}
-          impl OtherTrait for U where U: ConstTrait<ID = 3> {}
+          impl OtherTrait for U where U: ConstTrait<const ID = 3> {}
           impl ConstTrait for () {
             const ID: usize = 3;
           }

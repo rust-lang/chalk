@@ -588,6 +588,14 @@ InlineClause: Clause = {
 WhereClause: WhereClause = {
     <t:TraitRef<":">> => WhereClause::Implemented { trait_ref: t },
 
+    <s:Ty> ":" <t:Id> "<" "const" <name:Id> "=" <val: Const> ">" => {
+        let args = vec![GenericArg::Ty(s)];
+        let trait_ref = TraitRef { trait_name: t, args: args };
+        let projection = ProjectionTerm { trait_ref, name, args: vec![] };
+
+        WhereClause::ConstProjectionEq { projection, val }
+    },
+
     // `T: Foo<U = Bar>` -- projection equality
     <s:Ty> ":" <t:Id> "<" <a:(<Comma<GenericArg>> ",")?> <name:Id> <a2:Angle<GenericArg>>
         "=" <ty:Ty> ">" =>

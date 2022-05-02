@@ -728,6 +728,26 @@ impl<I: Interner> TyKind<I> {
                             dyn_flags |= alias_eq.alias.compute_flags(interner);
                             dyn_flags |= alias_eq.ty.data(interner).flags;
                         }
+                        WhereClause::ConstEq(ct_eq) => {
+                            // TODO it's not a type projection but is that fine?
+                            // TODO do I need to add other flags here?
+                            dyn_flags |= TypeFlags::HAS_TY_PROJECTION;
+                            let const_data = ct_eq.ct.data(interner);
+                            dyn_flags |= const_data.ty.data(interner).flags
+                                | match const_data.value {
+                                    ConstValue::BoundVar(_) | ConstValue::Concrete(_) => {
+                                        TypeFlags::empty()
+                                    }
+                                    ConstValue::InferenceVar(_) => {
+                                        TypeFlags::HAS_CT_INFER
+                                            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                                    }
+                                    ConstValue::Placeholder(_) => {
+                                        TypeFlags::HAS_CT_PLACEHOLDER
+                                            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
+                                    }
+                                }
+                        }
                         WhereClause::LifetimeOutlives(lifetime_outlives) => {
                             dyn_flags |= lifetime_outlives.a.compute_flags(interner)
                                 | lifetime_outlives.b.compute_flags(interner);
@@ -1743,6 +1763,8 @@ pub enum WhereClause<I: Interner> {
     LifetimeOutlives(LifetimeOutlives<I>),
     /// Type outlives a lifetime.
     TypeOutlives(TypeOutlives<I>),
+    /// Const is equal to another const
+    ConstEq(ConstEq<I>),
 }
 
 impl<I: Interner> Copy for WhereClause<I>
@@ -1750,6 +1772,7 @@ where
     I::InternedSubstitution: Copy,
     I::InternedLifetime: Copy,
     I::InternedType: Copy,
+    I::InternedConst: Copy,
 {
 }
 
@@ -1908,6 +1931,7 @@ where
     I::InternedSubstitution: Copy,
     I::InternedLifetime: Copy,
     I::InternedType: Copy,
+    I::InternedConst: Copy,
 {
 }
 
@@ -1939,6 +1963,7 @@ impl<I: Interner> WhereClause<I> {
         match self {
             WhereClause::Implemented(trait_ref) => Some(trait_ref.trait_id),
             WhereClause::AliasEq(_) => None,
+            WhereClause::ConstEq(_) => None,
             WhereClause::LifetimeOutlives(_) => None,
             WhereClause::TypeOutlives(_) => None,
         }
@@ -2043,6 +2068,26 @@ where
 }
 
 impl<I: Interner> HasInterner for AliasEq<I> {
+    type Interner = I;
+}
+
+/// Proves **equality** between an alias and a type.
+#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
+#[allow(missing_docs)]
+pub struct ConstEq<I: Interner> {
+    /// The id for the associated type member.
+    pub term: AssocItemId<I>,
+
+    pub ct: Const<I>,
+}
+impl<I: Interner> Copy for ConstEq<I>
+where
+    I::InternedSubstitution: Copy,
+    I::InternedConst: Copy,
+{
+}
+
+impl<I: Interner> HasInterner for ConstEq<I> {
     type Interner = I;
 }
 
@@ -2610,6 +2655,7 @@ pub enum GoalData<I: Interner> {
 impl<I: Interner> Copy for GoalData<I>
 where
     I::InternedType: Copy,
+    I::InternedConst: Copy,
     I::InternedLifetime: Copy,
     I::InternedGenericArg: Copy,
     I::InternedSubstitution: Copy,

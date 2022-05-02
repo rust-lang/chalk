@@ -171,6 +171,12 @@ impl LowerWithEnv for WhereClause {
                 }),
                 chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
             ],
+            WhereClause::ConstProjectionEq { projection, val } => {
+                vec![chalk_ir::WhereClause::ConstEq(chalk_ir::ConstEq {
+                    term: chalk_ir::AliasTy::Projection(projection.lower(env)?),
+                    ct: val.lower(env)?,
+                })]
+            }
             WhereClause::LifetimeOutlives { a, b } => {
                 vec![chalk_ir::WhereClause::LifetimeOutlives(
                     chalk_ir::LifetimeOutlives {

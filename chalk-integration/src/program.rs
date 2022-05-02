@@ -9,10 +9,10 @@ use chalk_ir::{
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
-    AssociatedConstValue, AssociatedConstValueId,
-    ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum,
-    ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AdtSizeAlign, AssociatedConstValue, AssociatedConstValueId,
+    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
+    FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum, ImplType,
+    OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;

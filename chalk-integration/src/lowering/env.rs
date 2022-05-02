@@ -29,7 +29,8 @@ pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), Ass
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
 
-pub type AssociatedConstLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedConstLookup>;
+pub type AssociatedConstLookups =
+    BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedConstLookup>;
 pub type AssociatedConstValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedConstValueId<ChalkIr>>;
 pub type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;

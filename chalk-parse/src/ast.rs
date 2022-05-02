@@ -455,10 +455,26 @@ impl fmt::Display for Identifier {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WhereClause {
-    Implemented { trait_ref: TraitRef },
-    ProjectionEq { projection: ProjectionTerm, ty: Ty },
-    LifetimeOutlives { a: Lifetime, b: Lifetime },
-    TypeOutlives { ty: Ty, lifetime: Lifetime },
+    Implemented {
+        trait_ref: TraitRef,
+    },
+    ProjectionEq {
+        projection: ProjectionTerm,
+        ty: Ty,
+    },
+    ConstProjectionEq {
+        projection: ProjectionTerm,
+        val: Const,
+    },
+
+    LifetimeOutlives {
+        a: Lifetime,
+        b: Lifetime,
+    },
+    TypeOutlives {
+        ty: Ty,
+        lifetime: Lifetime,
+    },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

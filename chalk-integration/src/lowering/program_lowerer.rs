@@ -361,15 +361,17 @@ impl ProgramLowerer {
                     }
 
                     for acv in &impl_defn.assoc_const_values {
-                        let acv_id = self.associated_const_value_ids[&(impl_id, acv.name.str.clone())];
-                        let lookup = &self.associated_const_lookups[&(trait_id, acv.name.str.clone())];
+                        let acv_id =
+                            self.associated_const_value_ids[&(impl_id, acv.name.str.clone())];
+                        let lookup =
+                            &self.associated_const_lookups[&(trait_id, acv.name.str.clone())];
 
                         associated_const_values.insert(
-                          acv_id,
-                          Arc::new(rust_ir::AssociatedConstValue {
-                            impl_id,
-                            associated_const_id: lookup.id,
-                          }),
+                            acv_id,
+                            Arc::new(rust_ir::AssociatedConstValue {
+                                impl_id,
+                                associated_const_id: lookup.id,
+                            }),
                         );
                     }
                 }

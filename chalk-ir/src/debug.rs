@@ -786,11 +786,18 @@ impl<I: Interner> Debug for AliasEq<I> {
     }
 }
 
+impl<I: Interner> Debug for ConstEq<I> {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(fmt, "ConstEq(const {:?} = {:?})", self.term, self.ct)
+    }
+}
+
 impl<I: Interner> Debug for WhereClause<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
             WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
+            WhereClause::ConstEq(a) => write!(fmt, "{:?}", a),
             WhereClause::LifetimeOutlives(l_o) => write!(fmt, "{:?}", l_o),
             WhereClause::TypeOutlives(t_o) => write!(fmt, "{:?}", t_o),
         }
