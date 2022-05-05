@@ -154,6 +154,10 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<I> for IdCollector<'i, I, D
         match where_clause {
             WhereClause::Implemented(trait_ref) => self.record(trait_ref.trait_id),
             WhereClause::AliasEq(alias_eq) => self.visit_alias(&alias_eq.alias),
+            WhereClause::ConstEq(const_eq) => {
+                self.db.associated_const_data(const_eq.term);
+                self.visit_const(&const_eq.ct, outer_binder)?;
+            }
             WhereClause::LifetimeOutlives(_lifetime_outlives) => (),
             WhereClause::TypeOutlives(_type_outlives) => (),
         }

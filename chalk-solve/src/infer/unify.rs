@@ -672,6 +672,9 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                         self.table.new_variable(universe_index).to_ty(interner);
                                     WhereClause::AliasEq(AliasEq { alias, ty })
                                 }
+                                WhereClause::ConstEq(ConstEq { term, ct }) => {
+                                    todo!();
+                                }
                                 WhereClause::TypeOutlives(_) => {
                                     let lifetime_var = self.table.new_variable(universe_index);
                                     let lifetime = lifetime_var.to_lifetime(interner);

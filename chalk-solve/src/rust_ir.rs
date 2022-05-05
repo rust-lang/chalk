@@ -524,6 +524,30 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AssociatedConstDatum<I: Interner> {
+    /// The trait this associated type is defined in.
+    pub trait_id: TraitId<I>,
+
+    /// The ID of this associated type
+    pub id: AssocItemId<I>,
+
+    /// Name of this associated type.
+    pub name: I::Identifier,
+}
+
+// Manual implementation to avoid I::Identifier type.
+impl<I: Interner> Visit<I> for AssociatedConstDatum<I> {
+    fn visit_with<B>(
+        &self,
+        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
+        outer_binder: DebruijnIndex,
+    ) -> ControlFlow<B> {
+        try_break!(self.trait_id.visit_with(visitor, outer_binder));
+        self.id.visit_with(visitor, outer_binder)
+    }
+}
+
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]

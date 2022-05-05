@@ -158,6 +158,7 @@ impl ProgramLowerer {
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_const_values = BTreeMap::new();
+        let mut associated_const_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
@@ -316,6 +317,9 @@ impl ProgramLowerer {
                                 binders,
                             }),
                         );
+                    }
+                    for assoc_ct_defn in &trait_defn.assoc_const_defns {
+                        todo!();
                     }
                 }
                 Item::Impl(ref impl_defn) => {
@@ -522,6 +526,7 @@ impl ProgramLowerer {
             well_known_traits,
             impl_data,
             associated_const_values,
+            associated_const_data,
             associated_ty_values,
             associated_ty_data,
             opaque_ty_ids: self.opaque_ty_ids,

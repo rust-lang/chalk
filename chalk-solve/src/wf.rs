@@ -90,6 +90,10 @@ impl<I: Interner> Visitor<I> for InputTypeCollector<I> {
                 .clone()
                 .intern(self.interner)
                 .visit_with(self, outer_binder),
+            WhereClause::ConstEq(const_eq) => {
+                const_eq.term.visit_with(self, outer_binder)?;
+                const_eq.ct.visit_with(self, outer_binder)
+            }
             WhereClause::Implemented(trait_ref) => trait_ref.visit_with(self, outer_binder),
             WhereClause::TypeOutlives(TypeOutlives { ty, .. }) => ty.visit_with(self, outer_binder),
             WhereClause::LifetimeOutlives(..) => ControlFlow::Continue(()),

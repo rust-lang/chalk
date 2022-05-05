@@ -23,9 +23,10 @@ impl<I: Interner> IsCoinductive<I> for Goal<I> {
                     db.trait_datum(tr.trait_id).is_auto_trait()
                         || db.trait_datum(tr.trait_id).is_coinductive_trait()
                 }
-                WhereClause::AliasEq(..) => false,
-                WhereClause::LifetimeOutlives(..) => false,
-                WhereClause::TypeOutlives(..) => false,
+                WhereClause::AliasEq(_)
+                | WhereClause::LifetimeOutlives(..)
+                | WhereClause::TypeOutlives(..)
+                | WhereClause::ConstEq(_) => false,
             },
             GoalData::DomainGoal(DomainGoal::WellFormed(WellFormed::Trait(..))) => true,
             GoalData::Quantified(QuantifierKind::ForAll, goal) => {

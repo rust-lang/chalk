@@ -14,6 +14,7 @@ use chalk_ir::{
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
+    AssociatedConstDatum,
     ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum,
     ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
@@ -89,6 +90,13 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
 
     fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.program_ir().unwrap().associated_ty_data(ty)
+    }
+
+    fn associated_const_data(
+        &self,
+        ct: AssocItemId<ChalkIr>,
+    ) -> Arc<AssociatedConstDatum<ChalkIr>> {
+        self.program_ir().unwrap().associated_const_data(ct)
     }
 
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {

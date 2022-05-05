@@ -570,6 +570,9 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 })
             });
         }
+        DomainGoal::Holds(WhereClause::ConstEq(const_eq)) => {
+            todo!()
+        }
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)
@@ -1071,6 +1074,7 @@ fn match_ty<I: Interner>(
                                 vec![DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()))]
                             }
                             WhereClause::AliasEq(_)
+                            | WhereClause::ConstEq(_)
                             | WhereClause::LifetimeOutlives(_)
                             | WhereClause::TypeOutlives(_) => vec![],
                         }

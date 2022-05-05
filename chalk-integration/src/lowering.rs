@@ -173,7 +173,8 @@ impl LowerWithEnv for WhereClause {
             ],
             WhereClause::ConstProjectionEq { projection, val } => {
                 vec![chalk_ir::WhereClause::ConstEq(chalk_ir::ConstEq {
-                    term: chalk_ir::AliasTy::Projection(projection.lower(env)?),
+                    // TODO maybe this should just be a projection term instead
+                    term: projection.lower(env)?.associated_term_id,
                     ct: val.lower(env)?,
                 })]
             }

@@ -206,7 +206,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                         )
                     }
                     // FIXME: Associated item bindings are just taken as facts (?)
-                    WhereClause::AliasEq(_) => builder.push_fact(bound),
+                    WhereClause::AliasEq(_) | WhereClause::ConstEq(_) => builder.push_fact(bound),
                     WhereClause::LifetimeOutlives(..) => {}
                     WhereClause::TypeOutlives(..) => {}
                 });

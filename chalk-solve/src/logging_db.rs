@@ -128,6 +128,15 @@ where
         ty_datum
     }
 
+    fn associated_const_data(
+        &self,
+        ct: chalk_ir::AssocItemId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedConstDatum<I>> {
+        let ct_datum = self.ws.db().associated_const_data(ct);
+        self.record(ct_datum.trait_id);
+        ct_datum
+    }
+
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
         self.record(trait_id);
         self.ws.db().trait_datum(trait_id)
@@ -400,6 +409,13 @@ where
         ty: chalk_ir::AssocItemId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         self.db.associated_ty_data(ty)
+    }
+
+    fn associated_const_data(
+        &self,
+        ct: chalk_ir::AssocItemId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedConstDatum<I>> {
+        self.db.associated_const_data(ct)
     }
 
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {

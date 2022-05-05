@@ -93,9 +93,10 @@ pub fn super_traits<I: Interner>(
                                 }
                                 Some(tr.clone())
                             }
-                            WhereClause::AliasEq(_) => None,
-                            WhereClause::LifetimeOutlives(..) => None,
-                            WhereClause::TypeOutlives(..) => None,
+                            WhereClause::AliasEq(_)
+                            | WhereClause::LifetimeOutlives(..)
+                            | WhereClause::ConstEq(_)
+                            | WhereClause::TypeOutlives(..) => None,
                         })
                     })
                     .collect::<Vec<_>>()

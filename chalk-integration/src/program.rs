@@ -10,6 +10,7 @@ use chalk_ir::{
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedConstValue, AssociatedConstValueId,
+    AssociatedConstDatum,
     AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
     FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum, ImplType,
     OpaqueTyDatum, TraitDatum, WellKnownTrait,
@@ -103,6 +104,9 @@ pub struct Program {
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocItemId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
+
+    /// For each associated const declaration `const Foo` found in a trait:
+    pub associated_const_data: BTreeMap<AssocItemId<ChalkIr>, Arc<AssociatedConstDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -393,6 +397,10 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
         self.associated_ty_data[&ty].clone()
+    }
+
+    fn associated_const_data(&self, ct: AssocItemId<ChalkIr>) -> Arc<AssociatedConstDatum<ChalkIr>> {
+        self.associated_const_data[&ct].clone()
     }
 
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {

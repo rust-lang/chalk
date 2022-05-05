@@ -44,7 +44,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
     fn associated_ty_data(
         &self,
         ty: chalk_ir::AssocItemId<I>,
-    ) -> std::sync::Arc<crate::rust_ir::AssociatedTyDatum<I>> {
+    ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         let mut v = (*self.db.associated_ty_data(ty)).clone();
         v.binders = Binders::new(
             v.binders.binders.clone(),
@@ -54,6 +54,13 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
             },
         );
         Arc::new(v)
+    }
+
+    fn associated_const_data(
+        &self,
+        ct: chalk_ir::AssocItemId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedConstDatum<I>> {
+        Arc::new((*self.db.associated_const_data(ct)).clone())
     }
 
     fn trait_datum(
