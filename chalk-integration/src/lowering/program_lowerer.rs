@@ -71,6 +71,14 @@ impl ProgramLowerer {
                         self.associated_term_lookups
                             .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                     }
+                    for defn in &d.assoc_const_defns {
+                        let lookup = AssociatedTermLookup {
+                            id: AssocItemId(self.next_item_id()),
+                            addl_variable_kinds: vec![],
+                        };
+                        self.associated_term_lookups
+                            .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
+                    }
                 }
 
                 Item::Impl(d) => {
@@ -314,7 +322,25 @@ impl ProgramLowerer {
                         );
                     }
                     for assoc_ct_defn in &trait_defn.assoc_const_defns {
-                        todo!();
+                        let lookup = &self.associated_term_lookups
+                            [&(trait_id, assoc_ct_defn.name.str.clone())];
+                        // assoc const has no parameters
+                        let binders =
+                            empty_env.in_binders(trait_defn.all_parameters(), |_env| {
+                                Ok(rust_ir::AssociatedTermDatumBound {
+                                    bounds: vec![],
+                                    where_clauses: vec![],
+                                })
+                            })?;
+                        associated_term_data.insert(
+                            lookup.id,
+                            Arc::new(rust_ir::AssociatedTermDatum {
+                                trait_id: TraitId(raw_id),
+                                id: lookup.id,
+                                name: assoc_ct_defn.name.str.clone(),
+                                binders,
+                            }),
+                        );
                     }
                 }
                 Item::Impl(ref impl_defn) => {

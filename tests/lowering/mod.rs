@@ -20,13 +20,14 @@ fn lower_assoc_term() {
             trait Bar {
                 const N: usize;
             }
-            struct Foo;
+            struct Foo {}
             impl Bar for Foo {
                const N: usize = 100;
             }
         }
     }
 
+    /*
     lowering_success! {
         program {
             trait Bar {
@@ -38,6 +39,7 @@ fn lower_assoc_term() {
             }
         }
     }
+    */
 }
 
 #[test]
