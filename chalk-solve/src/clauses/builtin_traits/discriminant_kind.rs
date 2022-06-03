@@ -1,8 +1,7 @@
 use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
-    AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind, TyVariableKind,
-    Term,
+    AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Term, Ty, TyKind, TyVariableKind,
 };
 
 pub fn add_discriminant_clauses<I: Interner>(

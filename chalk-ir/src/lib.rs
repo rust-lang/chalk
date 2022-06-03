@@ -743,11 +743,11 @@ impl<I: Interner> TyKind<I> {
                         WhereClause::AliasEq(alias_eq) => {
                             dyn_flags |= alias_eq.alias.compute_flags(interner);
                             dyn_flags |= match &alias_eq.term {
-                              Term::Ty(ty) => ty.data(interner).flags,
-                              Term::Const(ct) => {
-                                let const_data = ct.data(interner);
-                                const_data.ty.data(interner).flags
-                              },
+                                Term::Ty(ty) => ty.data(interner).flags,
+                                Term::Const(ct) => {
+                                    let const_data = ct.data(interner);
+                                    const_data.ty.data(interner).flags
+                                }
                             };
                         }
                         WhereClause::LifetimeOutlives(lifetime_outlives) => {

@@ -127,8 +127,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermValue<I> {
                 Normalize {
                     alias: AliasTy::Projection(projection.clone()),
                     term: match assoc_ty_value {
-                      AssociatedTermValueBound::Ty(ty) => Term::Ty(ty),
-                      AssociatedTermValueBound::Const(ct) => Term::Const(ct),
+                        AssociatedTermValueBound::Ty(ty) => Term::Ty(ty),
+                        AssociatedTermValueBound::Const(ct) => Term::Const(ct),
                     },
                 },
                 impl_where_clauses.chain(assoc_ty_where_clauses),
@@ -170,7 +170,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                 DomainGoal::Holds(
                     AliasEq {
                         alias: alias.clone(),
-                        ty: builder.db.hidden_opaque_type(self.opaque_ty_id),
+                        term: Term::Ty(builder.db.hidden_opaque_type(self.opaque_ty_id)),
                     }
                     .cast(interner),
                 ),
@@ -181,7 +181,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
             builder.push_fact(DomainGoal::Holds(
                 AliasEq {
                     alias,
-                    ty: alias_placeholder_ty.clone(),
+                    term: Term::Ty(alias_placeholder_ty.clone()),
                 }
                 .cast(interner),
             ));
@@ -825,7 +825,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
 
                 let projection_eq = AliasEq {
                     alias: AliasTy::Projection(projection.clone()),
-                    ty: ty.clone(),
+                    term: Term::Ty(ty.clone()),
                 };
 
                 // Fallback rule. The solver uses this to move between the projection
@@ -907,7 +907,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
                     // `AliasEq(<T as Foo>::Assoc = U)`
                     let projection_eq = AliasEq {
                         alias: AliasTy::Projection(projection),
-                        ty,
+                        term: Term::Ty(ty),
                     };
 
                     // Projection equality rule from above.

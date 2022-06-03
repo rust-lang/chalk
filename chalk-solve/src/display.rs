@@ -159,7 +159,7 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                                         assoc_ty_datum,
                                         &trait_params[1..],
                                         assoc_type_params,
-                                        &alias_eq.ty,
+                                        &alias_eq.term,
                                     )
                                     .fmt(f)
                                 }
@@ -201,7 +201,7 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
     assoc_ty_datum: Arc<AssociatedTermDatum<I>>,
     trait_params: &'a [GenericArg<I>],
     assoc_ty_params: &'a [GenericArg<I>],
-    assoc_ty_value: &'a Ty<I>,
+    assoc_term_value: &'a Term<I>,
 ) -> impl Display + 'a {
     as_display(move |f| {
         write!(f, "{}<", assoc_ty_datum.trait_id.display(s))?;
@@ -218,7 +218,7 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
             assoc_ty_params.iter().map(|param| param.display(s)),
             ", "
         )?;
-        write!(f, "={}>", assoc_ty_value.display(s))?;
+        write!(f, "={}>", assoc_term_value.display(s))?;
         Ok(())
     })
 }

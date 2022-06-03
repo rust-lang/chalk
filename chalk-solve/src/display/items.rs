@@ -299,12 +299,10 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         write!(f, "{{")?;
         {
             let s = &s.add_indent();
-            let assoc_ty_values = self.associated_term_value_ids.iter().map(|av| {
-                s.db()
-                    .associated_term_value(*av)
-                    .display(s)
-                    .to_string()
-            });
+            let assoc_ty_values = self
+                .associated_term_value_ids
+                .iter()
+                .map(|av| s.db().associated_term_value(*av).display(s).to_string());
             write_joined_non_empty_list!(f, "\n{}\n", assoc_ty_values, "\n")?;
         }
         write!(f, "}}")?;
@@ -445,8 +443,8 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTermValue<I> {
         write!(f, "{}type {}", s.indent(), assoc_ty_data.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", assoc_ty_value_display, ", ")?;
         match value {
-          AssociatedTermValueBound::Ty(ty) => write!(f, " = {};", ty.display(s))?,
-          AssociatedTermValueBound::Const(ct) => write!(f, " = const {};", ct.display(s))?,
+            AssociatedTermValueBound::Ty(ty) => write!(f, " = {};", ty.display(s))?,
+            AssociatedTermValueBound::Const(ct) => write!(f, " = const {};", ct.display(s))?,
         }
         Ok(())
     }

@@ -108,7 +108,9 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {
     fn visit_alias(&mut self, alias: &AliasTy<I>) {
         match alias {
             AliasTy::Projection(projection_ty) => {
-                let assoc_ty_datum = self.db.associated_term_data(projection_ty.associated_term_id);
+                let assoc_ty_datum = self
+                    .db
+                    .associated_term_data(projection_ty.associated_term_id);
                 self.record(assoc_ty_datum.trait_id)
             }
             AliasTy::Opaque(opaque_ty) => self.record(opaque_ty.opaque_ty_id),

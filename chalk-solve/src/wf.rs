@@ -566,8 +566,8 @@ fn compute_assoc_ty_goal<I: Interner>(
     // Create `forall<T, 'a> { .. }`
     Some(gb.forall(
         &assoc.value.map_ref(|v| match v {
-          AssociatedTermValueBound::Ty(ty) => ty,
-          AssociatedTermValueBound::Const(ct) => todo!(),
+            AssociatedTermValueBound::Ty(ty) => ty,
+            AssociatedTermValueBound::Const(_ct) => todo!(),
         }),
         assoc_term_id,
         |gb, assoc_ty_substitution, value_ty, assoc_ty_id| {

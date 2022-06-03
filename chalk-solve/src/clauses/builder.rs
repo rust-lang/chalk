@@ -207,7 +207,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     /// passing a const representing this new const variable in as an
     /// argument.
     pub fn push_bound_const(&mut self, ty: Ty<I>, op: impl FnOnce(&mut Self, Const<I>)) {
-      let interner = self.interner();
+        let interner = self.interner();
         let binders = Binders::new(
             VariableKinds::from1(interner, VariableKind::Const(ty)),
             PhantomData::<I>,
@@ -219,7 +219,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
                 .unwrap()
                 .assert_const_ref(interner)
                 .clone();
-            op(this, lifetime)
+            op(this, ct)
         });
     }
 

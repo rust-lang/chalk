@@ -296,6 +296,15 @@ impl<I: Interner> RenderAsRust<I> for Const<I> {
     }
 }
 
+impl<I: Interner> RenderAsRust<I> for Term<I> {
+    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Term::Ty(ty) => ty.fmt(s, f),
+            Term::Const(ct) => ct.fmt(s, f),
+        }
+    }
+}
+
 impl<I: Interner> RenderAsRust<I> for GenericArg<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // delegate to GenericArgData

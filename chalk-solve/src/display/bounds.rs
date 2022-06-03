@@ -37,7 +37,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEqBound<I> {
             s.db().associated_term_data(self.associated_ty_id),
             &self.trait_bound.args_no_self,
             &self.parameters,
-            &self.value,
+            &Term::Ty(self.value.clone()),
         )
         .fmt(f)
     }
@@ -144,7 +144,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
                         assoc_ty_datum,
                         &trait_params[1..],
                         assoc_type_params,
-                        &self.ty
+                        &self.term,
                     ),
                 )
             }

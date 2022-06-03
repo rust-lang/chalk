@@ -465,14 +465,15 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     self.environment,
                     AliasEq {
                         alias: alias.clone(),
-                        ty: ty.clone(),
+                        term: Term::Ty(ty.clone()),
                     }
                     .cast(interner),
                 ));
                 Ok(())
             }
             Variance::Covariant | Variance::Contravariant => {
-                let var = self
+                // TODO need to convert this into type or const.
+                let term = self
                     .table
                     .new_variable(UniverseIndex::root())
                     .to_ty(interner);
@@ -480,11 +481,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     self.environment,
                     AliasEq {
                         alias: alias.clone(),
-                        ty: var.clone(),
+                        term: Term::Ty(term.clone()),
                     }
                     .cast(interner),
                 ));
-                self.relate_ty_ty(variance, &var, ty)
+                // TODO this should vary whether it relates a type or a const
+                self.relate_ty_ty(variance, &term, ty)
             }
         }
     }
@@ -629,7 +631,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                     })
                                 }
                                 WhereClause::AliasEq(alias_eq) => {
-                                    let AliasEq { alias, ty: _ } = alias_eq;
+                                    let AliasEq { alias, term: _ } = alias_eq;
                                     let alias = match alias {
                                         AliasTy::Opaque(opaque_ty) => {
                                             let OpaqueTy {
@@ -668,9 +670,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                             })
                                         }
                                     };
-                                    let ty =
+                                    // TODO need to convert this to a type or a const.
+                                    let term =
                                         self.table.new_variable(universe_index).to_ty(interner);
-                                    WhereClause::AliasEq(AliasEq { alias, ty })
+                                    let term = Term::Ty(term);
+                                    WhereClause::AliasEq(AliasEq { alias, term })
                                 }
                                 WhereClause::TypeOutlives(_) => {
                                     let lifetime_var = self.table.new_variable(universe_index);

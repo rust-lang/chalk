@@ -7,9 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocItemId, Binders, DebruijnIndex, FnDefId,
-    GenericArg, ImplId, OpaqueTyId, ProjectionTerm, QuantifiedWhereClause, Substitution,
-    ToGenericArg, TraitId, TraitRef, Ty, TyKind, Const, VariableKind, WhereClause, WithKind,
+    try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocItemId, Binders, Const, DebruijnIndex,
+    FnDefId, GenericArg, ImplId, OpaqueTyId, ProjectionTerm, QuantifiedWhereClause, Substitution,
+    Term, ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 use std::ops::ControlFlow;
@@ -448,7 +448,8 @@ impl<I: Interner> AliasEqBound<I> {
                     associated_term_id: self.associated_ty_id,
                     substitution,
                 }),
-                ty: self.value.clone(),
+                // TODO here self.value should be a Term already.
+                term: Term::Ty(self.value.clone()),
             }),
         ]
     }

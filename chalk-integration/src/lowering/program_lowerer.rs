@@ -5,8 +5,8 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
-    self, Anonymize, GeneratorDatum, GeneratorInputOutputDatum,
-    GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
+    self, Anonymize, GeneratorDatum, GeneratorInputOutputDatum, GeneratorWitnessDatum,
+    GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
 };
 use rust_ir::IntoWhereClauses;
 use std::collections::{BTreeMap, HashSet};
@@ -340,9 +340,7 @@ impl ProgramLowerer {
                         variable_kinds.extend(impl_defn.all_parameters());
 
                         let value = empty_env.in_binders(variable_kinds, |env| {
-                            Ok(rust_ir::AssociatedTermValueBound::Ty(
-                                atv.value.lower(env)?,
-                            ))
+                            Ok(rust_ir::AssociatedTermValueBound::Ty(atv.value.lower(env)?))
                         })?;
 
                         associated_term_values.insert(

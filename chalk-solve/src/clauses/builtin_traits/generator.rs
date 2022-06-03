@@ -2,7 +2,7 @@ use crate::clauses::ClauseBuilder;
 use crate::rust_ir::WellKnownTrait;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
-use chalk_ir::{AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind, Term};
+use chalk_ir::{AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Term, Ty, TyKind};
 
 /// Add implicit impls of the generator trait, i.e., add a clause that all generators implement
 /// `Generator` and clauses for `Generator`'s associated types.

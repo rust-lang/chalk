@@ -787,7 +787,7 @@ fn push_alias_implemented_clause<I: Interner>(
                     DomainGoal::Holds(WhereClause::Implemented(fresh_self_trait_ref)),
                     DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
                         alias: alias.clone(),
-                        ty: bound_var,
+                        term: Term::Ty(bound_var),
                     })),
                 ],
             );
@@ -825,12 +825,12 @@ fn push_alias_alias_eq_clause<I: Interner>(
                 ),
             );
             let fresh_alias = AliasTy::Projection(ProjectionTerm {
-                associated_term_id: projection_ty.associated_term_id,
+                associated_term_id: projection_term.associated_term_id,
                 substitution: fresh_self_subst,
             });
             builder.push_clause(
                 DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                    alias: AliasTy::Projection(projection_ty.clone()),
+                    alias: AliasTy::Projection(projection_term.clone()),
                     term: term.clone(),
                 })),
                 &[
@@ -840,7 +840,7 @@ fn push_alias_alias_eq_clause<I: Interner>(
                     })),
                     DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
                         alias: alias.clone(),
-                        term: bound_var,
+                        term: Term::Ty(bound_var),
                     })),
                 ],
             );
