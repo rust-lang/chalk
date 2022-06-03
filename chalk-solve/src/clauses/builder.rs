@@ -201,6 +201,28 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         });
     }
 
+    /// Push a single binder, for a const, at the end of the binder
+    /// list.  The indices of previously bound variables are
+    /// unaffected and hence the context remains usable. Invokes `op`,
+    /// passing a const representing this new const variable in as an
+    /// argument.
+    pub fn push_bound_const(&mut self, ty: Ty<I>, op: impl FnOnce(&mut Self, Const<I>)) {
+      let interner = self.interner();
+        let binders = Binders::new(
+            VariableKinds::from1(interner, VariableKind::Const(ty)),
+            PhantomData::<I>,
+        );
+        self.push_binders(binders, |this, PhantomData| {
+            let ct = this
+                .placeholders_in_scope()
+                .last()
+                .unwrap()
+                .assert_const_ref(interner)
+                .clone();
+            op(this, lifetime)
+        });
+    }
+
     pub fn interner(&self) -> I {
         self.db.interner()
     }

@@ -47,10 +47,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn custom_clauses(&self) -> Vec<ProgramClause<I>>;
 
     /// Returns the datum for the associated type with the given id.
-    fn associated_ty_data(&self, ty: AssocItemId<I>) -> Arc<AssociatedTyDatum<I>>;
-
-    /// Returns the datum for the associated type with the given id.
-    fn associated_const_data(&self, ty: AssocItemId<I>) -> Arc<AssociatedConstDatum<I>>;
+    fn associated_term_data(&self, ty: AssocItemId<I>) -> Arc<AssociatedTermDatum<I>>;
 
     /// Returns the datum for the definition with the given id.
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>>;
@@ -79,8 +76,8 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the impl with the given id.
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>>;
 
-    /// Returns the `AssociatedTyValue` with the given id.
-    fn associated_ty_value(&self, id: AssociatedTyValueId<I>) -> Arc<AssociatedTyValue<I>>;
+    /// Returns the `AssociatedTermValue` with the given id.
+    fn associated_term_value(&self, id: AssociatedTermValueId<I>) -> Arc<AssociatedTermValue<I>>;
 
     /// Returns the `OpaqueTyDatum` with the given id.
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>>;

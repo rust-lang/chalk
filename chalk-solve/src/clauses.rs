@@ -513,7 +513,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                         push_alias_alias_eq_clause(
                             builder,
                             proj.clone(),
-                            alias_eq.ty.clone(),
+                            alias_eq.term.clone(),
                             alias.clone(),
                         );
                         return Ok(clauses);
@@ -531,7 +531,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                     _ => {}
                 }
 
-                db.associated_ty_data(proj.associated_term_id)
+                db.associated_term_data(proj.associated_term_id)
                     .to_program_clauses(builder, environment)
             }
             AliasTy::Opaque(opaque_ty) => db
@@ -570,9 +570,6 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 })
             });
         }
-        DomainGoal::Holds(WhereClause::ConstEq(const_eq)) => {
-            todo!()
-        }
         DomainGoal::WellFormed(WellFormed::Trait(trait_ref))
         | DomainGoal::LocalImplAllowed(trait_ref) => {
             db.trait_datum(trait_ref.trait_id)
@@ -589,7 +586,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
         | DomainGoal::IsFullyVisible(ty)
         | DomainGoal::IsLocal(ty) => match_ty(builder, environment, ty)?,
         DomainGoal::FromEnv(_) => (), // Computed in the environment
-        DomainGoal::Normalize(Normalize { alias, ty: _ }) => match alias {
+        DomainGoal::Normalize(Normalize { alias, term: _ }) => match alias {
             AliasTy::Projection(proj) => {
                 // Normalize goals derive from `AssociatedTyValue` datums,
                 // which are found in impls. That is, if we are
@@ -602,7 +599,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 //     type Item = Bar; // <-- associated type value
                 // }
                 // ```
-                let associated_ty_datum = db.associated_ty_data(proj.associated_term_id);
+                let associated_ty_datum = db.associated_term_data(proj.associated_term_id);
                 let trait_id = associated_ty_datum.trait_id;
                 let trait_parameters = db.trait_parameters_from_projection(proj);
 
@@ -687,7 +684,7 @@ fn push_clauses_for_compatible_normalize<I: Interner>(
             for i in 0..type_parameters.len() {
                 builder.push_clause(
                     DomainGoal::Normalize(Normalize {
-                        ty: target_ty.clone(),
+                        term: Term::Ty(target_ty.clone()),
                         alias: AliasTy::Projection(projection.clone()),
                     }),
                     where_clauses
@@ -744,8 +741,8 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
 
         debug!(?impl_id);
 
-        for &atv_id in &impl_datum.associated_ty_value_ids {
-            let atv = builder.db.associated_ty_value(atv_id);
+        for &atv_id in &impl_datum.associated_term_value_ids {
+            let atv = builder.db.associated_term_value(atv_id);
             debug!(?atv_id, ?atv);
             atv.to_program_clauses(builder, environment);
         }
@@ -800,19 +797,19 @@ fn push_alias_implemented_clause<I: Interner>(
 
 fn push_alias_alias_eq_clause<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
-    projection_ty: ProjectionTerm<I>,
-    ty: Ty<I>,
+    projection_term: ProjectionTerm<I>,
+    term: Term<I>,
     alias: AliasTy<I>,
 ) {
     let interner = builder.interner();
     assert_eq!(
-        *projection_ty.self_type_parameter(interner).kind(interner),
+        *projection_term.self_type_parameter(interner).kind(interner),
         TyKind::Alias(alias.clone())
     );
 
     // TODO: instead generate clauses without reference to the specific type parameters of the goal?
-    let generalized = generalize::Generalize::apply(interner, (projection_ty, ty, alias));
-    builder.push_binders(generalized, |builder, (projection_ty, ty, alias)| {
+    let generalized = generalize::Generalize::apply(interner, (projection_term, term, alias));
+    builder.push_binders(generalized, |builder, (projection_term, term, alias)| {
         let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
 
         // forall<..., T> {
@@ -822,7 +819,7 @@ fn push_alias_alias_eq_clause<I: Interner>(
             let fresh_self_subst = Substitution::from_iter(
                 interner,
                 std::iter::once(bound_var.clone().cast(interner)).chain(
-                    projection_ty.substitution.as_slice(interner)[1..]
+                    projection_term.substitution.as_slice(interner)[1..]
                         .iter()
                         .cloned(),
                 ),
@@ -834,16 +831,16 @@ fn push_alias_alias_eq_clause<I: Interner>(
             builder.push_clause(
                 DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
                     alias: AliasTy::Projection(projection_ty.clone()),
-                    ty: ty.clone(),
+                    term: term.clone(),
                 })),
                 &[
                     DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
                         alias: fresh_alias,
-                        ty: ty.clone(),
+                        term: term.clone(),
                     })),
                     DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
                         alias: alias.clone(),
-                        ty: bound_var,
+                        term: bound_var,
                     })),
                 ],
             );
@@ -883,7 +880,7 @@ fn match_ty<I: Interner>(
         TyKind::Error => {}
         TyKind::AssociatedType(type_id, _) => builder
             .db
-            .associated_ty_data(*type_id)
+            .associated_term_data(*type_id)
             .to_program_clauses(builder, environment),
         TyKind::FnDef(fn_def_id, _) => builder
             .db
@@ -1036,7 +1033,7 @@ fn match_ty<I: Interner>(
         }
         TyKind::Alias(AliasTy::Projection(proj)) => builder
             .db
-            .associated_ty_data(proj.associated_term_id)
+            .associated_term_data(proj.associated_term_id)
             .to_program_clauses(builder, environment),
         TyKind::Alias(AliasTy::Opaque(opaque_ty)) => builder
             .db
@@ -1074,7 +1071,6 @@ fn match_ty<I: Interner>(
                                 vec![DomainGoal::WellFormed(WellFormed::Trait(trait_ref.clone()))]
                             }
                             WhereClause::AliasEq(_)
-                            | WhereClause::ConstEq(_)
                             | WhereClause::LifetimeOutlives(_)
                             | WhereClause::TypeOutlives(_) => vec![],
                         }
@@ -1096,7 +1092,7 @@ fn match_alias_ty<I: Interner>(
     if let AliasTy::Projection(projection_term) = alias {
         builder
             .db
-            .associated_ty_data(projection_term.associated_term_id)
+            .associated_term_data(projection_term.associated_term_id)
             .to_program_clauses(builder, environment)
     }
 }

@@ -13,10 +13,9 @@ use chalk_ir::{
     UnificationDatabase, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
-    AssociatedConstDatum,
-    ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum,
-    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTermDatum, AssociatedTermValue,
+    AssociatedTermValueId, ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum,
+    GeneratorWitnessDatum, ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
 use salsa::Database;
@@ -88,15 +87,8 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().custom_clauses()
     }
 
-    fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
-        self.program_ir().unwrap().associated_ty_data(ty)
-    }
-
-    fn associated_const_data(
-        &self,
-        ct: AssocItemId<ChalkIr>,
-    ) -> Arc<AssociatedConstDatum<ChalkIr>> {
-        self.program_ir().unwrap().associated_const_data(ct)
+    fn associated_term_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTermDatum<ChalkIr>> {
+        self.program_ir().unwrap().associated_term_data(ty)
     }
 
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
@@ -107,11 +99,11 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().impl_datum(id)
     }
 
-    fn associated_ty_value(
+    fn associated_term_value(
         &self,
-        id: AssociatedTyValueId<ChalkIr>,
-    ) -> Arc<AssociatedTyValue<ChalkIr>> {
-        self.program_ir().unwrap().associated_ty_values[&id].clone()
+        id: AssociatedTermValueId<ChalkIr>,
+    ) -> Arc<AssociatedTermValue<ChalkIr>> {
+        self.program_ir().unwrap().associated_term_values[&id].clone()
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {

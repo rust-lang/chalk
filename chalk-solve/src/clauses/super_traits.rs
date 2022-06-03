@@ -95,7 +95,6 @@ pub fn super_traits<I: Interner>(
                             }
                             WhereClause::AliasEq(_)
                             | WhereClause::LifetimeOutlives(..)
-                            | WhereClause::ConstEq(_)
                             | WhereClause::TypeOutlives(..) => None,
                         })
                     })

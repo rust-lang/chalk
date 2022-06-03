@@ -228,8 +228,8 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         write_joined_non_empty_list!(
             f,
             "\n{}\n",
-            self.associated_ty_ids.iter().map(|assoc_ty_id| {
-                let assoc_ty_data = s.db().associated_ty_data(*assoc_ty_id);
+            self.associated_ty_ids.iter().map(|assoc_id| {
+                let assoc_ty_data = s.db().associated_term_data(*assoc_id);
                 format!("{}{}", s.indent(), (*assoc_ty_data).display(s))
             }),
             "\n"
@@ -299,9 +299,9 @@ impl<I: Interner> RenderAsRust<I> for ImplDatum<I> {
         write!(f, "{{")?;
         {
             let s = &s.add_indent();
-            let assoc_ty_values = self.associated_ty_value_ids.iter().map(|assoc_ty_value| {
+            let assoc_ty_values = self.associated_term_value_ids.iter().map(|av| {
                 s.db()
-                    .associated_ty_value(*assoc_ty_value)
+                    .associated_term_value(*av)
                     .display(s)
                     .to_string()
             });
@@ -336,14 +336,14 @@ impl<I: Interner> RenderAsRust<I> for OpaqueTyDatum<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
+impl<I: Interner> RenderAsRust<I> for AssociatedTermDatum<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         // In lowering, a completely new empty environment is created for each
-        // AssociatedTyDatum, and it's given generic parameters for each generic
+        // AssociatedTermDatum, and it's given generic parameters for each generic
         // parameter that its trait had. We want to map the new binders for
         // those generic parameters back into their original names. To do that,
         // first find their original names (trait_binder_names), then the names
-        // they have inside the AssociatedTyDatum (assoc_ty_names_for_trait_params),
+        // they have inside the AssociatedTermDatum (assoc_ty_names_for_trait_params),
         // and then add that mapping to the WriterState when writing bounds and
         // where clauses.
         let trait_datum = s.db().trait_datum(self.trait_id);
@@ -409,11 +409,11 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyDatum<I> {
     }
 }
 
-impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
+impl<I: Interner> RenderAsRust<I> for AssociatedTermValue<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        // see comments for a similar empty env operation in AssociatedTyDatum's
+        // see comments for a similar empty env operation in AssociatedTermDatum's
         // impl of RenderAsRust.
-        let assoc_ty_data = s.db().associated_ty_data(self.associated_ty_id);
+        let assoc_ty_data = s.db().associated_term_data(self.associated_term_id);
         let impl_datum = s.db().impl_datum(self.impl_id);
 
         let impl_param_names_in_impl_env = s.binder_var_indices(&impl_datum.binders.binders);
@@ -444,7 +444,10 @@ impl<I: Interner> RenderAsRust<I> for AssociatedTyValue<I> {
 
         write!(f, "{}type {}", s.indent(), assoc_ty_data.id.display(s))?;
         write_joined_non_empty_list!(f, "<{}>", assoc_ty_value_display, ", ")?;
-        write!(f, " = {};", value.ty.display(s))?;
+        match value {
+          AssociatedTermValueBound::Ty(ty) => write!(f, " = {};", ty.display(s))?,
+          AssociatedTermValueBound::Const(ct) => write!(f, " = const {};", ct.display(s))?,
+        }
         Ok(())
     }
 }

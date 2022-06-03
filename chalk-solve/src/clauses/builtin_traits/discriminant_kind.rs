@@ -2,6 +2,7 @@ use crate::clauses::ClauseBuilder;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind, TyVariableKind,
+    Term,
 };
 
 pub fn add_discriminant_clauses<I: Interner>(
@@ -63,7 +64,7 @@ pub fn add_discriminant_clauses<I: Interner>(
             associated_term_id: associated_ty_id,
             substitution,
         }),
-        ty: disc_ty,
+        term: Term::Ty(disc_ty),
     };
 
     builder.push_fact(trait_ref);

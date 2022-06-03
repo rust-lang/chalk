@@ -412,6 +412,22 @@ pub struct Ty<I: Interner> {
     interned: I::InternedType,
 }
 
+/// A Rust term (const or type). Used for associated items.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, HasInterner, Fold, Visit, Zip)]
+pub enum Term<I: Interner> {
+    /// On a trait, associated type.
+    Ty(Ty<I>),
+    /// On a trait, associated const.
+    Const(Const<I>),
+}
+
+impl<I: Interner> Copy for Term<I>
+where
+    I::InternedType: Copy,
+    I::InternedConst: Copy,
+{
+}
+
 impl<I: Interner> Ty<I> {
     /// Creates a type from `TyKind`.
     pub fn new(interner: I, data: impl CastTo<TyKind<I>>) -> Self {
@@ -726,27 +742,13 @@ impl<I: Interner> TyKind<I> {
                         }
                         WhereClause::AliasEq(alias_eq) => {
                             dyn_flags |= alias_eq.alias.compute_flags(interner);
-                            dyn_flags |= alias_eq.ty.data(interner).flags;
-                        }
-                        WhereClause::ConstEq(ct_eq) => {
-                            // TODO it's not a type projection but is that fine?
-                            // TODO do I need to add other flags here?
-                            dyn_flags |= TypeFlags::HAS_TY_PROJECTION;
-                            let const_data = ct_eq.ct.data(interner);
-                            dyn_flags |= const_data.ty.data(interner).flags
-                                | match const_data.value {
-                                    ConstValue::BoundVar(_) | ConstValue::Concrete(_) => {
-                                        TypeFlags::empty()
-                                    }
-                                    ConstValue::InferenceVar(_) => {
-                                        TypeFlags::HAS_CT_INFER
-                                            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                                    }
-                                    ConstValue::Placeholder(_) => {
-                                        TypeFlags::HAS_CT_PLACEHOLDER
-                                            | TypeFlags::STILL_FURTHER_SPECIALIZABLE
-                                    }
-                                }
+                            dyn_flags |= match &alias_eq.term {
+                              Term::Ty(ty) => ty.data(interner).flags,
+                              Term::Const(ct) => {
+                                let const_data = ct.data(interner);
+                                const_data.ty.data(interner).flags
+                              },
+                            };
                         }
                         WhereClause::LifetimeOutlives(lifetime_outlives) => {
                             dyn_flags |= lifetime_outlives.a.compute_flags(interner)
@@ -1757,14 +1759,12 @@ where
 pub enum WhereClause<I: Interner> {
     /// Type implements a trait.
     Implemented(TraitRef<I>),
-    /// Type is equal to an alias.
+    /// Term is equal to an alias.
     AliasEq(AliasEq<I>),
     /// One lifetime outlives another.
     LifetimeOutlives(LifetimeOutlives<I>),
     /// Type outlives a lifetime.
     TypeOutlives(TypeOutlives<I>),
-    /// Const is equal to another const
-    ConstEq(ConstEq<I>),
 }
 
 impl<I: Interner> Copy for WhereClause<I>
@@ -1865,7 +1865,7 @@ pub enum DomainGoal<I: Interner> {
     /// True if the trait ref can be derived from in-scope where clauses.
     FromEnv(FromEnv<I>),
 
-    /// True if the alias type can be normalized to some other type
+    /// True if the alias term can be normalized to some other term
     Normalize(Normalize<I>),
 
     /// True if a type is considered to have been "defined" by the current crate. This is true for
@@ -1963,7 +1963,6 @@ impl<I: Interner> WhereClause<I> {
         match self {
             WhereClause::Implemented(trait_ref) => Some(trait_ref.trait_id),
             WhereClause::AliasEq(_) => None,
-            WhereClause::ConstEq(_) => None,
             WhereClause::LifetimeOutlives(_) => None,
             WhereClause::TypeOutlives(_) => None,
         }
@@ -2042,52 +2041,34 @@ impl<I: Interner> Copy for SubtypeGoal<I> where I::InternedType: Copy {}
 #[allow(missing_docs)]
 pub struct Normalize<I: Interner> {
     pub alias: AliasTy<I>,
-    pub ty: Ty<I>,
+    pub term: Term<I>,
 }
 
 impl<I: Interner> Copy for Normalize<I>
 where
     I::InternedSubstitution: Copy,
     I::InternedType: Copy,
+    I::InternedConst: Copy,
 {
 }
 
-/// Proves **equality** between an alias and a type.
+/// Proves **equality** between an alias and a term.
 #[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
 #[allow(missing_docs)]
 pub struct AliasEq<I: Interner> {
     pub alias: AliasTy<I>,
-    pub ty: Ty<I>,
+    pub term: Term<I>,
 }
 
 impl<I: Interner> Copy for AliasEq<I>
 where
     I::InternedSubstitution: Copy,
     I::InternedType: Copy,
-{
-}
-
-impl<I: Interner> HasInterner for AliasEq<I> {
-    type Interner = I;
-}
-
-/// Proves **equality** between an alias and a type.
-#[derive(Clone, PartialEq, Eq, Hash, Fold, Visit, Zip)]
-#[allow(missing_docs)]
-pub struct ConstEq<I: Interner> {
-    /// The id for the associated type member.
-    pub term: AssocItemId<I>,
-
-    pub ct: Const<I>,
-}
-impl<I: Interner> Copy for ConstEq<I>
-where
-    I::InternedSubstitution: Copy,
     I::InternedConst: Copy,
 {
 }
 
-impl<I: Interner> HasInterner for ConstEq<I> {
+impl<I: Interner> HasInterner for AliasEq<I> {
     type Interner = I;
 }
 

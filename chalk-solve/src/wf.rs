@@ -90,10 +90,6 @@ impl<I: Interner> Visitor<I> for InputTypeCollector<I> {
                 .clone()
                 .intern(self.interner)
                 .visit_with(self, outer_binder),
-            WhereClause::ConstEq(const_eq) => {
-                const_eq.term.visit_with(self, outer_binder)?;
-                const_eq.ct.visit_with(self, outer_binder)
-            }
             WhereClause::Implemented(trait_ref) => trait_ref.visit_with(self, outer_binder),
             WhereClause::TypeOutlives(TypeOutlives { ty, .. }) => ty.visit_with(self, outer_binder),
             WhereClause::LifetimeOutlives(..) => ControlFlow::Continue(()),
@@ -324,7 +320,7 @@ where
             interner,
             impl_header_wf_goal(self.db, impl_id).into_iter().chain(
                 impl_datum
-                    .associated_ty_value_ids
+                    .associated_term_value_ids
                     .iter()
                     .filter_map(|&id| compute_assoc_ty_goal(self.db, id)),
             ),
@@ -562,26 +558,29 @@ fn impl_wf_environment<'i, I: Interner>(
 /// ```
 fn compute_assoc_ty_goal<I: Interner>(
     db: &dyn RustIrDatabase<I>,
-    assoc_ty_id: AssociatedTyValueId<I>,
+    assoc_term_id: AssociatedTermValueId<I>,
 ) -> Option<Goal<I>> {
     let mut gb = GoalBuilder::new(db);
-    let assoc_ty = &db.associated_ty_value(assoc_ty_id);
+    let assoc = &db.associated_term_value(assoc_term_id);
 
     // Create `forall<T, 'a> { .. }`
     Some(gb.forall(
-        &assoc_ty.value.map_ref(|v| &v.ty),
-        assoc_ty_id,
+        &assoc.value.map_ref(|v| match v {
+          AssociatedTermValueBound::Ty(ty) => ty,
+          AssociatedTermValueBound::Const(ct) => todo!(),
+        }),
+        assoc_term_id,
         |gb, assoc_ty_substitution, value_ty, assoc_ty_id| {
             let interner = gb.interner();
             let db = gb.db();
 
-            // Hmm, because `Arc<AssociatedTyValue>` does not implement `Fold`, we can't pass this value through,
+            // Hmm, because `Arc<AssociatedTermValue>` does not implement `Fold`, we can't pass this value through,
             // just the id, so we have to fetch `assoc_ty` from the database again.
-            // Implementing `Fold` for `AssociatedTyValue` doesn't *quite* seem right though, as that
+            // Implementing `Fold` for `AssociatedTermValue` doesn't *quite* seem right though, as that
             // would result in a deep clone, and the value is inert. We could do some more refatoring
             // (move the `Arc` behind a newtype, for example) to fix this, but for now doesn't
             // seem worth it.
-            let assoc_ty = &db.associated_ty_value(assoc_ty_id);
+            let assoc_ty = &db.associated_term_value(assoc_ty_id);
 
             let (impl_parameters, projection) = db
                 .impl_parameters_and_projection_from_associated_ty_value(
@@ -615,8 +614,8 @@ fn compute_assoc_ty_goal<I: Interner>(
                 // * where clauses
                 //     * original in trait, `Self: 'a`
                 //     * after substituting impl parameters, `Box<!T>: '!a`
-                let assoc_ty_datum = db.associated_ty_data(projection.associated_term_id);
-                let AssociatedTyDatumBound {
+                let assoc_ty_datum = db.associated_term_data(projection.associated_term_id);
+                let AssociatedTermDatumBound {
                     bounds: defn_bounds,
                     where_clauses: defn_where_clauses,
                 } = assoc_ty_datum

@@ -165,7 +165,6 @@ fn display_self_where_clauses_as_bounds<'a, I: Interner>(
                                 }
                                 AliasTy::Opaque(opaque) => opaque.display(s).fmt(f),
                             },
-                            WhereClause::ConstEq(_) => todo!(),
                             WhereClause::LifetimeOutlives(lifetime) => lifetime.display(s).fmt(f),
                             WhereClause::TypeOutlives(ty) => ty.display(s).fmt(f),
                         }
@@ -199,7 +198,7 @@ fn display_type_with_generics<'a, I: Interner>(
 /// This is shared between where bounds & dyn Trait.
 fn display_trait_with_assoc_ty_value<'a, I: Interner>(
     s: &'a InternalWriterState<'a, I>,
-    assoc_ty_datum: Arc<AssociatedTyDatum<I>>,
+    assoc_ty_datum: Arc<AssociatedTermDatum<I>>,
     trait_params: &'a [GenericArg<I>],
     assoc_ty_params: &'a [GenericArg<I>],
     assoc_ty_value: &'a Ty<I>,

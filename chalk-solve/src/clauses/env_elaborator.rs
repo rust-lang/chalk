@@ -91,9 +91,9 @@ impl<'me, 'builder, I: Interner> Visitor<I> for EnvElaborator<'me, 'builder, I> 
                     // If we know that `T: Iterator`, then we also know
                     // things about `<T as Iterator>::Item`, so push those
                     // implied bounds too:
-                    for &associated_ty_id in &trait_datum.associated_ty_ids {
+                    for &ai in &trait_datum.associated_ty_ids {
                         self.db
-                            .associated_ty_data(associated_ty_id)
+                            .associated_term_data(ai)
                             .to_program_clauses(self.builder, self.environment);
                     }
                     ControlFlow::Continue(())

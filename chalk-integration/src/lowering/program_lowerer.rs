@@ -5,7 +5,7 @@ use chalk_ir::{
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
-    self, Anonymize, AssociatedTyValueId, GeneratorDatum, GeneratorInputOutputDatum,
+    self, Anonymize, GeneratorDatum, GeneratorInputOutputDatum,
     GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
 };
 use rust_ir::IntoWhereClauses;
@@ -23,11 +23,8 @@ use crate::{interner::ChalkIr, TypeKind, TypeSort};
 pub(super) struct ProgramLowerer {
     next_item_index: u32,
 
-    associated_ty_lookups: AssociatedTyLookups,
-    associated_ty_value_ids: AssociatedTyValueIds,
-
-    associated_const_lookups: AssociatedConstLookups,
-    associated_const_value_ids: AssociatedConstValueIds,
+    associated_term_lookups: AssociatedTermLookups,
+    associated_term_value_ids: AssociatedTermValueIds,
 
     adt_ids: AdtIds,
     fn_def_ids: FnDefIds,
@@ -67,19 +64,19 @@ impl ProgramLowerer {
                     }
                     for defn in &d.assoc_ty_defns {
                         let addl_variable_kinds = defn.all_parameters();
-                        let lookup = AssociatedTyLookup {
+                        let lookup = AssociatedTermLookup {
                             id: AssocItemId(self.next_item_id()),
                             addl_variable_kinds: addl_variable_kinds.anonymize(),
                         };
-                        self.associated_ty_lookups
+                        self.associated_term_lookups
                             .insert((TraitId(raw_id), defn.name.str.clone()), lookup);
                     }
                 }
 
                 Item::Impl(d) => {
                     for atv in &d.assoc_ty_values {
-                        let atv_id = AssociatedTyValueId(self.next_item_id());
-                        self.associated_ty_value_ids
+                        let atv_id = rust_ir::AssociatedTermValueId(self.next_item_id());
+                        self.associated_term_value_ids
                             .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
                     }
                 }
@@ -157,10 +154,8 @@ impl ProgramLowerer {
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
-        let mut associated_const_values = BTreeMap::new();
-        let mut associated_const_data = BTreeMap::new();
-        let mut associated_ty_data = BTreeMap::new();
-        let mut associated_ty_values = BTreeMap::new();
+        let mut associated_term_data = BTreeMap::new();
+        let mut associated_term_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
         let mut generator_data = BTreeMap::new();
         let mut generator_witness_data = BTreeMap::new();
@@ -181,7 +176,7 @@ impl ProgramLowerer {
                 opaque_ty_kinds: &self.opaque_ty_kinds,
                 generator_ids: &self.generator_ids,
                 generator_kinds: &self.generator_kinds,
-                associated_ty_lookups: &self.associated_ty_lookups,
+                associated_term_lookups: &self.associated_term_lookups,
                 parameter_map: BTreeMap::new(),
                 auto_traits: &self.auto_traits,
                 foreign_ty_ids: &self.foreign_ty_ids,
@@ -275,7 +270,7 @@ impl ProgramLowerer {
                     trait_data.insert(trait_id, Arc::new(trait_datum));
 
                     for assoc_ty_defn in &trait_defn.assoc_ty_defns {
-                        let lookup = &self.associated_ty_lookups
+                        let lookup = &self.associated_term_lookups
                             [&(trait_id, assoc_ty_defn.name.str.clone())];
 
                         // The parameters in scope for the associated
@@ -302,15 +297,15 @@ impl ProgramLowerer {
                         variable_kinds.extend(trait_defn.all_parameters());
 
                         let binders = empty_env.in_binders(variable_kinds, |env| {
-                            Ok(rust_ir::AssociatedTyDatumBound {
+                            Ok(rust_ir::AssociatedTermDatumBound {
                                 bounds: assoc_ty_defn.bounds.lower(env)?,
                                 where_clauses: assoc_ty_defn.where_clauses.lower(env)?,
                             })
                         })?;
 
-                        associated_ty_data.insert(
+                        associated_term_data.insert(
                             lookup.id,
-                            Arc::new(rust_ir::AssociatedTyDatum {
+                            Arc::new(rust_ir::AssociatedTermDatum {
                                 trait_id: TraitId(raw_id),
                                 id: lookup.id,
                                 name: assoc_ty_defn.name.str.clone(),
@@ -325,20 +320,16 @@ impl ProgramLowerer {
                 Item::Impl(ref impl_defn) => {
                     let impl_id = ImplId(raw_id);
                     let impl_datum = Arc::new(
-                        (
-                            impl_defn,
-                            impl_id,
-                            &self.associated_ty_value_ids,
-                            &self.associated_const_value_ids,
-                        )
-                            .lower(&empty_env)?,
+                        (impl_defn, impl_id, &self.associated_term_value_ids).lower(&empty_env)?,
                     );
                     impl_data.insert(impl_id, impl_datum.clone());
                     let trait_id = impl_datum.trait_id();
 
                     for atv in &impl_defn.assoc_ty_values {
-                        let atv_id = self.associated_ty_value_ids[&(impl_id, atv.name.str.clone())];
-                        let lookup = &self.associated_ty_lookups[&(trait_id, atv.name.str.clone())];
+                        let atv_id =
+                            self.associated_term_value_ids[&(impl_id, atv.name.str.clone())];
+                        let lookup =
+                            &self.associated_term_lookups[&(trait_id, atv.name.str.clone())];
 
                         // The parameters in scope for the associated
                         // type definitions are *both* those from the
@@ -349,32 +340,17 @@ impl ProgramLowerer {
                         variable_kinds.extend(impl_defn.all_parameters());
 
                         let value = empty_env.in_binders(variable_kinds, |env| {
-                            Ok(rust_ir::AssociatedTyValueBound {
-                                ty: atv.value.lower(env)?,
-                            })
+                            Ok(rust_ir::AssociatedTermValueBound::Ty(
+                                atv.value.lower(env)?,
+                            ))
                         })?;
 
-                        associated_ty_values.insert(
+                        associated_term_values.insert(
                             atv_id,
-                            Arc::new(rust_ir::AssociatedTyValue {
+                            Arc::new(rust_ir::AssociatedTermValue {
                                 impl_id,
-                                associated_ty_id: lookup.id,
+                                associated_term_id: lookup.id,
                                 value,
-                            }),
-                        );
-                    }
-
-                    for acv in &impl_defn.assoc_const_values {
-                        let acv_id =
-                            self.associated_const_value_ids[&(impl_id, acv.name.str.clone())];
-                        let lookup =
-                            &self.associated_const_lookups[&(trait_id, acv.name.str.clone())];
-
-                        associated_const_values.insert(
-                            acv_id,
-                            Arc::new(rust_ir::AssociatedConstValue {
-                                impl_id,
-                                associated_const_id: lookup.id,
                             }),
                         );
                     }
@@ -525,10 +501,8 @@ impl ProgramLowerer {
             trait_data,
             well_known_traits,
             impl_data,
-            associated_const_values,
-            associated_const_data,
-            associated_ty_values,
-            associated_ty_data,
+            associated_term_values,
+            associated_term_data,
             opaque_ty_ids: self.opaque_ty_ids,
             opaque_ty_kinds: self.opaque_ty_kinds,
             opaque_ty_data,

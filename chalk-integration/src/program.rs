@@ -9,11 +9,10 @@ use chalk_ir::{
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
-    AdtDatum, AdtRepr, AdtSizeAlign, AssociatedConstValue, AssociatedConstValueId,
-    AssociatedConstDatum,
-    AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId, ClosureKind, FnDefDatum,
-    FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum, ImplType,
-    OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    AdtDatum, AdtRepr, AdtSizeAlign,
+    AssociatedTermDatum, AssociatedTermValue, AssociatedTermValueId, ClosureKind,
+    FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum, ImplDatum,
+    ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -77,12 +76,11 @@ pub struct Program {
     pub impl_data: BTreeMap<ImplId<ChalkIr>, Arc<ImplDatum<ChalkIr>>>,
 
     /// For each associated ty value `type Foo = XXX` found in an impl:
-    pub associated_ty_values:
-        BTreeMap<AssociatedTyValueId<ChalkIr>, Arc<AssociatedTyValue<ChalkIr>>>,
+    pub associated_term_values:
+        BTreeMap<AssociatedTermValueId<ChalkIr>, Arc<AssociatedTermValue<ChalkIr>>>,
 
-    /// For each associated const value `const Foo: <Ty> = XXX` found in an impl:
-    pub associated_const_values:
-        BTreeMap<AssociatedConstValueId<ChalkIr>, Arc<AssociatedConstValue<ChalkIr>>>,
+    /// For each associated ty declaration `type Foo` found in a trait:
+    pub associated_term_data: BTreeMap<AssocItemId<ChalkIr>, Arc<AssociatedTermDatum<ChalkIr>>>,
 
     // From opaque type name to item-id. Used during lowering only.
     pub opaque_ty_ids: BTreeMap<Identifier, OpaqueTyId<ChalkIr>>,
@@ -101,12 +99,6 @@ pub struct Program {
 
     /// For each trait lang item
     pub well_known_traits: BTreeMap<WellKnownTrait, TraitId<ChalkIr>>,
-
-    /// For each associated ty declaration `type Foo` found in a trait:
-    pub associated_ty_data: BTreeMap<AssocItemId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
-
-    /// For each associated const declaration `const Foo` found in a trait:
-    pub associated_const_data: BTreeMap<AssocItemId<ChalkIr>, Arc<AssociatedConstDatum<ChalkIr>>>,
 
     /// For each user-specified clause
     pub custom_clauses: Vec<ProgramClause<ChalkIr>>,
@@ -163,7 +155,7 @@ impl tls::DebugContext for Program {
         assoc_type_id: AssocItemId<ChalkIr>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Result<(), fmt::Error> {
-        if let Some(d) = self.associated_ty_data.get(&assoc_type_id) {
+        if let Some(d) = self.associated_term_data.get(&assoc_type_id) {
             write!(fmt, "({:?}::{})", d.trait_id, d.name)
         } else {
             fmt.debug_struct("InvalidAssocItemId")
@@ -395,12 +387,11 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.custom_clauses.clone()
     }
 
-    fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
-        self.associated_ty_data[&ty].clone()
-    }
-
-    fn associated_const_data(&self, ct: AssocItemId<ChalkIr>) -> Arc<AssociatedConstDatum<ChalkIr>> {
-        self.associated_const_data[&ct].clone()
+    fn associated_term_data(
+        &self,
+        term: AssocItemId<ChalkIr>,
+    ) -> Arc<AssociatedTermDatum<ChalkIr>> {
+        self.associated_term_data[&term].clone()
     }
 
     fn trait_datum(&self, id: TraitId<ChalkIr>) -> Arc<TraitDatum<ChalkIr>> {
@@ -411,11 +402,11 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.impl_data[&id].clone()
     }
 
-    fn associated_ty_value(
+    fn associated_term_value(
         &self,
-        id: AssociatedTyValueId<ChalkIr>,
-    ) -> Arc<AssociatedTyValue<ChalkIr>> {
-        self.associated_ty_values[&id].clone()
+        id: AssociatedTermValueId<ChalkIr>,
+    ) -> Arc<AssociatedTermValue<ChalkIr>> {
+        self.associated_term_values[&id].clone()
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<ChalkIr>) -> Arc<OpaqueTyDatum<ChalkIr>> {
@@ -601,7 +592,7 @@ impl RustIrDatabase<ChalkIr> for Program {
     // writer to fail. This is because they use the `Eq` implementation on
     // Program, which checks for name equality.
     fn assoc_type_name(&self, assoc_type_id: AssocItemId<ChalkIr>) -> String {
-        self.associated_ty_data
+        self.associated_term_data
             .get(&assoc_type_id)
             .unwrap()
             .name

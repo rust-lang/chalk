@@ -205,7 +205,7 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
     let env = chalk_ir::Environment::new(builder.interner());
 
     program
-        .associated_ty_data
+        .associated_term_data
         .values()
         .for_each(|d| d.to_program_clauses(builder, &env));
 
@@ -238,10 +238,10 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
         if datum.is_positive() {
             datum.to_program_clauses(builder, &env);
             datum
-                .associated_ty_value_ids
+                .associated_term_value_ids
                 .iter()
-                .map(|&atv_id| db.associated_ty_value(atv_id))
-                .for_each(|atv| atv.to_program_clauses(builder, &env));
+                .map(|&av_id| db.associated_term_value(av_id))
+                .for_each(|av| av.to_program_clauses(builder, &env));
         }
     }
 

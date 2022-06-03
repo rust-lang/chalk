@@ -72,7 +72,7 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
                     )
                 }
                 // FIXME: Associated item bindings are just taken as facts (?)
-                WhereClause::AliasEq(_) | WhereClause::ConstEq(_) => builder.push_fact(bound),
+                WhereClause::AliasEq(_) => builder.push_fact(bound),
                 WhereClause::LifetimeOutlives(..) => {}
                 WhereClause::TypeOutlives(..) => {}
             });

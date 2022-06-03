@@ -9,32 +9,24 @@ use chalk_ir::interner::Interner;
 use chalk_ir::{
     try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocItemId, Binders, DebruijnIndex, FnDefId,
     GenericArg, ImplId, OpaqueTyId, ProjectionTerm, QuantifiedWhereClause, Substitution,
-    ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
+    ToGenericArg, TraitId, TraitRef, Ty, TyKind, Const, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
 use std::ops::ControlFlow;
 
-/// Identifier for an "associated type value" found in some impl.
+/// Identifier for an "associated term value" found in some impl.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
+pub struct AssociatedTermValueId<I: Interner>(pub I::DefId);
 
-/// Identifier for an "associated const value" found in some impl.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AssociatedConstValueId<I: Interner>(pub I::DefId);
-
-chalk_ir::id_visit!(AssociatedTyValueId);
-chalk_ir::id_fold!(AssociatedTyValueId);
-
-chalk_ir::id_visit!(AssociatedConstValueId);
-chalk_ir::id_fold!(AssociatedConstValueId);
+chalk_ir::id_visit!(AssociatedTermValueId);
+chalk_ir::id_fold!(AssociatedTermValueId);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound<I>>,
     pub impl_type: ImplType,
-    pub associated_ty_value_ids: Vec<AssociatedTyValueId<I>>,
-    pub associated_const_value_ids: Vec<AssociatedConstValueId<I>>,
+    pub associated_term_value_ids: Vec<AssociatedTermValueId<I>>,
 }
 
 impl<I: Interner> ImplDatum<I> {
@@ -493,7 +485,7 @@ impl<I: Interner, T> Anonymize<I> for [WithKind<I, T>] {
 /// * The *where clauses* `where_clauses` are things that the impl can *assume* to be true
 ///   (but which projectors must prove).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssociatedTyDatum<I: Interner> {
+pub struct AssociatedTermDatum<I: Interner> {
     /// The trait this associated type is defined in.
     pub trait_id: TraitId<I>,
 
@@ -508,11 +500,11 @@ pub struct AssociatedTyDatum<I: Interner> {
     /// from `Bar` come first (corresponding to the de bruijn concept
     /// that "inner" binders are lower indices, although within a
     /// given binder we do not have an ordering).
-    pub binders: Binders<AssociatedTyDatumBound<I>>,
+    pub binders: Binders<AssociatedTermDatumBound<I>>,
 }
 
 // Manual implementation to avoid I::Identifier type.
-impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
+impl<I: Interner> Visit<I> for AssociatedTermDatum<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
@@ -524,34 +516,10 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AssociatedConstDatum<I: Interner> {
-    /// The trait this associated type is defined in.
-    pub trait_id: TraitId<I>,
-
-    /// The ID of this associated type
-    pub id: AssocItemId<I>,
-
-    /// Name of this associated type.
-    pub name: I::Identifier,
-}
-
-// Manual implementation to avoid I::Identifier type.
-impl<I: Interner> Visit<I> for AssociatedConstDatum<I> {
-    fn visit_with<B>(
-        &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
-        outer_binder: DebruijnIndex,
-    ) -> ControlFlow<B> {
-        try_break!(self.trait_id.visit_with(visitor, outer_binder));
-        self.id.visit_with(visitor, outer_binder)
-    }
-}
-
-/// Encodes the parts of `AssociatedTyDatum` where the parameters
+/// Encodes the parts of `AssociatedTermDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct AssociatedTyDatumBound<I: Interner> {
+pub struct AssociatedTermDatumBound<I: Interner> {
     /// Bounds on the associated type itself.
     ///
     /// These must be proven by the implementer, for all possible parameters that
@@ -562,7 +530,7 @@ pub struct AssociatedTyDatumBound<I: Interner> {
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
-impl<I: Interner> AssociatedTyDatum<I> {
+impl<I: Interner> AssociatedTermDatum<I> {
     /// Returns the associated ty's bounds applied to the projection type, e.g.:
     ///
     /// ```notrust
@@ -613,7 +581,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
 /// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
-pub struct AssociatedTyValue<I: Interner> {
+pub struct AssociatedTermValue<I: Interner> {
     /// Impl in which this associated type value is found.  You might
     /// need to look at this to find the generic parameters defined on
     /// the impl, for example.
@@ -636,7 +604,7 @@ pub struct AssociatedTyValue<I: Interner> {
     ///     type Item; // <-- refers to this declaration here!
     /// }
     /// ```
-    pub associated_ty_id: AssocItemId<I>,
+    pub associated_term_id: AssocItemId<I>,
 
     /// Additional binders declared on the associated type itself,
     /// beyond those from the impl. This would be empty for normal
@@ -648,40 +616,13 @@ pub struct AssociatedTyValue<I: Interner> {
     ///           // ^^^^ refers to these generics here
     /// }
     /// ```
-    pub value: Binders<AssociatedTyValueBound<I>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
-pub struct AssociatedConstValue<I: Interner> {
-    /// Impl in which this associated type value is found.  You might
-    /// need to look at this to find the generic parameters defined on
-    /// the impl, for example.
-    ///
-    /// ```ignore
-    /// impl Iterator for Foo { // <-- refers to this impl
-    ///     const Item: usize = XXX; // <-- (where this is self)
-    /// }
-    /// ```
-    pub impl_id: ImplId<I>,
-
-    /// Associated type being defined.
-    ///
-    /// ```ignore
-    /// impl Iterator for Foo {
-    ///     const Item: usize = XXX; // <-- (where this is self)
-    /// }
-    /// ...
-    /// trait Iterator {
-    ///     const Item: usize; // <-- refers to this declaration here!
-    /// }
-    /// ```
-    pub associated_const_id: AssocItemId<I>,
+    pub value: Binders<AssociatedTermValueBound<I>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
-pub struct AssociatedTyValueBound<I: Interner> {
-    /// Type that we normalize to. The X in `type Foo<'a> = X`.
-    pub ty: Ty<I>,
+pub enum AssociatedTermValueBound<I: Interner> {
+    Ty(Ty<I>),
+    Const(Const<I>),
 }
 
 /// Represents the bounds for an `impl Trait` type.

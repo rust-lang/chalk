@@ -2,7 +2,7 @@ use crate::clauses::ClauseBuilder;
 use crate::rust_ir::WellKnownTrait;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
-use chalk_ir::{AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind};
+use chalk_ir::{AliasTy, Floundered, Normalize, ProjectionTerm, Substitution, Ty, TyKind, Term};
 
 /// Add implicit impls of the generator trait, i.e., add a clause that all generators implement
 /// `Generator` and clauses for `Generator`'s associated types.
@@ -52,7 +52,7 @@ pub fn add_generator_program_clauses<I: Interner>(
             });
             builder.push_fact(Normalize {
                 alias: yield_alias,
-                ty: generator_io_datum.yield_type,
+                term: Term::Ty(generator_io_datum.yield_type),
             });
 
             // `Generator::Return`
@@ -63,7 +63,7 @@ pub fn add_generator_program_clauses<I: Interner>(
             });
             builder.push_fact(Normalize {
                 alias: return_alias,
-                ty: generator_io_datum.return_type,
+                term: Term::Ty(generator_io_datum.return_type),
             });
 
             Ok(())

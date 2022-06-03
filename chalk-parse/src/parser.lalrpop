@@ -593,7 +593,7 @@ WhereClause: WhereClause = {
         let trait_ref = TraitRef { trait_name: t, args: args };
         let projection = ProjectionTerm { trait_ref, name, args: vec![] };
 
-        WhereClause::ConstProjectionEq { projection, val }
+        WhereClause::ProjectionEq { projection, term: Term::Const(val) }
     },
 
     // `T: Foo<U = Bar>` -- projection equality
@@ -604,7 +604,7 @@ WhereClause: WhereClause = {
         if let Some(a) = a { args.extend(a); }
         let trait_ref = TraitRef { trait_name: t, args: args };
         let projection = ProjectionTerm { trait_ref, name, args: a2 };
-        WhereClause::ProjectionEq { projection, ty }
+        WhereClause::ProjectionEq { projection, term: Term::Ty(ty) }
     },
 
     // 'a: 'b
@@ -647,7 +647,8 @@ DomainGoal: DomainGoal = {
     "FromEnv" "(" <t:TraitRef<":">> ")" => DomainGoal::TraitRefFromEnv { trait_ref: t },
 
     // `<T as Foo>::U -> Bar` -- a normalization
-    "Normalize" "(" <s:ProjectionTerm> "->" <t:Ty> ")" => DomainGoal::Normalize { projection: s, ty: t },
+    "Normalize" "(" <s:ProjectionTerm> "->" <t:Ty> ")" =>
+      DomainGoal::Normalize { projection: s, term: Term::Ty(t) },
 
     "IsLocal" "(" <ty:Ty> ")" => DomainGoal::IsLocal { ty },
     "IsUpstream" "(" <ty:Ty> ")" => DomainGoal::IsUpstream { ty },

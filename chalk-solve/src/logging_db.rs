@@ -119,22 +119,13 @@ where
         self.ws.db().custom_clauses()
     }
 
-    fn associated_ty_data(
+    fn associated_term_data(
         &self,
         ty: chalk_ir::AssocItemId<I>,
-    ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
-        let ty_datum = self.ws.db().associated_ty_data(ty);
+    ) -> Arc<crate::rust_ir::AssociatedTermDatum<I>> {
+        let ty_datum = self.ws.db().associated_term_data(ty);
         self.record(ty_datum.trait_id);
         ty_datum
-    }
-
-    fn associated_const_data(
-        &self,
-        ct: chalk_ir::AssocItemId<I>,
-    ) -> Arc<crate::rust_ir::AssociatedConstDatum<I>> {
-        let ct_datum = self.ws.db().associated_const_data(ct);
-        self.record(ct_datum.trait_id);
-        ct_datum
     }
 
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
@@ -180,11 +171,11 @@ where
         self.ws.db().hidden_opaque_type(id)
     }
 
-    fn associated_ty_value(
+    fn associated_term_value(
         &self,
-        id: crate::rust_ir::AssociatedTyValueId<I>,
-    ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
-        let value = self.ws.db().associated_ty_value(id);
+        id: crate::rust_ir::AssociatedTermValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedTermValue<I>> {
+        let value = self.ws.db().associated_term_value(id);
         self.record(value.impl_id);
         value
     }
@@ -404,18 +395,11 @@ where
         self.db.custom_clauses()
     }
 
-    fn associated_ty_data(
+    fn associated_term_data(
         &self,
         ty: chalk_ir::AssocItemId<I>,
-    ) -> Arc<crate::rust_ir::AssociatedTyDatum<I>> {
-        self.db.associated_ty_data(ty)
-    }
-
-    fn associated_const_data(
-        &self,
-        ct: chalk_ir::AssocItemId<I>,
-    ) -> Arc<crate::rust_ir::AssociatedConstDatum<I>> {
-        self.db.associated_const_data(ct)
+    ) -> Arc<crate::rust_ir::AssociatedTermDatum<I>> {
+        self.db.associated_term_data(ty)
     }
 
     fn trait_datum(&self, trait_id: TraitId<I>) -> Arc<TraitDatum<I>> {
@@ -450,11 +434,11 @@ where
         self.db.impl_datum(impl_id)
     }
 
-    fn associated_ty_value(
+    fn associated_term_value(
         &self,
-        id: crate::rust_ir::AssociatedTyValueId<I>,
-    ) -> Arc<crate::rust_ir::AssociatedTyValue<I>> {
-        self.db.associated_ty_value(id)
+        id: crate::rust_ir::AssociatedTermValueId<I>,
+    ) -> Arc<crate::rust_ir::AssociatedTermValue<I>> {
+        self.db.associated_term_value(id)
     }
 
     fn opaque_ty_data(&self, id: OpaqueTyId<I>) -> Arc<OpaqueTyDatum<I>> {

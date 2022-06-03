@@ -22,10 +22,10 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
                 let parameters = parameters.iter().map(|param| param.display(s));
                 write_joined_non_empty_list!(f, "<{}>", parameters, ", ")
             }
-            TyKind::AssociatedType(assoc_type_id, substitution) => {
+            TyKind::AssociatedType(assoc_id, substitution) => {
                 // (Iterator::Item)(x)
                 // should be written in Rust as <X as Iterator>::Item
-                let datum = s.db().associated_ty_data(*assoc_type_id);
+                let datum = s.db().associated_term_data(*assoc_id);
                 assert!(
                     substitution
                         .iter(interner)

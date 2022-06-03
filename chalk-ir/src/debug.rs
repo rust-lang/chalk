@@ -776,19 +776,13 @@ impl<'a, T: Debug> Debug for Angle<'a, T> {
 
 impl<I: Interner> Debug for Normalize<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "Normalize({:?} -> {:?})", self.alias, self.ty)
+        write!(fmt, "Normalize({:?} -> {:?})", self.alias, self.term)
     }
 }
 
 impl<I: Interner> Debug for AliasEq<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "AliasEq({:?} = {:?})", self.alias, self.ty)
-    }
-}
-
-impl<I: Interner> Debug for ConstEq<I> {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(fmt, "ConstEq(const {:?} = {:?})", self.term, self.ct)
+        write!(fmt, "AliasEq({:?} = {:?})", self.alias, self.term)
     }
 }
 
@@ -797,7 +791,6 @@ impl<I: Interner> Debug for WhereClause<I> {
         match self {
             WhereClause::Implemented(tr) => write!(fmt, "Implemented({:?})", tr.with_colon()),
             WhereClause::AliasEq(a) => write!(fmt, "{:?}", a),
-            WhereClause::ConstEq(a) => write!(fmt, "{:?}", a),
             WhereClause::LifetimeOutlives(l_o) => write!(fmt, "{:?}", l_o),
             WhereClause::TypeOutlives(t_o) => write!(fmt, "{:?}", t_o),
         }

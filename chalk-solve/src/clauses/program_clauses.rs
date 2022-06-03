@@ -49,7 +49,7 @@ impl<I: Interner> ToProgramClauses<I> for ImplDatum<I> {
     }
 }
 
-impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
+impl<I: Interner> ToProgramClauses<I> for AssociatedTermValue<I> {
     /// Given the following trait:
     ///
     /// ```notrust
@@ -81,7 +81,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
         _environment: &Environment<I>,
     ) {
         let impl_datum = builder.db.impl_datum(self.impl_id);
-        let associated_ty = builder.db.associated_ty_data(self.associated_ty_id);
+        let associated_ty = builder.db.associated_term_data(self.associated_term_id);
 
         builder.push_binders(self.value.clone(), |builder, assoc_ty_value| {
             let all_parameters = builder.placeholders_in_scope().to_vec();
@@ -126,7 +126,10 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyValue<I> {
             builder.push_clause(
                 Normalize {
                     alias: AliasTy::Projection(projection.clone()),
-                    ty: assoc_ty_value.ty,
+                    term: match assoc_ty_value {
+                      AssociatedTermValueBound::Ty(ty) => Term::Ty(ty),
+                      AssociatedTermValueBound::Const(ct) => Term::Const(ct),
+                    },
                 },
                 impl_where_clauses.chain(assoc_ty_where_clauses),
             );
@@ -206,7 +209,7 @@ impl<I: Interner> ToProgramClauses<I> for OpaqueTyDatum<I> {
                         )
                     }
                     // FIXME: Associated item bindings are just taken as facts (?)
-                    WhereClause::AliasEq(_) | WhereClause::ConstEq(_) => builder.push_fact(bound),
+                    WhereClause::AliasEq(_) => builder.push_fact(bound),
                     WhereClause::LifetimeOutlives(..) => {}
                     WhereClause::TypeOutlives(..) => {}
                 });
@@ -722,7 +725,7 @@ impl<I: Interner> ToProgramClauses<I> for TraitDatum<I> {
     }
 }
 
-impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
+impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
     /// For each associated type, we define the "projection
     /// equality" rules. There are always two; one for a successful normalization,
     /// and one for the "fallback" notion of equality.
@@ -801,7 +804,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
         builder.push_binders(
             binders,
             |builder,
-             AssociatedTyDatumBound {
+             AssociatedTermDatumBound {
                  where_clauses,
                  bounds,
              }| {
@@ -898,7 +901,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                     // `Normalize(<T as Foo>::Assoc -> U)`
                     let normalize = Normalize {
                         alias: AliasTy::Projection(projection.clone()),
-                        ty: ty.clone(),
+                        term: Term::Ty(ty.clone()),
                     };
 
                     // `AliasEq(<T as Foo>::Assoc = U)`

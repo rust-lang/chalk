@@ -18,7 +18,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         &self,
         projection: &'p ProjectionTerm<I>,
     ) -> (
-        Arc<AssociatedTyDatum<I>>,
+        Arc<AssociatedTermDatum<I>>,
         &'p [GenericArg<I>],
         &'p [GenericArg<I>],
     ) {
@@ -28,7 +28,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
             ref substitution,
         } = *projection;
         let parameters = substitution.as_slice(interner);
-        let associated_ty_data = &self.associated_ty_data(associated_term_id);
+        let associated_ty_data = &self.associated_term_data(associated_term_id);
         let (trait_params, other_params) =
             self.split_associated_ty_parameters(parameters, &**associated_ty_data);
         (associated_ty_data.clone(), trait_params, other_params)
@@ -83,7 +83,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     fn split_associated_ty_value_parameters<'p, P>(
         &self,
         parameters: &'p [P],
-        associated_ty_value: &AssociatedTyValue<I>,
+        associated_ty_value: &AssociatedTermValue<I>,
     ) -> (&'p [P], &'p [P]) {
         let interner = self.interner();
         let impl_datum = self.impl_datum(associated_ty_value.impl_id);
@@ -123,7 +123,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     fn impl_parameters_and_projection_from_associated_ty_value<'p>(
         &self,
         parameters: &'p [GenericArg<I>],
-        associated_ty_value: &AssociatedTyValue<I>,
+        associated_ty_value: &AssociatedTermValue<I>,
     ) -> (&'p [GenericArg<I>], ProjectionTerm<I>) {
         let interner = self.interner();
 
@@ -151,7 +151,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         );
 
         let projection = ProjectionTerm {
-            associated_term_id: associated_ty_value.associated_ty_id,
+            associated_term_id: associated_ty_value.associated_term_id,
             substitution: projection_substitution,
         };
 
@@ -186,7 +186,7 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     fn split_associated_ty_parameters<'p, P>(
         &self,
         parameters: &'p [P],
-        associated_ty_datum: &AssociatedTyDatum<I>,
+        associated_ty_datum: &AssociatedTermDatum<I>,
     ) -> (&'p [P], &'p [P]) {
         let trait_datum = &self.trait_datum(associated_ty_datum.trait_id);
         let trait_num_params = trait_datum.binders.len(self.interner());

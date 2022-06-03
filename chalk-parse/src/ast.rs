@@ -410,6 +410,12 @@ pub enum Lifetime {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Term {
+    Ty(Ty),
+    Const(Const),
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ProjectionTerm {
     pub trait_ref: TraitRef,
     pub name: Identifier,
@@ -460,13 +466,8 @@ pub enum WhereClause {
     },
     ProjectionEq {
         projection: ProjectionTerm,
-        ty: Ty,
+        term: Term,
     },
-    ConstProjectionEq {
-        projection: ProjectionTerm,
-        val: Const,
-    },
-
     LifetimeOutlives {
         a: Lifetime,
         b: Lifetime,
@@ -479,20 +480,47 @@ pub enum WhereClause {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DomainGoal {
-    Holds { where_clause: WhereClause },
-    Normalize { projection: ProjectionTerm, ty: Ty },
-    TraitRefWellFormed { trait_ref: TraitRef },
-    TyWellFormed { ty: Ty },
-    TyFromEnv { ty: Ty },
-    TraitRefFromEnv { trait_ref: TraitRef },
-    IsLocal { ty: Ty },
-    IsUpstream { ty: Ty },
-    IsFullyVisible { ty: Ty },
-    LocalImplAllowed { trait_ref: TraitRef },
+    Holds {
+        where_clause: WhereClause,
+    },
+
+    Normalize {
+        projection: ProjectionTerm,
+        term: Term,
+    },
+
+    TraitRefWellFormed {
+        trait_ref: TraitRef,
+    },
+    TyWellFormed {
+        ty: Ty,
+    },
+    TyFromEnv {
+        ty: Ty,
+    },
+    TraitRefFromEnv {
+        trait_ref: TraitRef,
+    },
+    IsLocal {
+        ty: Ty,
+    },
+    IsUpstream {
+        ty: Ty,
+    },
+    IsFullyVisible {
+        ty: Ty,
+    },
+    LocalImplAllowed {
+        trait_ref: TraitRef,
+    },
     Compatible,
-    DownstreamType { ty: Ty },
+    DownstreamType {
+        ty: Ty,
+    },
     Reveal,
-    ObjectSafe { id: Identifier },
+    ObjectSafe {
+        id: Identifier,
+    },
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

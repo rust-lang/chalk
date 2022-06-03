@@ -164,20 +164,13 @@ impl LowerWithEnv for WhereClause {
             WhereClause::Implemented { trait_ref } => {
                 vec![chalk_ir::WhereClause::Implemented(trait_ref.lower(env)?)]
             }
-            WhereClause::ProjectionEq { projection, ty } => vec![
+            WhereClause::ProjectionEq { projection, term } => vec![
                 chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
                     alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
-                    ty: ty.lower(env)?,
+                    term: term.lower(env)?,
                 }),
                 chalk_ir::WhereClause::Implemented(projection.trait_ref.lower(env)?),
             ],
-            WhereClause::ConstProjectionEq { projection, val } => {
-                vec![chalk_ir::WhereClause::ConstEq(chalk_ir::ConstEq {
-                    // TODO maybe this should just be a projection term instead
-                    term: projection.lower(env)?.associated_term_id,
-                    ct: val.lower(env)?,
-                })]
-            }
             WhereClause::LifetimeOutlives { a, b } => {
                 vec![chalk_ir::WhereClause::LifetimeOutlives(
                     chalk_ir::LifetimeOutlives {
@@ -223,10 +216,10 @@ impl LowerWithEnv for DomainGoal {
                 .into_iter()
                 .casted(interner)
                 .collect(),
-            DomainGoal::Normalize { projection, ty } => {
+            DomainGoal::Normalize { projection, term } => {
                 vec![chalk_ir::DomainGoal::Normalize(chalk_ir::Normalize {
                     alias: chalk_ir::AliasTy::Projection(projection.lower(env)?),
-                    ty: ty.lower(env)?,
+                    term: term.lower(env)?,
                 })]
             }
             DomainGoal::TyWellFormed { ty } => vec![chalk_ir::DomainGoal::WellFormed(
@@ -853,6 +846,17 @@ impl LowerWithEnv for Const {
     }
 }
 
+impl LowerWithEnv for Term {
+    type Lowered = chalk_ir::Term<ChalkIr>;
+
+    fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
+        Ok(match self {
+            Term::Ty(t) => chalk_ir::Term::Ty(t.lower(env)?),
+            Term::Const(c) => chalk_ir::Term::Const(c.lower(env)?),
+        })
+    }
+}
+
 impl LowerWithEnv for GenericArg {
     type Lowered = chalk_ir::GenericArg<ChalkIr>;
 
@@ -899,18 +903,11 @@ impl LowerWithEnv for Lifetime {
     }
 }
 
-impl LowerWithEnv
-    for (
-        &Impl,
-        ImplId<ChalkIr>,
-        &AssociatedTyValueIds,
-        &AssociatedConstValueIds,
-    )
-{
+impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTermValueIds) {
     type Lowered = rust_ir::ImplDatum<ChalkIr>;
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
-        let (impl_, impl_id, associated_ty_value_ids, associated_const_value_ids) = self;
+        let (impl_, impl_id, associated_term_value_ids) = self;
 
         let polarity = impl_.polarity.lower();
         let binders = env.in_binders(impl_.all_parameters(), |env| {
@@ -934,26 +931,24 @@ impl LowerWithEnv
         // lookup the ids for each of the "associated type values"
         // within the impl, which should have already assigned and
         // stored in the map
-        let associated_ty_value_ids = impl_
-            .assoc_ty_values
-            .iter()
-            .map(|atv| associated_ty_value_ids[&(*impl_id, atv.name.str.clone())])
-            .collect();
-
-        let associated_const_value_ids = impl_
+        let assoc_const_values = impl_
             .assoc_const_values
             .iter()
-            .map(|acv| associated_const_value_ids[&(*impl_id, acv.name.str.clone())])
+            .map(|av| associated_term_value_ids[&(*impl_id, av.name.str.clone())]);
+        let associated_term_value_ids = impl_
+            .assoc_ty_values
+            .iter()
+            .map(|av| associated_term_value_ids[&(*impl_id, av.name.str.clone())])
+            .chain(assoc_const_values)
             .collect();
 
-        debug!(?associated_ty_value_ids);
+        debug!(?associated_term_value_ids);
 
         Ok(rust_ir::ImplDatum {
             polarity,
             binders,
             impl_type: impl_.impl_type.lower(),
-            associated_ty_value_ids,
-            associated_const_value_ids,
+            associated_term_value_ids,
         })
     }
 }
@@ -1043,17 +1038,17 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
 
 pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir::Goal<ChalkIr>> {
     let interner = ChalkIr;
-    let associated_ty_lookups: BTreeMap<_, _> = program
-        .associated_ty_data
+    let associated_term_lookups: BTreeMap<_, _> = program
+        .associated_term_data
         .iter()
-        .map(|(&associated_ty_id, datum)| {
+        .map(|(&associated_term_id, datum)| {
             let trait_datum = &program.trait_data[&datum.trait_id];
             let num_trait_params = trait_datum.binders.len(interner);
             let num_addl_params = datum.binders.len(interner) - num_trait_params;
             let addl_variable_kinds =
                 datum.binders.binders.as_slice(interner)[..num_addl_params].to_owned();
-            let lookup = AssociatedTyLookup {
-                id: associated_ty_id,
+            let lookup = AssociatedTermLookup {
+                id: associated_term_id,
                 addl_variable_kinds,
             };
             ((datum.trait_id, datum.name.clone()), lookup)
@@ -1079,7 +1074,7 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         closure_kinds: &program.closure_kinds,
         trait_kinds: &program.trait_kinds,
         opaque_ty_kinds: &program.opaque_ty_kinds,
-        associated_ty_lookups: &associated_ty_lookups,
+        associated_term_lookups: &associated_term_lookups,
         foreign_ty_ids: &program.foreign_ty_ids,
         parameter_map: BTreeMap::new(),
         auto_traits: &auto_traits,

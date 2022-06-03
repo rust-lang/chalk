@@ -61,7 +61,7 @@ pub fn collect_unrecorded_ids<I: Interner, DB: RustIrDatabase<I>>(
 
                 trait_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
                 for assoc_ty_id in &trait_datum.associated_ty_ids {
-                    let assoc_ty_datum = collector.db.associated_ty_data(*assoc_ty_id);
+                    let assoc_ty_datum = collector.db.associated_term_data(*assoc_ty_id);
                     assoc_ty_datum
                         .bounds_on_self(collector.db.interner())
                         .visit_with(&mut collector, DebruijnIndex::INNERMOST);
@@ -80,8 +80,8 @@ pub fn collect_unrecorded_ids<I: Interner, DB: RustIrDatabase<I>>(
             }
             RecordedItemId::Impl(impl_id) => {
                 let impl_datum = collector.db.impl_datum(impl_id);
-                for id in &impl_datum.associated_ty_value_ids {
-                    let assoc_ty_value = collector.db.associated_ty_value(*id);
+                for id in &impl_datum.associated_term_value_ids {
+                    let assoc_ty_value = collector.db.associated_term_value(*id);
                     assoc_ty_value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
                 }
                 impl_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
@@ -108,7 +108,7 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {
     fn visit_alias(&mut self, alias: &AliasTy<I>) {
         match alias {
             AliasTy::Projection(projection_ty) => {
-                let assoc_ty_datum = self.db.associated_ty_data(projection_ty.associated_term_id);
+                let assoc_ty_datum = self.db.associated_term_data(projection_ty.associated_term_id);
                 self.record(assoc_ty_datum.trait_id)
             }
             AliasTy::Opaque(opaque_ty) => self.record(opaque_ty.opaque_ty_id),
@@ -154,10 +154,6 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<I> for IdCollector<'i, I, D
         match where_clause {
             WhereClause::Implemented(trait_ref) => self.record(trait_ref.trait_id),
             WhereClause::AliasEq(alias_eq) => self.visit_alias(&alias_eq.alias),
-            WhereClause::ConstEq(const_eq) => {
-                self.db.associated_const_data(const_eq.term);
-                self.visit_const(&const_eq.ct, outer_binder)?;
-            }
             WhereClause::LifetimeOutlives(_lifetime_outlives) => (),
             WhereClause::TypeOutlives(_type_outlives) => (),
         }

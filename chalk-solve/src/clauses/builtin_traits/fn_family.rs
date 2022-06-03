@@ -4,6 +4,7 @@ use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
     AliasTy, Binders, Normalize, ProjectionTerm, Safety, Substitution, TraitId, Ty, TyKind,
+    Term,
 };
 
 fn push_clauses<I: Interner>(
@@ -42,7 +43,7 @@ fn push_clauses<I: Interner>(
         });
         builder.push_fact(Normalize {
             alias,
-            ty: return_type,
+            term: Term::Ty(return_type),
         });
     }
 }

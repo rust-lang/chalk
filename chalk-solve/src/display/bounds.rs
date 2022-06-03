@@ -34,7 +34,7 @@ impl<I: Interner> RenderAsRust<I> for AliasEqBound<I> {
     fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
         display_trait_with_assoc_ty_value(
             s,
-            s.db().associated_ty_data(self.associated_ty_id),
+            s.db().associated_term_data(self.associated_ty_id),
             &self.trait_bound.args_no_self,
             &self.parameters,
             &self.value,
@@ -91,7 +91,6 @@ impl<I: Interner> RenderAsRust<I> for WhereClause<I> {
         match self {
             WhereClause::Implemented(trait_ref) => trait_ref.fmt(s, f),
             WhereClause::AliasEq(alias_eq) => alias_eq.fmt(s, f),
-            WhereClause::ConstEq(const_eq) => const_eq.fmt(s, f),
             WhereClause::LifetimeOutlives(lifetime) => lifetime.display(s).fmt(f),
             WhereClause::TypeOutlives(ty) => ty.display(s).fmt(f),
         }
@@ -151,12 +150,6 @@ impl<I: Interner> RenderAsRust<I> for AliasEq<I> {
             }
             AliasTy::Opaque(opaque) => write!(f, "{}", opaque.display(s)),
         }
-    }
-}
-
-impl<I: Interner> RenderAsRust<I> for ConstEq<I> {
-    fn fmt(&self, s: &InternalWriterState<'_, I>, f: &'_ mut Formatter<'_>) -> Result {
-        todo!()
     }
 }
 

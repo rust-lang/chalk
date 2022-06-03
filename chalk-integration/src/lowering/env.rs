@@ -5,7 +5,7 @@ use chalk_ir::{
 };
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
 use chalk_parse::ast::*;
-use chalk_solve::rust_ir::{AssociatedConstValueId, AssociatedTyValueId};
+use chalk_solve::rust_ir::AssociatedTermValueId;
 use std::collections::BTreeMap;
 
 use crate::error::RustIrError;
@@ -25,14 +25,11 @@ pub type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
 pub type OpaqueTyVariableKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
 pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
-pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
-pub type AssociatedTyValueIds =
-    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
 
-pub type AssociatedConstLookups =
-    BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedConstLookup>;
-pub type AssociatedConstValueIds =
-    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedConstValueId<ChalkIr>>;
+pub type AssociatedTermLookups =
+    BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTermLookup>;
+pub type AssociatedTermValueIds =
+    BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTermValueId<ChalkIr>>;
 pub type ForeignIds = BTreeMap<Ident, chalk_ir::ForeignDefId<ChalkIr>>;
 
 pub type ParameterMap = BTreeMap<Ident, chalk_ir::WithKind<ChalkIr, BoundVar>>;
@@ -51,7 +48,7 @@ pub struct Env<'k> {
     pub trait_kinds: &'k TraitKinds,
     pub opaque_ty_ids: &'k OpaqueTyIds,
     pub opaque_ty_kinds: &'k OpaqueTyVariableKinds,
-    pub associated_ty_lookups: &'k AssociatedTyLookups,
+    pub associated_term_lookups: &'k AssociatedTermLookups,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,
     pub generator_ids: &'k GeneratorIds,
@@ -75,24 +72,9 @@ pub struct Env<'k> {
 /// }
 /// ```
 #[derive(Debug, PartialEq, Eq)]
-pub struct AssociatedTyLookup {
+pub struct AssociatedTermLookup {
     pub id: chalk_ir::AssocItemId<ChalkIr>,
     pub addl_variable_kinds: Vec<chalk_ir::VariableKind<ChalkIr>>,
-}
-
-/// Information about an associated const **declaration** (i.e., an
-/// `AssociatedConstDatum`). This information is gathered in the first
-/// phase of creating the Rust IR and is then later used to lookup the
-/// "id" of an associated const.
-///
-/// ```ignore
-/// trait Foo {
-///     const Bar: <Ty> = XXX; // <-- associated const declaration
-/// }
-/// ```
-#[derive(Debug, PartialEq, Eq)]
-pub struct AssociatedConstLookup {
-    pub id: chalk_ir::AssocItemId<ChalkIr>,
 }
 
 pub enum TypeLookup<'k> {
@@ -236,8 +218,8 @@ impl Env<'_> {
         &self,
         trait_id: TraitId<ChalkIr>,
         ident: &Identifier,
-    ) -> LowerResult<&AssociatedTyLookup> {
-        self.associated_ty_lookups
+    ) -> LowerResult<&AssociatedTermLookup> {
+        self.associated_term_lookups
             .get(&(trait_id, ident.str.clone()))
             .ok_or_else(|| RustIrError::MissingAssociatedType(ident.clone()))
     }
