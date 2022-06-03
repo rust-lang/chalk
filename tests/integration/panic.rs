@@ -54,7 +54,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         vec![]
     }
 
-    fn associated_ty_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTyDatum<ChalkIr>> {
+    fn associated_term_data(&self, ty: AssocItemId<ChalkIr>) -> Arc<AssociatedTermDatum<ChalkIr>> {
         unimplemented!()
     }
 
@@ -114,15 +114,14 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             polarity: Polarity::Positive,
             binders,
             impl_type: ImplType::Local,
-            associated_ty_value_ids: vec![],
-            associated_const_value_ids: vec![],
+            associated_term_value_ids: vec![],
         })
     }
 
-    fn associated_ty_value(
+    fn associated_term_value(
         &self,
-        id: AssociatedTyValueId<ChalkIr>,
-    ) -> Arc<AssociatedTyValue<ChalkIr>> {
+        id: AssociatedTermValueId<ChalkIr>,
+    ) -> Arc<AssociatedTermValue<ChalkIr>> {
         unimplemented!()
     }
 

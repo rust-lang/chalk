@@ -1,7 +1,7 @@
 use chalk_integration::interner::ChalkIr;
 use chalk_integration::{empty_substitution, lifetime, ty};
 use chalk_ir::cast::Cast;
-use chalk_ir::{PlaceholderIndex, TyKind, TypeFlags, UniverseIndex};
+use chalk_ir::{PlaceholderIndex, Term, TyKind, TypeFlags, UniverseIndex};
 
 #[test]
 fn placeholder_ty_flags_correct() {
@@ -56,7 +56,7 @@ fn dyn_ty_flags_correct() {
             vec![chalk_ir::Binders::<chalk_ir::WhereClause<ChalkIr>>::empty(
                 ChalkIr,
                 chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
-                    ty: internal_ty,
+                    term: Term::Ty(internal_ty),
                     alias: chalk_ir::AliasTy::Projection(projection_ty),
                 }),
             )],

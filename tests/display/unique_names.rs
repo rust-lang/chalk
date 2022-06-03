@@ -58,11 +58,11 @@ where
     fn custom_clauses(&self) -> Vec<chalk_ir::ProgramClause<I>> {
         self.db.custom_clauses()
     }
-    fn associated_ty_data(
+    fn associated_term_data(
         &self,
         ty: chalk_ir::AssocItemId<I>,
-    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyDatum<I>> {
-        self.db.associated_ty_data(ty)
+    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTermDatum<I>> {
+        self.db.associated_term_data(ty)
     }
     fn trait_datum(
         &self,
@@ -94,11 +94,11 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::ImplDatum<I>> {
         self.db.impl_datum(impl_id)
     }
-    fn associated_ty_value(
+    fn associated_term_value(
         &self,
-        id: chalk_solve::rust_ir::AssociatedTyValueId<I>,
-    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyValue<I>> {
-        self.db.associated_ty_value(id)
+        id: chalk_solve::rust_ir::AssociatedTermValueId<I>,
+    ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTermValue<I>> {
+        self.db.associated_term_value(id)
     }
     fn generator_datum(
         &self,

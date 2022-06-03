@@ -14,6 +14,33 @@ fn lower_success() {
 }
 
 #[test]
+fn lower_assoc_term() {
+    lowering_success! {
+        program {
+            trait Bar {
+                const N: usize;
+            }
+            struct Foo;
+            impl Bar for Foo {
+               const N: usize = 100;
+            }
+        }
+    }
+
+    lowering_success! {
+        program {
+            trait Bar {
+                type T;
+            }
+            struct Foo;
+            impl Bar for Foo {
+               type T = usize;
+            }
+        }
+    }
+}
+
+#[test]
 fn not_trait() {
     lowering_error! {
         program {
@@ -184,7 +211,7 @@ fn atc_accounting() {
     db.with_program(|program| {
         let atv_text = format!(
             "{:#?}",
-            &program.associated_ty_values.values().next().unwrap()
+            &program.associated_term_values.values().next().unwrap()
         );
         println!("{}", atv_text);
         assert_eq!(
