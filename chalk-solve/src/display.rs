@@ -218,7 +218,10 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
             assoc_ty_params.iter().map(|param| param.display(s)),
             ", "
         )?;
-        write!(f, "={}>", assoc_term_value.display(s))?;
+        match assoc_term_value {
+          Term::Ty(t) => write!(f, "={}>", t.display(s))?,
+          Term::Const(ct) => write!(f, "={}>", ct.display(s))?,
+        }
         Ok(())
     })
 }

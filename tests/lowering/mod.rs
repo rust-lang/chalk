@@ -27,19 +27,17 @@ fn lower_assoc_term() {
         }
     }
 
-    /*
     lowering_success! {
         program {
             trait Bar {
                 type T;
             }
-            struct Foo;
+            struct Foo {}
             impl Bar for Foo {
                type T = usize;
             }
         }
     }
-    */
 }
 
 #[test]
@@ -218,12 +216,12 @@ fn atc_accounting() {
         println!("{}", atv_text);
         assert_eq!(
             &atv_text[..].replace(",\n", "\n"),
-            &r#"AssociatedTyValue {
+            &r#"AssociatedTermValue {
     impl_id: ImplId(#2),
-    associated_ty_id: (Iterable::Iter),
-    value: for<lifetime, type> AssociatedTyValueBound {
-        ty: Iter<'^0.0, ^0.1>
-    },
+    associated_term_id: (Iterable::Iter),
+    value: for<lifetime, type> Ty(
+        Iter<'^0.0, ^0.1>
+    ),
 }"#
             .replace(",\n", "\n"),
         );
@@ -240,7 +238,7 @@ fn atc_accounting() {
             "ForAll<type> { \
              ForAll<lifetime> { \
              ForAll<type> { \
-             all(AliasEq(<^2.0 as Iterable>::Iter<'^1.0> = ^0.0), \
+             all(AliasEq(<^2.0 as Iterable>::Iter<'^1.0> = Ty(^0.0)), \
              Implemented(^2.0: Iterable)) \
              } \
              } \
