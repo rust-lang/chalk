@@ -1120,7 +1120,7 @@ fn const_projection() {
         goal {
           <i32 as ConstTrait>::N = 3
         } yields {
-          expect![[]]
+          expect![[r#"No possible solution"#]]
         }
     }
 }
