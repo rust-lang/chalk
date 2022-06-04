@@ -48,7 +48,7 @@ impl Lower for Program {
             .map(|_| lowerer.next_item_id())
             .collect::<Vec<_>>();
 
-        lowerer.extract_associated_types(self, &raw_ids)?;
+        lowerer.extract_associated_terms(self, &raw_ids)?;
         lowerer.extract_ids(self, &raw_ids)?;
         lowerer.lower(self, &raw_ids)
     }

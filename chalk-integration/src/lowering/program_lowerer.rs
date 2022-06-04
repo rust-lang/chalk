@@ -51,7 +51,7 @@ impl ProgramLowerer {
     }
 
     /// Create ids for associated type declarations and values
-    pub fn extract_associated_types(
+    pub fn extract_associated_terms(
         &mut self,
         program: &Program,
         raw_ids: &[RawId],
@@ -83,6 +83,11 @@ impl ProgramLowerer {
 
                 Item::Impl(d) => {
                     for atv in &d.assoc_ty_values {
+                        let atv_id = rust_ir::AssociatedTermValueId(self.next_item_id());
+                        self.associated_term_value_ids
+                            .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
+                    }
+                    for atv in &d.assoc_const_values {
                         let atv_id = rust_ir::AssociatedTermValueId(self.next_item_id());
                         self.associated_term_value_ids
                             .insert((ImplId(raw_id), atv.name.str.clone()), atv_id);
@@ -371,6 +376,27 @@ impl ProgramLowerer {
 
                         associated_term_values.insert(
                             atv_id,
+                            Arc::new(rust_ir::AssociatedTermValue {
+                                impl_id,
+                                associated_term_id: lookup.id,
+                                value,
+                            }),
+                        );
+                    }
+
+                    for acv in &impl_defn.assoc_const_values {
+                        let acv_id =
+                            self.associated_term_value_ids[&(impl_id, acv.name.str.clone())];
+                        let lookup =
+                            &self.associated_term_lookups[&(trait_id, acv.name.str.clone())];
+
+                        let value = empty_env.in_binders(vec![], |env| {
+                            Ok(rust_ir::AssociatedTermValueBound::Const(
+                                acv.value.lower(env)?,
+                            ))
+                        })?;
+                        associated_term_values.insert(
+                            acv_id,
                             Arc::new(rust_ir::AssociatedTermValue {
                                 impl_id,
                                 associated_term_id: lookup.id,

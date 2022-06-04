@@ -566,11 +566,11 @@ fn compute_assoc_ty_goal<I: Interner>(
     // Create `forall<T, 'a> { .. }`
     Some(gb.forall(
         &assoc.value.map_ref(|v| match v {
-            AssociatedTermValueBound::Ty(ty) => ty,
-            AssociatedTermValueBound::Const(_ct) => todo!(),
+            AssociatedTermValueBound::Ty(ty) => Term::Ty(ty.clone()),
+            AssociatedTermValueBound::Const(ct) => Term::Const(ct.clone()),
         }),
         assoc_term_id,
-        |gb, assoc_ty_substitution, value_ty, assoc_ty_id| {
+        |gb, assoc_ty_substitution, value_term, assoc_ty_id| {
             let interner = gb.interner();
             let db = gb.db();
 
@@ -630,7 +630,7 @@ fn compute_assoc_ty_goal<I: Interner>(
                         .cloned()
                         .map(|qwc| qwc.into_from_env_goal(interner)),
                     |gb| {
-                        let types = InputTypeCollector::types_in(gb.interner(), value_ty);
+                        let types = InputTypeCollector::types_in(gb.interner(), value_term);
 
                         // We require that `WellFormed(T)` for each type that appears in the value
                         let wf_goals = types
@@ -645,10 +645,16 @@ fn compute_assoc_ty_goal<I: Interner>(
                         // In our example, the bound was `Clone`, so the combined
                         // result is `Box<!T>: Clone`. This is then converted to a
                         // well-formed goal like `WellFormed(Box<!T>: Clone)`.
+                        //
+                        // In the case that the value_term is a const, we don't need to do
+                        // anything extra, since all we have to check there is equality.
                         let bound_goals = defn_bounds
                             .iter()
                             .cloned()
-                            .flat_map(|qb| qb.into_where_clauses(interner, (*value_ty).clone()))
+                            .flat_map(|qb| match value_term {
+                                Term::Ty(ty) => qb.into_where_clauses(interner, (*ty).clone()),
+                                Term::Const(_ct) => vec![],
+                            })
                             .map(|qwc| qwc.into_well_formed_goal(interner))
                             .casted(interner);
 
