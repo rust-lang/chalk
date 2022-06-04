@@ -81,9 +81,9 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermValue<I> {
         _environment: &Environment<I>,
     ) {
         let impl_datum = builder.db.impl_datum(self.impl_id);
-        let associated_ty = builder.db.associated_term_data(self.associated_term_id);
+        let associated_term = builder.db.associated_term_data(self.associated_term_id);
 
-        builder.push_binders(self.value.clone(), |builder, assoc_ty_value| {
+        builder.push_binders(self.value.clone(), |builder, assoc_term_value| {
             let all_parameters = builder.placeholders_in_scope().to_vec();
 
             // Get the projection for this associated type:
@@ -107,7 +107,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermValue<I> {
 
             // 2. any where-clauses from the `type` declaration in the trait: the
             //    parameters must be substituted with those of the impl
-            let assoc_ty_where_clauses = associated_ty
+            let assoc_term_where_clauses = associated_term
                 .binders
                 .map_ref(|b| &b.where_clauses)
                 .into_iter()
@@ -123,16 +123,20 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermValue<I> {
             //         Implemented(Iter<'a, T>: 'a).   // (2)
             // }
             // ```
-            builder.push_clause(
-                Normalize {
-                    alias: AliasTy::Projection(projection.clone()),
-                    term: match assoc_ty_value {
-                        AssociatedTermValueBound::Ty(ty) => Term::Ty(ty),
-                        AssociatedTermValueBound::Const(ct) => Term::Const(ct),
-                    },
-                },
-                impl_where_clauses.chain(assoc_ty_where_clauses),
-            );
+            match assoc_term_value {
+                AssociatedTermValueBound::Ty(ty) => {
+                    builder.push_clause(
+                        Normalize {
+                            alias: AliasTy::Projection(projection.clone()),
+                            term: Term::Ty(ty),
+                        },
+                        impl_where_clauses.chain(assoc_term_where_clauses),
+                    );
+                }
+                AssociatedTermValueBound::Const(ct) => {
+                    todo!();
+                }
+            }
         });
     }
 }
@@ -801,12 +805,15 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
     ) {
         let interner = builder.interner();
         let binders = self.binders.clone();
+        // otherwise known to be a type.
+
         builder.push_binders(
             binders,
             |builder,
              AssociatedTermDatumBound {
                  where_clauses,
                  bounds,
+                 assoc_const_ty,
              }| {
                 let substitution = builder.substitution_in_scope();
 
@@ -882,8 +889,8 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
                 //    forall<Self> {
                 //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
                 //    }
-                for quantified_bound in bounds {
-                    builder.push_binders(quantified_bound, |builder, bound| {
+                for quantified_bound in bounds.iter() {
+                    builder.push_binders(quantified_bound.clone(), |builder, bound| {
                         for wc in bound.into_where_clauses(interner, projection_ty.clone()) {
                             builder.push_clause(
                                 wc.into_from_env_goal(interner),
@@ -906,7 +913,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
 
                     // `AliasEq(<T as Foo>::Assoc = U)`
                     let projection_eq = AliasEq {
-                        alias: AliasTy::Projection(projection),
+                        alias: AliasTy::Projection(projection.clone()),
                         term: Term::Ty(ty),
                     };
 
@@ -918,6 +925,17 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTermDatum<I> {
                     //    }
                     builder.push_clause(projection_eq, Some(normalize));
                 });
+                if let Some(act) = assoc_const_ty {
+                    builder.push_bound_const(act, |builder, ct| {
+                        // `AliasEq(<T as Foo>::Assoc = U)`
+                        let projection_eq = AliasEq {
+                            alias: AliasTy::Projection(projection),
+                            term: Term::Const(ct),
+                        };
+                        builder.push_fact(projection_eq);
+                    });
+                    // todo!()
+                }
             },
         );
     }

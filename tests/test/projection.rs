@@ -1113,12 +1113,14 @@ fn const_projection() {
     test! {
         program {
           trait ConstTrait { const N: usize; }
+          struct Foo {}
+          impl ConstTrait for Foo { const N: usize = 3; }
           impl ConstTrait for () { const N: usize = 3; }
           impl ConstTrait for i32 { const N: usize = 5; }
         }
 
         goal {
-          <i32 as ConstTrait>::N = 3
+          <Foo as ConstTrait>::N = 3
         } yields {
           expect![[r#"No possible solution"#]]
         }

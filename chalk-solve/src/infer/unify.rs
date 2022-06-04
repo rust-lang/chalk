@@ -181,8 +181,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
             ),
 
             // Unifying an alias type with some other type `U`.
-            (_, &TyKind::Alias(ref alias)) => self.relate_alias_ty(variance.invert(), alias, a),
-            (&TyKind::Alias(ref alias), _) => self.relate_alias_ty(variance, alias, b),
+            (_, &TyKind::Alias(ref alias)) => {
+                self.relate_alias_term(variance.invert(), alias, &Term::Ty(a.clone()))
+            }
+            (&TyKind::Alias(ref alias), _) => {
+                self.relate_alias_term(variance, alias, &Term::Ty(b.clone()))
+            }
 
             (&TyKind::InferenceVar(var, kind), ty_data) => {
                 let ty = ty_data.clone().intern(interner);
@@ -452,11 +456,11 @@ impl<'t, I: Interner> Unifier<'t, I> {
     /// ```
     /// and relates `?X` and `ty`.
     #[instrument(level = "debug", skip(self))]
-    fn relate_alias_ty(
+    fn relate_alias_term(
         &mut self,
         variance: Variance,
         alias: &AliasTy<I>,
-        ty: &Ty<I>,
+        term: &Term<I>,
     ) -> Fallible<()> {
         let interner = self.interner;
         match variance {
@@ -465,29 +469,44 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     self.environment,
                     AliasEq {
                         alias: alias.clone(),
-                        term: Term::Ty(ty.clone()),
+                        term: term.clone(),
                     }
                     .cast(interner),
                 ));
                 Ok(())
             }
-            Variance::Covariant | Variance::Contravariant => {
-                // TODO need to convert this into type or const.
-                let term = self
-                    .table
-                    .new_variable(UniverseIndex::root())
-                    .to_ty(interner);
-                self.goals.push(InEnvironment::new(
-                    self.environment,
-                    AliasEq {
-                        alias: alias.clone(),
-                        term: Term::Ty(term.clone()),
-                    }
-                    .cast(interner),
-                ));
-                // TODO this should vary whether it relates a type or a const
-                self.relate_ty_ty(variance, &term, ty)
-            }
+            Variance::Covariant | Variance::Contravariant => match term {
+                Term::Ty(ty) => {
+                    let var = self
+                        .table
+                        .new_variable(UniverseIndex::root())
+                        .to_ty(interner);
+                    self.goals.push(InEnvironment::new(
+                        self.environment,
+                        AliasEq {
+                            alias: alias.clone(),
+                            term: Term::Ty(var.clone()),
+                        }
+                        .cast(interner),
+                    ));
+                    self.relate_ty_ty(variance, &var, ty)
+                }
+                Term::Const(ct) => {
+                    let var = self
+                        .table
+                        .new_variable(UniverseIndex::root())
+                        .to_const(interner, ct.data(interner).ty.clone());
+                    self.goals.push(InEnvironment::new(
+                        self.environment,
+                        AliasEq {
+                            alias: alias.clone(),
+                            term: Term::Const(var.clone()),
+                        }
+                        .cast(interner),
+                    ));
+                    self.relate_const_const(variance, &var, ct)
+                }
+            },
         }
     }
 
@@ -631,7 +650,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
                                     })
                                 }
                                 WhereClause::AliasEq(alias_eq) => {
-                                    let AliasEq { alias, term: _ } = alias_eq;
+                                    let AliasEq { alias, term } = alias_eq;
+                                    assert!(matches!(term, Term::Ty(_)));
                                     let alias = match alias {
                                         AliasTy::Opaque(opaque_ty) => {
                                             let OpaqueTy {

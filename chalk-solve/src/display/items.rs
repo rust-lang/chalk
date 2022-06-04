@@ -228,9 +228,9 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         write_joined_non_empty_list!(
             f,
             "\n{}\n",
-            self.associated_ty_ids.iter().map(|assoc_id| {
-                let assoc_ty_data = s.db().associated_term_data(*assoc_id);
-                format!("{}{}", s.indent(), (*assoc_ty_data).display(s))
+            self.associated_term_ids.iter().map(|assoc_id| {
+                let assoc_data = s.db().associated_term_data(*assoc_id);
+                format!("{}{}", s.indent(), (*assoc_data).display(s))
             }),
             "\n"
         )?;

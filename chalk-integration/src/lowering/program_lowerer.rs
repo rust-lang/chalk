@@ -313,6 +313,7 @@ impl ProgramLowerer {
                             Ok(rust_ir::AssociatedTermDatumBound {
                                 bounds: assoc_ty_defn.bounds.lower(env)?,
                                 where_clauses: assoc_ty_defn.where_clauses.lower(env)?,
+                                assoc_const_ty: None,
                             })
                         })?;
 
@@ -326,17 +327,17 @@ impl ProgramLowerer {
                             }),
                         );
                     }
+
                     for assoc_ct_defn in &trait_defn.assoc_const_defns {
                         let lookup = &self.associated_term_lookups
                             [&(trait_id, assoc_ct_defn.name.str.clone())];
-                        // assoc const has no parameters
-                        let binders =
-                            empty_env.in_binders(trait_defn.all_parameters(), |_env| {
-                                Ok(rust_ir::AssociatedTermDatumBound {
-                                    bounds: vec![],
-                                    where_clauses: vec![],
-                                })
-                            })?;
+                        let binders = empty_env.in_binders(trait_defn.all_parameters(), |env| {
+                            Ok(rust_ir::AssociatedTermDatumBound {
+                                bounds: vec![],
+                                where_clauses: vec![],
+                                assoc_const_ty: Some(assoc_ct_defn.ty.lower(env)?),
+                            })
+                        })?;
                         associated_term_data.insert(
                             lookup.id,
                             Arc::new(rust_ir::AssociatedTermDatum {

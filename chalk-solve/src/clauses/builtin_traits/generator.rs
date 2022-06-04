@@ -24,10 +24,10 @@ pub fn add_generator_program_clauses<I: Interner>(
             let trait_id = db.well_known_trait_id(WellKnownTrait::Generator).unwrap();
             let trait_datum = db.trait_datum(trait_id);
             assert_eq!(
-                trait_datum.associated_ty_ids.len(),
+                trait_datum.associated_term_ids.len(),
                 2,
                 "Generator trait should have exactly two associated types, found {:?}",
-                trait_datum.associated_ty_ids
+                trait_datum.associated_term_ids
             );
 
             let substitution = Substitution::from_iter(
@@ -45,7 +45,7 @@ pub fn add_generator_program_clauses<I: Interner>(
             });
 
             // `Generator::Yield`
-            let yield_id = trait_datum.associated_ty_ids[0];
+            let yield_id = trait_datum.associated_term_ids[0];
             let yield_alias = AliasTy::Projection(ProjectionTerm {
                 associated_term_id: yield_id,
                 substitution: substitution.clone(),
@@ -56,7 +56,7 @@ pub fn add_generator_program_clauses<I: Interner>(
             });
 
             // `Generator::Return`
-            let return_id = trait_datum.associated_ty_ids[1];
+            let return_id = trait_datum.associated_term_ids[1];
             let return_alias = AliasTy::Projection(ProjectionTerm {
                 associated_term_id: return_id,
                 substitution,

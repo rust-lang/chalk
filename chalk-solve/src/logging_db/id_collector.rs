@@ -60,12 +60,12 @@ pub fn collect_unrecorded_ids<I: Interner, DB: RustIrDatabase<I>>(
                 let trait_datum = collector.db.trait_datum(trait_id);
 
                 trait_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
-                for assoc_ty_id in &trait_datum.associated_ty_ids {
-                    let assoc_ty_datum = collector.db.associated_term_data(*assoc_ty_id);
-                    assoc_ty_datum
+                for assoc_id in &trait_datum.associated_term_ids {
+                    let assoc_datum = collector.db.associated_term_data(*assoc_id);
+                    assoc_datum
                         .bounds_on_self(collector.db.interner())
                         .visit_with(&mut collector, DebruijnIndex::INNERMOST);
-                    assoc_ty_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
+                    assoc_datum.visit_with(&mut collector, DebruijnIndex::INNERMOST);
                 }
             }
             RecordedItemId::OpaqueTy(opaque_id) => {

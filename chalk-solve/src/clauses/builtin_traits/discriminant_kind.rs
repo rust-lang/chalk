@@ -50,7 +50,7 @@ pub fn add_discriminant_clauses<I: Interner>(
         .unwrap();
     let trait_datum = db.trait_datum(trait_id);
 
-    let associated_ty_id = trait_datum.associated_ty_ids[0];
+    let associated_ty_id = trait_datum.associated_term_ids[0];
     let substitution = Substitution::from1(interner, self_ty);
 
     let trait_ref = TraitRef {

@@ -618,6 +618,7 @@ fn compute_assoc_ty_goal<I: Interner>(
                 let AssociatedTermDatumBound {
                     bounds: defn_bounds,
                     where_clauses: defn_where_clauses,
+                    assoc_const_ty: _,
                 } = assoc_ty_datum
                     .binders
                     .clone()

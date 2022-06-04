@@ -28,14 +28,14 @@ fn push_clauses<I: Interner>(
     if let WellKnownTrait::FnOnce = well_known {
         let trait_datum = db.trait_datum(trait_id);
         assert_eq!(
-            trait_datum.associated_ty_ids.len(),
+            trait_datum.associated_term_ids.len(),
             1,
             "FnOnce trait should have exactly one associated type, found {:?}",
-            trait_datum.associated_ty_ids
+            trait_datum.associated_term_ids
         );
         // Constructs the alias. For `Fn`, for example, this would look like
         // `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
-        let output_id = trait_datum.associated_ty_ids[0];
+        let output_id = trait_datum.associated_term_ids[0];
         let alias = AliasTy::Projection(ProjectionTerm {
             associated_term_id: output_id,
             substitution,

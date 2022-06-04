@@ -495,7 +495,7 @@ impl LowerWithEnv for AliasEqBound {
 
     fn lower(&self, env: &Env) -> LowerResult<Self::Lowered> {
         let trait_bound = self.trait_bound.lower(env)?;
-        let lookup = env.lookup_associated_ty(trait_bound.trait_id, &self.name)?;
+        let lookup = env.lookup_associated_term(trait_bound.trait_id, &self.name)?;
         let args: Vec<_> = self
             .args
             .iter()
@@ -632,7 +632,7 @@ impl LowerWithEnv for ProjectionTerm {
             trait_id,
             substitution: trait_substitution,
         } = trait_ref.lower(env)?;
-        let lookup = env.lookup_associated_ty(trait_id, name)?;
+        let lookup = env.lookup_associated_term(trait_id, name)?;
         let mut args: Vec<_> = args
             .iter()
             .map(|a| a.lower(env))
@@ -928,13 +928,14 @@ impl LowerWithEnv for (&Impl, ImplId<ChalkIr>, &AssociatedTermValueIds) {
             })
         })?;
 
-        // lookup the ids for each of the "associated type values"
+        // lookup the ids for each of the "associated term values"
         // within the impl, which should have already assigned and
         // stored in the map
         let assoc_const_values = impl_
             .assoc_const_values
             .iter()
             .map(|av| associated_term_value_ids[&(*impl_id, av.name.str.clone())]);
+
         let associated_term_value_ids = impl_
             .assoc_ty_values
             .iter()
@@ -1016,17 +1017,25 @@ impl LowerWithEnv for (&TraitDefn, chalk_ir::TraitId<ChalkIr>) {
             })
         })?;
 
-        let associated_ty_ids: Vec<_> = trait_defn
-            .assoc_ty_defns
-            .iter()
-            .map(|defn| env.lookup_associated_ty(*trait_id, &defn.name).unwrap().id)
-            .collect();
+        let assoc_ct_ids = trait_defn.assoc_const_defns.iter().map(|defn| {
+            env.lookup_associated_term(*trait_id, &defn.name)
+                .unwrap()
+                .id
+        });
+
+        let assoc_ty_ids = trait_defn.assoc_ty_defns.iter().map(|defn| {
+            env.lookup_associated_term(*trait_id, &defn.name)
+                .unwrap()
+                .id
+        });
+
+        let associated_term_ids: Vec<_> = assoc_ty_ids.chain(assoc_ct_ids).collect();
 
         let trait_datum = rust_ir::TraitDatum {
             id: *trait_id,
             binders,
             flags: trait_defn.flags.lower(),
-            associated_ty_ids,
+            associated_term_ids,
             well_known: trait_defn.well_known.map(|def| def.lower()),
         };
 

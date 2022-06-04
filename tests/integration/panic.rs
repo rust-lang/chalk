@@ -81,7 +81,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
                 non_enumerable: false,
                 coinductive: false,
             },
-            associated_ty_ids: vec![],
+            associated_term_ids: vec![],
             well_known: None,
         })
     }

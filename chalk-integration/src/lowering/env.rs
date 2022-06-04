@@ -214,7 +214,7 @@ impl Env<'_> {
         &self.generator_kinds[&id]
     }
 
-    pub fn lookup_associated_ty(
+    pub fn lookup_associated_term(
         &self,
         trait_id: TraitId<ChalkIr>,
         ident: &Identifier,

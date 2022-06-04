@@ -43,14 +43,15 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
 
     fn associated_term_data(
         &self,
-        ty: chalk_ir::AssocItemId<I>,
+        id: chalk_ir::AssocItemId<I>,
     ) -> Arc<crate::rust_ir::AssociatedTermDatum<I>> {
-        let mut v = (*self.db.associated_term_data(ty)).clone();
+        let mut v = (*self.db.associated_term_data(id)).clone();
         v.binders = Binders::new(
             v.binders.binders.clone(),
             AssociatedTermDatumBound {
                 where_clauses: Vec::new(),
                 bounds: Vec::new(),
+                assoc_const_ty: None,
             },
         );
         Arc::new(v)

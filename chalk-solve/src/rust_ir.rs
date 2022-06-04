@@ -249,7 +249,8 @@ pub struct TraitDatum<I: Interner> {
     /// chalk we add annotations like `#[auto]`.
     pub flags: TraitFlags,
 
-    pub associated_ty_ids: Vec<AssocItemId<I>>,
+    /// Types and consts associated with this trait.
+    pub associated_term_ids: Vec<AssocItemId<I>>,
 
     /// If this is a well-known trait, which one? If `None`, this is a regular,
     /// user-defined trait.
@@ -529,6 +530,9 @@ pub struct AssociatedTermDatumBound<I: Interner> {
 
     /// Where clauses that must hold for the projection to be well-formed.
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
+
+    /// If the associated term is a constant, what type is it?
+    pub assoc_const_ty: Option<Ty<I>>,
 }
 
 impl<I: Interner> AssociatedTermDatum<I> {
