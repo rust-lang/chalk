@@ -219,8 +219,8 @@ fn display_trait_with_assoc_ty_value<'a, I: Interner>(
             ", "
         )?;
         match assoc_term_value {
-          Term::Ty(t) => write!(f, "={}>", t.display(s))?,
-          Term::Const(ct) => write!(f, "={}>", ct.display(s))?,
+            Term::Ty(t) => write!(f, "={}>", t.display(s))?,
+            Term::Const(ct) => write!(f, "={}>", ct.display(s))?,
         }
         Ok(())
     })

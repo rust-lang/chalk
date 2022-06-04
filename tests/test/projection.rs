@@ -1112,22 +1112,15 @@ fn projection_to_opaque() {
 fn const_projection() {
     test! {
         program {
-          trait ConstTrait {
-              const ID: usize;
-          }
-          trait OtherTrait {}
-          impl OtherTrait for U where U: ConstTrait<const ID = 3> {}
-          impl ConstTrait for () {
-            const ID: usize = 3;
-          }
-          impl ConstTrait for i32 {
-            const ID: usize = 5;
-          }
+          trait ConstTrait { const N: usize; }
+          impl ConstTrait for () { const N: usize = 3; }
+          impl ConstTrait for i32 { const N: usize = 5; }
         }
 
         goal {
+          <i32 as ConstTrait>::N = 3
         } yields {
-          expect![["Unique"]]
+          expect![[]]
         }
     }
 }
