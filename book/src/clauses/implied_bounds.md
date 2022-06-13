@@ -102,7 +102,7 @@ trait Foo {
     ...
 }
 
-trait Bar where Self: Foo { } {
+trait Bar where Self: Foo {
     ...
 }
 ```
