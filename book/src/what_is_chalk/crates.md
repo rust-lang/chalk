@@ -19,7 +19,7 @@ The following crate is an implementation detail, used internally by `chalk-solve
 
 * The `chalk-engine` crate, which defines the actual engine that solves logical predicate. This
   engine is quite general and not really specific to Rust.
-* The `chalk-derive` crate defines custom derives for the `chalk_ir::fold::Fold` trait and other
+* The `chalk-derive` crate defines custom derives for the `chalk_ir::fold::TypeFoldable` trait and other
   such things.
 
 ## Crates for standalone REPL and testing
@@ -37,11 +37,11 @@ define a kind of "minimal embedding" of chalk.
 
 ## The chalk-solve crate
 
-| The `chalk-solve` crate | |
-|---|--- |
-| Purpose:  | to solve a given goal |
-| Depends on IR:  | chalk-ir and rust-ir   |
-| Context required:  | `RustIrDatabase` |
+| The `chalk-solve` crate |                       |
+| ----------------------- | --------------------- |
+| Purpose:                | to solve a given goal |
+| Depends on IR:          | chalk-ir and rust-ir  |
+| Context required:       | `RustIrDatabase`      |
 
 The `chalk-solve` crate exposes a key type called `Solver`.  This is a
 solver that, given a goal (expressed in chalk-ir) will solve the goal
@@ -60,11 +60,11 @@ provide needed context for the solver -- notably, the solver can ask:
 
 ## The chalk-engine crate
 
-| The `chalk-engine` crate  |   |
-|---|--- |
-| Purpose:  | define the base solving strategy |
-| IR:  | none   |
-| Context required:  | `Context` trait |
+| The `chalk-engine` crate |                                  |
+| ------------------------ | -------------------------------- |
+| Purpose:                 | define the base solving strategy |
+| IR:                      | none                             |
+| Context required:        | `Context` trait                  |
 
 For the purposes of chalk, the `chalk-engine` crate is effectively
 encapsulated by `chalk-solve`.  It defines the base SLG engine. It is

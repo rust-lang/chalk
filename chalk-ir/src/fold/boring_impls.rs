@@ -1,14 +1,14 @@
-//! This module contains "rote and uninteresting" impls of `Fold` for
-//! various types. In general, we prefer to derive `Fold`, but
+//! This module contains "rote and uninteresting" impls of `TypeFoldable` for
+//! various types. In general, we prefer to derive `TypeFoldable`, but
 //! sometimes that doesn't work for whatever reason.
 //!
-//! The more interesting impls of `Fold` remain in the `fold` module.
+//! The more interesting impls of `TypeFoldable` remain in the `fold` module.
 
 use super::in_place;
 use crate::*;
 use std::marker::PhantomData;
 
-impl<T: Fold<I>, I: Interner> Fold<I> for Vec<T> {
+impl<T: TypeFoldable<I>, I: Interner> TypeFoldable<I> for Vec<T> {
     type Result = Vec<T::Result>;
     fn fold_with<E>(
         self,
@@ -19,7 +19,7 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Vec<T> {
     }
 }
 
-impl<T: Fold<I>, I: Interner> Fold<I> for Box<T> {
+impl<T: TypeFoldable<I>, I: Interner> TypeFoldable<I> for Box<T> {
     type Result = Box<T::Result>;
     fn fold_with<E>(
         self,
@@ -32,7 +32,7 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Box<T> {
 
 macro_rules! tuple_fold {
     ($($n:ident),*) => {
-        impl<$($n: Fold<I>,)* I: Interner> Fold<I> for ($($n,)*) {
+        impl<$($n: TypeFoldable<I>,)* I: Interner> TypeFoldable<I> for ($($n,)*) {
             type Result = ($($n::Result,)*);
             fn fold_with<Error>(self, folder: &mut dyn Folder<I, Error = Error>, outer_binder: DebruijnIndex) -> Result<Self::Result, Error>
             {
@@ -49,7 +49,7 @@ tuple_fold!(A, B, C);
 tuple_fold!(A, B, C, D);
 tuple_fold!(A, B, C, D, E);
 
-impl<T: Fold<I>, I: Interner> Fold<I> for Option<T> {
+impl<T: TypeFoldable<I>, I: Interner> TypeFoldable<I> for Option<T> {
     type Result = Option<T::Result>;
     fn fold_with<E>(
         self,
@@ -63,7 +63,7 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Option<T> {
     }
 }
 
-impl<I: Interner> Fold<I> for GenericArg<I> {
+impl<I: Interner> TypeFoldable<I> for GenericArg<I> {
     type Result = GenericArg<I>;
     fn fold_with<E>(
         self,
@@ -80,7 +80,7 @@ impl<I: Interner> Fold<I> for GenericArg<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for Substitution<I> {
+impl<I: Interner> TypeFoldable<I> for Substitution<I> {
     type Result = Substitution<I>;
     fn fold_with<E>(
         self,
@@ -97,7 +97,7 @@ impl<I: Interner> Fold<I> for Substitution<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for Goals<I> {
+impl<I: Interner> TypeFoldable<I> for Goals<I> {
     type Result = Goals<I>;
     fn fold_with<E>(
         self,
@@ -113,7 +113,7 @@ impl<I: Interner> Fold<I> for Goals<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for ProgramClauses<I> {
+impl<I: Interner> TypeFoldable<I> for ProgramClauses<I> {
     type Result = ProgramClauses<I>;
     fn fold_with<E>(
         self,
@@ -129,7 +129,7 @@ impl<I: Interner> Fold<I> for ProgramClauses<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for QuantifiedWhereClauses<I> {
+impl<I: Interner> TypeFoldable<I> for QuantifiedWhereClauses<I> {
     type Result = QuantifiedWhereClauses<I>;
     fn fold_with<E>(
         self,
@@ -145,7 +145,7 @@ impl<I: Interner> Fold<I> for QuantifiedWhereClauses<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for Constraints<I> {
+impl<I: Interner> TypeFoldable<I> for Constraints<I> {
     type Result = Constraints<I>;
     fn fold_with<E>(
         self,
@@ -165,7 +165,7 @@ impl<I: Interner> Fold<I> for Constraints<I> {
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {
-        impl<I: Interner> $crate::fold::Fold<I> for $t {
+        impl<I: Interner> $crate::fold::TypeFoldable<I> for $t {
             type Result = Self;
             fn fold_with<E>(
                 self,
@@ -197,7 +197,7 @@ copy_fold!(Safety);
 #[macro_export]
 macro_rules! id_fold {
     ($t:ident) => {
-        impl<I: Interner> $crate::fold::Fold<I> for $t<I> {
+        impl<I: Interner> $crate::fold::TypeFoldable<I> for $t<I> {
             type Result = $t<I>;
             fn fold_with<E>(
                 self,
@@ -243,7 +243,7 @@ impl<I: Interner> SuperFold<I> for ProgramClause<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for PhantomData<I> {
+impl<I: Interner> TypeFoldable<I> for PhantomData<I> {
     type Result = PhantomData<I>;
 
     fn fold_with<E>(

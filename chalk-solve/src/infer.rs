@@ -1,6 +1,6 @@
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
-use chalk_ir::{cast::Cast, fold::Fold};
+use chalk_ir::{cast::Cast, fold::TypeFoldable};
 use tracing::debug;
 
 mod canonicalize;
@@ -52,7 +52,7 @@ impl<I: Interner> InferenceTable<I> {
         canonical: Canonical<T>,
     ) -> (Self, Substitution<I>, T)
     where
-        T: HasInterner<Interner = I> + Fold<I, Result = T> + Clone,
+        T: HasInterner<Interner = I> + TypeFoldable<I, Result = T> + Clone,
     {
         let mut table = InferenceTable::new();
 

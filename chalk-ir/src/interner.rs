@@ -647,7 +647,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 /// are virtually all of the types in chalk-ir, for example).
 /// This lets us map from a type like `Ty<I>` to the parameter `I`.
 ///
-/// It's particularly useful for writing `Fold` impls for generic types like
+/// It's particularly useful for writing `TypeFoldable` impls for generic types like
 /// `Binder<T>`, since it allows us to figure out the interner of `T`.
 pub trait HasInterner {
     /// The interner associated with the type.

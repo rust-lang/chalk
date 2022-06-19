@@ -120,7 +120,7 @@ enum DeriveKind {
 decl_derive!([HasInterner, attributes(has_interner)] => derive_has_interner);
 decl_derive!([Visit, attributes(has_interner)] => derive_visit);
 decl_derive!([SuperVisit, attributes(has_interner)] => derive_super_visit);
-decl_derive!([Fold, attributes(has_interner)] => derive_fold);
+decl_derive!([TypeFoldable, attributes(has_interner)] => derive_type_foldable);
 decl_derive!([Zip, attributes(has_interner)] => derive_zip);
 
 fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
@@ -250,11 +250,11 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
     )
 }
 
-/// Derives Fold for structs and enums for which one of the following is true:
+/// Derives TypeFoldable for structs and enums for which one of the following is true:
 /// - It has a `#[has_interner(TheInterner)]` attribute
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
-fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
+fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
     s.underscore_const(true);
     s.bind_with(|_| synstructure::BindStyle::Move);
 
@@ -265,7 +265,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
         vi.construct(|_, index| {
             let bind = &bindings[index];
             quote! {
-                ::chalk_ir::fold::Fold::fold_with(#bind, folder, outer_binder)?
+                ::chalk_ir::fold::TypeFoldable::fold_with(#bind, folder, outer_binder)?
             }
         })
     });
@@ -277,7 +277,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
         let param = get_generic_param_name(input).unwrap();
         s.add_impl_generic(parse_quote! { _U })
             .add_where_predicate(
-                parse_quote! { #param: ::chalk_ir::fold::Fold<#interner, Result = _U> },
+                parse_quote! { #param: ::chalk_ir::fold::TypeFoldable<#interner, Result = _U> },
             )
             .add_where_predicate(
                 parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = #interner> },
@@ -289,7 +289,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
 
     s.add_bounds(synstructure::AddBounds::None);
     s.bound_impl(
-        quote!(::chalk_ir::fold::Fold<#interner>),
+        quote!(::chalk_ir::fold::TypeFoldable<#interner>),
         quote! {
             type Result = #result;
 

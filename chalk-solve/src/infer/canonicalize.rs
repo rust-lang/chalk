@@ -1,6 +1,6 @@
 use crate::debug_span;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{Fold, Folder, SuperFold};
+use chalk_ir::fold::{Folder, SuperFold, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
@@ -29,7 +29,7 @@ impl<I: Interner> InferenceTable<I> {
     /// also returned.
     pub fn canonicalize<T>(&mut self, interner: I, value: T) -> Canonicalized<T::Result>
     where
-        T: Fold<I>,
+        T: TypeFoldable<I>,
         T::Result: HasInterner<Interner = I>,
     {
         debug_span!("canonicalize", "{:#?}", value);

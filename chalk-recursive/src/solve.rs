@@ -3,7 +3,7 @@ use super::fulfill::Fulfill;
 use crate::fixed_point::Minimums;
 use crate::UCanonicalGoal;
 use chalk_ir::could_match::CouldMatch;
-use chalk_ir::fold::Fold;
+use chalk_ir::fold::TypeFoldable;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::{
     Canonical, ClausePriority, DomainGoal, Fallible, Floundered, Goal, GoalData, InEnvironment,
@@ -196,7 +196,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         }
     }
 
-    fn new_inference_table<T: Fold<I, Result = T> + HasInterner<Interner = I> + Clone>(
+    fn new_inference_table<T: TypeFoldable<I, Result = T> + HasInterner<Interner = I> + Clone>(
         &self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
     ) -> (InferenceTable<I>, Substitution<I>, InEnvironment<T::Result>) {

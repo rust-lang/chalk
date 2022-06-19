@@ -28,7 +28,7 @@ impl<I: Interner> InferenceTable<I> {
     /// Variant on `instantiate` that takes a `Canonical<T>`.
     pub fn instantiate_canonical<T>(&mut self, interner: I, bound: Canonical<T>) -> T::Result
     where
-        T: HasInterner<Interner = I> + Fold<I> + Debug,
+        T: HasInterner<Interner = I> + TypeFoldable<I> + Debug,
     {
         let subst = self.fresh_subst(interner, bound.binders.as_slice(interner));
         subst.apply(bound.value, interner)
@@ -47,7 +47,7 @@ impl<I: Interner> InferenceTable<I> {
         arg: T,
     ) -> T::Result
     where
-        T: Fold<I>,
+        T: TypeFoldable<I>,
     {
         let binders: Vec<_> = binders
             .map(|pk| CanonicalVarKind::new(pk, universe))
@@ -64,7 +64,7 @@ impl<I: Interner> InferenceTable<I> {
         arg: Binders<T>,
     ) -> T::Result
     where
-        T: Fold<I> + HasInterner<Interner = I>,
+        T: TypeFoldable<I> + HasInterner<Interner = I>,
     {
         let (value, binders) = arg.into_value_and_skipped_binders();
 
@@ -80,7 +80,7 @@ impl<I: Interner> InferenceTable<I> {
     #[instrument(level = "debug", skip(self, interner))]
     pub fn instantiate_binders_universally<T>(&mut self, interner: I, arg: Binders<T>) -> T::Result
     where
-        T: Fold<I> + HasInterner<Interner = I>,
+        T: TypeFoldable<I> + HasInterner<Interner = I>,
     {
         let (value, binders) = arg.into_value_and_skipped_binders();
 

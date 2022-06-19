@@ -1,5 +1,5 @@
 use crate::infer::InferenceTable;
-use chalk_ir::fold::Fold;
+use chalk_ir::fold::TypeFoldable;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 
@@ -7,8 +7,8 @@ pub trait CanonicalExt<T: HasInterner, I: Interner> {
     fn map<OP, U>(self, interner: I, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold<I>,
-        U: Fold<I>,
+        T: TypeFoldable<I>,
+        U: TypeFoldable<I>,
         U::Result: HasInterner<Interner = I>;
 }
 
@@ -27,8 +27,8 @@ where
     fn map<OP, U>(self, interner: I, op: OP) -> Canonical<U::Result>
     where
         OP: FnOnce(T::Result) -> U,
-        T: Fold<I>,
-        U: Fold<I>,
+        T: TypeFoldable<I>,
+        U: TypeFoldable<I>,
         U::Result: HasInterner<Interner = I>,
     {
         // Subtle: It is only quite rarely correct to apply `op` and

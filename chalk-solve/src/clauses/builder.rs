@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
-use chalk_ir::fold::{Fold, Shift};
+use chalk_ir::fold::{Shift, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use tracing::{debug, instrument};
@@ -135,7 +135,7 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
         op: impl FnOnce(&mut Self, V::Result) -> R,
     ) -> R
     where
-        V: Fold<I> + HasInterner<Interner = I>,
+        V: TypeFoldable<I> + HasInterner<Interner = I>,
         V::Result: std::fmt::Debug,
     {
         let old_len = self.binders.len();

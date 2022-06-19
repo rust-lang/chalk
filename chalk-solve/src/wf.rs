@@ -571,9 +571,9 @@ fn compute_assoc_ty_goal<I: Interner>(
             let interner = gb.interner();
             let db = gb.db();
 
-            // Hmm, because `Arc<AssociatedTyValue>` does not implement `Fold`, we can't pass this value through,
+            // Hmm, because `Arc<AssociatedTyValue>` does not implement `TypeFoldable`, we can't pass this value through,
             // just the id, so we have to fetch `assoc_ty` from the database again.
-            // Implementing `Fold` for `AssociatedTyValue` doesn't *quite* seem right though, as that
+            // Implementing `TypeFoldable` for `AssociatedTyValue` doesn't *quite* seem right though, as that
             // would result in a deep clone, and the value is inert. We could do some more refatoring
             // (move the `Arc` behind a newtype, for example) to fix this, but for now doesn't
             // seem worth it.

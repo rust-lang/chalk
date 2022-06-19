@@ -1,5 +1,5 @@
 use crate::debug_span;
-use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::fold::{Folder, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{Visit, Visitor};
 use chalk_ir::*;
@@ -10,7 +10,7 @@ use super::InferenceTable;
 impl<I: Interner> InferenceTable<I> {
     pub fn u_canonicalize<T>(interner: I, value0: &Canonical<T>) -> UCanonicalized<T::Result>
     where
-        T: Clone + HasInterner<Interner = I> + Fold<I> + Visit<I>,
+        T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + Visit<I>,
         T::Result: HasInterner<Interner = I>,
     {
         debug_span!("u_canonicalize", "{:#?}", value0);
@@ -84,7 +84,7 @@ pub trait UniverseMapExt {
         canonical_value: &Canonical<T>,
     ) -> Canonical<T::Result>
     where
-        T: Clone + Fold<I> + HasInterner<Interner = I>,
+        T: Clone + TypeFoldable<I> + HasInterner<Interner = I>,
         T::Result: HasInterner<Interner = I>,
         I: Interner;
 }
@@ -163,7 +163,7 @@ impl UniverseMapExt for UniverseMap {
         canonical_value: &Canonical<T>,
     ) -> Canonical<T::Result>
     where
-        T: Clone + Fold<I> + HasInterner<Interner = I>,
+        T: Clone + TypeFoldable<I> + HasInterner<Interner = I>,
         T::Result: HasInterner<Interner = I>,
         I: Interner,
     {

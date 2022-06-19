@@ -1,6 +1,6 @@
 //! Traits for "zipping" types, walking through two structures and checking that they match.
 
-use crate::fold::Fold;
+use crate::fold::TypeFoldable;
 use crate::*;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -44,7 +44,7 @@ pub trait Zipper<I: Interner> {
         b: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>;
+        T: Clone + HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>;
 
     /// Zips two substs
     fn zip_substs(
@@ -98,7 +98,7 @@ where
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
+        T: Clone + HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>,
     {
         (**self).zip_binders(variance, a, b)
     }
@@ -248,7 +248,7 @@ impl<I: Interner> Zip<I> for Const<I> {
 }
 impl<I: Interner, T> Zip<I> for Binders<T>
 where
-    T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
+    T: Clone + HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>,
 {
     fn zip_with<Z: Zipper<I>>(
         zipper: &mut Z,

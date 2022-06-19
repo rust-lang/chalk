@@ -56,7 +56,7 @@
 use std::cmp::min;
 use std::usize;
 
-use chalk_derive::{Fold, HasInterner, Visit};
+use chalk_derive::{HasInterner, TypeFoldable, Visit};
 use chalk_ir::interner::Interner;
 use chalk_ir::{
     AnswerSubst, Canonical, ConstrainedSubst, Constraint, DebruijnIndex, Goal, InEnvironment,
@@ -78,13 +78,13 @@ mod table;
 mod tables;
 
 index_struct! {
-    pub struct TableIndex { // FIXME: pub b/c Fold
+    pub struct TableIndex { // FIXME: pub b/c TypeFoldable
         value: usize,
     }
 }
 
 /// The paper describes these as `A :- D | G`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, Visit, HasInterner)]
 pub struct ExClause<I: Interner> {
     /// The substitution which, applied to the goal of our table,
     /// would yield A.
@@ -168,7 +168,7 @@ impl TimeStamp {
 ///
 /// trying to solve `?T: Foo` would immediately require solving `?T:
 /// Sized`, and hence would flounder.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, Visit)]
 pub struct FlounderedSubgoal<I: Interner> {
     /// Literal that floundered.
     pub floundered_literal: Literal<I>,
@@ -209,7 +209,7 @@ pub struct CompleteAnswer<I: Interner> {
 }
 
 /// Either `A` or `~A`, where `A` is a `Env |- Goal`.
-#[derive(Clone, Debug, Fold, Visit)]
+#[derive(Clone, Debug, TypeFoldable, Visit)]
 pub enum Literal<I: Interner> {
     // FIXME: pub b/c fold
     Positive(InEnvironment<Goal<I>>),
