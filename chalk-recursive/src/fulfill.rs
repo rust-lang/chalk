@@ -3,7 +3,7 @@ use crate::solve::SolveDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::TypeFoldable;
 use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::Visit;
+use chalk_ir::visit::TypeVisitable;
 use chalk_ir::zip::Zip;
 use chalk_ir::{
     Binders, BoundVar, Canonical, ConstrainedSubst, Constraint, Constraints, DomainGoal,
@@ -83,7 +83,7 @@ fn u_canonicalize<I: Interner, T>(
     value0: &Canonical<T>,
 ) -> (UCanonical<T::Result>, UniverseMap)
 where
-    T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + Visit<I>,
+    T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + TypeVisitable<I>,
     T::Result: HasInterner<Interner = I>,
 {
     let res = InferenceTable::u_canonicalize(interner, value0);

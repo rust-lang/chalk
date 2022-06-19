@@ -8,7 +8,7 @@ use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
-    visit::{SuperVisit, Visit, Visitor},
+    visit::{SuperVisit, TypeVisitable, Visitor},
     Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, LifetimeOutlives,
     QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
@@ -60,7 +60,7 @@ impl<I: Interner> Visitor<I> for UnsizeParameterCollector<I> {
 
 fn outer_binder_parameters_used<I: Interner>(
     interner: I,
-    v: &Binders<impl Visit<I> + HasInterner>,
+    v: &Binders<impl TypeVisitable<I> + HasInterner>,
 ) -> HashSet<usize> {
     let mut visitor = UnsizeParameterCollector {
         interner,
@@ -124,7 +124,7 @@ impl<'p, I: Interner> Visitor<I> for ParameterOccurenceCheck<'p, I> {
 
 fn uses_outer_binder_params<I: Interner>(
     interner: I,
-    v: &Binders<impl Visit<I> + HasInterner>,
+    v: &Binders<impl TypeVisitable<I> + HasInterner>,
     parameters: &HashSet<usize>,
 ) -> bool {
     let mut visitor = ParameterOccurenceCheck {

@@ -96,7 +96,7 @@ where
 
         let forest = self.build_specialization_forest()?;
 
-        // Visit every root in the forest & set specialization
+        // TypeVisitable every root in the forest & set specialization
         // priority for the tree that is the root of.
         for root_idx in forest.externals(Direction::Incoming) {
             self.set_priorities(root_idx, &forest, 0, &mut result);
@@ -141,7 +141,7 @@ where
             map.insert(*impl_id, SpecializationPriority(p));
         }
 
-        // Visit all children of this node, setting their priority to this + 1
+        // TypeVisitable all children of this node, setting their priority to this + 1
         for child_idx in forest.neighbors(idx) {
             self.set_priorities(child_idx, forest, p + 1, map);
         }

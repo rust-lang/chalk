@@ -1,15 +1,15 @@
-//! This module contains "rote and uninteresting" impls of `Visit` for
-//! various types. In general, we prefer to derive `Visit`, but
+//! This module contains "rote and uninteresting" impls of `TypeVisitable` for
+//! various types. In general, we prefer to derive `TypeVisitable`, but
 //! sometimes that doesn't work for whatever reason.
 //!
-//! The more interesting impls of `Visit` remain in the `visit` module.
+//! The more interesting impls of `TypeVisitable` remain in the `visit` module.
 
 use crate::{
     try_break, AdtId, AssocTypeId, ClausePriority, ClosureId, Constraints, ControlFlow,
     DebruijnIndex, FloatTy, FnDefId, ForeignDefId, GeneratorId, GenericArg, Goals, ImplId, IntTy,
     Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauses,
     QuantifiedWhereClauses, QuantifierKind, Safety, Scalar, Substitution, SuperVisit, TraitId,
-    UintTy, UniverseIndex, Visit, Visitor,
+    TypeVisitable, UintTy, UniverseIndex, Visitor,
 };
 use std::{marker::PhantomData, sync::Arc};
 
@@ -20,7 +20,7 @@ pub fn visit_iter<'i, T, I, B>(
     outer_binder: DebruijnIndex,
 ) -> ControlFlow<B>
 where
-    T: Visit<I>,
+    T: TypeVisitable<I>,
     I: 'i + Interner,
 {
     for e in it {
@@ -29,7 +29,7 @@ where
     ControlFlow::Continue(())
 }
 
-impl<T: Visit<I>, I: Interner> Visit<I> for &T {
+impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for &T {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -39,7 +39,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &T {
     }
 }
 
-impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
+impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Vec<T> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -49,7 +49,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Vec<T> {
     }
 }
 
-impl<T: Visit<I>, I: Interner> Visit<I> for &[T] {
+impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for &[T] {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -59,7 +59,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for &[T] {
     }
 }
 
-impl<T: Visit<I>, I: Interner> Visit<I> for Box<T> {
+impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Box<T> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -69,7 +69,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Box<T> {
     }
 }
 
-impl<T: Visit<I>, I: Interner> Visit<I> for Arc<T> {
+impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Arc<T> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -81,7 +81,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Arc<T> {
 
 macro_rules! tuple_visit {
     ($($n:ident),*) => {
-        impl<$($n: Visit<I>,)* I: Interner> Visit<I> for ($($n,)*) {
+        impl<$($n: TypeVisitable<I>,)* I: Interner> TypeVisitable<I> for ($($n,)*) {
             fn visit_with<BT>(&self, visitor: &mut dyn Visitor<I, BreakTy = BT>, outer_binder: DebruijnIndex) -> ControlFlow<BT> {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
@@ -99,7 +99,7 @@ tuple_visit!(A, B, C);
 tuple_visit!(A, B, C, D);
 tuple_visit!(A, B, C, D, E);
 
-impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
+impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Option<T> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -112,7 +112,7 @@ impl<T: Visit<I>, I: Interner> Visit<I> for Option<T> {
     }
 }
 
-impl<I: Interner> Visit<I> for GenericArg<I> {
+impl<I: Interner> TypeVisitable<I> for GenericArg<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -123,7 +123,7 @@ impl<I: Interner> Visit<I> for GenericArg<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Substitution<I> {
+impl<I: Interner> TypeVisitable<I> for Substitution<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -134,7 +134,7 @@ impl<I: Interner> Visit<I> for Substitution<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Goals<I> {
+impl<I: Interner> TypeVisitable<I> for Goals<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -149,7 +149,7 @@ impl<I: Interner> Visit<I> for Goals<I> {
 #[macro_export]
 macro_rules! const_visit {
     ($t:ty) => {
-        impl<I: Interner> $crate::visit::Visit<I> for $t {
+        impl<I: Interner> $crate::visit::TypeVisitable<I> for $t {
             fn visit_with<B>(
                 &self,
                 _visitor: &mut dyn ($crate::visit::Visitor<I, BreakTy = B>),
@@ -180,7 +180,7 @@ const_visit!(Safety);
 #[macro_export]
 macro_rules! id_visit {
     ($t:ident) => {
-        impl<I: Interner> $crate::visit::Visit<I> for $t<I> {
+        impl<I: Interner> $crate::visit::TypeVisitable<I> for $t<I> {
             fn visit_with<B>(
                 &self,
                 _visitor: &mut dyn ($crate::visit::Visitor<I, BreakTy = B>),
@@ -214,7 +214,7 @@ impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for ProgramClauses<I> {
+impl<I: Interner> TypeVisitable<I> for ProgramClauses<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -226,7 +226,7 @@ impl<I: Interner> Visit<I> for ProgramClauses<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Constraints<I> {
+impl<I: Interner> TypeVisitable<I> for Constraints<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -238,7 +238,7 @@ impl<I: Interner> Visit<I> for Constraints<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for QuantifiedWhereClauses<I> {
+impl<I: Interner> TypeVisitable<I> for QuantifiedWhereClauses<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -250,7 +250,7 @@ impl<I: Interner> Visit<I> for QuantifiedWhereClauses<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for PhantomData<I> {
+impl<I: Interner> TypeVisitable<I> for PhantomData<I> {
     fn visit_with<B>(
         &self,
         _visitor: &mut dyn Visitor<I, BreakTy = B>,

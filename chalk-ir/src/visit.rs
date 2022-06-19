@@ -30,7 +30,7 @@ macro_rules! try_break {
 /// such as a `Goal`, and computes a value as a result.
 ///
 ///
-/// To **apply** a visitor, use the `Visit::visit_with` method, like so
+/// To **apply** a visitor, use the `TypeVisitable::visit_with` method, like so
 ///
 /// ```rust,ignore
 /// let result = x.visit_with(&mut visitor, 0);
@@ -188,7 +188,7 @@ pub trait Visitor<I: Interner> {
 
 /// Applies the given `visitor` to a value, producing a visited result
 /// of type `Visitor::Result`.
-pub trait Visit<I: Interner>: Debug {
+pub trait TypeVisitable<I: Interner>: Debug {
     /// Apply the given visitor `visitor` to `self`; `binders` is the
     /// number of binders that are in scope when beginning the
     /// visitor. Typically `binders` starts as 0, but is adjusted when
@@ -204,7 +204,7 @@ pub trait Visit<I: Interner>: Debug {
 /// For types where "visit" invokes a callback on the `visitor`, the
 /// `SuperVisit` trait captures the recursive behavior that visits all
 /// the contents of the type.
-pub trait SuperVisit<I: Interner>: Visit<I> {
+pub trait SuperVisit<I: Interner>: TypeVisitable<I> {
     /// Recursively visits the type contents.
     fn super_visit_with<B>(
         &self,
@@ -216,7 +216,7 @@ pub trait SuperVisit<I: Interner>: Visit<I> {
 /// "visiting" a type invokes the `visit_ty` method on the visitor; this
 /// usually (in turn) invokes `super_visit_ty` to visit the individual
 /// parts.
-impl<I: Interner> Visit<I> for Ty<I> {
+impl<I: Interner> TypeVisitable<I> for Ty<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -301,7 +301,7 @@ where
     }
 }
 
-impl<I: Interner> Visit<I> for Lifetime<I> {
+impl<I: Interner> TypeVisitable<I> for Lifetime<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -338,7 +338,7 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Const<I> {
+impl<I: Interner> TypeVisitable<I> for Const<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -372,7 +372,7 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Goal<I> {
+impl<I: Interner> TypeVisitable<I> for Goal<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -393,7 +393,7 @@ impl<I: Interner> SuperVisit<I> for Goal<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for ProgramClause<I> {
+impl<I: Interner> TypeVisitable<I> for ProgramClause<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -403,7 +403,7 @@ impl<I: Interner> Visit<I> for ProgramClause<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for WhereClause<I> {
+impl<I: Interner> TypeVisitable<I> for WhereClause<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -413,7 +413,7 @@ impl<I: Interner> Visit<I> for WhereClause<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for DomainGoal<I> {
+impl<I: Interner> TypeVisitable<I> for DomainGoal<I> {
     fn visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,

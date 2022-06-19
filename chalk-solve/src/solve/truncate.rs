@@ -2,7 +2,7 @@
 
 use crate::infer::InferenceTable;
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{SuperVisit, Visit, Visitor};
+use chalk_ir::visit::{SuperVisit, TypeVisitable, Visitor};
 use chalk_ir::*;
 use std::cmp::max;
 use std::ops::ControlFlow;
@@ -23,7 +23,7 @@ pub fn needs_truncation<I: Interner>(
     interner: I,
     infer: &mut InferenceTable<I>,
     max_size: usize,
-    value: impl Visit<I>,
+    value: impl TypeVisitable<I>,
 ) -> bool {
     let mut visitor = TySizeVisitor::new(interner, infer);
     value.visit_with(&mut visitor, DebruijnIndex::INNERMOST);

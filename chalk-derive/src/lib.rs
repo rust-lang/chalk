@@ -118,7 +118,7 @@ enum DeriveKind {
 }
 
 decl_derive!([HasInterner, attributes(has_interner)] => derive_has_interner);
-decl_derive!([Visit, attributes(has_interner)] => derive_visit);
+decl_derive!([TypeVisitable, attributes(has_interner)] => derive_type_visitable);
 decl_derive!([SuperVisit, attributes(has_interner)] => derive_super_visit);
 decl_derive!([TypeFoldable, attributes(has_interner)] => derive_type_foldable);
 decl_derive!([Zip, attributes(has_interner)] => derive_zip);
@@ -136,24 +136,28 @@ fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
     )
 }
 
-/// Derives Visit for structs and enums for which one of the following is true:
+/// Derives TypeVisitable for structs and enums for which one of the following is true:
 /// - It has a `#[has_interner(TheInterner)]` attribute
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
-fn derive_visit(s: synstructure::Structure) -> TokenStream {
-    derive_any_visit(s, parse_quote! { Visit }, parse_quote! { visit_with })
+fn derive_type_visitable(s: synstructure::Structure) -> TokenStream {
+    derive_any_type_visitable(
+        s,
+        parse_quote! { TypeVisitable },
+        parse_quote! { visit_with },
+    )
 }
 
-/// Same as Visit, but derives SuperVisit instead
+/// Same as TypeVisitable, but derives SuperVisit instead
 fn derive_super_visit(s: synstructure::Structure) -> TokenStream {
-    derive_any_visit(
+    derive_any_type_visitable(
         s,
         parse_quote! { SuperVisit },
         parse_quote! { super_visit_with },
     )
 }
 
-fn derive_any_visit(
+fn derive_any_type_visitable(
     mut s: synstructure::Structure,
     trait_name: Ident,
     method_name: Ident,
@@ -164,13 +168,13 @@ fn derive_any_visit(
 
     let body = s.each(|bi| {
         quote! {
-            ::chalk_ir::try_break!(::chalk_ir::visit::Visit::visit_with(#bi, visitor, outer_binder));
+            ::chalk_ir::try_break!(::chalk_ir::visit::TypeVisitable::visit_with(#bi, visitor, outer_binder));
         }
     });
 
     if kind == DeriveKind::FromHasInterner {
         let param = get_generic_param_name(input).unwrap();
-        s.add_where_predicate(parse_quote! { #param: ::chalk_ir::visit::Visit<#interner> });
+        s.add_where_predicate(parse_quote! { #param: ::chalk_ir::visit::TypeVisitable<#interner> });
     }
 
     s.add_bounds(synstructure::AddBounds::None);

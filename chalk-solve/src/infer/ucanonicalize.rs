@@ -1,7 +1,7 @@
 use crate::debug_span;
 use chalk_ir::fold::{Folder, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::{Visit, Visitor};
+use chalk_ir::visit::{TypeVisitable, Visitor};
 use chalk_ir::*;
 use std::ops::ControlFlow;
 
@@ -10,7 +10,7 @@ use super::InferenceTable;
 impl<I: Interner> InferenceTable<I> {
     pub fn u_canonicalize<T>(interner: I, value0: &Canonical<T>) -> UCanonicalized<T::Result>
     where
-        T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + Visit<I>,
+        T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + TypeVisitable<I>,
         T::Result: HasInterner<Interner = I>,
     {
         debug_span!("u_canonicalize", "{:#?}", value0);
