@@ -12,11 +12,7 @@ pub struct Subst<'s, I: Interner> {
 
 impl<I: Interner> Subst<'_, I> {
     /// Applies the substitution by folding
-    pub fn apply<T: TypeFoldable<I>>(
-        interner: I,
-        parameters: &[GenericArg<I>],
-        value: T,
-    ) -> T::Result {
+    pub fn apply<T: TypeFoldable<I>>(interner: I, parameters: &[GenericArg<I>], value: T) -> T {
         value
             .fold_with(
                 &mut Subst {

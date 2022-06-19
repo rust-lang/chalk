@@ -390,15 +390,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn relate_binders<'a, T, R>(
+    fn relate_binders<'a, T>(
         &mut self,
         variance: Variance,
         a: &Binders<T>,
         b: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: Clone + TypeFoldable<I, Result = R> + HasInterner<Interner = I>,
-        R: Zip<I> + TypeFoldable<I, Result = R>,
+        T: Clone + TypeFoldable<I> + HasInterner<Interner = I> + Zip<I>,
         't: 'a,
     {
         // for<'a...> T == for<'b...> U
@@ -1202,7 +1201,7 @@ impl<'i, I: Interner> Zipper<I> for Unifier<'i, I> {
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Clone + HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>,
+        T: Clone + HasInterner<Interner = I> + Zip<I> + TypeFoldable<I>,
     {
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.

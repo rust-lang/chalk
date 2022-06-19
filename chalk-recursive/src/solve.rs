@@ -196,10 +196,10 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         }
     }
 
-    fn new_inference_table<T: TypeFoldable<I, Result = T> + HasInterner<Interner = I> + Clone>(
+    fn new_inference_table<T: TypeFoldable<I> + HasInterner<Interner = I> + Clone>(
         &self,
         ucanonical_goal: &UCanonical<InEnvironment<T>>,
-    ) -> (InferenceTable<I>, Substitution<I>, InEnvironment<T::Result>) {
+    ) -> (InferenceTable<I>, Substitution<I>, InEnvironment<T>) {
         let (infer, subst, canonical_goal) = InferenceTable::from_canonical(
             self.interner(),
             ucanonical_goal.universes,

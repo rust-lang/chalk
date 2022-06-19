@@ -6,12 +6,11 @@
 use crate::*;
 
 impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
-    type Result = FnPointer<I>;
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         let FnPointer {
             num_binders,
             substitution,
@@ -32,15 +31,13 @@ impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
 impl<T, I: Interner> TypeFoldable<I> for Binders<T>
 where
     T: HasInterner<Interner = I> + TypeFoldable<I>,
-    <T as TypeFoldable<I>>::Result: HasInterner<Interner = I>,
     I: Interner,
 {
-    type Result = Binders<T::Result>;
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         let Binders {
             binders: self_binders,
             value: self_value,
@@ -57,14 +54,12 @@ impl<I, T> TypeFoldable<I> for Canonical<T>
 where
     I: Interner,
     T: HasInterner<Interner = I> + TypeFoldable<I>,
-    <T as TypeFoldable<I>>::Result: HasInterner<Interner = I>,
 {
-    type Result = Canonical<T::Result>;
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         let Canonical {
             binders: self_binders,
             value: self_value,

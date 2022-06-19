@@ -8,10 +8,10 @@ use std::ops::ControlFlow;
 use super::InferenceTable;
 
 impl<I: Interner> InferenceTable<I> {
-    pub fn u_canonicalize<T>(interner: I, value0: &Canonical<T>) -> UCanonicalized<T::Result>
+    pub fn u_canonicalize<T>(interner: I, value0: &Canonical<T>) -> UCanonicalized<T>
     where
         T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + TypeVisitable<I>,
-        T::Result: HasInterner<Interner = I>,
+        T: HasInterner<Interner = I>,
     {
         debug_span!("u_canonicalize", "{:#?}", value0);
 
@@ -78,14 +78,10 @@ pub trait UniverseMapExt {
     fn add(&mut self, universe: UniverseIndex);
     fn map_universe_to_canonical(&self, universe: UniverseIndex) -> Option<UniverseIndex>;
     fn map_universe_from_canonical(&self, universe: UniverseIndex) -> UniverseIndex;
-    fn map_from_canonical<T, I>(
-        &self,
-        interner: I,
-        canonical_value: &Canonical<T>,
-    ) -> Canonical<T::Result>
+    fn map_from_canonical<T, I>(&self, interner: I, canonical_value: &Canonical<T>) -> Canonical<T>
     where
         T: Clone + TypeFoldable<I> + HasInterner<Interner = I>,
-        T::Result: HasInterner<Interner = I>,
+        T: HasInterner<Interner = I>,
         I: Interner;
 }
 impl UniverseMapExt for UniverseMap {
@@ -157,14 +153,10 @@ impl UniverseMapExt for UniverseMap {
     /// of universes, since that determines visibility, and (b) that
     /// the universe we produce does not correspond to any of the
     /// other original universes.
-    fn map_from_canonical<T, I>(
-        &self,
-        interner: I,
-        canonical_value: &Canonical<T>,
-    ) -> Canonical<T::Result>
+    fn map_from_canonical<T, I>(&self, interner: I, canonical_value: &Canonical<T>) -> Canonical<T>
     where
         T: Clone + TypeFoldable<I> + HasInterner<Interner = I>,
-        T::Result: HasInterner<Interner = I>,
+        T: HasInterner<Interner = I>,
         I: Interner,
     {
         debug_span!("map_from_canonical", ?canonical_value, universes = ?self.universes);

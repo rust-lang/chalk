@@ -275,33 +275,21 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
     });
 
     let input = s.ast();
-    let type_name = &input.ident;
 
-    let result = if kind == DeriveKind::FromHasInterner {
+    if kind == DeriveKind::FromHasInterner {
         let param = get_generic_param_name(input).unwrap();
-        s.add_impl_generic(parse_quote! { _U })
-            .add_where_predicate(
-                parse_quote! { #param: ::chalk_ir::fold::TypeFoldable<#interner, Result = _U> },
-            )
-            .add_where_predicate(
-                parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = #interner> },
-            );
-        quote! { #type_name <_U> }
-    } else {
-        quote! { #type_name < #interner > }
+        s.add_where_predicate(parse_quote! { #param: ::chalk_ir::fold::TypeFoldable<#interner> });
     };
 
     s.add_bounds(synstructure::AddBounds::None);
     s.bound_impl(
         quote!(::chalk_ir::fold::TypeFoldable<#interner>),
         quote! {
-            type Result = #result;
-
             fn fold_with<E>(
                 self,
                 folder: &mut dyn ::chalk_ir::fold::TypeFolder < #interner, Error = E >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> ::std::result::Result<Self::Result, E> {
+            ) -> ::std::result::Result<Self, E> {
                 Ok(match self { #body })
             }
         },

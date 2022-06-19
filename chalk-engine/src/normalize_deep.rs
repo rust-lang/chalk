@@ -25,7 +25,7 @@ impl<I: Interner> DeepNormalizer<'_, I> {
         table: &mut InferenceTable<I>,
         interner: I,
         value: T,
-    ) -> T::Result {
+    ) -> T {
         value
             .fold_with(
                 &mut DeepNormalizer { interner, table },

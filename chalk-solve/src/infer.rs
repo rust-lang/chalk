@@ -52,7 +52,7 @@ impl<I: Interner> InferenceTable<I> {
         canonical: Canonical<T>,
     ) -> (Self, Substitution<I>, T)
     where
-        T: HasInterner<Interner = I> + TypeFoldable<I, Result = T> + Clone,
+        T: HasInterner<Interner = I> + TypeFoldable<I> + Clone,
     {
         let mut table = InferenceTable::new();
 

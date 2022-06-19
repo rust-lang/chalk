@@ -21,10 +21,9 @@ pub struct Generalize<I: Interner> {
 }
 
 impl<I: Interner> Generalize<I> {
-    pub fn apply<T>(interner: I, value: T) -> Binders<T::Result>
+    pub fn apply<T>(interner: I, value: T) -> Binders<T>
     where
         T: HasInterner<Interner = I> + TypeFoldable<I>,
-        T::Result: HasInterner<Interner = I>,
     {
         let mut generalize = Generalize {
             binders: Vec::new(),
