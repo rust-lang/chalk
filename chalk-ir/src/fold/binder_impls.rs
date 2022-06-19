@@ -9,7 +9,7 @@ impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
     type Result = FnPointer<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let FnPointer {
@@ -38,7 +38,7 @@ where
     type Result = Binders<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let Binders {
@@ -62,7 +62,7 @@ where
     type Result = Canonical<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let Canonical {

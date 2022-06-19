@@ -8,7 +8,7 @@ extern crate self as chalk_ir;
 
 use crate::cast::{Cast, CastTo, Caster};
 use crate::fold::shift::Shift;
-use crate::fold::{Folder, Subst, TypeFoldable, TypeSuperFoldable};
+use crate::fold::{Subst, TypeFoldable, TypeFolder, TypeSuperFoldable};
 use crate::visit::{TypeSuperVisitable, TypeVisitable, VisitExt, Visitor};
 use chalk_derive::{HasInterner, TypeFoldable, TypeSuperVisitable, TypeVisitable, Zip};
 use std::marker::PhantomData;
@@ -2830,10 +2830,10 @@ impl<'a, I: Interner> ToGenericArg<I> for (usize, &'a VariableKind<I>) {
     }
 }
 
-impl<'i, I: Interner, A: AsParameters<I>> Folder<I> for &SubstFolder<'i, I, A> {
+impl<'i, I: Interner, A: AsParameters<I>> TypeFolder<I> for &SubstFolder<'i, I, A> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

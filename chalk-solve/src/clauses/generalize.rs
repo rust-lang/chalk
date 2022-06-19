@@ -7,7 +7,7 @@
 //! types passed to `program_clauses` in the clauses we generate.
 
 use chalk_ir::{
-    fold::{Folder, TypeFoldable},
+    fold::{TypeFoldable, TypeFolder},
     interner::{HasInterner, Interner},
     Binders, BoundVar, Const, ConstData, ConstValue, DebruijnIndex, Fallible, Lifetime,
     LifetimeData, NoSolution, Ty, TyKind, TyVariableKind, VariableKind, VariableKinds,
@@ -41,10 +41,10 @@ impl<I: Interner> Generalize<I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Generalize<I> {
+impl<I: Interner> TypeFolder<I> for Generalize<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

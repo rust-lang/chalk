@@ -2,7 +2,7 @@ use super::var::*;
 use super::*;
 use crate::debug_span;
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{Folder, TypeFoldable};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::UnificationDatabase;
@@ -1247,10 +1247,10 @@ impl<'u, 't, I: Interner> OccursCheck<'u, 't, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<I> for OccursCheck<'_, 'i, I> {
+impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

@@ -71,10 +71,10 @@ impl<I> Shifter<I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Shifter<I> {
+impl<I: Interner> TypeFolder<I> for Shifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 
@@ -141,10 +141,10 @@ impl<I> DownShifter<I> {
     }
 }
 
-impl<I: Interner> Folder<I> for DownShifter<I> {
+impl<I: Interner> TypeFolder<I> for DownShifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

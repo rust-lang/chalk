@@ -299,7 +299,7 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
 
             fn fold_with<E>(
                 self,
-                folder: &mut dyn ::chalk_ir::fold::Folder < #interner, Error = E >,
+                folder: &mut dyn ::chalk_ir::fold::TypeFolder < #interner, Error = E >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> ::std::result::Result<Self::Result, E> {
                 Ok(match self { #body })
