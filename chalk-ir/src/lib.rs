@@ -9,7 +9,7 @@ extern crate self as chalk_ir;
 use crate::cast::{Cast, CastTo, Caster};
 use crate::fold::shift::Shift;
 use crate::fold::{Subst, TypeFoldable, TypeFolder, TypeSuperFoldable};
-use crate::visit::{TypeSuperVisitable, TypeVisitable, VisitExt, Visitor};
+use crate::visit::{TypeSuperVisitable, TypeVisitable, TypeVisitor, VisitExt};
 use chalk_derive::{HasInterner, TypeFoldable, TypeSuperVisitable, TypeVisitable, Zip};
 use std::marker::PhantomData;
 use std::ops::ControlFlow;

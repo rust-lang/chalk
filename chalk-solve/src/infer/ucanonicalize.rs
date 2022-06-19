@@ -1,7 +1,7 @@
 use crate::debug_span;
 use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::{HasInterner, Interner};
-use chalk_ir::visit::{TypeVisitable, Visitor};
+use chalk_ir::visit::{TypeVisitable, TypeVisitor};
 use chalk_ir::*;
 use std::ops::ControlFlow;
 
@@ -200,10 +200,10 @@ struct UCollector<'q, I> {
     interner: I,
 }
 
-impl<I: Interner> Visitor<I> for UCollector<'_, I> {
+impl<I: Interner> TypeVisitor<I> for UCollector<'_, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 

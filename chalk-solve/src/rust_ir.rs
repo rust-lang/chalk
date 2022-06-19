@@ -160,7 +160,7 @@ pub struct FnDefDatum<I: Interner> {
 impl<I: Interner> TypeVisitable<I> for FnDefDatum<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
+        visitor: &mut dyn chalk_ir::visit::TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         try_break!(self.id.visit_with(visitor, outer_binder));
@@ -507,7 +507,7 @@ pub struct AssociatedTyDatum<I: Interner> {
 impl<I: Interner> TypeVisitable<I> for AssociatedTyDatum<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
+        visitor: &mut dyn chalk_ir::visit::TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         try_break!(self.trait_id.visit_with(visitor, outer_binder));

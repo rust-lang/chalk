@@ -2,7 +2,7 @@
 
 use crate::infer::InferenceTable;
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{TypeSuperVisitable, TypeVisitable, Visitor};
+use chalk_ir::visit::{TypeSuperVisitable, TypeVisitable, TypeVisitor};
 use chalk_ir::*;
 use std::cmp::max;
 use std::ops::ControlFlow;
@@ -51,10 +51,10 @@ impl<'infer, I: Interner> TySizeVisitor<'infer, I> {
     }
 }
 
-impl<'infer, I: Interner> Visitor<I> for TySizeVisitor<'infer, I> {
+impl<'infer, I: Interner> TypeVisitor<I> for TySizeVisitor<'infer, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 

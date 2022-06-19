@@ -5,13 +5,13 @@
 
 use crate::interner::HasInterner;
 use crate::{
-    Binders, Canonical, ControlFlow, DebruijnIndex, FnPointer, Interner, TypeVisitable, Visitor,
+    Binders, Canonical, ControlFlow, DebruijnIndex, FnPointer, Interner, TypeVisitable, TypeVisitor,
 };
 
 impl<I: Interner> TypeVisitable<I> for FnPointer<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         self.substitution
@@ -25,7 +25,7 @@ where
 {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         self.value.visit_with(visitor, outer_binder.shifted_in())
@@ -39,7 +39,7 @@ where
 {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         self.value.visit_with(visitor, outer_binder.shifted_in())

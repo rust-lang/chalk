@@ -9,14 +9,14 @@ use crate::{
     DebruijnIndex, FloatTy, FnDefId, ForeignDefId, GeneratorId, GenericArg, Goals, ImplId, IntTy,
     Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauses,
     QuantifiedWhereClauses, QuantifierKind, Safety, Scalar, Substitution, TraitId,
-    TypeSuperVisitable, TypeVisitable, UintTy, UniverseIndex, Visitor,
+    TypeSuperVisitable, TypeVisitable, TypeVisitor, UintTy, UniverseIndex,
 };
 use std::{marker::PhantomData, sync::Arc};
 
 /// Convenience function to visit all the items in the iterator it.
 pub fn visit_iter<'i, T, I, B>(
     it: impl Iterator<Item = T>,
-    visitor: &mut dyn Visitor<I, BreakTy = B>,
+    visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
     outer_binder: DebruijnIndex,
 ) -> ControlFlow<B>
 where
@@ -32,7 +32,7 @@ where
 impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for &T {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         T::visit_with(self, visitor, outer_binder)
@@ -42,7 +42,7 @@ impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for &T {
 impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Vec<T> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visit_iter(self.iter(), visitor, outer_binder)
@@ -52,7 +52,7 @@ impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Vec<T> {
 impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for &[T] {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visit_iter(self.iter(), visitor, outer_binder)
@@ -62,7 +62,7 @@ impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for &[T] {
 impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Box<T> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         T::visit_with(self, visitor, outer_binder)
@@ -72,7 +72,7 @@ impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Box<T> {
 impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Arc<T> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         T::visit_with(self, visitor, outer_binder)
@@ -82,7 +82,7 @@ impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Arc<T> {
 macro_rules! tuple_visit {
     ($($n:ident),*) => {
         impl<$($n: TypeVisitable<I>,)* I: Interner> TypeVisitable<I> for ($($n,)*) {
-            fn visit_with<BT>(&self, visitor: &mut dyn Visitor<I, BreakTy = BT>, outer_binder: DebruijnIndex) -> ControlFlow<BT> {
+            fn visit_with<BT>(&self, visitor: &mut dyn TypeVisitor<I, BreakTy = BT>, outer_binder: DebruijnIndex) -> ControlFlow<BT> {
                 #[allow(non_snake_case)]
                 let &($(ref $n),*) = self;
                 $(
@@ -102,7 +102,7 @@ tuple_visit!(A, B, C, D, E);
 impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Option<T> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         match self {
@@ -115,7 +115,7 @@ impl<T: TypeVisitable<I>, I: Interner> TypeVisitable<I> for Option<T> {
 impl<I: Interner> TypeVisitable<I> for GenericArg<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -126,7 +126,7 @@ impl<I: Interner> TypeVisitable<I> for GenericArg<I> {
 impl<I: Interner> TypeVisitable<I> for Substitution<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -137,7 +137,7 @@ impl<I: Interner> TypeVisitable<I> for Substitution<I> {
 impl<I: Interner> TypeVisitable<I> for Goals<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -152,7 +152,7 @@ macro_rules! const_visit {
         impl<I: Interner> $crate::visit::TypeVisitable<I> for $t {
             fn visit_with<B>(
                 &self,
-                _visitor: &mut dyn ($crate::visit::Visitor<I, BreakTy = B>),
+                _visitor: &mut dyn ($crate::visit::TypeVisitor<I, BreakTy = B>),
                 _outer_binder: DebruijnIndex,
             ) -> ControlFlow<B> {
                 ControlFlow::Continue(())
@@ -183,7 +183,7 @@ macro_rules! id_visit {
         impl<I: Interner> $crate::visit::TypeVisitable<I> for $t<I> {
             fn visit_with<B>(
                 &self,
-                _visitor: &mut dyn ($crate::visit::Visitor<I, BreakTy = B>),
+                _visitor: &mut dyn ($crate::visit::TypeVisitor<I, BreakTy = B>),
                 _outer_binder: DebruijnIndex,
             ) -> ControlFlow<B> {
                 ControlFlow::Continue(())
@@ -205,7 +205,7 @@ id_visit!(ForeignDefId);
 impl<I: Interner> TypeSuperVisitable<I> for ProgramClause<I> {
     fn super_visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -217,7 +217,7 @@ impl<I: Interner> TypeSuperVisitable<I> for ProgramClause<I> {
 impl<I: Interner> TypeVisitable<I> for ProgramClauses<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -229,7 +229,7 @@ impl<I: Interner> TypeVisitable<I> for ProgramClauses<I> {
 impl<I: Interner> TypeVisitable<I> for Constraints<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -241,7 +241,7 @@ impl<I: Interner> TypeVisitable<I> for Constraints<I> {
 impl<I: Interner> TypeVisitable<I> for QuantifiedWhereClauses<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -253,7 +253,7 @@ impl<I: Interner> TypeVisitable<I> for QuantifiedWhereClauses<I> {
 impl<I: Interner> TypeVisitable<I> for PhantomData<I> {
     fn visit_with<B>(
         &self,
-        _visitor: &mut dyn Visitor<I, BreakTy = B>,
+        _visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         _outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         ControlFlow::Continue(())

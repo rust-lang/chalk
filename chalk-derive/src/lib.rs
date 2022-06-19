@@ -183,7 +183,7 @@ fn derive_any_type_visitable(
         quote! {
             fn #method_name <B>(
                 &self,
-                visitor: &mut dyn ::chalk_ir::visit::Visitor < #interner, BreakTy = B >,
+                visitor: &mut dyn ::chalk_ir::visit::TypeVisitor < #interner, BreakTy = B >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> std::ops::ControlFlow<B> {
                 match *self {

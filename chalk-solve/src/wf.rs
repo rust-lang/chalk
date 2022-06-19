@@ -8,7 +8,7 @@ use chalk_ir::{
     cast::*,
     fold::shift::Shift,
     interner::Interner,
-    visit::{TypeVisitable, Visitor},
+    visit::{TypeVisitable, TypeVisitor},
     *,
 };
 use tracing::debug;
@@ -69,9 +69,9 @@ impl<I: Interner> InputTypeCollector<I> {
     }
 }
 
-impl<I: Interner> Visitor<I> for InputTypeCollector<I> {
+impl<I: Interner> TypeVisitor<I> for InputTypeCollector<I> {
     type BreakTy = ();
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 

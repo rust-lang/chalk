@@ -1,8 +1,8 @@
-//! Visitor helpers
+//! TypeVisitor helpers
 
-use crate::{BoundVar, ControlFlow, DebruijnIndex, Interner, TypeVisitable, Visitor};
+use crate::{BoundVar, ControlFlow, DebruijnIndex, Interner, TypeVisitable, TypeVisitor};
 
-/// Visitor extensions.
+/// TypeVisitor extensions.
 pub trait VisitExt<I: Interner>: TypeVisitable<I> {
     /// Check whether there are free (non-bound) variables.
     fn has_free_vars(&self, interner: I) -> bool {
@@ -20,10 +20,10 @@ struct FindFreeVarsVisitor<I: Interner> {
     interner: I,
 }
 
-impl<I: Interner> Visitor<I> for FindFreeVarsVisitor<I> {
+impl<I: Interner> TypeVisitor<I> for FindFreeVarsVisitor<I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
