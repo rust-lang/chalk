@@ -1,6 +1,6 @@
 use crate::debug_span;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{TypeFoldable, TypeFolder, TypeSuperFoldable};
+use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable, TypeSuperFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
@@ -101,10 +101,10 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     }
 }
 
-impl<'i, I: Interner> TypeFolder<I> for Canonicalizer<'i, I> {
+impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 

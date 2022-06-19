@@ -1,5 +1,5 @@
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{TypeFoldable, TypeFolder};
+use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_solve::infer::InferenceTable;
@@ -35,10 +35,10 @@ impl<I: Interner> DeepNormalizer<'_, I> {
     }
 }
 
-impl<I: Interner> TypeFolder<I> for DeepNormalizer<'_, I> {
+impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 

@@ -17,8 +17,8 @@ pub use self::subst::Subst;
 /// certain changes applied. The idea is that it contains methods that
 /// let you swap types/lifetimes for new types/lifetimes; meanwhile,
 /// each bit of IR implements the `TypeFoldable` trait which, given a
-/// `TypeFolder`, will reconstruct itself, invoking the folder's methods
-/// to transform each of the types/lifetimes embedded within.
+/// `FallibleTypeFolder`, will reconstruct itself, invoking the folder's
+/// methods to transform each of the types/lifetimes embedded within.
 ///
 /// # Usage patterns
 ///
@@ -29,15 +29,15 @@ pub use self::subst::Subst;
 /// more often, just free existential variables) that appear within
 /// the term.
 ///
-/// For this reason, the `TypeFolder` trait extends two other traits that
-/// contain methods that are invoked when just those particular
+/// For this reason, the `FallibleTypeFolder` trait extends two other
+/// traits that contain methods that are invoked when just those particular
 ///
 /// In particular, folders can intercept references to free variables
 /// (either existentially or universally quantified) and replace them
 /// with other types/lifetimes as appropriate.
 ///
-/// To create a folder `F`, one never implements `TypeFolder` directly, but instead
-/// implements one of each of these three sub-traits:
+/// To create a folder `F`, one never implements `FallibleTypeFolder`
+/// directly, but instead implements one of each of these three sub-traits:
 ///
 /// - `FreeVarFolder` -- folds `BoundVar` instances that appear free
 ///   in the term being folded (use `DefaultFreeVarFolder` to
@@ -49,24 +49,25 @@ pub use self::subst::Subst;
 ///   that appear in the term being folded (use
 ///   `DefaultPlaceholderFolder` to ignore/forbid these altogether)
 ///
-/// To **apply** a folder, use the `TypeFoldable::fold_with` method, like so
+/// To **apply** a folder, use the `TypeFoldable::fold_with` method,
+/// like so
 ///
 /// ```rust,ignore
 /// let x = x.fold_with(&mut folder, 0);
 /// ```
-pub trait TypeFolder<I: Interner> {
+pub trait FallibleTypeFolder<I: Interner> {
     /// The type this folder returns when folding fails. This is
     /// commonly [`NoSolution`].
     type Error;
 
     /// Creates a `dyn` value from this folder. Unfortunately, this
-    /// must be added manually to each impl of TypeFolder; it permits the
-    /// default implements below to create a `&mut dyn TypeFolder` from
-    /// `Self` without knowing what `Self` is (by invoking this
-    /// method). Effectively, this limits impls of `TypeFolder` to types
-    /// for which we are able to create a dyn value (i.e., not `[T]`
-    /// types).
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error>;
+    /// must be added manually to each impl of FallibleTypeFolder; it
+    /// permits the default implements below to create a
+    /// `&mut dyn FallibleTypeFolder` from `Self` without knowing what
+    /// `Self` is (by invoking this method). Effectively, this limits
+    /// impls of `FallibleTypeFolder` to types for which we are able to
+    /// create a dyn value (i.e., not `[T]` types).
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when folding. By default, invokes
@@ -318,7 +319,7 @@ pub trait TypeFoldable<I: Interner>: Debug + Sized {
     /// constructs.
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E>;
 }
@@ -330,7 +331,7 @@ pub trait TypeSuperFoldable<I: Interner>: TypeFoldable<I> {
     /// Recursively folds the value.
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E>;
 }
@@ -341,7 +342,7 @@ pub trait TypeSuperFoldable<I: Interner>: TypeFoldable<I> {
 impl<I: Interner> TypeFoldable<I> for Ty<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         folder.fold_ty(self, outer_binder)
@@ -355,7 +356,7 @@ where
 {
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Ty<I>, E> {
         let interner = folder.interner();
@@ -463,7 +464,7 @@ where
 impl<I: Interner> TypeFoldable<I> for Lifetime<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         folder.fold_lifetime(self, outer_binder)
@@ -476,7 +477,7 @@ where
 {
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Lifetime<I>, E> {
         let interner = folder.interner();
@@ -513,7 +514,7 @@ where
 impl<I: Interner> TypeFoldable<I> for Const<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         folder.fold_const(self, outer_binder)
@@ -526,7 +527,7 @@ where
 {
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Const<I>, E> {
         let interner = folder.interner();
@@ -562,7 +563,7 @@ where
 impl<I: Interner> TypeFoldable<I> for Goal<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         folder.fold_goal(self, outer_binder)
@@ -573,7 +574,7 @@ impl<I: Interner> TypeFoldable<I> for Goal<I> {
 impl<I: Interner> TypeSuperFoldable<I> for Goal<I> {
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         let interner = folder.interner();
@@ -592,7 +593,7 @@ impl<I: Interner> TypeSuperFoldable<I> for Goal<I> {
 impl<I: Interner> TypeFoldable<I> for ProgramClause<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         folder.fold_program_clause(self, outer_binder)

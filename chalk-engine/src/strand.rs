@@ -3,7 +3,7 @@ use crate::{ExClause, TableIndex, TimeStamp};
 use std::fmt::Debug;
 
 use chalk_derive::HasInterner;
-use chalk_ir::fold::{TypeFoldable, TypeFolder};
+use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, DebruijnIndex, UniverseMap};
 
@@ -38,7 +38,7 @@ pub(crate) struct SelectedSubgoal {
 impl<I: Interner> TypeFoldable<I> for Strand<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         Ok(Strand {

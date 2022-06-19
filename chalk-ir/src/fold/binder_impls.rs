@@ -8,7 +8,7 @@ use crate::*;
 impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         let FnPointer {
@@ -35,7 +35,7 @@ where
 {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         let Binders {
@@ -57,7 +57,7 @@ where
 {
     fn fold_with<E>(
         self,
-        folder: &mut dyn TypeFolder<I, Error = E>,
+        folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         let Canonical {

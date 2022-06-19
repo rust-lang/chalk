@@ -1,5 +1,5 @@
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{TypeFoldable, TypeFolder};
+use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
@@ -127,10 +127,10 @@ impl<'q, I: Interner> Inverter<'q, I> {
     }
 }
 
-impl<'i, I: Interner> TypeFolder<I> for Inverter<'i, I> {
+impl<'i, I: Interner> FallibleTypeFolder<I> for Inverter<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 

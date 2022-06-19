@@ -25,10 +25,10 @@ impl<I: Interner> Subst<'_, I> {
     }
 }
 
-impl<I: Interner> TypeFolder<I> for Subst<'_, I> {
+impl<I: Interner> FallibleTypeFolder<I> for Subst<'_, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 

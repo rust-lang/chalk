@@ -1,5 +1,5 @@
 use crate::debug_span;
-use chalk_ir::fold::{TypeFoldable, TypeFolder};
+use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{TypeVisitable, TypeVisitor};
 use chalk_ir::*;
@@ -222,10 +222,10 @@ struct UMapToCanonical<'q, I> {
     universes: &'q UniverseMap,
 }
 
-impl<'i, I: Interner> TypeFolder<I> for UMapToCanonical<'i, I> {
+impl<'i, I: Interner> FallibleTypeFolder<I> for UMapToCanonical<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 
@@ -294,10 +294,10 @@ struct UMapFromCanonical<'q, I> {
     universes: &'q UniverseMap,
 }
 
-impl<'i, I: Interner> TypeFolder<I> for UMapFromCanonical<'i, I> {
+impl<'i, I: Interner> FallibleTypeFolder<I> for UMapFromCanonical<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 
