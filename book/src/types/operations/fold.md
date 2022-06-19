@@ -29,7 +29,7 @@ folder can substitute a new type in its place.
 A common use for `TypeFoldable` is to permit a substitution -- that is,
 replacing generic type parameters with their values.
 
-## From TypeFoldable to Folder to SuperFold and back again
+## From TypeFoldable to Folder to TypeSuperFoldable and back again
 
 The overall flow of folding is like this.
 
@@ -39,7 +39,7 @@ The overall flow of folding is like this.
    callbacks in the [`Folder`] trait, invoking [`TypeFoldable::fold_with`] will in turn
    invoke the corresponding method on the [`Folder`] trait, such as `Folder::fold_ty`.
 3. The default implementation of `Folder::fold_ty`, in turn, invokes
-   `SuperFold::super_fold_with`.  This will recursively fold the
+   `TypeSuperFoldable::super_fold_with`.  This will recursively fold the
    contents of the type. In some cases, the `super_fold_with`
    implementation invokes more specialized methods on [`Folder`], such
    as [`Folder::fold_free_var_ty`], which makes it easier to write
@@ -53,7 +53,7 @@ Thus, as a user, you can customize folding by:
 * Implementing the appropriate methods to "intercept" types/lifetimes/etc at the right level of
   detail
 * In those methods, if you find a case where you would prefer not to
-  substitute a new value, then invoke `SuperFold::super_fold_with` to
+  substitute a new value, then invoke `TypeSuperFoldable::super_fold_with` to
   return to the default behavior.
 
 ## The `binders` argument
@@ -77,21 +77,21 @@ type that will result from folding.
 
 [`Result`]: https://rust-lang.github.io/chalk/chalk_ir/fold/trait.TypeFoldable.html#associatedtype.Result
 
-## When to implement the TypeFoldable and SuperFold traits
+## When to implement the TypeFoldable and TypeSuperFoldable traits
 
 Any piece of IR that represents a kind of "term" (e.g., a type, part
 of a type, or a goal, etc) in the logic should implement `TypeFoldable`. We
 also implement `TypeFoldable` for common collection types like `Vec` as well
 as tuples, references, etc.
 
-The `SuperFold` trait should only be implemented for those types that
+The `TypeSuperFoldable` trait should only be implemented for those types that
 have a callback defined on the `Folder` trait (e.g., types and
 lifetimes).
 
 ## Derives
 
 Using the `chalk-derive` crate, you can auto-derive the `TypeFoldable` trait.
-There isn't presently a derive for `SuperFold` since it is very rare
+There isn't presently a derive for `TypeSuperFoldable` since it is very rare
 to require it. The derive for `TypeFoldable` is a bit cludgy and requires:
 
 * You must import `TypeFoldable` into scope.

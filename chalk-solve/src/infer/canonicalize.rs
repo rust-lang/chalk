@@ -1,6 +1,6 @@
 use crate::debug_span;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{Folder, SuperFold, TypeFoldable};
+use chalk_ir::fold::{Folder, TypeFoldable, TypeSuperFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;

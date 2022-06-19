@@ -220,7 +220,7 @@ id_fold!(ClosureId);
 id_fold!(GeneratorId);
 id_fold!(ForeignDefId);
 
-impl<I: Interner> SuperFold<I> for ProgramClauseData<I> {
+impl<I: Interner> TypeSuperFoldable<I> for ProgramClauseData<I> {
     fn super_fold_with<E>(
         self,
         folder: &mut dyn Folder<I, Error = E>,
@@ -230,7 +230,7 @@ impl<I: Interner> SuperFold<I> for ProgramClauseData<I> {
     }
 }
 
-impl<I: Interner> SuperFold<I> for ProgramClause<I> {
+impl<I: Interner> TypeSuperFoldable<I> for ProgramClause<I> {
     fn super_fold_with<E>(
         self,
         folder: &mut dyn Folder<I, Error = E>,

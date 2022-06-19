@@ -331,9 +331,9 @@ pub trait TypeFoldable<I: Interner>: Debug {
 }
 
 /// For types where "fold" invokes a callback on the `Folder`, the
-/// `SuperFold` trait captures the recursive behavior that folds all
+/// `TypeSuperFoldable` trait captures the recursive behavior that folds all
 /// the contents of the type.
-pub trait SuperFold<I: Interner>: TypeFoldable<I> {
+pub trait TypeSuperFoldable<I: Interner>: TypeFoldable<I> {
     /// Recursively folds the value.
     fn super_fold_with<E>(
         self,
@@ -358,7 +358,7 @@ impl<I: Interner> TypeFoldable<I> for Ty<I> {
 }
 
 /// "Super fold" for a type invokes te more detailed callbacks on the type
-impl<I> SuperFold<I> for Ty<I>
+impl<I> TypeSuperFoldable<I> for Ty<I>
 where
     I: Interner,
 {
@@ -481,7 +481,7 @@ impl<I: Interner> TypeFoldable<I> for Lifetime<I> {
     }
 }
 
-impl<I> SuperFold<I> for Lifetime<I>
+impl<I> TypeSuperFoldable<I> for Lifetime<I>
 where
     I: Interner,
 {
@@ -533,7 +533,7 @@ impl<I: Interner> TypeFoldable<I> for Const<I> {
     }
 }
 
-impl<I> SuperFold<I> for Const<I>
+impl<I> TypeSuperFoldable<I> for Const<I>
 where
     I: Interner,
 {
@@ -585,7 +585,7 @@ impl<I: Interner> TypeFoldable<I> for Goal<I> {
 }
 
 /// Superfold folds recursively.
-impl<I: Interner> SuperFold<I> for Goal<I> {
+impl<I: Interner> TypeSuperFoldable<I> for Goal<I> {
     fn super_fold_with<E>(
         self,
         folder: &mut dyn Folder<I, Error = E>,
