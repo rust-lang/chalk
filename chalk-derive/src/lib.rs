@@ -119,7 +119,7 @@ enum DeriveKind {
 
 decl_derive!([HasInterner, attributes(has_interner)] => derive_has_interner);
 decl_derive!([TypeVisitable, attributes(has_interner)] => derive_type_visitable);
-decl_derive!([SuperVisit, attributes(has_interner)] => derive_super_visit);
+decl_derive!([TypeSuperVisitable, attributes(has_interner)] => derive_type_super_visitable);
 decl_derive!([TypeFoldable, attributes(has_interner)] => derive_type_foldable);
 decl_derive!([Zip, attributes(has_interner)] => derive_zip);
 
@@ -148,11 +148,11 @@ fn derive_type_visitable(s: synstructure::Structure) -> TokenStream {
     )
 }
 
-/// Same as TypeVisitable, but derives SuperVisit instead
-fn derive_super_visit(s: synstructure::Structure) -> TokenStream {
+/// Same as TypeVisitable, but derives TypeSuperVisitable instead
+fn derive_type_super_visitable(s: synstructure::Structure) -> TokenStream {
     derive_any_type_visitable(
         s,
-        parse_quote! { SuperVisit },
+        parse_quote! { TypeSuperVisitable },
         parse_quote! { super_visit_with },
     )
 }

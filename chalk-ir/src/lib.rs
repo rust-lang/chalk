@@ -9,8 +9,8 @@ extern crate self as chalk_ir;
 use crate::cast::{Cast, CastTo, Caster};
 use crate::fold::shift::Shift;
 use crate::fold::{Folder, Subst, TypeFoldable, TypeSuperFoldable};
-use crate::visit::{SuperVisit, TypeVisitable, VisitExt, Visitor};
-use chalk_derive::{HasInterner, SuperVisit, TypeFoldable, TypeVisitable, Zip};
+use crate::visit::{TypeSuperVisitable, TypeVisitable, VisitExt, Visitor};
+use chalk_derive::{HasInterner, TypeFoldable, TypeSuperVisitable, TypeVisitable, Zip};
 use std::marker::PhantomData;
 use std::ops::ControlFlow;
 
@@ -1733,7 +1733,7 @@ where
 }
 
 /// Where clauses that can be written by a Rust programmer.
-#[derive(Clone, PartialEq, Eq, Hash, TypeFoldable, SuperVisit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, TypeFoldable, TypeSuperVisitable, HasInterner, Zip)]
 pub enum WhereClause<I: Interner> {
     /// Type implements a trait.
     Implemented(TraitRef<I>),
@@ -1831,7 +1831,7 @@ where
 /// A "domain goal" is a goal that is directly about Rust, rather than a pure
 /// logical statement. As much as possible, the Chalk solver should avoid
 /// decomposing this enum, and instead treat its values opaquely.
-#[derive(Clone, PartialEq, Eq, Hash, TypeFoldable, SuperVisit, HasInterner, Zip)]
+#[derive(Clone, PartialEq, Eq, Hash, TypeFoldable, TypeSuperVisitable, HasInterner, Zip)]
 pub enum DomainGoal<I: Interner> {
     /// Simple goal that is true if the where clause is true.
     Holds(WhereClause<I>),

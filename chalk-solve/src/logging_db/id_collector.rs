@@ -3,7 +3,7 @@ use crate::RustIrDatabase;
 use chalk_ir::{
     interner::Interner,
     visit::Visitor,
-    visit::{SuperVisit, TypeVisitable},
+    visit::{TypeSuperVisitable, TypeVisitable},
     AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
 use std::ops::ControlFlow;

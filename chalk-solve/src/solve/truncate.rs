@@ -2,7 +2,7 @@
 
 use crate::infer::InferenceTable;
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{SuperVisit, TypeVisitable, Visitor};
+use chalk_ir::visit::{TypeSuperVisitable, TypeVisitable, Visitor};
 use chalk_ir::*;
 use std::cmp::max;
 use std::ops::ControlFlow;

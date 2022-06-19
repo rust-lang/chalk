@@ -8,8 +8,8 @@ use crate::{
     try_break, AdtId, AssocTypeId, ClausePriority, ClosureId, Constraints, ControlFlow,
     DebruijnIndex, FloatTy, FnDefId, ForeignDefId, GeneratorId, GenericArg, Goals, ImplId, IntTy,
     Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauses,
-    QuantifiedWhereClauses, QuantifierKind, Safety, Scalar, Substitution, SuperVisit, TraitId,
-    TypeVisitable, UintTy, UniverseIndex, Visitor,
+    QuantifiedWhereClauses, QuantifierKind, Safety, Scalar, Substitution, TraitId,
+    TypeSuperVisitable, TypeVisitable, UintTy, UniverseIndex, Visitor,
 };
 use std::{marker::PhantomData, sync::Arc};
 
@@ -202,7 +202,7 @@ id_visit!(ClosureId);
 id_visit!(GeneratorId);
 id_visit!(ForeignDefId);
 
-impl<I: Interner> SuperVisit<I> for ProgramClause<I> {
+impl<I: Interner> TypeSuperVisitable<I> for ProgramClause<I> {
     fn super_visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,

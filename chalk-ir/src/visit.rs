@@ -202,9 +202,9 @@ pub trait TypeVisitable<I: Interner>: Debug {
 }
 
 /// For types where "visit" invokes a callback on the `visitor`, the
-/// `SuperVisit` trait captures the recursive behavior that visits all
+/// `TypeSuperVisitable` trait captures the recursive behavior that visits all
 /// the contents of the type.
-pub trait SuperVisit<I: Interner>: TypeVisitable<I> {
+pub trait TypeSuperVisitable<I: Interner>: TypeVisitable<I> {
     /// Recursively visits the type contents.
     fn super_visit_with<B>(
         &self,
@@ -227,7 +227,7 @@ impl<I: Interner> TypeVisitable<I> for Ty<I> {
 }
 
 /// "Super visit" for a type invokes the more detailed callbacks on the type
-impl<I> SuperVisit<I> for Ty<I>
+impl<I> TypeSuperVisitable<I> for Ty<I>
 where
     I: Interner,
 {
@@ -311,7 +311,7 @@ impl<I: Interner> TypeVisitable<I> for Lifetime<I> {
     }
 }
 
-impl<I: Interner> SuperVisit<I> for Lifetime<I> {
+impl<I: Interner> TypeSuperVisitable<I> for Lifetime<I> {
     fn super_visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -348,7 +348,7 @@ impl<I: Interner> TypeVisitable<I> for Const<I> {
     }
 }
 
-impl<I: Interner> SuperVisit<I> for Const<I> {
+impl<I: Interner> TypeSuperVisitable<I> for Const<I> {
     fn super_visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,
@@ -382,7 +382,7 @@ impl<I: Interner> TypeVisitable<I> for Goal<I> {
     }
 }
 
-impl<I: Interner> SuperVisit<I> for Goal<I> {
+impl<I: Interner> TypeSuperVisitable<I> for Goal<I> {
     fn super_visit_with<B>(
         &self,
         visitor: &mut dyn Visitor<I, BreakTy = B>,

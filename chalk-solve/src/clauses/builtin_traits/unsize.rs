@@ -8,7 +8,7 @@ use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
-    visit::{SuperVisit, TypeVisitable, Visitor},
+    visit::{TypeSuperVisitable, TypeVisitable, Visitor},
     Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, LifetimeOutlives,
     QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
