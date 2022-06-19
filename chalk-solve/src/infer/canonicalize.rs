@@ -39,7 +39,9 @@ impl<I: Interner> InferenceTable<I> {
             max_universe: UniverseIndex::root(),
             interner,
         };
-        let value = value.fold_with(&mut q, DebruijnIndex::INNERMOST).unwrap();
+        let value = value
+            .try_fold_with(&mut q, DebruijnIndex::INNERMOST)
+            .unwrap();
         let free_vars = q.free_vars.clone();
 
         Canonicalized {
@@ -108,7 +110,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
         self
     }
 
-    fn fold_free_placeholder_ty(
+    fn try_fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -118,7 +120,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
         Ok(universe.to_ty(interner))
     }
 
-    fn fold_free_placeholder_lifetime(
+    fn try_fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -128,7 +130,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
         Ok(universe.to_lifetime(interner))
     }
 
-    fn fold_free_placeholder_const(
+    fn try_fold_free_placeholder_const(
         &mut self,
         ty: Ty<I>,
         universe: PlaceholderIndex,
@@ -144,7 +146,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn fold_inference_ty(
+    fn try_fold_inference_ty(
         &mut self,
         var: InferenceVar,
         kind: TyVariableKind,
@@ -157,7 +159,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
                 debug!("bound to {:?}", ty);
                 Ok(ty
                     .clone()
-                    .fold_with(self, DebruijnIndex::INNERMOST)?
+                    .try_fold_with(self, DebruijnIndex::INNERMOST)?
                     .shifted_in_from(interner, outer_binder))
             }
             None => {
@@ -176,7 +178,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn fold_inference_lifetime(
+    fn try_fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
@@ -187,7 +189,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
                 let l = l.assert_lifetime_ref(interner);
                 debug!("bound to {:?}", l);
                 Ok(l.clone()
-                    .fold_with(self, DebruijnIndex::INNERMOST)?
+                    .try_fold_with(self, DebruijnIndex::INNERMOST)?
                     .shifted_in_from(interner, outer_binder))
             }
             None => {
@@ -204,7 +206,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
     }
 
     #[instrument(level = "debug", skip(self, ty))]
-    fn fold_inference_const(
+    fn try_fold_inference_const(
         &mut self,
         ty: Ty<I>,
         var: InferenceVar,
@@ -216,7 +218,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
                 let c = c.assert_const_ref(interner);
                 debug!("bound to {:?}", c);
                 Ok(c.clone()
-                    .fold_with(self, DebruijnIndex::INNERMOST)?
+                    .try_fold_with(self, DebruijnIndex::INNERMOST)?
                     .shifted_in_from(interner, outer_binder))
             }
             None => {
@@ -233,7 +235,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
         }
     }
 
-    fn fold_lifetime(
+    fn try_fold_lifetime(
         &mut self,
         lifetime: Lifetime<I>,
         outer_binder: DebruijnIndex,
@@ -244,7 +246,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
                 // inference. We shouldn't see it in canonicalization.
                 panic!("Cannot canonicalize ReEmpty in non-root universe")
             }
-            _ => lifetime.super_fold_with(self, outer_binder),
+            _ => lifetime.try_super_fold_with(self, outer_binder),
         }
     }
 

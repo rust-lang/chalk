@@ -27,7 +27,7 @@ impl<I: Interner> DeepNormalizer<'_, I> {
         value: T,
     ) -> T {
         value
-            .fold_with(
+            .try_fold_with(
                 &mut DeepNormalizer { interner, table },
                 DebruijnIndex::INNERMOST,
             )
@@ -42,7 +42,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
         self
     }
 
-    fn fold_inference_ty(
+    fn try_fold_inference_ty(
         &mut self,
         var: InferenceVar,
         kind: TyVariableKind,
@@ -53,7 +53,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
             Some(ty) => Ok(ty
                 .assert_ty_ref(interner)
                 .clone()
-                .fold_with(self, DebruijnIndex::INNERMOST)?
+                .try_fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)), // FIXME shift
             None => {
                 // Normalize all inference vars which have been unified into a
@@ -63,7 +63,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
         }
     }
 
-    fn fold_inference_lifetime(
+    fn try_fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
@@ -73,13 +73,13 @@ impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
             Some(l) => Ok(l
                 .assert_lifetime_ref(interner)
                 .clone()
-                .fold_with(self, DebruijnIndex::INNERMOST)?
+                .try_fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)),
             None => Ok(var.to_lifetime(interner)), // FIXME shift
         }
     }
 
-    fn fold_inference_const(
+    fn try_fold_inference_const(
         &mut self,
         ty: Ty<I>,
         var: InferenceVar,
@@ -90,7 +90,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
             Some(c) => Ok(c
                 .assert_const_ref(interner)
                 .clone()
-                .fold_with(self, DebruijnIndex::INNERMOST)?
+                .try_fold_with(self, DebruijnIndex::INNERMOST)?
                 .shifted_in(interner)),
             None => Ok(var.to_const(interner, ty)), // FIXME shift
         }

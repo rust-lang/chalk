@@ -6,7 +6,7 @@
 use crate::*;
 
 impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
-    fn fold_with<E>(
+    fn try_fold_with<E>(
         self,
         folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
@@ -18,7 +18,7 @@ impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
         } = self;
         Ok(FnPointer {
             num_binders,
-            substitution: substitution.fold_with(folder, outer_binder.shifted_in())?,
+            substitution: substitution.try_fold_with(folder, outer_binder.shifted_in())?,
             sig: FnSig {
                 abi: sig.abi,
                 safety: sig.safety,
@@ -33,7 +33,7 @@ where
     T: HasInterner<Interner = I> + TypeFoldable<I>,
     I: Interner,
 {
-    fn fold_with<E>(
+    fn try_fold_with<E>(
         self,
         folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
@@ -42,7 +42,7 @@ where
             binders: self_binders,
             value: self_value,
         } = self;
-        let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
+        let value = self_value.try_fold_with(folder, outer_binder.shifted_in())?;
         let binders = VariableKinds {
             interned: self_binders.interned().clone(),
         };
@@ -55,7 +55,7 @@ where
     I: Interner,
     T: HasInterner<Interner = I> + TypeFoldable<I>,
 {
-    fn fold_with<E>(
+    fn try_fold_with<E>(
         self,
         folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
@@ -64,7 +64,7 @@ where
             binders: self_binders,
             value: self_value,
         } = self;
-        let value = self_value.fold_with(folder, outer_binder.shifted_in())?;
+        let value = self_value.try_fold_with(folder, outer_binder.shifted_in())?;
         let binders = CanonicalVarKinds {
             interned: self_binders.interned().clone(),
         };

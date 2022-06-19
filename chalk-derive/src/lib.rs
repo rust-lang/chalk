@@ -269,7 +269,7 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
         vi.construct(|_, index| {
             let bind = &bindings[index];
             quote! {
-                ::chalk_ir::fold::TypeFoldable::fold_with(#bind, folder, outer_binder)?
+                ::chalk_ir::fold::TypeFoldable::try_fold_with(#bind, folder, outer_binder)?
             }
         })
     });
@@ -285,7 +285,7 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
     s.bound_impl(
         quote!(::chalk_ir::fold::TypeFoldable<#interner>),
         quote! {
-            fn fold_with<E>(
+            fn try_fold_with<E>(
                 self,
                 folder: &mut dyn ::chalk_ir::fold::FallibleTypeFolder < #interner, Error = E >,
                 outer_binder: ::chalk_ir::DebruijnIndex,

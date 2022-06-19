@@ -29,7 +29,7 @@ impl<T: TypeFoldable<I>, I: Interner> Shift<I> for T {
     }
 
     fn shifted_in_from(self, interner: I, source_binder: DebruijnIndex) -> T {
-        self.fold_with(
+        self.try_fold_with(
             &mut Shifter {
                 source_binder,
                 interner,
@@ -40,7 +40,7 @@ impl<T: TypeFoldable<I>, I: Interner> Shift<I> for T {
     }
 
     fn shifted_out_to(self, interner: I, target_binder: DebruijnIndex) -> Fallible<T> {
-        self.fold_with(
+        self.try_fold_with(
             &mut DownShifter {
                 target_binder,
                 interner,
@@ -78,7 +78,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Shifter<I> {
         self
     }
 
-    fn fold_free_var_ty(
+    fn try_fold_free_var_ty(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -86,7 +86,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Shifter<I> {
         Ok(TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder)).intern(self.interner()))
     }
 
-    fn fold_free_var_lifetime(
+    fn try_fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -97,7 +97,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Shifter<I> {
         )
     }
 
-    fn fold_free_var_const(
+    fn try_fold_free_var_const(
         &mut self,
         ty: Ty<I>,
         bound_var: BoundVar,
@@ -148,7 +148,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DownShifter<I> {
         self
     }
 
-    fn fold_free_var_ty(
+    fn try_fold_free_var_ty(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -156,7 +156,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DownShifter<I> {
         Ok(TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder)?).intern(self.interner()))
     }
 
-    fn fold_free_var_lifetime(
+    fn try_fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -167,7 +167,7 @@ impl<I: Interner> FallibleTypeFolder<I> for DownShifter<I> {
         )
     }
 
-    fn fold_free_var_const(
+    fn try_fold_free_var_const(
         &mut self,
         ty: Ty<I>,
         bound_var: BoundVar,

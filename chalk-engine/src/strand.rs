@@ -36,13 +36,13 @@ pub(crate) struct SelectedSubgoal {
 }
 
 impl<I: Interner> TypeFoldable<I> for Strand<I> {
-    fn fold_with<E>(
+    fn try_fold_with<E>(
         self,
         folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E> {
         Ok(Strand {
-            ex_clause: self.ex_clause.fold_with(folder, outer_binder)?,
+            ex_clause: self.ex_clause.try_fold_with(folder, outer_binder)?,
             last_pursued_time: self.last_pursued_time,
             selected_subgoal: self.selected_subgoal,
         })

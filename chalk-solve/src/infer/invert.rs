@@ -90,7 +90,7 @@ impl<I: Interner> InferenceTable<I> {
         assert!(quantified.binders.is_empty(interner));
         let inverted = quantified
             .value
-            .fold_with(&mut Inverter::new(interner, self), DebruijnIndex::INNERMOST)
+            .try_fold_with(&mut Inverter::new(interner, self), DebruijnIndex::INNERMOST)
             .unwrap();
         Some(inverted)
     }
@@ -134,7 +134,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Inverter<'i, I> {
         self
     }
 
-    fn fold_free_placeholder_ty(
+    fn try_fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -148,7 +148,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Inverter<'i, I> {
             .shifted_in(self.interner()))
     }
 
-    fn fold_free_placeholder_lifetime(
+    fn try_fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,

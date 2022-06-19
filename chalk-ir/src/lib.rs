@@ -2791,7 +2791,7 @@ impl<I: Interner, A: AsParameters<I>> Substitute<I> for A {
         T: TypeFoldable<I>,
     {
         value
-            .fold_with(
+            .try_fold_with(
                 &mut &SubstFolder {
                     interner,
                     subst: self,
@@ -2832,7 +2832,7 @@ impl<'i, I: Interner, A: AsParameters<I>> FallibleTypeFolder<I> for &SubstFolder
         self
     }
 
-    fn fold_free_var_ty(
+    fn try_fold_free_var_ty(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -2843,7 +2843,7 @@ impl<'i, I: Interner, A: AsParameters<I>> FallibleTypeFolder<I> for &SubstFolder
         Ok(ty.clone().shifted_in_from(self.interner(), outer_binder))
     }
 
-    fn fold_free_var_lifetime(
+    fn try_fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -2854,7 +2854,7 @@ impl<'i, I: Interner, A: AsParameters<I>> FallibleTypeFolder<I> for &SubstFolder
         Ok(l.clone().shifted_in_from(self.interner(), outer_binder))
     }
 
-    fn fold_free_var_const(
+    fn try_fold_free_var_const(
         &mut self,
         _ty: Ty<I>,
         bound_var: BoundVar,

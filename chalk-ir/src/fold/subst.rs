@@ -14,7 +14,7 @@ impl<I: Interner> Subst<'_, I> {
     /// Applies the substitution by folding
     pub fn apply<T: TypeFoldable<I>>(interner: I, parameters: &[GenericArg<I>], value: T) -> T {
         value
-            .fold_with(
+            .try_fold_with(
                 &mut Subst {
                     parameters,
                     interner,
@@ -51,7 +51,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Subst<'_, I> {
     /// for<A, B> { [A, u32] }
     ///              ^ represented as `^0.0`
     /// ```
-    fn fold_free_var_ty(
+    fn try_fold_free_var_ty(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -73,7 +73,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Subst<'_, I> {
     }
 
     /// see `fold_free_var_ty`
-    fn fold_free_var_lifetime(
+    fn try_fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -95,7 +95,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Subst<'_, I> {
     }
 
     /// see `fold_free_var_ty`
-    fn fold_free_var_const(
+    fn try_fold_free_var_const(
         &mut self,
         ty: Ty<I>,
         bound_var: BoundVar,

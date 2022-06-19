@@ -31,7 +31,7 @@ impl<I: Interner> Generalize<I> {
             interner,
         };
         let value = value
-            .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
+            .try_fold_with(&mut generalize, DebruijnIndex::INNERMOST)
             .unwrap();
         Binders::new(
             VariableKinds::from_iter(interner, generalize.binders),
@@ -47,7 +47,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Generalize<I> {
         self
     }
 
-    fn fold_free_var_ty(
+    fn try_fold_free_var_ty(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -62,7 +62,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Generalize<I> {
         Ok(TyKind::BoundVar(new_var).intern(self.interner()))
     }
 
-    fn fold_free_var_const(
+    fn try_fold_free_var_const(
         &mut self,
         ty: Ty<I>,
         bound_var: BoundVar,
@@ -82,7 +82,7 @@ impl<I: Interner> FallibleTypeFolder<I> for Generalize<I> {
         .intern(self.interner()))
     }
 
-    fn fold_free_var_lifetime(
+    fn try_fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,

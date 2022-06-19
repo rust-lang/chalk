@@ -36,7 +36,7 @@ impl<I: Interner> InferenceTable<I> {
         let value1 = value0
             .value
             .clone()
-            .fold_with(
+            .try_fold_with(
                 &mut UMapToCanonical {
                     universes: &universes,
                     interner,
@@ -169,7 +169,7 @@ impl UniverseMapExt for UniverseMap {
         let value = canonical_value
             .value
             .clone()
-            .fold_with(
+            .try_fold_with(
                 &mut UMapFromCanonical {
                     interner,
                     universes: self,
@@ -233,7 +233,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for UMapToCanonical<'i, I> {
         true
     }
 
-    fn fold_free_placeholder_ty(
+    fn try_fold_free_placeholder_ty(
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -249,7 +249,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for UMapToCanonical<'i, I> {
         .to_ty(self.interner()))
     }
 
-    fn fold_free_placeholder_lifetime(
+    fn try_fold_free_placeholder_lifetime(
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -266,7 +266,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for UMapToCanonical<'i, I> {
         .to_lifetime(self.interner()))
     }
 
-    fn fold_free_placeholder_const(
+    fn try_fold_free_placeholder_const(
         &mut self,
         ty: Ty<I>,
         universe0: PlaceholderIndex,
@@ -301,7 +301,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for UMapFromCanonical<'i, I> {
         self
     }
 
-    fn fold_free_placeholder_ty(
+    fn try_fold_free_placeholder_ty(
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -314,7 +314,7 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for UMapFromCanonical<'i, I> {
         .to_ty(self.interner()))
     }
 
-    fn fold_free_placeholder_lifetime(
+    fn try_fold_free_placeholder_lifetime(
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
