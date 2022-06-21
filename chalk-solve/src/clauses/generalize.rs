@@ -7,7 +7,7 @@
 //! types passed to `program_clauses` in the clauses we generate.
 
 use chalk_ir::{
-    fold::{Fold, Folder},
+    fold::{TypeFoldable, TypeFolder},
     interner::{HasInterner, Interner},
     Binders, BoundVar, Const, ConstData, ConstValue, DebruijnIndex, Fallible, Lifetime,
     LifetimeData, NoSolution, Ty, TyKind, TyVariableKind, VariableKind, VariableKinds,
@@ -23,7 +23,7 @@ pub struct Generalize<I: Interner> {
 impl<I: Interner> Generalize<I> {
     pub fn apply<T>(interner: I, value: T) -> Binders<T::Result>
     where
-        T: HasInterner<Interner = I> + Fold<I>,
+        T: HasInterner<Interner = I> + TypeFoldable<I>,
         T::Result: HasInterner<Interner = I>,
     {
         let mut generalize = Generalize {
@@ -41,10 +41,10 @@ impl<I: Interner> Generalize<I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Generalize<I> {
+impl<I: Interner> TypeFolder<I> for Generalize<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

@@ -30,24 +30,24 @@ macro_rules! try_break {
 /// such as a `Goal`, and computes a value as a result.
 ///
 ///
-/// To **apply** a visitor, use the `Visit::visit_with` method, like so
+/// To **apply** a visitor, use the `TypeVisitable::visit_with` method, like so
 ///
 /// ```rust,ignore
 /// let result = x.visit_with(&mut visitor, 0);
 /// ```
-pub trait Visitor<I: Interner> {
+pub trait TypeVisitor<I: Interner> {
     /// The "break type" of the visitor, often `()`. It represents the result
     /// the visitor yields when it stops visiting.
     type BreakTy;
 
     /// Creates a `dyn` value from this visitor. Unfortunately, this
     /// must be added manually to each impl of visitor; it permits the
-    /// default implements below to create a `&mut dyn Visitor` from
+    /// default implements below to create a `&mut dyn TypeVisitor` from
     /// `Self` without knowing what `Self` is (by invoking this
     /// method). Effectively, this limits impls of `visitor` to types
     /// for which we are able to create a dyn value (i.e., not `[T]`
     /// types).
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy>;
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy>;
 
     /// Top-level callback: invoked for each `Ty<I>` that is
     /// encountered when visiting. By default, invokes
@@ -187,8 +187,8 @@ pub trait Visitor<I: Interner> {
 }
 
 /// Applies the given `visitor` to a value, producing a visited result
-/// of type `Visitor::Result`.
-pub trait Visit<I: Interner>: Debug {
+/// of type `TypeVisitor::Result`.
+pub trait TypeVisitable<I: Interner>: Debug {
     /// Apply the given visitor `visitor` to `self`; `binders` is the
     /// number of binders that are in scope when beginning the
     /// visitor. Typically `binders` starts as 0, but is adjusted when
@@ -196,19 +196,19 @@ pub trait Visit<I: Interner>: Debug {
     /// constructs.
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B>;
 }
 
 /// For types where "visit" invokes a callback on the `visitor`, the
-/// `SuperVisit` trait captures the recursive behavior that visits all
+/// `TypeSuperVisitable` trait captures the recursive behavior that visits all
 /// the contents of the type.
-pub trait SuperVisit<I: Interner>: Visit<I> {
+pub trait TypeSuperVisitable<I: Interner>: TypeVisitable<I> {
     /// Recursively visits the type contents.
     fn super_visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B>;
 }
@@ -216,10 +216,10 @@ pub trait SuperVisit<I: Interner>: Visit<I> {
 /// "visiting" a type invokes the `visit_ty` method on the visitor; this
 /// usually (in turn) invokes `super_visit_ty` to visit the individual
 /// parts.
-impl<I: Interner> Visit<I> for Ty<I> {
+impl<I: Interner> TypeVisitable<I> for Ty<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_ty(self, outer_binder)
@@ -227,13 +227,13 @@ impl<I: Interner> Visit<I> for Ty<I> {
 }
 
 /// "Super visit" for a type invokes the more detailed callbacks on the type
-impl<I> SuperVisit<I> for Ty<I>
+impl<I> TypeSuperVisitable<I> for Ty<I>
 where
     I: Interner,
 {
     fn super_visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -301,20 +301,20 @@ where
     }
 }
 
-impl<I: Interner> Visit<I> for Lifetime<I> {
+impl<I: Interner> TypeVisitable<I> for Lifetime<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_lifetime(self, outer_binder)
     }
 }
 
-impl<I: Interner> SuperVisit<I> for Lifetime<I> {
+impl<I: Interner> TypeSuperVisitable<I> for Lifetime<I> {
     fn super_visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -338,20 +338,20 @@ impl<I: Interner> SuperVisit<I> for Lifetime<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Const<I> {
+impl<I: Interner> TypeVisitable<I> for Const<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_const(self, outer_binder)
     }
 }
 
-impl<I: Interner> SuperVisit<I> for Const<I> {
+impl<I: Interner> TypeSuperVisitable<I> for Const<I> {
     fn super_visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -372,20 +372,20 @@ impl<I: Interner> SuperVisit<I> for Const<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for Goal<I> {
+impl<I: Interner> TypeVisitable<I> for Goal<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_goal(self, outer_binder)
     }
 }
 
-impl<I: Interner> SuperVisit<I> for Goal<I> {
+impl<I: Interner> TypeSuperVisitable<I> for Goal<I> {
     fn super_visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         let interner = visitor.interner();
@@ -393,30 +393,30 @@ impl<I: Interner> SuperVisit<I> for Goal<I> {
     }
 }
 
-impl<I: Interner> Visit<I> for ProgramClause<I> {
+impl<I: Interner> TypeVisitable<I> for ProgramClause<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_program_clause(self, outer_binder)
     }
 }
 
-impl<I: Interner> Visit<I> for WhereClause<I> {
+impl<I: Interner> TypeVisitable<I> for WhereClause<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_where_clause(self, outer_binder)
     }
 }
 
-impl<I: Interner> Visit<I> for DomainGoal<I> {
+impl<I: Interner> TypeVisitable<I> for DomainGoal<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn Visitor<I, BreakTy = B>,
+        visitor: &mut dyn TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         visitor.visit_domain_goal(self, outer_binder)

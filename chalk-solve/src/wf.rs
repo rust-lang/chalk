@@ -8,7 +8,7 @@ use chalk_ir::{
     cast::*,
     fold::shift::Shift,
     interner::Interner,
-    visit::{Visit, Visitor},
+    visit::{TypeVisitable, TypeVisitor},
     *,
 };
 use tracing::debug;
@@ -62,16 +62,16 @@ impl<I: Interner> InputTypeCollector<I> {
         }
     }
 
-    fn types_in(interner: I, value: impl Visit<I>) -> Vec<Ty<I>> {
+    fn types_in(interner: I, value: impl TypeVisitable<I>) -> Vec<Ty<I>> {
         let mut collector = Self::new(interner);
         value.visit_with(&mut collector, DebruijnIndex::INNERMOST);
         collector.types
     }
 }
 
-impl<I: Interner> Visitor<I> for InputTypeCollector<I> {
+impl<I: Interner> TypeVisitor<I> for InputTypeCollector<I> {
     type BreakTy = ();
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -571,9 +571,9 @@ fn compute_assoc_ty_goal<I: Interner>(
             let interner = gb.interner();
             let db = gb.db();
 
-            // Hmm, because `Arc<AssociatedTyValue>` does not implement `Fold`, we can't pass this value through,
+            // Hmm, because `Arc<AssociatedTyValue>` does not implement `TypeFoldable`, we can't pass this value through,
             // just the id, so we have to fetch `assoc_ty` from the database again.
-            // Implementing `Fold` for `AssociatedTyValue` doesn't *quite* seem right though, as that
+            // Implementing `TypeFoldable` for `AssociatedTyValue` doesn't *quite* seem right though, as that
             // would result in a deep clone, and the value is inert. We could do some more refatoring
             // (move the `Arc` behind a newtype, for example) to fix this, but for now doesn't
             // seem worth it.

@@ -2,8 +2,8 @@ use super::RecordedItemId;
 use crate::RustIrDatabase;
 use chalk_ir::{
     interner::Interner,
-    visit::Visitor,
-    visit::{SuperVisit, Visit},
+    visit::TypeVisitor,
+    visit::{TypeSuperVisitable, TypeVisitable},
     AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
 use std::ops::ControlFlow;
@@ -116,10 +116,10 @@ impl<'i, I: Interner, DB: RustIrDatabase<I>> IdCollector<'i, I, DB> {
     }
 }
 
-impl<'i, I: Interner, DB: RustIrDatabase<I>> Visitor<I> for IdCollector<'i, I, DB> {
+impl<'i, I: Interner, DB: RustIrDatabase<I>> TypeVisitor<I> for IdCollector<'i, I, DB> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
     fn interner(&self) -> I {

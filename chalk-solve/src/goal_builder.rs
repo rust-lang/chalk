@@ -4,7 +4,7 @@ use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::*;
 use fold::shift::Shift;
-use fold::Fold;
+use fold::TypeFoldable;
 use interner::{HasInterner, Interner};
 
 pub struct GoalBuilder<'i, I: Interner> {
@@ -80,7 +80,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     ) -> Goal<I>
     where
         B: HasInterner<Interner = I>,
-        P: Fold<I>,
+        P: TypeFoldable<I>,
         G: CastTo<Goal<I>>,
     {
         self.quantified(QuantifierKind::ForAll, binders, passthru, body)
@@ -95,7 +95,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     ) -> Goal<I>
     where
         B: HasInterner<Interner = I>,
-        P: Fold<I>,
+        P: TypeFoldable<I>,
         G: CastTo<Goal<I>>,
     {
         self.quantified(QuantifierKind::Exists, binders, passthru, body)
@@ -117,7 +117,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
     ) -> Goal<I>
     where
         B: HasInterner<Interner = I>,
-        P: Fold<I>,
+        P: TypeFoldable<I>,
         G: CastTo<Goal<I>>,
     {
         let interner = self.interner();

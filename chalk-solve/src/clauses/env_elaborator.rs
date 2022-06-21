@@ -8,7 +8,7 @@ use crate::RustIrDatabase;
 use crate::Ty;
 use crate::{debug_span, TyKind};
 use chalk_ir::interner::Interner;
-use chalk_ir::visit::{Visit, Visitor};
+use chalk_ir::visit::{TypeVisitable, TypeVisitor};
 use chalk_ir::{DebruijnIndex, Environment};
 use rustc_hash::FxHashSet;
 use std::ops::ControlFlow;
@@ -43,10 +43,10 @@ struct EnvElaborator<'me, 'builder, I: Interner> {
     environment: &'me Environment<I>,
 }
 
-impl<'me, 'builder, I: Interner> Visitor<I> for EnvElaborator<'me, 'builder, I> {
+impl<'me, 'builder, I: Interner> TypeVisitor<I> for EnvElaborator<'me, 'builder, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 

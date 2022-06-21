@@ -3,7 +3,7 @@ use crate::slg::ResolventOps;
 use crate::{ExClause, Literal, TimeStamp};
 use chalk_ir::cast::Caster;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::Fold;
+use chalk_ir::fold::TypeFoldable;
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::*;
@@ -708,7 +708,7 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
         pending: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>,
     {
         self.outer_binder.shift_in();
         Zip::zip_with(

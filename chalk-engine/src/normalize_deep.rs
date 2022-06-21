@@ -1,5 +1,5 @@
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_solve::infer::InferenceTable;
@@ -21,7 +21,7 @@ impl<I: Interner> DeepNormalizer<'_, I> {
     /// See also `InferenceTable::canonicalize`, which -- during real
     /// processing -- is often used to capture the "current state" of
     /// variables.
-    pub fn normalize_deep<T: Fold<I>>(
+    pub fn normalize_deep<T: TypeFoldable<I>>(
         table: &mut InferenceTable<I>,
         interner: I,
         value: T,
@@ -35,10 +35,10 @@ impl<I: Interner> DeepNormalizer<'_, I> {
     }
 }
 
-impl<I: Interner> Folder<I> for DeepNormalizer<'_, I> {
+impl<I: Interner> TypeFolder<I> for DeepNormalizer<'_, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

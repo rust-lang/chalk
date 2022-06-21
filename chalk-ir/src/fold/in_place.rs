@@ -1,4 +1,4 @@
-//! Subroutines to help implementers of `Fold` avoid unnecessary heap allocations.
+//! Subroutines to help implementers of `TypeFoldable` avoid unnecessary heap allocations.
 
 use std::marker::PhantomData;
 use std::{mem, ptr};

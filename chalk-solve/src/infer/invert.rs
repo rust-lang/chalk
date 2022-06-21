@@ -1,5 +1,5 @@
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
@@ -73,7 +73,7 @@ impl<I: Interner> InferenceTable<I> {
     /// `None`) until the second unification has occurred.)
     pub fn invert<T>(&mut self, interner: I, value: T) -> Option<T::Result>
     where
-        T: Fold<I, Result = T> + HasInterner<Interner = I>,
+        T: TypeFoldable<I, Result = T> + HasInterner<Interner = I>,
     {
         let Canonicalized {
             free_vars,
@@ -103,7 +103,7 @@ impl<I: Interner> InferenceTable<I> {
         value: T,
     ) -> Option<Canonical<T::Result>>
     where
-        T: Fold<I, Result = T> + HasInterner<Interner = I>,
+        T: TypeFoldable<I, Result = T> + HasInterner<Interner = I>,
     {
         let snapshot = self.snapshot();
         let result = self.invert(interner, value);
@@ -131,10 +131,10 @@ impl<'q, I: Interner> Inverter<'q, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<I> for Inverter<'i, I> {
+impl<'i, I: Interner> TypeFolder<I> for Inverter<'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

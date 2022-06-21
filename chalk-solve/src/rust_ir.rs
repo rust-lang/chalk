@@ -2,13 +2,13 @@
 //! version of the AST, roughly corresponding to [the HIR] in the Rust
 //! compiler.
 
-use chalk_derive::{Fold, HasInterner, Visit};
+use chalk_derive::{HasInterner, TypeFoldable, TypeVisitable};
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    try_break, visit::Visit, AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId,
-    GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
+    try_break, visit::TypeVisitable, AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex,
+    FnDefId, GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
     ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
 };
 use std::iter;
@@ -21,7 +21,7 @@ pub struct AssociatedTyValueId<I: Interner>(pub I::DefId);
 chalk_ir::id_visit!(AssociatedTyValueId);
 chalk_ir::id_fold!(AssociatedTyValueId);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeVisitable)]
 pub struct ImplDatum<I: Interner> {
     pub polarity: Polarity,
     pub binders: Binders<ImplDatumBound<I>>,
@@ -52,7 +52,7 @@ impl<I: Interner> ImplDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, Fold, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, TypeFoldable, TypeVisitable)]
 pub struct ImplDatumBound<I: Interner> {
     pub trait_ref: TraitRef<I>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
@@ -77,7 +77,7 @@ pub struct DefaultImplDatumBound<I: Interner> {
     pub accessible_tys: Vec<Ty<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeVisitable)]
 pub struct AdtDatum<I: Interner> {
     pub binders: Binders<AdtDatumBound<I>>,
     pub id: AdtId<I>,
@@ -94,13 +94,13 @@ pub enum AdtKind {
 
 chalk_ir::const_visit!(AdtKind);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner, TypeVisitable)]
 pub struct AdtDatumBound<I: Interner> {
     pub variants: Vec<AdtVariantDatum<I>>,
     pub where_clauses: Vec<QuantifiedWhereClause<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner, TypeVisitable)]
 pub struct AdtVariantDatum<I: Interner> {
     pub fields: Vec<Ty<I>>,
 }
@@ -157,10 +157,10 @@ pub struct FnDefDatum<I: Interner> {
 }
 
 /// Avoids visiting `I::FnAbi`
-impl<I: Interner> Visit<I> for FnDefDatum<I> {
+impl<I: Interner> TypeVisitable<I> for FnDefDatum<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
+        visitor: &mut dyn chalk_ir::visit::TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         try_break!(self.id.visit_with(visitor, outer_binder));
@@ -170,7 +170,7 @@ impl<I: Interner> Visit<I> for FnDefDatum<I> {
 
 /// Represents the inputs and outputs on a `FnDefDatum`. This is split
 /// from the where clauses, since these can contain bound lifetimes.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner, TypeVisitable)]
 pub struct FnDefInputsAndOutputDatum<I: Interner> {
     /// Types of the function's arguments
     /// ```ignore
@@ -187,7 +187,7 @@ pub struct FnDefInputsAndOutputDatum<I: Interner> {
     pub return_type: Ty<I>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner, TypeVisitable)]
 /// Represents the bounds on a `FnDefDatum`, including
 /// the function definition's type signature and where clauses.
 pub struct FnDefDatumBound<I: Interner> {
@@ -238,7 +238,7 @@ pub struct FnDefDatumBound<I: Interner> {
 ///
 /// [`ImplDatum`]: struct.ImplDatum.html
 /// [`AssociatedTyDatum`]: struct.AssociatedTyDatum.html
-#[derive(Visit)]
+#[derive(TypeVisitable)]
 pub struct TraitDatum<I: Interner> {
     pub id: TraitId<I>,
 
@@ -304,7 +304,7 @@ impl<I: Interner> TraitDatum<I> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, HasInterner, TypeVisitable)]
 pub struct TraitDatumBound<I: Interner> {
     /// Where clauses defined on the trait:
     ///
@@ -351,7 +351,7 @@ pub struct TraitFlags {
 chalk_ir::const_visit!(TraitFlags);
 
 /// An inline bound, e.g. `: Foo<K>` in `impl<K, T: Foo<K>> SomeType<T>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable, HasInterner)]
 pub enum InlineBound<I: Interner> {
     TraitBound(TraitBound<I>),
     AliasEqBound(AliasEqBound<I>),
@@ -395,7 +395,7 @@ impl<I: Interner> IntoWhereClauses<I> for QuantifiedInlineBound<I> {
 
 /// Represents a trait bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable)]
 pub struct TraitBound<I: Interner> {
     pub trait_id: TraitId<I>,
     pub args_no_self: Vec<GenericArg<I>>,
@@ -420,7 +420,7 @@ impl<I: Interner> TraitBound<I> {
 
 /// Represents an alias equality bound on e.g. a type or type parameter.
 /// Does not know anything about what it's binding.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable)]
 pub struct AliasEqBound<I: Interner> {
     pub trait_bound: TraitBound<I>,
     pub associated_ty_id: AssocTypeId<I>,
@@ -504,10 +504,10 @@ pub struct AssociatedTyDatum<I: Interner> {
 }
 
 // Manual implementation to avoid I::Identifier type.
-impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
+impl<I: Interner> TypeVisitable<I> for AssociatedTyDatum<I> {
     fn visit_with<B>(
         &self,
-        visitor: &mut dyn chalk_ir::visit::Visitor<I, BreakTy = B>,
+        visitor: &mut dyn chalk_ir::visit::TypeVisitor<I, BreakTy = B>,
         outer_binder: DebruijnIndex,
     ) -> ControlFlow<B> {
         try_break!(self.trait_id.visit_with(visitor, outer_binder));
@@ -518,7 +518,7 @@ impl<I: Interner> Visit<I> for AssociatedTyDatum<I> {
 
 /// Encodes the parts of `AssociatedTyDatum` where the parameters
 /// `P0..Pm` are in scope (`bounds` and `where_clauses`).
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable, HasInterner)]
 pub struct AssociatedTyDatumBound<I: Interner> {
     /// Bounds on the associated type itself.
     ///
@@ -580,7 +580,7 @@ impl<I: Interner> AssociatedTyDatum<I> {
 ///     type Item = XXX; // <-- represents this line!
 /// }
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable)]
 pub struct AssociatedTyValue<I: Interner> {
     /// Impl in which this associated type value is found.  You might
     /// need to look at this to find the generic parameters defined on
@@ -619,7 +619,7 @@ pub struct AssociatedTyValue<I: Interner> {
     pub value: Binders<AssociatedTyValueBound<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable, HasInterner)]
 pub struct AssociatedTyValueBound<I: Interner> {
     /// Type that we normalize to. The X in `type Foo<'a> = X`.
     pub ty: Ty<I>,
@@ -630,7 +630,7 @@ pub struct AssociatedTyValueBound<I: Interner> {
 /// ```ignore
 /// opaque type T: A + B = HiddenTy;
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable)]
 pub struct OpaqueTyDatum<I: Interner> {
     /// The placeholder `!T` that corresponds to the opaque type `T`.
     pub opaque_ty_id: OpaqueTyId<I>,
@@ -639,7 +639,7 @@ pub struct OpaqueTyDatum<I: Interner> {
     pub bound: Binders<OpaqueTyDatumBound<I>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner, Visit)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner, TypeVisitable)]
 pub struct OpaqueTyDatumBound<I: Interner> {
     /// Trait bounds for the opaque type. These are bounds that the hidden type must meet.
     pub bounds: Binders<Vec<QuantifiedWhereClause<I>>>,
@@ -659,7 +659,7 @@ pub enum Movability {
 chalk_ir::copy_fold!(Movability);
 
 /// Represents a generator type.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
 pub struct GeneratorDatum<I: Interner> {
     // Can the generator be moved (is Unpin or not)
     pub movability: Movability,
@@ -670,7 +670,7 @@ pub struct GeneratorDatum<I: Interner> {
 }
 
 /// The nested types for a generator. This always appears inside a `GeneratorDatum`
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
 pub struct GeneratorInputOutputDatum<I: Interner> {
     /// The generator resume type - a value of this type
     /// is supplied by the caller when resuming the generator.
@@ -698,7 +698,7 @@ pub struct GeneratorInputOutputDatum<I: Interner> {
 /// `GeneratorWitnessDatum` is logically 'inside' a generator - this only
 /// matters when we treat the witness type as a 'constituent type for the
 /// purposes of determining auto trait implementations.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
 pub struct GeneratorWitnessDatum<I: Interner> {
     /// This binder is identical to the `input_output` binder in `GeneratorWitness` -
     /// it binds the types and lifetimes that the generator is generic over.
@@ -717,7 +717,7 @@ pub struct GeneratorWitnessDatum<I: Interner> {
 /// Unlike the binder in `GeneratorWitnessDatum`, this `Binder` never gets substituted
 /// via an `Ty`. Instead, we handle this `Binders` specially when determining
 /// auto trait impls. See `push_auto_trait_impls_generator_witness` for more details.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Fold, HasInterner)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
 pub struct GeneratorWitnessExistential<I: Interner> {
     pub types: Binders<Vec<Ty<I>>>,
 }

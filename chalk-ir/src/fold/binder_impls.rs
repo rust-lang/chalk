@@ -1,15 +1,15 @@
-//! This module contains impls of `Fold` for those types that
+//! This module contains impls of `TypeFoldable` for those types that
 //! introduce binders.
 //!
-//! The more interesting impls of `Fold` remain in the `fold` module.
+//! The more interesting impls of `TypeFoldable` remain in the `fold` module.
 
 use crate::*;
 
-impl<I: Interner> Fold<I> for FnPointer<I> {
+impl<I: Interner> TypeFoldable<I> for FnPointer<I> {
     type Result = FnPointer<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let FnPointer {
@@ -29,16 +29,16 @@ impl<I: Interner> Fold<I> for FnPointer<I> {
     }
 }
 
-impl<T, I: Interner> Fold<I> for Binders<T>
+impl<T, I: Interner> TypeFoldable<I> for Binders<T>
 where
-    T: HasInterner<Interner = I> + Fold<I>,
-    <T as Fold<I>>::Result: HasInterner<Interner = I>,
+    T: HasInterner<Interner = I> + TypeFoldable<I>,
+    <T as TypeFoldable<I>>::Result: HasInterner<Interner = I>,
     I: Interner,
 {
     type Result = Binders<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let Binders {
@@ -53,16 +53,16 @@ where
     }
 }
 
-impl<I, T> Fold<I> for Canonical<T>
+impl<I, T> TypeFoldable<I> for Canonical<T>
 where
     I: Interner,
-    T: HasInterner<Interner = I> + Fold<I>,
-    <T as Fold<I>>::Result: HasInterner<Interner = I>,
+    T: HasInterner<Interner = I> + TypeFoldable<I>,
+    <T as TypeFoldable<I>>::Result: HasInterner<Interner = I>,
 {
     type Result = Canonical<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let Canonical {

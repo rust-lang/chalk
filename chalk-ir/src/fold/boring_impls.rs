@@ -1,29 +1,29 @@
-//! This module contains "rote and uninteresting" impls of `Fold` for
-//! various types. In general, we prefer to derive `Fold`, but
+//! This module contains "rote and uninteresting" impls of `TypeFoldable` for
+//! various types. In general, we prefer to derive `TypeFoldable`, but
 //! sometimes that doesn't work for whatever reason.
 //!
-//! The more interesting impls of `Fold` remain in the `fold` module.
+//! The more interesting impls of `TypeFoldable` remain in the `fold` module.
 
 use super::in_place;
 use crate::*;
 use std::marker::PhantomData;
 
-impl<T: Fold<I>, I: Interner> Fold<I> for Vec<T> {
+impl<T: TypeFoldable<I>, I: Interner> TypeFoldable<I> for Vec<T> {
     type Result = Vec<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         in_place::fallible_map_vec(self, |e| e.fold_with(folder, outer_binder))
     }
 }
 
-impl<T: Fold<I>, I: Interner> Fold<I> for Box<T> {
+impl<T: TypeFoldable<I>, I: Interner> TypeFoldable<I> for Box<T> {
     type Result = Box<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         in_place::fallible_map_box(self, |e| e.fold_with(folder, outer_binder))
@@ -32,9 +32,9 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Box<T> {
 
 macro_rules! tuple_fold {
     ($($n:ident),*) => {
-        impl<$($n: Fold<I>,)* I: Interner> Fold<I> for ($($n,)*) {
+        impl<$($n: TypeFoldable<I>,)* I: Interner> TypeFoldable<I> for ($($n,)*) {
             type Result = ($($n::Result,)*);
-            fn fold_with<Error>(self, folder: &mut dyn Folder<I, Error = Error>, outer_binder: DebruijnIndex) -> Result<Self::Result, Error>
+            fn fold_with<Error>(self, folder: &mut dyn TypeFolder<I, Error = Error>, outer_binder: DebruijnIndex) -> Result<Self::Result, Error>
             {
                 #[allow(non_snake_case)]
                 let ($($n),*) = self;
@@ -49,11 +49,11 @@ tuple_fold!(A, B, C);
 tuple_fold!(A, B, C, D);
 tuple_fold!(A, B, C, D, E);
 
-impl<T: Fold<I>, I: Interner> Fold<I> for Option<T> {
+impl<T: TypeFoldable<I>, I: Interner> TypeFoldable<I> for Option<T> {
     type Result = Option<T::Result>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         match self {
@@ -63,11 +63,11 @@ impl<T: Fold<I>, I: Interner> Fold<I> for Option<T> {
     }
 }
 
-impl<I: Interner> Fold<I> for GenericArg<I> {
+impl<I: Interner> TypeFoldable<I> for GenericArg<I> {
     type Result = GenericArg<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let interner = folder.interner();
@@ -80,11 +80,11 @@ impl<I: Interner> Fold<I> for GenericArg<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for Substitution<I> {
+impl<I: Interner> TypeFoldable<I> for Substitution<I> {
     type Result = Substitution<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let interner = folder.interner();
@@ -97,11 +97,11 @@ impl<I: Interner> Fold<I> for Substitution<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for Goals<I> {
+impl<I: Interner> TypeFoldable<I> for Goals<I> {
     type Result = Goals<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let interner = folder.interner();
@@ -113,11 +113,11 @@ impl<I: Interner> Fold<I> for Goals<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for ProgramClauses<I> {
+impl<I: Interner> TypeFoldable<I> for ProgramClauses<I> {
     type Result = ProgramClauses<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let interner = folder.interner();
@@ -129,11 +129,11 @@ impl<I: Interner> Fold<I> for ProgramClauses<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for QuantifiedWhereClauses<I> {
+impl<I: Interner> TypeFoldable<I> for QuantifiedWhereClauses<I> {
     type Result = QuantifiedWhereClauses<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let interner = folder.interner();
@@ -145,11 +145,11 @@ impl<I: Interner> Fold<I> for QuantifiedWhereClauses<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for Constraints<I> {
+impl<I: Interner> TypeFoldable<I> for Constraints<I> {
     type Result = Constraints<I>;
     fn fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self::Result, E> {
         let interner = folder.interner();
@@ -165,11 +165,11 @@ impl<I: Interner> Fold<I> for Constraints<I> {
 #[macro_export]
 macro_rules! copy_fold {
     ($t:ty) => {
-        impl<I: Interner> $crate::fold::Fold<I> for $t {
+        impl<I: Interner> $crate::fold::TypeFoldable<I> for $t {
             type Result = Self;
             fn fold_with<E>(
                 self,
-                _folder: &mut dyn ($crate::fold::Folder<I, Error = E>),
+                _folder: &mut dyn ($crate::fold::TypeFolder<I, Error = E>),
                 _outer_binder: DebruijnIndex,
             ) -> ::std::result::Result<Self::Result, E> {
                 Ok(self)
@@ -197,11 +197,11 @@ copy_fold!(Safety);
 #[macro_export]
 macro_rules! id_fold {
     ($t:ident) => {
-        impl<I: Interner> $crate::fold::Fold<I> for $t<I> {
+        impl<I: Interner> $crate::fold::TypeFoldable<I> for $t<I> {
             type Result = $t<I>;
             fn fold_with<E>(
                 self,
-                _folder: &mut dyn ($crate::fold::Folder<I, Error = E>),
+                _folder: &mut dyn ($crate::fold::TypeFolder<I, Error = E>),
                 _outer_binder: DebruijnIndex,
             ) -> ::std::result::Result<Self::Result, E> {
                 Ok(self)
@@ -220,20 +220,20 @@ id_fold!(ClosureId);
 id_fold!(GeneratorId);
 id_fold!(ForeignDefId);
 
-impl<I: Interner> SuperFold<I> for ProgramClauseData<I> {
+impl<I: Interner> TypeSuperFoldable<I> for ProgramClauseData<I> {
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> ::std::result::Result<Self::Result, E> {
         Ok(ProgramClauseData(self.0.fold_with(folder, outer_binder)?))
     }
 }
 
-impl<I: Interner> SuperFold<I> for ProgramClause<I> {
+impl<I: Interner> TypeSuperFoldable<I> for ProgramClause<I> {
     fn super_fold_with<E>(
         self,
-        folder: &mut dyn Folder<I, Error = E>,
+        folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> ::std::result::Result<Self::Result, E> {
         let clause = self.data(folder.interner()).clone();
@@ -243,12 +243,12 @@ impl<I: Interner> SuperFold<I> for ProgramClause<I> {
     }
 }
 
-impl<I: Interner> Fold<I> for PhantomData<I> {
+impl<I: Interner> TypeFoldable<I> for PhantomData<I> {
     type Result = PhantomData<I>;
 
     fn fold_with<E>(
         self,
-        _folder: &mut dyn Folder<I, Error = E>,
+        _folder: &mut dyn TypeFolder<I, Error = E>,
         _outer_binder: DebruijnIndex,
     ) -> ::std::result::Result<Self::Result, E> {
         Ok(PhantomData)

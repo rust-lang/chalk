@@ -2,7 +2,7 @@ use super::var::*;
 use super::*;
 use crate::debug_span;
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{Fold, Folder};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::UnificationDatabase;
@@ -397,8 +397,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
         b: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: Clone + Fold<I, Result = R> + HasInterner<Interner = I>,
-        R: Zip<I> + Fold<I, Result = R>,
+        T: Clone + TypeFoldable<I, Result = R> + HasInterner<Interner = I>,
+        R: Zip<I> + TypeFoldable<I, Result = R>,
         't: 'a,
     {
         // for<'a...> T == for<'b...> U
@@ -1202,7 +1202,7 @@ impl<'i, I: Interner> Zipper<I> for Unifier<'i, I> {
 
     fn zip_binders<T>(&mut self, variance: Variance, a: &Binders<T>, b: &Binders<T>) -> Fallible<()>
     where
-        T: Clone + HasInterner<Interner = I> + Zip<I> + Fold<I, Result = T>,
+        T: Clone + HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>,
     {
         // The binders that appear in types (apart from quantified types, which are
         // handled in `unify_ty`) appear as part of `dyn Trait` and `impl Trait` types.
@@ -1247,10 +1247,10 @@ impl<'u, 't, I: Interner> OccursCheck<'u, 't, I> {
     }
 }
 
-impl<'i, I: Interner> Folder<I> for OccursCheck<'_, 'i, I> {
+impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

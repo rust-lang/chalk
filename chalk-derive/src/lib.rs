@@ -118,9 +118,9 @@ enum DeriveKind {
 }
 
 decl_derive!([HasInterner, attributes(has_interner)] => derive_has_interner);
-decl_derive!([Visit, attributes(has_interner)] => derive_visit);
-decl_derive!([SuperVisit, attributes(has_interner)] => derive_super_visit);
-decl_derive!([Fold, attributes(has_interner)] => derive_fold);
+decl_derive!([TypeVisitable, attributes(has_interner)] => derive_type_visitable);
+decl_derive!([TypeSuperVisitable, attributes(has_interner)] => derive_type_super_visitable);
+decl_derive!([TypeFoldable, attributes(has_interner)] => derive_type_foldable);
 decl_derive!([Zip, attributes(has_interner)] => derive_zip);
 
 fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
@@ -136,24 +136,28 @@ fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
     )
 }
 
-/// Derives Visit for structs and enums for which one of the following is true:
+/// Derives TypeVisitable for structs and enums for which one of the following is true:
 /// - It has a `#[has_interner(TheInterner)]` attribute
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
-fn derive_visit(s: synstructure::Structure) -> TokenStream {
-    derive_any_visit(s, parse_quote! { Visit }, parse_quote! { visit_with })
+fn derive_type_visitable(s: synstructure::Structure) -> TokenStream {
+    derive_any_type_visitable(
+        s,
+        parse_quote! { TypeVisitable },
+        parse_quote! { visit_with },
+    )
 }
 
-/// Same as Visit, but derives SuperVisit instead
-fn derive_super_visit(s: synstructure::Structure) -> TokenStream {
-    derive_any_visit(
+/// Same as TypeVisitable, but derives TypeSuperVisitable instead
+fn derive_type_super_visitable(s: synstructure::Structure) -> TokenStream {
+    derive_any_type_visitable(
         s,
-        parse_quote! { SuperVisit },
+        parse_quote! { TypeSuperVisitable },
         parse_quote! { super_visit_with },
     )
 }
 
-fn derive_any_visit(
+fn derive_any_type_visitable(
     mut s: synstructure::Structure,
     trait_name: Ident,
     method_name: Ident,
@@ -164,13 +168,13 @@ fn derive_any_visit(
 
     let body = s.each(|bi| {
         quote! {
-            ::chalk_ir::try_break!(::chalk_ir::visit::Visit::visit_with(#bi, visitor, outer_binder));
+            ::chalk_ir::try_break!(::chalk_ir::visit::TypeVisitable::visit_with(#bi, visitor, outer_binder));
         }
     });
 
     if kind == DeriveKind::FromHasInterner {
         let param = get_generic_param_name(input).unwrap();
-        s.add_where_predicate(parse_quote! { #param: ::chalk_ir::visit::Visit<#interner> });
+        s.add_where_predicate(parse_quote! { #param: ::chalk_ir::visit::TypeVisitable<#interner> });
     }
 
     s.add_bounds(synstructure::AddBounds::None);
@@ -179,7 +183,7 @@ fn derive_any_visit(
         quote! {
             fn #method_name <B>(
                 &self,
-                visitor: &mut dyn ::chalk_ir::visit::Visitor < #interner, BreakTy = B >,
+                visitor: &mut dyn ::chalk_ir::visit::TypeVisitor < #interner, BreakTy = B >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> std::ops::ControlFlow<B> {
                 match *self {
@@ -250,11 +254,11 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
     )
 }
 
-/// Derives Fold for structs and enums for which one of the following is true:
+/// Derives TypeFoldable for structs and enums for which one of the following is true:
 /// - It has a `#[has_interner(TheInterner)]` attribute
 /// - There is a single parameter `T: HasInterner` (does not have to be named `T`)
 /// - There is a single parameter `I: Interner` (does not have to be named `I`)
-fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
+fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
     s.underscore_const(true);
     s.bind_with(|_| synstructure::BindStyle::Move);
 
@@ -265,7 +269,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
         vi.construct(|_, index| {
             let bind = &bindings[index];
             quote! {
-                ::chalk_ir::fold::Fold::fold_with(#bind, folder, outer_binder)?
+                ::chalk_ir::fold::TypeFoldable::fold_with(#bind, folder, outer_binder)?
             }
         })
     });
@@ -277,7 +281,7 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
         let param = get_generic_param_name(input).unwrap();
         s.add_impl_generic(parse_quote! { _U })
             .add_where_predicate(
-                parse_quote! { #param: ::chalk_ir::fold::Fold<#interner, Result = _U> },
+                parse_quote! { #param: ::chalk_ir::fold::TypeFoldable<#interner, Result = _U> },
             )
             .add_where_predicate(
                 parse_quote! { _U: ::chalk_ir::interner::HasInterner<Interner = #interner> },
@@ -289,13 +293,13 @@ fn derive_fold(mut s: synstructure::Structure) -> TokenStream {
 
     s.add_bounds(synstructure::AddBounds::None);
     s.bound_impl(
-        quote!(::chalk_ir::fold::Fold<#interner>),
+        quote!(::chalk_ir::fold::TypeFoldable<#interner>),
         quote! {
             type Result = #result;
 
             fn fold_with<E>(
                 self,
-                folder: &mut dyn ::chalk_ir::fold::Folder < #interner, Error = E >,
+                folder: &mut dyn ::chalk_ir::fold::TypeFolder < #interner, Error = E >,
                 outer_binder: ::chalk_ir::DebruijnIndex,
             ) -> ::std::result::Result<Self::Result, E> {
                 Ok(match self { #body })

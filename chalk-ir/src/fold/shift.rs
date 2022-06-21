@@ -1,11 +1,11 @@
 //! Shifting of debruijn indices
 
-use super::Fold;
+use super::TypeFoldable;
 use crate::*;
 
 /// Methods for converting debruijn indices to move values into or out
 /// of binders.
-pub trait Shift<I: Interner>: Fold<I> {
+pub trait Shift<I: Interner>: TypeFoldable<I> {
     /// Shifts this term in one level of binders.
     fn shifted_in(self, interner: I) -> Self::Result;
 
@@ -23,7 +23,7 @@ pub trait Shift<I: Interner>: Fold<I> {
     fn shifted_out_to(self, interner: I, target_binder: DebruijnIndex) -> Fallible<Self::Result>;
 }
 
-impl<T: Fold<I>, I: Interner> Shift<I> for T {
+impl<T: TypeFoldable<I>, I: Interner> Shift<I> for T {
     fn shifted_in(self, interner: I) -> Self::Result {
         self.shifted_in_from(interner, DebruijnIndex::ONE)
     }
@@ -71,10 +71,10 @@ impl<I> Shifter<I> {
     }
 }
 
-impl<I: Interner> Folder<I> for Shifter<I> {
+impl<I: Interner> TypeFolder<I> for Shifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 
@@ -141,10 +141,10 @@ impl<I> DownShifter<I> {
     }
 }
 
-impl<I: Interner> Folder<I> for DownShifter<I> {
+impl<I: Interner> TypeFolder<I> for DownShifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn Folder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
         self
     }
 

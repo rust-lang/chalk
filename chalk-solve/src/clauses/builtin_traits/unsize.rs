@@ -8,7 +8,7 @@ use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
     cast::Cast,
     interner::HasInterner,
-    visit::{SuperVisit, Visit, Visitor},
+    visit::{TypeSuperVisitable, TypeVisitable, TypeVisitor},
     Binders, Const, ConstValue, DebruijnIndex, DomainGoal, DynTy, EqGoal, Goal, LifetimeOutlives,
     QuantifiedWhereClauses, Substitution, TraitId, Ty, TyKind, TypeOutlives, WhereClause,
 };
@@ -19,10 +19,10 @@ struct UnsizeParameterCollector<I: Interner> {
     parameters: HashSet<usize>,
 }
 
-impl<I: Interner> Visitor<I> for UnsizeParameterCollector<I> {
+impl<I: Interner> TypeVisitor<I> for UnsizeParameterCollector<I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -60,7 +60,7 @@ impl<I: Interner> Visitor<I> for UnsizeParameterCollector<I> {
 
 fn outer_binder_parameters_used<I: Interner>(
     interner: I,
-    v: &Binders<impl Visit<I> + HasInterner>,
+    v: &Binders<impl TypeVisitable<I> + HasInterner>,
 ) -> HashSet<usize> {
     let mut visitor = UnsizeParameterCollector {
         interner,
@@ -76,10 +76,10 @@ struct ParameterOccurenceCheck<'p, I: Interner> {
     parameters: &'p HashSet<usize>,
 }
 
-impl<'p, I: Interner> Visitor<I> for ParameterOccurenceCheck<'p, I> {
+impl<'p, I: Interner> TypeVisitor<I> for ParameterOccurenceCheck<'p, I> {
     type BreakTy = ();
 
-    fn as_dyn(&mut self) -> &mut dyn Visitor<I, BreakTy = Self::BreakTy> {
+    fn as_dyn(&mut self) -> &mut dyn TypeVisitor<I, BreakTy = Self::BreakTy> {
         self
     }
 
@@ -124,7 +124,7 @@ impl<'p, I: Interner> Visitor<I> for ParameterOccurenceCheck<'p, I> {
 
 fn uses_outer_binder_params<I: Interner>(
     interner: I,
-    v: &Binders<impl Visit<I> + HasInterner>,
+    v: &Binders<impl TypeVisitable<I> + HasInterner>,
     parameters: &HashSet<usize>,
 ) -> bool {
     let mut visitor = ParameterOccurenceCheck {
