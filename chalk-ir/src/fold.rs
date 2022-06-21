@@ -1,6 +1,7 @@
 //! Traits for transforming bits of IR.
 
 use crate::*;
+use std::convert::Infallible;
 use std::fmt::Debug;
 
 mod binder_impls;
@@ -19,6 +20,11 @@ pub use self::subst::Subst;
 /// each bit of IR implements the `TypeFoldable` trait which, given a
 /// `FallibleTypeFolder`, will reconstruct itself, invoking the folder's
 /// methods to transform each of the types/lifetimes embedded within.
+///
+/// As the name suggests, folds performed by `FallibleTypeFolder` can
+/// fail (with type `Error`); if the folder cannot fail, consider
+/// implementing `TypeFolder` instead (which is an infallible, but
+/// otherwise equivalent, trait).
 ///
 /// # Usage patterns
 ///
@@ -316,6 +322,289 @@ pub trait FallibleTypeFolder<I: Interner> {
     fn interner(&self) -> I;
 }
 
+/// A "folder" is a transformer that can be used to make a copy of
+/// some term -- that is, some bit of IR, such as a `Goal` -- with
+/// certain changes applied. The idea is that it contains methods that
+/// let you swap types/lifetimes for new types/lifetimes; meanwhile,
+/// each bit of IR implements the `TypeFoldable` trait which, given a
+/// `TypeFolder`, will reconstruct itself, invoking the folder's methods
+/// to transform each of the types/lifetimes embedded within.
+///
+/// Folds performed by `TypeFolder` cannot fail.  If folds might fail,
+/// consider implementing `FallibleTypeFolder` instead (which is a
+/// fallible, but otherwise equivalent, trait).
+///
+/// # Usage patterns
+///
+/// ## Substituting for free variables
+///
+/// Most of the time, though, we are not interested in adjust
+/// arbitrary types/lifetimes, but rather just free variables (even
+/// more often, just free existential variables) that appear within
+/// the term.
+///
+/// For this reason, the `TypeFolder` trait extends two other traits that
+/// contain methods that are invoked when just those particular
+///
+/// In particular, folders can intercept references to free variables
+/// (either existentially or universally quantified) and replace them
+/// with other types/lifetimes as appropriate.
+///
+/// To create a folder `F`, one never implements `TypeFolder` directly, but instead
+/// implements one of each of these three sub-traits:
+///
+/// - `FreeVarFolder` -- folds `BoundVar` instances that appear free
+///   in the term being folded (use `DefaultFreeVarFolder` to
+///   ignore/forbid these altogether)
+/// - `InferenceFolder` -- folds existential `InferenceVar` instances
+///   that appear in the term being folded (use
+///   `DefaultInferenceFolder` to ignore/forbid these altogether)
+/// - `PlaceholderFolder` -- folds universal `Placeholder` instances
+///   that appear in the term being folded (use
+///   `DefaultPlaceholderFolder` to ignore/forbid these altogether)
+///
+/// To **apply** a folder, use the `TypeFoldable::fold_with` method, like so
+///
+/// ```rust,ignore
+/// let x = x.fold_with(&mut folder, 0);
+/// ```
+pub trait TypeFolder<I: Interner>: FallibleTypeFolder<I, Error = Infallible> {
+    /// Creates a `dyn` value from this folder. Unfortunately, this
+    /// must be added manually to each impl of TypeFolder; it permits the
+    /// default implements below to create a `&mut dyn TypeFolder` from
+    /// `Self` without knowing what `Self` is (by invoking this
+    /// method). Effectively, this limits impls of `TypeFolder` to types
+    /// for which we are able to create a dyn value (i.e., not `[T]`
+    /// types).
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I>;
+
+    /// Top-level callback: invoked for each `Ty<I>` that is
+    /// encountered when folding. By default, invokes
+    /// `super_fold_with`, which will in turn invoke the more
+    /// specialized folding methods below, like `fold_free_var_ty`.
+    fn fold_ty(&mut self, ty: Ty<I>, outer_binder: DebruijnIndex) -> Ty<I> {
+        ty.super_fold_with(TypeFolder::as_dyn(self), outer_binder)
+    }
+
+    /// Top-level callback: invoked for each `Lifetime<I>` that is
+    /// encountered when folding. By default, invokes
+    /// `super_fold_with`, which will in turn invoke the more
+    /// specialized folding methods below, like `fold_free_var_lifetime`.
+    fn fold_lifetime(&mut self, lifetime: Lifetime<I>, outer_binder: DebruijnIndex) -> Lifetime<I> {
+        lifetime.super_fold_with(TypeFolder::as_dyn(self), outer_binder)
+    }
+
+    /// Top-level callback: invoked for each `Const<I>` that is
+    /// encountered when folding. By default, invokes
+    /// `super_fold_with`, which will in turn invoke the more
+    /// specialized folding methods below, like `fold_free_var_const`.
+    fn fold_const(&mut self, constant: Const<I>, outer_binder: DebruijnIndex) -> Const<I> {
+        constant.super_fold_with(TypeFolder::as_dyn(self), outer_binder)
+    }
+
+    /// Invoked for every program clause. By default, recursively folds the goals contents.
+    fn fold_program_clause(
+        &mut self,
+        clause: ProgramClause<I>,
+        outer_binder: DebruijnIndex,
+    ) -> ProgramClause<I> {
+        clause.super_fold_with(TypeFolder::as_dyn(self), outer_binder)
+    }
+
+    /// Invoked for every goal. By default, recursively folds the goals contents.
+    fn fold_goal(&mut self, goal: Goal<I>, outer_binder: DebruijnIndex) -> Goal<I> {
+        goal.super_fold_with(TypeFolder::as_dyn(self), outer_binder)
+    }
+
+    /// If overridden to return true, then folding will panic if a
+    /// free variable is encountered. This should be done if free
+    /// type/lifetime variables are not expected.
+    fn forbid_free_vars(&self) -> bool {
+        false
+    }
+
+    /// Invoked for `TyKind::BoundVar` instances that are not bound
+    /// within the type being folded over:
+    ///
+    /// - `depth` is the depth of the `TyKind::BoundVar`; this has
+    ///   been adjusted to account for binders in scope.
+    /// - `binders` is the number of binders in scope.
+    ///
+    /// This should return a type suitable for a context with
+    /// `binders` in scope.
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, outer_binder: DebruijnIndex) -> Ty<I> {
+        if TypeFolder::forbid_free_vars(self) {
+            panic!(
+                "unexpected free variable with depth `{:?}` with outer binder {:?}",
+                bound_var, outer_binder
+            )
+        } else {
+            let bound_var = bound_var.shifted_in_from(outer_binder);
+            TyKind::<I>::BoundVar(bound_var).intern(TypeFolder::interner(self))
+        }
+    }
+
+    /// As `fold_free_var_ty`, but for lifetimes.
+    fn fold_free_var_lifetime(
+        &mut self,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Lifetime<I> {
+        if TypeFolder::forbid_free_vars(self) {
+            panic!(
+                "unexpected free variable with depth `{:?}` with outer binder {:?}",
+                bound_var, outer_binder
+            )
+        } else {
+            let bound_var = bound_var.shifted_in_from(outer_binder);
+            LifetimeData::<I>::BoundVar(bound_var).intern(TypeFolder::interner(self))
+        }
+    }
+
+    /// As `fold_free_var_ty`, but for constants.
+    fn fold_free_var_const(
+        &mut self,
+        ty: Ty<I>,
+        bound_var: BoundVar,
+        outer_binder: DebruijnIndex,
+    ) -> Const<I> {
+        if TypeFolder::forbid_free_vars(self) {
+            panic!(
+                "unexpected free variable with depth `{:?}` with outer binder {:?}",
+                bound_var, outer_binder
+            )
+        } else {
+            let bound_var = bound_var.shifted_in_from(outer_binder);
+            ConstData {
+                ty: ty.fold_with(TypeFolder::as_dyn(self), outer_binder),
+                value: ConstValue::<I>::BoundVar(bound_var),
+            }
+            .intern(TypeFolder::interner(self))
+        }
+    }
+
+    /// If overridden to return true, we will panic when a free
+    /// placeholder type/lifetime/const is encountered.
+    fn forbid_free_placeholders(&self) -> bool {
+        false
+    }
+
+    /// Invoked for each occurrence of a placeholder type; these are
+    /// used when we instantiate binders universally. Returns a type
+    /// to use instead, which should be suitably shifted to account
+    /// for `binders`.
+    ///
+    /// - `universe` is the universe of the `TypeName::ForAll` that was found
+    /// - `binders` is the number of binders in scope
+    #[allow(unused_variables)]
+    fn fold_free_placeholder_ty(
+        &mut self,
+        universe: PlaceholderIndex,
+        outer_binder: DebruijnIndex,
+    ) -> Ty<I> {
+        if TypeFolder::forbid_free_placeholders(self) {
+            panic!("unexpected placeholder type `{:?}`", universe)
+        } else {
+            universe.to_ty::<I>(TypeFolder::interner(self))
+        }
+    }
+
+    /// As with `fold_free_placeholder_ty`, but for lifetimes.
+    #[allow(unused_variables)]
+    fn fold_free_placeholder_lifetime(
+        &mut self,
+        universe: PlaceholderIndex,
+        outer_binder: DebruijnIndex,
+    ) -> Lifetime<I> {
+        if TypeFolder::forbid_free_placeholders(self) {
+            panic!("unexpected placeholder lifetime `{:?}`", universe)
+        } else {
+            universe.to_lifetime(TypeFolder::interner(self))
+        }
+    }
+
+    /// As with `fold_free_placeholder_ty`, but for constants.
+    #[allow(unused_variables)]
+    fn fold_free_placeholder_const(
+        &mut self,
+        ty: Ty<I>,
+        universe: PlaceholderIndex,
+        outer_binder: DebruijnIndex,
+    ) -> Const<I> {
+        if TypeFolder::forbid_free_placeholders(self) {
+            panic!("unexpected placeholder const `{:?}`", universe)
+        } else {
+            universe.to_const(
+                TypeFolder::interner(self),
+                ty.fold_with(TypeFolder::as_dyn(self), outer_binder),
+            )
+        }
+    }
+
+    /// If overridden to return true, inference variables will trigger
+    /// panics when folded. Used when inference variables are
+    /// unexpected.
+    fn forbid_inference_vars(&self) -> bool {
+        false
+    }
+
+    /// Invoked for each occurrence of a inference type; these are
+    /// used when we instantiate binders universally. Returns a type
+    /// to use instead, which should be suitably shifted to account
+    /// for `binders`.
+    ///
+    /// - `universe` is the universe of the `TypeName::ForAll` that was found
+    /// - `binders` is the number of binders in scope
+    #[allow(unused_variables)]
+    fn fold_inference_ty(
+        &mut self,
+        var: InferenceVar,
+        kind: TyVariableKind,
+        outer_binder: DebruijnIndex,
+    ) -> Ty<I> {
+        if TypeFolder::forbid_inference_vars(self) {
+            panic!("unexpected inference type `{:?}`", var)
+        } else {
+            var.to_ty(TypeFolder::interner(self), kind)
+        }
+    }
+
+    /// As with `fold_inference_ty`, but for lifetimes.
+    #[allow(unused_variables)]
+    fn fold_inference_lifetime(
+        &mut self,
+        var: InferenceVar,
+        outer_binder: DebruijnIndex,
+    ) -> Lifetime<I> {
+        if TypeFolder::forbid_inference_vars(self) {
+            panic!("unexpected inference lifetime `'{:?}`", var)
+        } else {
+            var.to_lifetime(TypeFolder::interner(self))
+        }
+    }
+
+    /// As with `fold_inference_ty`, but for constants.
+    #[allow(unused_variables)]
+    fn fold_inference_const(
+        &mut self,
+        ty: Ty<I>,
+        var: InferenceVar,
+        outer_binder: DebruijnIndex,
+    ) -> Const<I> {
+        if TypeFolder::forbid_inference_vars(self) {
+            panic!("unexpected inference const `{:?}`", var)
+        } else {
+            var.to_const(
+                TypeFolder::interner(self),
+                ty.fold_with(TypeFolder::as_dyn(self), outer_binder),
+            )
+        }
+    }
+
+    /// Gets the interner that is being folded from.
+    fn interner(&self) -> I;
+}
+
 /// Applies the given `TypeFolder` to a value, producing a folded result
 /// of type `Self::Result`. The result type is typically the same as
 /// the source type, but in some cases we convert from borrowed
@@ -332,6 +621,14 @@ pub trait TypeFoldable<I: Interner>: Debug + Sized {
         folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E>;
+
+    /// A convenient alternative to `try_fold_with` for use with infallible
+    /// folders. Do not override this method, to ensure coherence with
+    /// `try_fold_with`.
+    fn fold_with(self, folder: &mut dyn TypeFolder<I>, outer_binder: DebruijnIndex) -> Self {
+        self.try_fold_with(FallibleTypeFolder::as_dyn(folder), outer_binder)
+            .unwrap()
+    }
 }
 
 /// For types where "fold" invokes a callback on the `TypeFolder`, the
@@ -344,6 +641,14 @@ pub trait TypeSuperFoldable<I: Interner>: TypeFoldable<I> {
         folder: &mut dyn FallibleTypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
     ) -> Result<Self, E>;
+
+    /// A convenient alternative to `try_super_fold_with` for use with
+    /// infallible folders. Do not override this method, to ensure coherence
+    /// with `try_super_fold_with`.
+    fn super_fold_with(self, folder: &mut dyn TypeFolder<I>, outer_binder: DebruijnIndex) -> Self {
+        self.try_super_fold_with(FallibleTypeFolder::as_dyn(folder), outer_binder)
+            .unwrap()
+    }
 }
 
 /// "Folding" a type invokes the `try_fold_ty` method on the folder; this
