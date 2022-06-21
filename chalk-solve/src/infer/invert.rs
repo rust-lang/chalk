@@ -71,9 +71,9 @@ impl<I: Interner> InferenceTable<I> {
     /// `?T: Clone` in the case where `?T = Vec<i32>`. The current
     /// version would delay processing the negative goal (i.e., return
     /// `None`) until the second unification has occurred.)
-    pub fn invert<T>(&mut self, interner: I, value: T) -> Option<T::Result>
+    pub fn invert<T>(&mut self, interner: I, value: T) -> Option<T>
     where
-        T: TypeFoldable<I, Result = T> + HasInterner<Interner = I>,
+        T: TypeFoldable<I> + HasInterner<Interner = I>,
     {
         let Canonicalized {
             free_vars,
@@ -97,13 +97,9 @@ impl<I: Interner> InferenceTable<I> {
 
     /// As `negated_instantiated`, but canonicalizes before
     /// returning. Just a convenience function.
-    pub fn invert_then_canonicalize<T>(
-        &mut self,
-        interner: I,
-        value: T,
-    ) -> Option<Canonical<T::Result>>
+    pub fn invert_then_canonicalize<T>(&mut self, interner: I, value: T) -> Option<Canonical<T>>
     where
-        T: TypeFoldable<I, Result = T> + HasInterner<Interner = I>,
+        T: TypeFoldable<I> + HasInterner<Interner = I>,
     {
         let snapshot = self.snapshot();
         let result = self.invert(interner, value);

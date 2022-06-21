@@ -132,11 +132,11 @@ impl<'me, I: Interner> ClauseBuilder<'me, I> {
     pub fn push_binders<R, V>(
         &mut self,
         binders: Binders<V>,
-        op: impl FnOnce(&mut Self, V::Result) -> R,
+        op: impl FnOnce(&mut Self, V) -> R,
     ) -> R
     where
         V: TypeFoldable<I> + HasInterner<Interner = I>,
-        V::Result: std::fmt::Debug,
+        V: std::fmt::Debug,
     {
         let old_len = self.binders.len();
         let interner = self.interner();

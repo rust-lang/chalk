@@ -708,7 +708,7 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
         pending: &Binders<T>,
     ) -> Fallible<()>
     where
-        T: HasInterner<Interner = I> + Zip<I> + TypeFoldable<I, Result = T>,
+        T: HasInterner<Interner = I> + Zip<I> + TypeFoldable<I>,
     {
         self.outer_binder.shift_in();
         Zip::zip_with(

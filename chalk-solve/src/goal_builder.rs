@@ -76,7 +76,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         &mut self,
         binders: &Binders<B>,
         passthru: P,
-        body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
+        body: fn(&mut Self, Substitution<I>, &B, P) -> G,
     ) -> Goal<I>
     where
         B: HasInterner<Interner = I>,
@@ -91,7 +91,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         &mut self,
         binders: &Binders<B>,
         passthru: P,
-        body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
+        body: fn(&mut Self, Substitution<I>, &B, P) -> G,
     ) -> Goal<I>
     where
         B: HasInterner<Interner = I>,
@@ -113,7 +113,7 @@ impl<'i, I: Interner> GoalBuilder<'i, I> {
         quantifier_kind: QuantifierKind,
         binders: &Binders<B>,
         passthru: P,
-        body: fn(&mut Self, Substitution<I>, &B, P::Result) -> G,
+        body: fn(&mut Self, Substitution<I>, &B, P) -> G,
     ) -> Goal<I>
     where
         B: HasInterner<Interner = I>,

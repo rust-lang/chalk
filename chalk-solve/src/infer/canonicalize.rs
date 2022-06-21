@@ -27,10 +27,10 @@ impl<I: Interner> InferenceTable<I> {
     ///
     /// A substitution mapping from the free variables to their re-bound form is
     /// also returned.
-    pub fn canonicalize<T>(&mut self, interner: I, value: T) -> Canonicalized<T::Result>
+    pub fn canonicalize<T>(&mut self, interner: I, value: T) -> Canonicalized<T>
     where
         T: TypeFoldable<I>,
-        T::Result: HasInterner<Interner = I>,
+        T: HasInterner<Interner = I>,
     {
         debug_span!("canonicalize", "{:#?}", value);
         let mut q = Canonicalizer {

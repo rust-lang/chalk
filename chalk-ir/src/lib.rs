@@ -2198,11 +2198,10 @@ impl<T: HasInterner> Binders<T> {
 impl<T, I> Binders<Binders<T>>
 where
     T: TypeFoldable<I> + HasInterner<Interner = I>,
-    T::Result: HasInterner<Interner = I>,
     I: Interner,
 {
     /// This turns two levels of binders (`for<A> for<B>`) into one level (`for<A, B>`).
-    pub fn fuse_binders(self, interner: T::Interner) -> Binders<T::Result> {
+    pub fn fuse_binders(self, interner: T::Interner) -> Binders<T> {
         let num_binders = self.len(interner);
         // generate a substitution to shift the indexes of the inner binder:
         let subst = Substitution::from_iter(
@@ -2240,11 +2239,7 @@ where
     /// binders. So if the binders represent (e.g.) `<X, Y> { T }` and
     /// parameters is the slice `[A, B]`, then returns `[X => A, Y =>
     /// B] T`.
-    pub fn substitute(
-        self,
-        interner: I,
-        parameters: &(impl AsParameters<I> + ?Sized),
-    ) -> T::Result {
+    pub fn substitute(self, interner: I, parameters: &(impl AsParameters<I> + ?Sized)) -> T {
         let parameters = parameters.as_parameters(interner);
         assert_eq!(self.binders.len(interner), parameters.len());
         Subst::apply(interner, parameters, self.value)
@@ -2706,7 +2701,7 @@ impl<I: Interner> Substitution<I> {
     }
 
     /// Apply the substitution to a value.
-    pub fn apply<T>(&self, value: T, interner: I) -> T::Result
+    pub fn apply<T>(&self, value: T, interner: I) -> T
     where
         T: TypeFoldable<I>,
     {
@@ -2787,11 +2782,11 @@ where
 /// that it can applied as a substituion to a value
 pub trait Substitute<I: Interner>: AsParameters<I> {
     /// Apply the substitution to a value.
-    fn apply<T: TypeFoldable<I>>(&self, value: T, interner: I) -> T::Result;
+    fn apply<T: TypeFoldable<I>>(&self, value: T, interner: I) -> T;
 }
 
 impl<I: Interner, A: AsParameters<I>> Substitute<I> for A {
-    fn apply<T>(&self, value: T, interner: I) -> T::Result
+    fn apply<T>(&self, value: T, interner: I) -> T
     where
         T: TypeFoldable<I>,
     {

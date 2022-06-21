@@ -63,10 +63,10 @@ fn canonicalize<I: Interner, T>(
     infer: &mut InferenceTable<I>,
     interner: I,
     value: T,
-) -> (Canonical<T::Result>, Vec<GenericArg<I>>)
+) -> (Canonical<T>, Vec<GenericArg<I>>)
 where
     T: TypeFoldable<I>,
-    T::Result: HasInterner<Interner = I>,
+    T: HasInterner<Interner = I>,
 {
     let res = infer.canonicalize(interner, value);
     let free_vars = res
@@ -81,10 +81,10 @@ fn u_canonicalize<I: Interner, T>(
     _infer: &mut InferenceTable<I>,
     interner: I,
     value0: &Canonical<T>,
-) -> (UCanonical<T::Result>, UniverseMap)
+) -> (UCanonical<T>, UniverseMap)
 where
     T: Clone + HasInterner<Interner = I> + TypeFoldable<I> + TypeVisitable<I>,
-    T::Result: HasInterner<Interner = I>,
+    T: HasInterner<Interner = I>,
 {
     let res = InferenceTable::u_canonicalize(interner, value0);
     (res.quantified, res.universes)

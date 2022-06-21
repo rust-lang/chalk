@@ -310,14 +310,7 @@ pub trait TypeFolder<I: Interner> {
 /// the source type, but in some cases we convert from borrowed
 /// to owned as well (e.g., the folder for `&T` will fold to a fresh
 /// `T`; well, actually `T::Result`).
-pub trait TypeFoldable<I: Interner>: Debug {
-    /// The type of value that will be produced once folding is done.
-    /// Typically this is `Self`, unless `Self` contains borrowed
-    /// values, in which case owned values are produced (for example,
-    /// one can fold over a `&T` value where `T: TypeFoldable`, in which case
-    /// you get back a `T`, not a `&T`).
-    type Result;
-
+pub trait TypeFoldable<I: Interner>: Debug + Sized {
     /// Apply the given folder `folder` to `self`; `binders` is the
     /// number of binders that are in scope when beginning the
     /// folder. Typically `binders` starts as 0, but is adjusted when
@@ -327,7 +320,7 @@ pub trait TypeFoldable<I: Interner>: Debug {
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>;
+    ) -> Result<Self, E>;
 }
 
 /// For types where "fold" invokes a callback on the `TypeFolder`, the
@@ -339,20 +332,18 @@ pub trait TypeSuperFoldable<I: Interner>: TypeFoldable<I> {
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E>;
+    ) -> Result<Self, E>;
 }
 
 /// "Folding" a type invokes the `fold_ty` method on the folder; this
 /// usually (in turn) invokes `super_fold_ty` to fold the individual
 /// parts.
 impl<I: Interner> TypeFoldable<I> for Ty<I> {
-    type Result = Ty<I>;
-
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         folder.fold_ty(self, outer_binder)
     }
 }
@@ -470,13 +461,11 @@ where
 /// usually (in turn) invokes `super_fold_lifetime` to fold the individual
 /// parts.
 impl<I: Interner> TypeFoldable<I> for Lifetime<I> {
-    type Result = Lifetime<I>;
-
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         folder.fold_lifetime(self, outer_binder)
     }
 }
@@ -522,13 +511,11 @@ where
 /// usually (in turn) invokes `super_fold_const` to fold the individual
 /// parts.
 impl<I: Interner> TypeFoldable<I> for Const<I> {
-    type Result = Const<I>;
-
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         folder.fold_const(self, outer_binder)
     }
 }
@@ -573,13 +560,11 @@ where
 /// Folding a goal invokes the `fold_goal` callback (which will, by
 /// default, invoke super-fold).
 impl<I: Interner> TypeFoldable<I> for Goal<I> {
-    type Result = Goal<I>;
-
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         folder.fold_goal(self, outer_binder)
     }
 }
@@ -590,7 +575,7 @@ impl<I: Interner> TypeSuperFoldable<I> for Goal<I> {
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         let interner = folder.interner();
         Ok(Goal::new(
             interner,
@@ -605,13 +590,11 @@ impl<I: Interner> TypeSuperFoldable<I> for Goal<I> {
 /// callback on the folder (which will, by default, invoke the
 /// `super_fold_with` method on the program clause).
 impl<I: Interner> TypeFoldable<I> for ProgramClause<I> {
-    type Result = ProgramClause<I>;
-
     fn fold_with<E>(
         self,
         folder: &mut dyn TypeFolder<I, Error = E>,
         outer_binder: DebruijnIndex,
-    ) -> Result<Self::Result, E> {
+    ) -> Result<Self, E> {
         folder.fold_program_clause(self, outer_binder)
     }
 }

@@ -26,7 +26,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     /// Variant on `instantiate` that takes a `Canonical<T>`.
-    pub fn instantiate_canonical<T>(&mut self, interner: I, bound: Canonical<T>) -> T::Result
+    pub fn instantiate_canonical<T>(&mut self, interner: I, bound: Canonical<T>) -> T
     where
         T: HasInterner<Interner = I> + TypeFoldable<I> + Debug,
     {
@@ -45,7 +45,7 @@ impl<I: Interner> InferenceTable<I> {
         universe: UniverseIndex,
         binders: impl Iterator<Item = VariableKind<I>>,
         arg: T,
-    ) -> T::Result
+    ) -> T
     where
         T: TypeFoldable<I>,
     {
@@ -58,11 +58,7 @@ impl<I: Interner> InferenceTable<I> {
 
     /// Variant on `instantiate_in` that takes a `Binders<T>`.
     #[instrument(level = "debug", skip(self, interner))]
-    pub fn instantiate_binders_existentially<T>(
-        &mut self,
-        interner: I,
-        arg: Binders<T>,
-    ) -> T::Result
+    pub fn instantiate_binders_existentially<T>(&mut self, interner: I, arg: Binders<T>) -> T
     where
         T: TypeFoldable<I> + HasInterner<Interner = I>,
     {
@@ -78,7 +74,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 
     #[instrument(level = "debug", skip(self, interner))]
-    pub fn instantiate_binders_universally<T>(&mut self, interner: I, arg: Binders<T>) -> T::Result
+    pub fn instantiate_binders_universally<T>(&mut self, interner: I, arg: Binders<T>) -> T
     where
         T: TypeFoldable<I> + HasInterner<Interner = I>,
     {
