@@ -3,17 +3,17 @@ extern crate proc_macro;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use quote::ToTokens;
-use syn::{parse_quote, DeriveInput, GenericParam, Ident, TypeParamBound};
+use syn::{parse_quote, DeriveInput, Ident, TypeParam, TypeParamBound};
 
 use synstructure::decl_derive;
 
 /// Checks whether a generic parameter has a `: HasInterner` bound
-fn has_interner(param: &GenericParam) -> Option<&Ident> {
+fn has_interner(param: &TypeParam) -> Option<&Ident> {
     bounded_by_trait(param, "HasInterner")
 }
 
 /// Checks whether a generic parameter has a `: Interner` bound
-fn is_interner(param: &GenericParam) -> Option<&Ident> {
+fn is_interner(param: &TypeParam) -> Option<&Ident> {
     bounded_by_trait(param, "Interner")
 }
 
@@ -28,48 +28,44 @@ fn has_interner_attr(input: &DeriveInput) -> Option<TokenStream> {
     )
 }
 
-fn bounded_by_trait<'p>(param: &'p GenericParam, name: &str) -> Option<&'p Ident> {
+fn bounded_by_trait<'p>(param: &'p TypeParam, name: &str) -> Option<&'p Ident> {
     let name = Some(String::from(name));
-    match param {
-        GenericParam::Type(ref t) => t.bounds.iter().find_map(|b| {
-            if let TypeParamBound::Trait(trait_bound) = b {
-                if trait_bound
-                    .path
-                    .segments
-                    .last()
-                    .map(|s| s.ident.to_string())
-                    == name
-                {
-                    return Some(&t.ident);
-                }
+    param.bounds.iter().find_map(|b| {
+        if let TypeParamBound::Trait(trait_bound) = b {
+            if trait_bound
+                .path
+                .segments
+                .last()
+                .map(|s| s.ident.to_string())
+                == name
+            {
+                return Some(&param.ident);
             }
-            None
-        }),
-        _ => None,
-    }
+        }
+        None
+    })
 }
 
-fn get_generic_param(input: &DeriveInput) -> &GenericParam {
-    match input.generics.params.len() {
-        1 => {}
+fn get_intern_param(input: &DeriveInput) -> Option<(DeriveKind, &Ident)> {
+    let mut params = input.generics.type_params().filter_map(|param| {
+        has_interner(param)
+            .map(|ident| (DeriveKind::FromHasInterner, ident))
+            .or_else(|| is_interner(param).map(|ident| (DeriveKind::FromInterner, ident)))
+    });
 
-        0 => panic!(
-            "deriving this trait requires a single type parameter or a `#[has_interner]` attr"
-        ),
+    let param = params.next();
+    assert!(params.next().is_none(), "deriving this trait only works with at most one type parameter that implements HasInterner or Interner");
 
-        _ => panic!("deriving this trait only works with a single type parameter"),
-    };
-    &input.generics.params[0]
+    param
 }
 
-fn get_generic_param_name(input: &DeriveInput) -> Option<&Ident> {
-    match get_generic_param(input) {
-        GenericParam::Type(t) => Some(&t.ident),
-        _ => None,
-    }
+fn get_intern_param_name(input: &DeriveInput) -> &Ident {
+    get_intern_param(input)
+        .expect("deriving this trait requires a parameter that implements HasInterner or Interner")
+        .1
 }
 
-fn find_interner(s: &mut synstructure::Structure) -> (TokenStream, DeriveKind) {
+fn try_find_interner(s: &mut synstructure::Structure) -> Option<(TokenStream, DeriveKind)> {
     let input = s.ast();
 
     if let Some(arg) = has_interner_attr(input) {
@@ -79,35 +75,40 @@ fn find_interner(s: &mut synstructure::Structure) -> (TokenStream, DeriveKind) {
         // struct S {
         //
         // }
-        return (arg, DeriveKind::FromHasInternerAttr);
+        return Some((arg, DeriveKind::FromHasInternerAttr));
     }
 
-    let generic_param0 = get_generic_param(input);
+    get_intern_param(input).map(|generic_param0| match generic_param0 {
+        (DeriveKind::FromHasInterner, param) => {
+            // HasInterner bound:
+            //
+            // Example:
+            //
+            // struct Binders<T: HasInterner> { }
+            s.add_impl_generic(parse_quote! { _I });
 
-    if let Some(param) = has_interner(generic_param0) {
-        // HasInterner bound:
-        //
-        // Example:
-        //
-        // struct Binders<T: HasInterner> { }
-        s.add_impl_generic(parse_quote! { _I });
+            s.add_where_predicate(parse_quote! { _I: ::chalk_ir::interner::Interner });
+            s.add_where_predicate(
+                parse_quote! { #param: ::chalk_ir::interner::HasInterner<Interner = _I> },
+            );
 
-        s.add_where_predicate(parse_quote! { _I: ::chalk_ir::interner::Interner });
-        s.add_where_predicate(
-            parse_quote! { #param: ::chalk_ir::interner::HasInterner<Interner = _I> },
-        );
+            (quote! { _I }, DeriveKind::FromHasInterner)
+        }
+        (DeriveKind::FromInterner, i) => {
+            // Interner bound:
+            //
+            // Example:
+            //
+            // struct Foo<I: Interner> { }
+            (quote! { #i }, DeriveKind::FromInterner)
+        }
+        _ => unreachable!(),
+    })
+}
 
-        (quote! { _I }, DeriveKind::FromHasInterner)
-    } else if let Some(i) = is_interner(generic_param0) {
-        // Interner bound:
-        //
-        // Example:
-        //
-        // struct Foo<I: Interner> { }
-        (quote! { #i }, DeriveKind::FromInterner)
-    } else {
-        panic!("deriving this trait requires a parameter that implements HasInterner or Interner",);
-    }
+fn find_interner(s: &mut synstructure::Structure) -> (TokenStream, DeriveKind) {
+    try_find_interner(s)
+        .expect("deriving this trait requires a `#[has_interner]` attr or a parameter that implements HasInterner or Interner")
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -174,7 +175,7 @@ fn derive_any_type_visitable(
     });
 
     if kind == DeriveKind::FromHasInterner {
-        let param = get_generic_param_name(input).unwrap();
+        let param = get_intern_param_name(input);
         s.add_where_predicate(parse_quote! { #param: ::chalk_ir::visit::TypeVisitable<#interner> });
     }
 
@@ -278,7 +279,7 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
     let input = s.ast();
 
     if kind == DeriveKind::FromHasInterner {
-        let param = get_generic_param_name(input).unwrap();
+        let param = get_intern_param_name(input);
         s.add_where_predicate(parse_quote! { #param: ::chalk_ir::fold::TypeFoldable<#interner> });
     };
 
@@ -298,7 +299,14 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
 }
 
 fn derive_fallible_type_folder(mut s: synstructure::Structure) -> TokenStream {
-    let (interner, _) = find_interner(&mut s);
+    let interner = try_find_interner(&mut s).map_or_else(
+        || {
+            s.add_impl_generic(parse_quote! { _I });
+            s.add_where_predicate(parse_quote! { _I: ::chalk_ir::interner::Interner });
+            quote! { _I }
+        },
+        |(interner, _)| interner,
+    );
     s.underscore_const(true);
     s.unbound_impl(
         quote!(::chalk_ir::fold::FallibleTypeFolder<#interner>),
