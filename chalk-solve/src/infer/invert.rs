@@ -1,5 +1,6 @@
+use chalk_derive::FallibleTypeFolder;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
@@ -109,6 +110,7 @@ impl<I: Interner> InferenceTable<I> {
     }
 }
 
+#[derive(FallibleTypeFolder)]
 struct Inverter<'q, I: Interner> {
     table: &'q mut InferenceTable<I>,
     inverted_ty: FxHashMap<PlaceholderIndex, EnaVariable<I>>,
@@ -127,39 +129,35 @@ impl<'q, I: Interner> Inverter<'q, I> {
     }
 }
 
-impl<'i, I: Interner> FallibleTypeFolder<I> for Inverter<'i, I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
+impl<'i, I: Interner> TypeFolder<I> for Inverter<'i, I> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
-    fn try_fold_free_placeholder_ty(
+    fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    ) -> Ty<I> {
         let table = &mut self.table;
-        Ok(self
-            .inverted_ty
+        self.inverted_ty
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
-            .to_ty(self.interner())
-            .shifted_in(self.interner()))
+            .to_ty(TypeFolder::interner(self))
+            .shifted_in(TypeFolder::interner(self))
     }
 
-    fn try_fold_free_placeholder_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let table = &mut self.table;
-        Ok(self
-            .inverted_lifetime
+        self.inverted_lifetime
             .entry(universe)
             .or_insert_with(|| table.new_variable(universe.ui))
-            .to_lifetime(self.interner())
-            .shifted_in(self.interner()))
+            .to_lifetime(TypeFolder::interner(self))
+            .shifted_in(TypeFolder::interner(self))
     }
 
     fn forbid_free_vars(&self) -> bool {

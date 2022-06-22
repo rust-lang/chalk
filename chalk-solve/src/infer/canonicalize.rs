@@ -1,6 +1,7 @@
 use crate::debug_span;
+use chalk_derive::FallibleTypeFolder;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable, TypeSuperFoldable};
+use chalk_ir::fold::{TypeFoldable, TypeFolder, TypeSuperFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
@@ -63,6 +64,7 @@ pub struct Canonicalized<T: HasInterner> {
     pub free_vars: Vec<ParameterEnaVariable<T::Interner>>,
 }
 
+#[derive(FallibleTypeFolder)]
 struct Canonicalizer<'q, I: Interner> {
     table: &'q mut InferenceTable<I>,
     free_vars: Vec<ParameterEnaVariable<I>>,
@@ -103,42 +105,40 @@ impl<'q, I: Interner> Canonicalizer<'q, I> {
     }
 }
 
-impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
+impl<'i, I: Interner> TypeFolder<I> for Canonicalizer<'i, I> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
-    fn try_fold_free_placeholder_ty(
+    fn fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    ) -> Ty<I> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_ty(interner))
+        universe.to_ty(interner)
     }
 
-    fn try_fold_free_placeholder_lifetime(
+    fn fold_free_placeholder_lifetime(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_lifetime(interner))
+        universe.to_lifetime(interner)
     }
 
-    fn try_fold_free_placeholder_const(
+    fn fold_free_placeholder_const(
         &mut self,
         ty: Ty<I>,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         let interner = self.interner;
         self.max_universe = max(self.max_universe, universe.ui);
-        Ok(universe.to_const(interner, ty))
+        universe.to_const(interner, ty)
     }
 
     fn forbid_free_vars(&self) -> bool {
@@ -146,21 +146,20 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn try_fold_inference_ty(
+    fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
         kind: TyVariableKind,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    ) -> Ty<I> {
         let interner = self.interner;
         match self.table.probe_var(var) {
             Some(ty) => {
                 let ty = ty.assert_ty_ref(interner);
                 debug!("bound to {:?}", ty);
-                Ok(ty
-                    .clone()
-                    .try_fold_with(self, DebruijnIndex::INNERMOST)?
-                    .shifted_in_from(interner, outer_binder))
+                ty.clone()
+                    .fold_with(self, DebruijnIndex::INNERMOST)
+                    .shifted_in_from(interner, outer_binder)
             }
             None => {
                 // If this variable is not yet bound, find its
@@ -172,54 +171,51 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
 
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!(position=?bound_var, "not yet unified");
-                Ok(TyKind::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner))
+                TyKind::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner)
             }
         }
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn try_fold_inference_lifetime(
+    fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let interner = self.interner;
         match self.table.probe_var(var) {
             Some(l) => {
                 let l = l.assert_lifetime_ref(interner);
                 debug!("bound to {:?}", l);
-                Ok(l.clone()
-                    .try_fold_with(self, DebruijnIndex::INNERMOST)?
-                    .shifted_in_from(interner, outer_binder))
+                l.clone()
+                    .fold_with(self, DebruijnIndex::INNERMOST)
+                    .shifted_in_from(interner, outer_binder)
             }
             None => {
                 let free_var =
                     ParameterEnaVariable::new(VariableKind::Lifetime, self.table.unify.find(var));
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!(position=?bound_var, "not yet unified");
-                Ok(
-                    LifetimeData::BoundVar(bound_var.shifted_in_from(outer_binder))
-                        .intern(interner),
-                )
+                LifetimeData::BoundVar(bound_var.shifted_in_from(outer_binder)).intern(interner)
             }
         }
     }
 
     #[instrument(level = "debug", skip(self, ty))]
-    fn try_fold_inference_const(
+    fn fold_inference_const(
         &mut self,
         ty: Ty<I>,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         let interner = self.interner;
         match self.table.probe_var(var) {
             Some(c) => {
                 let c = c.assert_const_ref(interner);
                 debug!("bound to {:?}", c);
-                Ok(c.clone()
-                    .try_fold_with(self, DebruijnIndex::INNERMOST)?
-                    .shifted_in_from(interner, outer_binder))
+                c.clone()
+                    .fold_with(self, DebruijnIndex::INNERMOST)
+                    .shifted_in_from(interner, outer_binder)
             }
             None => {
                 let free_var = ParameterEnaVariable::new(
@@ -228,25 +224,21 @@ impl<'i, I: Interner> FallibleTypeFolder<I> for Canonicalizer<'i, I> {
                 );
                 let bound_var = BoundVar::new(DebruijnIndex::INNERMOST, self.add(free_var));
                 debug!(position = ?bound_var, "not yet unified");
-                Ok(bound_var
+                bound_var
                     .shifted_in_from(outer_binder)
-                    .to_const(interner, ty))
+                    .to_const(interner, ty)
             }
         }
     }
 
-    fn try_fold_lifetime(
-        &mut self,
-        lifetime: Lifetime<I>,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    fn fold_lifetime(&mut self, lifetime: Lifetime<I>, outer_binder: DebruijnIndex) -> Lifetime<I> {
         match *lifetime.data(self.interner) {
             LifetimeData::Empty(ui) if ui.counter != 0 => {
                 // ReEmpty in non-root universes is only used by lexical region
                 // inference. We shouldn't see it in canonicalization.
                 panic!("Cannot canonicalize ReEmpty in non-root universe")
             }
-            _ => lifetime.try_super_fold_with(self, outer_binder),
+            _ => lifetime.super_fold_with(self, outer_binder),
         }
     }
 

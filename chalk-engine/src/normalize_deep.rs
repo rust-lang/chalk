@@ -1,9 +1,11 @@
+use chalk_derive::FallibleTypeFolder;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use chalk_solve::infer::InferenceTable;
 
+#[derive(FallibleTypeFolder)]
 pub(crate) struct DeepNormalizer<'table, I: Interner> {
     table: &'table mut InferenceTable<I>,
     interner: I,
@@ -35,64 +37,62 @@ impl<I: Interner> DeepNormalizer<'_, I> {
     }
 }
 
-impl<I: Interner> FallibleTypeFolder<I> for DeepNormalizer<'_, I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
+impl<I: Interner> TypeFolder<I> for DeepNormalizer<'_, I> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
-    fn try_fold_inference_ty(
+    fn fold_inference_ty(
         &mut self,
         var: InferenceVar,
         kind: TyVariableKind,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    ) -> Ty<I> {
         let interner = self.interner;
         match self.table.probe_var(var) {
-            Some(ty) => Ok(ty
+            Some(ty) => ty
                 .assert_ty_ref(interner)
                 .clone()
-                .try_fold_with(self, DebruijnIndex::INNERMOST)?
-                .shifted_in(interner)), // FIXME shift
+                .fold_with(self, DebruijnIndex::INNERMOST)
+                .shifted_in(interner), // FIXME shift
             None => {
                 // Normalize all inference vars which have been unified into a
                 // single variable. Ena calls this the "root" variable.
-                Ok(self.table.inference_var_root(var).to_ty(interner, kind))
+                self.table.inference_var_root(var).to_ty(interner, kind)
             }
         }
     }
 
-    fn try_fold_inference_lifetime(
+    fn fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let interner = self.interner;
         match self.table.probe_var(var) {
-            Some(l) => Ok(l
+            Some(l) => l
                 .assert_lifetime_ref(interner)
                 .clone()
-                .try_fold_with(self, DebruijnIndex::INNERMOST)?
-                .shifted_in(interner)),
-            None => Ok(var.to_lifetime(interner)), // FIXME shift
+                .fold_with(self, DebruijnIndex::INNERMOST)
+                .shifted_in(interner),
+            None => var.to_lifetime(interner), // FIXME shift
         }
     }
 
-    fn try_fold_inference_const(
+    fn fold_inference_const(
         &mut self,
         ty: Ty<I>,
         var: InferenceVar,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         let interner = self.interner;
         match self.table.probe_var(var) {
-            Some(c) => Ok(c
+            Some(c) => c
                 .assert_const_ref(interner)
                 .clone()
-                .try_fold_with(self, DebruijnIndex::INNERMOST)?
-                .shifted_in(interner)),
-            None => Ok(var.to_const(interner, ty)), // FIXME shift
+                .fold_with(self, DebruijnIndex::INNERMOST)
+                .shifted_in(interner),
+            None => var.to_const(interner, ty), // FIXME shift
         }
     }
 
