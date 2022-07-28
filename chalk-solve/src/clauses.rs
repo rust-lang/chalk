@@ -161,14 +161,16 @@ pub fn push_auto_trait_impls<I: Interner>(
         TyKind::Foreign(_) => Ok(()),
 
         // closures require binders, while the other types do not
-        TyKind::Closure(closure_id, _) => {
-            let binders = builder
-                .db
-                .closure_upvars(*closure_id, &Substitution::empty(interner));
-            builder.push_binders(binders, |builder, upvar_ty| {
-                let conditions = iter::once(mk_ref(upvar_ty));
-                builder.push_clause(consequence, conditions);
-            });
+        TyKind::Closure(closure_id, substs) => {
+            let closure_fn_substitution = builder.db.closure_fn_substitution(*closure_id, substs);
+            let binders = builder.db.closure_upvars(*closure_id, substs);
+            let upvars = binders.substitute(builder.db.interner(), &closure_fn_substitution);
+
+            // in a same behavior as for non-auto traits (reuse the code) we can require that
+            // every bound type must implement this auto-trait
+            use crate::clauses::builtin_traits::needs_impl_for_tys;
+            needs_impl_for_tys(builder.db, builder, consequence, Some(upvars).into_iter());
+
             Ok(())
         }
         TyKind::Generator(generator_id, _) => {

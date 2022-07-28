@@ -280,3 +280,35 @@ fn closure_implements_fn_traits() {
         }
     }
 }
+
+#[test]
+fn closures_propagate_auto_traits() {
+    test! {
+        program {
+            #[auto]
+            trait Send { }
+
+            closure foo(self,) {}
+
+            closure with_ty<T>(self,) { T }
+        }
+
+        goal {
+            foo: Send
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            forall<T> { with_ty<T>: Send }
+        } yields {
+            expect![["No possible solution"]]
+        }
+
+        goal {
+            forall<T> { if (T: Send) { with_ty<T>: Send } }
+        } yields {
+            expect![["Unique"]]
+        }
+    }
+}
