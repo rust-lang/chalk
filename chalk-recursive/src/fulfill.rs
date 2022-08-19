@@ -342,16 +342,19 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         Ok(())
     }
 
-    #[instrument(level = "debug", skip(self, minimums))]
+    #[instrument(level = "debug", skip(self, minimums, should_continue))]
     fn prove(
         &mut self,
         wc: InEnvironment<Goal<I>>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.interner();
         let (quantified, free_vars) = canonicalize(&mut self.infer, interner, wc);
         let (quantified, universes) = u_canonicalize(&mut self.infer, interner, &quantified);
-        let result = self.solver.solve_goal(quantified, minimums);
+        let result = self
+            .solver
+            .solve_goal(quantified, minimums, should_continue);
         Ok(PositiveSolution {
             free_vars,
             universes,
@@ -359,7 +362,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         })
     }
 
-    fn refute(&mut self, goal: InEnvironment<Goal<I>>) -> Fallible<NegativeSolution> {
+    fn refute(
+        &mut self,
+        goal: InEnvironment<Goal<I>>,
+        should_continue: impl std::ops::Fn() -> bool,
+    ) -> Fallible<NegativeSolution> {
         let canonicalized = match self
             .infer
             .invert_then_canonicalize(self.solver.interner(), goal)
@@ -376,7 +383,10 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         let (quantified, _) =
             u_canonicalize(&mut self.infer, self.solver.interner(), &canonicalized);
         let mut minimums = Minimums::new(); // FIXME -- minimums here seems wrong
-        if let Ok(solution) = self.solver.solve_goal(quantified, &mut minimums) {
+        if let Ok(solution) = self
+            .solver
+            .solve_goal(quantified, &mut minimums, should_continue)
+        {
             if solution.is_unique() {
                 Err(NoSolution)
             } else {
@@ -431,7 +441,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         }
     }
 
-    fn fulfill(&mut self, minimums: &mut Minimums) -> Fallible<Outcome> {
+    fn fulfill(
+        &mut self,
+        minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
+    ) -> Fallible<Outcome> {
         debug_span!("fulfill", obligations=?self.obligations);
 
         // Try to solve all the obligations. We do this via a fixed-point
@@ -460,7 +474,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                             free_vars,
                             universes,
                             solution,
-                        } = self.prove(wc.clone(), minimums)?;
+                        } = self.prove(wc.clone(), minimums, &should_continue)?;
 
                         if let Some(constrained_subst) = solution.definite_subst(self.interner()) {
                             // If the substitution is trivial, we won't actually make any progress by applying it!
@@ -484,7 +498,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                         solution.is_ambig()
                     }
                     Obligation::Refute(goal) => {
-                        let answer = self.refute(goal.clone())?;
+                        let answer = self.refute(goal.clone(), &should_continue)?;
                         answer == NegativeSolution::Ambiguous
                     }
                 };
@@ -514,8 +528,12 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
     /// Try to fulfill all pending obligations and build the resulting
     /// solution. The returned solution will transform `subst` substitution with
     /// the outcome of type inference by updating the replacements it provides.
-    pub(super) fn solve(mut self, minimums: &mut Minimums) -> Fallible<Solution<I>> {
-        let outcome = match self.fulfill(minimums) {
+    pub(super) fn solve(
+        mut self,
+        minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
+    ) -> Fallible<Solution<I>> {
+        let outcome = match self.fulfill(minimums, &should_continue) {
             Ok(o) => o,
             Err(e) => return Err(e),
         };
@@ -567,7 +585,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                         free_vars,
                         universes,
                         solution,
-                    } = self.prove(goal, minimums).unwrap();
+                    } = self.prove(goal, minimums, &should_continue).unwrap();
                     if let Some(constrained_subst) =
                         solution.constrained_subst(self.solver.interner())
                     {

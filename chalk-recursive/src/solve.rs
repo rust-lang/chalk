@@ -20,6 +20,7 @@ pub(super) trait SolveDatabase<I: Interner>: Sized {
         &mut self,
         goal: UCanonical<InEnvironment<Goal<I>>>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Fallible<Solution<I>>;
 
     fn max_size(&self) -> usize;
@@ -35,11 +36,12 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
     /// Executes one iteration of the recursive solver, computing the current
     /// solution to the given canonical goal. This is used as part of a loop in
     /// the case of cyclic goals.
-    #[instrument(level = "debug", skip(self))]
+    #[instrument(level = "debug", skip(self, should_continue))]
     fn solve_iteration(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Fallible<Solution<I>> {
         let UCanonical {
             universes,
@@ -72,7 +74,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                 let prog_solution = {
                     debug_span!("prog_clauses");
 
-                    self.solve_from_clauses(&canonical_goal, minimums)
+                    self.solve_from_clauses(&canonical_goal, minimums, should_continue)
                 };
                 debug!(?prog_solution);
 
@@ -88,7 +90,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
                     },
                 };
 
-                self.solve_via_simplification(&canonical_goal, minimums)
+                self.solve_via_simplification(&canonical_goal, minimums, should_continue)
             }
         }
     }
@@ -103,15 +105,16 @@ where
 
 /// Helper methods for `solve_iteration`, private to this module.
 trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
-    #[instrument(level = "debug", skip(self, minimums))]
+    #[instrument(level = "debug", skip(self, minimums, should_continue))]
     fn solve_via_simplification(
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Fallible<Solution<I>> {
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_simplification(self, infer, subst, goal) {
-            Ok(fulfill) => fulfill.solve(minimums),
+            Ok(fulfill) => fulfill.solve(minimums, should_continue),
             Err(e) => Err(e),
         }
     }
@@ -123,6 +126,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool,
     ) -> Fallible<Solution<I>> {
         let mut clauses = vec![];
 
@@ -159,7 +163,10 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             let subst = subst.clone();
             let goal = goal.clone();
             let res = match Fulfill::new_with_clause(self, infer, subst, goal, implication) {
-                Ok(fulfill) => (fulfill.solve(minimums), implication.skip_binders().priority),
+                Ok(fulfill) => (
+                    fulfill.solve(minimums, &should_continue),
+                    implication.skip_binders().priority,
+                ),
                 Err(e) => (Err(e), ClausePriority::High),
             };
 
