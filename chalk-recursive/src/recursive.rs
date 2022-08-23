@@ -143,7 +143,6 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         goal: &UCanonical<InEnvironment<Goal<I>>>,
         should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<chalk_solve::Solution<I>> {
-        // TODO support should_continue in recursive solver
         self.ctx
             .solve_root_goal(goal, program, should_continue)
             .ok()

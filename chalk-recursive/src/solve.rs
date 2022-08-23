@@ -43,6 +43,10 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
         minimums: &mut Minimums,
         should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
+        if !should_continue() {
+            return Err(NoSolution);
+        }
+
         let UCanonical {
             universes,
             canonical:
