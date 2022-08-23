@@ -347,7 +347,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
         &mut self,
         wc: InEnvironment<Goal<I>>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<PositiveSolution<I>> {
         let interner = self.solver.interner();
         let (quantified, free_vars) = canonicalize(&mut self.infer, interner, wc);
@@ -365,7 +365,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
     fn refute(
         &mut self,
         goal: InEnvironment<Goal<I>>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<NegativeSolution> {
         let canonicalized = match self
             .infer
@@ -444,7 +444,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
     fn fulfill(
         &mut self,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Outcome> {
         debug_span!("fulfill", obligations=?self.obligations);
 
@@ -474,7 +474,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                             free_vars,
                             universes,
                             solution,
-                        } = self.prove(wc.clone(), minimums, &should_continue)?;
+                        } = self.prove(wc.clone(), minimums, should_continue.clone())?;
 
                         if let Some(constrained_subst) = solution.definite_subst(self.interner()) {
                             // If the substitution is trivial, we won't actually make any progress by applying it!
@@ -498,7 +498,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                         solution.is_ambig()
                     }
                     Obligation::Refute(goal) => {
-                        let answer = self.refute(goal.clone(), &should_continue)?;
+                        let answer = self.refute(goal.clone(), should_continue.clone())?;
                         answer == NegativeSolution::Ambiguous
                     }
                 };
@@ -531,9 +531,9 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
     pub(super) fn solve(
         mut self,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
-        let outcome = match self.fulfill(minimums, &should_continue) {
+        let outcome = match self.fulfill(minimums, should_continue.clone()) {
             Ok(o) => o,
             Err(e) => return Err(e),
         };
@@ -585,7 +585,7 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
                         free_vars,
                         universes,
                         solution,
-                    } = self.prove(goal, minimums, &should_continue).unwrap();
+                    } = self.prove(goal, minimums, should_continue.clone()).unwrap();
                     if let Some(constrained_subst) =
                         solution.constrained_subst(self.solver.interner())
                     {

@@ -76,7 +76,7 @@ impl<I: Interner> SolverStuff<UCanonicalGoal<I>, Fallible<Solution<I>>> for &dyn
         context: &mut RecursiveContext<UCanonicalGoal<I>, Fallible<Solution<I>>>,
         goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
         Solver::new(context, self).solve_iteration(goal, minimums, should_continue)
     }
@@ -109,7 +109,7 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
         self.context
             .solve_goal(&goal, minimums, self.program, should_continue)

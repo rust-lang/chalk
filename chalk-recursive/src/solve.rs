@@ -20,7 +20,7 @@ pub(super) trait SolveDatabase<I: Interner>: Sized {
         &mut self,
         goal: UCanonical<InEnvironment<Goal<I>>>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>>;
 
     fn max_size(&self) -> usize;
@@ -41,7 +41,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
         let UCanonical {
             universes,
@@ -110,7 +110,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
         let (infer, subst, goal) = self.new_inference_table(canonical_goal);
         match Fulfill::new_with_simplification(self, infer, subst, goal) {
@@ -126,7 +126,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
         &mut self,
         canonical_goal: &UCanonical<InEnvironment<DomainGoal<I>>>,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
         let mut clauses = vec![];
 
@@ -164,7 +164,7 @@ trait SolveIterationHelpers<I: Interner>: SolveDatabase<I> {
             let goal = goal.clone();
             let res = match Fulfill::new_with_clause(self, infer, subst, goal, implication) {
                 Ok(fulfill) => (
-                    fulfill.solve(minimums, &should_continue),
+                    fulfill.solve(minimums, should_continue.clone()),
                     implication.skip_binders().priority,
                 ),
                 Err(e) => (Err(e), ClausePriority::High),

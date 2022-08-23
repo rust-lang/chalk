@@ -43,7 +43,7 @@ where
         context: &mut RecursiveContext<K, V>,
         goal: &K,
         minimums: &mut Minimums,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> V;
     fn reached_fixed_point(self, old_value: &V, new_value: &V) -> bool;
     fn error_value(self) -> V;
@@ -105,7 +105,7 @@ where
         &mut self,
         canonical_goal: &K,
         solver_stuff: impl SolverStuff<K, V>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> V {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.stack.is_empty());
@@ -122,7 +122,7 @@ where
         goal: &K,
         minimums: &mut Minimums,
         solver_stuff: impl SolverStuff<K, V>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> V {
         // First check the cache.
         if let Some(cache) = &self.cache {
@@ -201,7 +201,7 @@ where
         depth: StackDepth,
         dfn: DepthFirstNumber,
         solver_stuff: impl SolverStuff<K, V>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Minimums {
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
@@ -214,8 +214,12 @@ where
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let current_answer =
-                solver_stuff.solve_iteration(self, canonical_goal, minimums, &should_continue);
+            let current_answer = solver_stuff.solve_iteration(
+                self,
+                canonical_goal,
+                minimums,
+                should_continue.clone(),
+            );
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",
