@@ -47,7 +47,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/book" >> $GITHUB_PATH
 
       - name: Install mdbook-mermaid
-        run: cargo install mdbook-mermaid --locked --version 0.6.1
+        run: cargo install mdbook-mermaid
 
       - name: Execute tests for Chalk book
         run: cd book && ./mdbook test
