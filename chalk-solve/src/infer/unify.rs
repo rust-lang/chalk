@@ -2,7 +2,7 @@ use super::var::*;
 use super::*;
 use crate::debug_span;
 use chalk_ir::cast::Cast;
-use chalk_ir::fold::{TypeFoldable, TypeFolder};
+use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
 use chalk_ir::UnificationDatabase;
@@ -876,7 +876,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         debug!("trying fold_with on {:?}", ty);
         let ty1 = ty
             .clone()
-            .fold_with(
+            .try_fold_with(
                 &mut OccursCheck::new(self, var, universe_index),
                 DebruijnIndex::INNERMOST,
             )
@@ -1133,7 +1133,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
         // as the variable is unified.
         let universe_index = self.table.universe_of_unbound_var(var);
 
-        let c1 = c.clone().fold_with(
+        let c1 = c.clone().try_fold_with(
             &mut OccursCheck::new(self, var, universe_index),
             DebruijnIndex::INNERMOST,
         )?;
@@ -1246,14 +1246,14 @@ impl<'u, 't, I: Interner> OccursCheck<'u, 't, I> {
     }
 }
 
-impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
+impl<'i, I: Interner> FallibleTypeFolder<I> for OccursCheck<'_, 'i, I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 
-    fn fold_free_placeholder_ty(
+    fn try_fold_free_placeholder_ty(
         &mut self,
         universe: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -1270,7 +1270,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
         }
     }
 
-    fn fold_free_placeholder_const(
+    fn try_fold_free_placeholder_const(
         &mut self,
         ty: Ty<I>,
         universe: PlaceholderIndex,
@@ -1285,7 +1285,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn fold_free_placeholder_lifetime(
+    fn try_fold_free_placeholder_lifetime(
         &mut self,
         ui: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
@@ -1319,7 +1319,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
         }
     }
 
-    fn fold_inference_ty(
+    fn try_fold_inference_ty(
         &mut self,
         var: InferenceVar,
         kind: TyVariableKind,
@@ -1333,7 +1333,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
                 let normalized_ty = normalized_ty.assert_ty_ref(interner);
                 let normalized_ty = normalized_ty
                     .clone()
-                    .fold_with(self, DebruijnIndex::INNERMOST)?;
+                    .try_fold_with(self, DebruijnIndex::INNERMOST)?;
                 assert!(!normalized_ty.needs_shift(interner));
                 Ok(normalized_ty)
             }
@@ -1369,7 +1369,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
         }
     }
 
-    fn fold_inference_const(
+    fn try_fold_inference_const(
         &mut self,
         ty: Ty<I>,
         var: InferenceVar,
@@ -1383,7 +1383,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
                 let normalized_const = normalized_const.assert_const_ref(interner);
                 let normalized_const = normalized_const
                     .clone()
-                    .fold_with(self, DebruijnIndex::INNERMOST)?;
+                    .try_fold_with(self, DebruijnIndex::INNERMOST)?;
                 assert!(!normalized_const.needs_shift(interner));
                 Ok(normalized_const)
             }
@@ -1415,7 +1415,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
         }
     }
 
-    fn fold_inference_lifetime(
+    fn try_fold_inference_lifetime(
         &mut self,
         var: InferenceVar,
         outer_binder: DebruijnIndex,
@@ -1444,7 +1444,7 @@ impl<'i, I: Interner> TypeFolder<I> for OccursCheck<'_, 'i, I> {
 
             InferenceValue::Bound(l) => {
                 let l = l.assert_lifetime_ref(interner);
-                let l = l.clone().fold_with(self, outer_binder)?;
+                let l = l.clone().try_fold_with(self, outer_binder)?;
                 assert!(!l.needs_shift(interner));
                 Ok(l)
             }

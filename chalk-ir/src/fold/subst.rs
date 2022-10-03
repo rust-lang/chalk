@@ -2,6 +2,7 @@ use super::*;
 use crate::fold::shift::Shift;
 
 /// Substitution used during folding
+#[derive(FallibleTypeFolder)]
 pub struct Subst<'s, I: Interner> {
     /// Values to substitute. A reference to a free variable with
     /// index `i` will be mapped to `parameters[i]` -- if `i >
@@ -14,7 +15,7 @@ impl<I: Interner> Subst<'_, I> {
     /// Applies the substitution by folding
     pub fn apply<T: TypeFoldable<I>>(interner: I, parameters: &[GenericArg<I>], value: T) -> T {
         value
-            .fold_with(
+            .try_fold_with(
                 &mut Subst {
                     parameters,
                     interner,
@@ -26,9 +27,7 @@ impl<I: Interner> Subst<'_, I> {
 }
 
 impl<I: Interner> TypeFolder<I> for Subst<'_, I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
@@ -51,24 +50,20 @@ impl<I: Interner> TypeFolder<I> for Subst<'_, I> {
     /// for<A, B> { [A, u32] }
     ///              ^ represented as `^0.0`
     /// ```
-    fn fold_free_var_ty(
-        &mut self,
-        bound_var: BoundVar,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, outer_binder: DebruijnIndex) -> Ty<I> {
         if let Some(index) = bound_var.index_if_innermost() {
-            match self.parameters[index].data(self.interner()) {
-                GenericArgData::Ty(t) => {
-                    Ok(t.clone().shifted_in_from(self.interner(), outer_binder))
-                }
+            match self.parameters[index].data(TypeFolder::interner(self)) {
+                GenericArgData::Ty(t) => t
+                    .clone()
+                    .shifted_in_from(TypeFolder::interner(self), outer_binder),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
-            Ok(bound_var
+            bound_var
                 .shifted_out()
                 .expect("cannot fail because this is not the innermost")
                 .shifted_in_from(outer_binder)
-                .to_ty(self.interner()))
+                .to_ty(TypeFolder::interner(self))
         }
     }
 
@@ -77,20 +72,20 @@ impl<I: Interner> TypeFolder<I> for Subst<'_, I> {
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         if let Some(index) = bound_var.index_if_innermost() {
-            match self.parameters[index].data(self.interner()) {
-                GenericArgData::Lifetime(l) => {
-                    Ok(l.clone().shifted_in_from(self.interner(), outer_binder))
-                }
+            match self.parameters[index].data(TypeFolder::interner(self)) {
+                GenericArgData::Lifetime(l) => l
+                    .clone()
+                    .shifted_in_from(TypeFolder::interner(self), outer_binder),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
-            Ok(bound_var
+            bound_var
                 .shifted_out()
                 .unwrap()
                 .shifted_in_from(outer_binder)
-                .to_lifetime(self.interner()))
+                .to_lifetime(TypeFolder::interner(self))
         }
     }
 
@@ -100,20 +95,20 @@ impl<I: Interner> TypeFolder<I> for Subst<'_, I> {
         ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         if let Some(index) = bound_var.index_if_innermost() {
-            match self.parameters[index].data(self.interner()) {
-                GenericArgData::Const(c) => {
-                    Ok(c.clone().shifted_in_from(self.interner(), outer_binder))
-                }
+            match self.parameters[index].data(TypeFolder::interner(self)) {
+                GenericArgData::Const(c) => c
+                    .clone()
+                    .shifted_in_from(TypeFolder::interner(self), outer_binder),
                 _ => panic!("mismatched kinds in substitution"),
             }
         } else {
-            Ok(bound_var
+            bound_var
                 .shifted_out()
                 .unwrap()
                 .shifted_in_from(outer_binder)
-                .to_const(self.interner(), ty))
+                .to_const(TypeFolder::interner(self), ty)
         }
     }
 

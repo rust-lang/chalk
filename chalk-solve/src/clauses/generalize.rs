@@ -6,14 +6,16 @@
 //! happen with `dyn Trait` currently; that's the only case where we use the
 //! types passed to `program_clauses` in the clauses we generate.
 
+use chalk_derive::FallibleTypeFolder;
 use chalk_ir::{
     fold::{TypeFoldable, TypeFolder},
     interner::{HasInterner, Interner},
-    Binders, BoundVar, Const, ConstData, ConstValue, DebruijnIndex, Fallible, Lifetime,
-    LifetimeData, NoSolution, Ty, TyKind, TyVariableKind, VariableKind, VariableKinds,
+    Binders, BoundVar, Const, ConstData, ConstValue, DebruijnIndex, Lifetime, LifetimeData, Ty,
+    TyKind, TyVariableKind, VariableKind, VariableKinds,
 };
 use rustc_hash::FxHashMap;
 
+#[derive(FallibleTypeFolder)]
 pub struct Generalize<I: Interner> {
     binders: Vec<VariableKind<I>>,
     mapping: FxHashMap<BoundVar, usize>,
@@ -31,7 +33,7 @@ impl<I: Interner> Generalize<I> {
             interner,
         };
         let value = value
-            .fold_with(&mut generalize, DebruijnIndex::INNERMOST)
+            .try_fold_with(&mut generalize, DebruijnIndex::INNERMOST)
             .unwrap();
         Binders::new(
             VariableKinds::from_iter(interner, generalize.binders),
@@ -41,17 +43,11 @@ impl<I: Interner> Generalize<I> {
 }
 
 impl<I: Interner> TypeFolder<I> for Generalize<I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
-    fn fold_free_var_ty(
-        &mut self,
-        bound_var: BoundVar,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, outer_binder: DebruijnIndex) -> Ty<I> {
         let binder_vec = &mut self.binders;
         let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
             let i = binder_vec.len();
@@ -59,7 +55,7 @@ impl<I: Interner> TypeFolder<I> for Generalize<I> {
             i
         });
         let new_var = BoundVar::new(outer_binder, *new_index);
-        Ok(TyKind::BoundVar(new_var).intern(self.interner()))
+        TyKind::BoundVar(new_var).intern(TypeFolder::interner(self))
     }
 
     fn fold_free_var_const(
@@ -67,7 +63,7 @@ impl<I: Interner> TypeFolder<I> for Generalize<I> {
         ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         let binder_vec = &mut self.binders;
         let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
             let i = binder_vec.len();
@@ -75,18 +71,18 @@ impl<I: Interner> TypeFolder<I> for Generalize<I> {
             i
         });
         let new_var = BoundVar::new(outer_binder, *new_index);
-        Ok(ConstData {
+        ConstData {
             ty,
             value: ConstValue::BoundVar(new_var),
         }
-        .intern(self.interner()))
+        .intern(TypeFolder::interner(self))
     }
 
     fn fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let binder_vec = &mut self.binders;
         let new_index = self.mapping.entry(bound_var).or_insert_with(|| {
             let i = binder_vec.len();
@@ -94,7 +90,7 @@ impl<I: Interner> TypeFolder<I> for Generalize<I> {
             i
         });
         let new_var = BoundVar::new(outer_binder, *new_index);
-        Ok(LifetimeData::BoundVar(new_var).intern(self.interner()))
+        LifetimeData::BoundVar(new_var).intern(TypeFolder::interner(self))
     }
 
     fn interner(&self) -> I {

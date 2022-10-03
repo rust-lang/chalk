@@ -1,6 +1,5 @@
 //! Shifting of debruijn indices
 
-use super::TypeFoldable;
 use crate::*;
 
 /// Methods for converting debruijn indices to move values into or out
@@ -29,7 +28,7 @@ impl<T: TypeFoldable<I>, I: Interner> Shift<I> for T {
     }
 
     fn shifted_in_from(self, interner: I, source_binder: DebruijnIndex) -> T {
-        self.fold_with(
+        self.try_fold_with(
             &mut Shifter {
                 source_binder,
                 interner,
@@ -40,7 +39,7 @@ impl<T: TypeFoldable<I>, I: Interner> Shift<I> for T {
     }
 
     fn shifted_out_to(self, interner: I, target_binder: DebruijnIndex) -> Fallible<T> {
-        self.fold_with(
+        self.try_fold_with(
             &mut DownShifter {
                 target_binder,
                 interner,
@@ -55,12 +54,13 @@ impl<T: TypeFoldable<I>, I: Interner> Shift<I> for T {
 }
 
 /// A folder that adjusts debruijn indices by a certain amount.
-struct Shifter<I> {
+#[derive(FallibleTypeFolder)]
+struct Shifter<I: Interner> {
     source_binder: DebruijnIndex,
     interner: I,
 }
 
-impl<I> Shifter<I> {
+impl<I: Interner> Shifter<I> {
     /// Given a free variable at `depth`, shifts that depth to `depth
     /// + self.adjustment`, and then wraps *that* within the internal
     /// set `binders`.
@@ -72,29 +72,22 @@ impl<I> Shifter<I> {
 }
 
 impl<I: Interner> TypeFolder<I> for Shifter<I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
-    fn fold_free_var_ty(
-        &mut self,
-        bound_var: BoundVar,
-        outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
-        Ok(TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder)).intern(self.interner()))
+    fn fold_free_var_ty(&mut self, bound_var: BoundVar, outer_binder: DebruijnIndex) -> Ty<I> {
+        TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder))
+            .intern(TypeFolder::interner(self))
     }
 
     fn fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
-        Ok(
-            LifetimeData::<I>::BoundVar(self.adjust(bound_var, outer_binder))
-                .intern(self.interner()),
-        )
+    ) -> Lifetime<I> {
+        LifetimeData::<I>::BoundVar(self.adjust(bound_var, outer_binder))
+            .intern(TypeFolder::interner(self))
     }
 
     fn fold_free_var_const(
@@ -102,11 +95,10 @@ impl<I: Interner> TypeFolder<I> for Shifter<I> {
         ty: Ty<I>,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         // const types don't have free variables, so we can skip folding `ty`
-        Ok(self
-            .adjust(bound_var, outer_binder)
-            .to_const(self.interner(), ty))
+        self.adjust(bound_var, outer_binder)
+            .to_const(TypeFolder::interner(self), ty)
     }
 
     fn interner(&self) -> I {
@@ -141,14 +133,14 @@ impl<I> DownShifter<I> {
     }
 }
 
-impl<I: Interner> TypeFolder<I> for DownShifter<I> {
+impl<I: Interner> FallibleTypeFolder<I> for DownShifter<I> {
     type Error = NoSolution;
 
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn FallibleTypeFolder<I, Error = Self::Error> {
         self
     }
 
-    fn fold_free_var_ty(
+    fn try_fold_free_var_ty(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -156,7 +148,7 @@ impl<I: Interner> TypeFolder<I> for DownShifter<I> {
         Ok(TyKind::<I>::BoundVar(self.adjust(bound_var, outer_binder)?).intern(self.interner()))
     }
 
-    fn fold_free_var_lifetime(
+    fn try_fold_free_var_lifetime(
         &mut self,
         bound_var: BoundVar,
         outer_binder: DebruijnIndex,
@@ -167,7 +159,7 @@ impl<I: Interner> TypeFolder<I> for DownShifter<I> {
         )
     }
 
-    fn fold_free_var_const(
+    fn try_fold_free_var_const(
         &mut self,
         ty: Ty<I>,
         bound_var: BoundVar,

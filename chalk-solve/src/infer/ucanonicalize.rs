@@ -1,4 +1,5 @@
 use crate::debug_span;
+use chalk_derive::FallibleTypeFolder;
 use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::visit::{TypeVisitable, TypeVisitor};
@@ -36,7 +37,7 @@ impl<I: Interner> InferenceTable<I> {
         let value1 = value0
             .value
             .clone()
-            .fold_with(
+            .try_fold_with(
                 &mut UMapToCanonical {
                     universes: &universes,
                     interner,
@@ -169,7 +170,7 @@ impl UniverseMapExt for UniverseMap {
         let value = canonical_value
             .value
             .clone()
-            .fold_with(
+            .try_fold_with(
                 &mut UMapFromCanonical {
                     interner,
                     universes: self,
@@ -217,15 +218,14 @@ impl<I: Interner> TypeVisitor<I> for UCollector<'_, I> {
     }
 }
 
-struct UMapToCanonical<'q, I> {
+#[derive(FallibleTypeFolder)]
+struct UMapToCanonical<'q, I: Interner> {
     interner: I,
     universes: &'q UniverseMap,
 }
 
 impl<'i, I: Interner> TypeFolder<I> for UMapToCanonical<'i, I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
@@ -237,33 +237,33 @@ impl<'i, I: Interner> TypeFolder<I> for UMapToCanonical<'i, I> {
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    ) -> Ty<I> {
         let ui = self
             .universes
             .map_universe_to_canonical(universe0.ui)
             .expect("Expected UCollector to encounter this universe");
-        Ok(PlaceholderIndex {
+        PlaceholderIndex {
             ui,
             idx: universe0.idx,
         }
-        .to_ty(self.interner()))
+        .to_ty(TypeFolder::interner(self))
     }
 
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let universe = self
             .universes
             .map_universe_to_canonical(universe0.ui)
             .expect("Expected UCollector to encounter this universe");
 
-        Ok(PlaceholderIndex {
+        PlaceholderIndex {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_lifetime(self.interner()))
+        .to_lifetime(TypeFolder::interner(self))
     }
 
     fn fold_free_placeholder_const(
@@ -271,17 +271,17 @@ impl<'i, I: Interner> TypeFolder<I> for UMapToCanonical<'i, I> {
         ty: Ty<I>,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Const<I>> {
+    ) -> Const<I> {
         let universe = self
             .universes
             .map_universe_to_canonical(universe0.ui)
             .expect("Expected UCollector to encounter this universe");
 
-        Ok(PlaceholderIndex {
+        PlaceholderIndex {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_const(self.interner(), ty))
+        .to_const(TypeFolder::interner(self), ty)
     }
 
     fn interner(&self) -> I {
@@ -289,15 +289,14 @@ impl<'i, I: Interner> TypeFolder<I> for UMapToCanonical<'i, I> {
     }
 }
 
-struct UMapFromCanonical<'q, I> {
+#[derive(FallibleTypeFolder)]
+struct UMapFromCanonical<'q, I: Interner> {
     interner: I,
     universes: &'q UniverseMap,
 }
 
 impl<'i, I: Interner> TypeFolder<I> for UMapFromCanonical<'i, I> {
-    type Error = NoSolution;
-
-    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I, Error = Self::Error> {
+    fn as_dyn(&mut self) -> &mut dyn TypeFolder<I> {
         self
     }
 
@@ -305,26 +304,26 @@ impl<'i, I: Interner> TypeFolder<I> for UMapFromCanonical<'i, I> {
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Ty<I>> {
+    ) -> Ty<I> {
         let ui = self.universes.map_universe_from_canonical(universe0.ui);
-        Ok(PlaceholderIndex {
+        PlaceholderIndex {
             ui,
             idx: universe0.idx,
         }
-        .to_ty(self.interner()))
+        .to_ty(TypeFolder::interner(self))
     }
 
     fn fold_free_placeholder_lifetime(
         &mut self,
         universe0: PlaceholderIndex,
         _outer_binder: DebruijnIndex,
-    ) -> Fallible<Lifetime<I>> {
+    ) -> Lifetime<I> {
         let universe = self.universes.map_universe_from_canonical(universe0.ui);
-        Ok(PlaceholderIndex {
+        PlaceholderIndex {
             ui: universe,
             idx: universe0.idx,
         }
-        .to_lifetime(self.interner()))
+        .to_lifetime(TypeFolder::interner(self))
     }
 
     fn forbid_inference_vars(&self) -> bool {
