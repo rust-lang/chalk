@@ -688,6 +688,33 @@ fn forall_projection_gat() {
 }
 
 #[test]
+fn gat_in_non_enumerable_trait() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Deref { }
+
+            #[non_enumerable]
+            trait PointerFamily {
+                type Pointer<T>: Deref;
+            }
+        }
+
+        goal {
+            forall<T> {
+                forall<U> {
+                    if (T: PointerFamily) {
+                        <T as PointerFamily>::Pointer<U>: Deref
+                    }
+                }
+            }
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+    }
+}
+
+#[test]
 fn normalize_under_binder() {
     test! {
         program {

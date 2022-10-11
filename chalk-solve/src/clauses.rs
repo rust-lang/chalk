@@ -603,11 +603,12 @@ pub fn program_clauses_that_could_match<I: Interner>(
                 // ```
                 let associated_ty_datum = db.associated_ty_data(proj.associated_ty_id);
                 let trait_id = associated_ty_datum.trait_id;
-                let trait_parameters = db.trait_parameters_from_projection(proj);
+                let trait_ref = db.trait_ref_from_projection(proj);
+                let trait_parameters = trait_ref.substitution.as_parameters(interner);
 
                 let trait_datum = db.trait_datum(trait_id);
 
-                let self_ty = proj.self_type_parameter(interner);
+                let self_ty = trait_ref.self_type_parameter(interner);
                 if let TyKind::InferenceVar(_, _) = self_ty.kind(interner) {
                     panic!("Inference vars not allowed when getting program clauses");
                 }
@@ -804,10 +805,11 @@ fn push_alias_alias_eq_clause<I: Interner>(
     alias: AliasTy<I>,
 ) {
     let interner = builder.interner();
-    assert_eq!(
-        *projection_ty.self_type_parameter(interner).kind(interner),
-        TyKind::Alias(alias.clone())
-    );
+    let self_ty = builder
+        .db
+        .trait_ref_from_projection(&projection_ty)
+        .self_type_parameter(interner);
+    assert_eq!(*self_ty.kind(interner), TyKind::Alias(alias.clone()));
 
     // TODO: instead generate clauses without reference to the specific type parameters of the goal?
     let generalized = generalize::Generalize::apply(interner, (projection_ty, ty, alias));
