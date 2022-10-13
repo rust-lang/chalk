@@ -313,7 +313,7 @@ fn derive_fallible_type_folder(mut s: synstructure::Structure) -> TokenStream {
         quote! {
             type Error = ::core::convert::Infallible;
 
-            fn as_dyn(&mut self) -> &mut dyn ::chalk_ir::fold::FallibleTypeFolder<I, Error = Self::Error> {
+            fn as_dyn(&mut self) -> &mut dyn ::chalk_ir::fold::FallibleTypeFolder<#interner, Error = Self::Error> {
                 self
             }
 
