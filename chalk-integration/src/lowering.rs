@@ -1143,6 +1143,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::DiscriminantKind => rust_ir::WellKnownTrait::DiscriminantKind,
             WellKnownTrait::Generator => rust_ir::WellKnownTrait::Generator,
             WellKnownTrait::DispatchFromDyn => rust_ir::WellKnownTrait::DispatchFromDyn,
+            WellKnownTrait::Tuple => rust_ir::WellKnownTrait::Tuple,
         }
     }
 }

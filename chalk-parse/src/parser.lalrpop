@@ -69,6 +69,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "discriminant_kind" ")" "]" => WellKnownTrait::DiscriminantKind,
      "#" "[" "lang" "(" "generator" ")" "]" => WellKnownTrait::Generator,
      "#" "[" "lang" "(" "dispatch_from_dyn" ")" "]" => WellKnownTrait::DispatchFromDyn,
+     "#" "[" "lang" "(" "tuple_trait" ")" "]" => WellKnownTrait::Tuple,
 };
 
 AdtReprAttr: AdtReprAttr = {

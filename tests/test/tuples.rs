@@ -294,3 +294,55 @@ fn tuples_are_wf() {
         }
     }
 }
+
+#[test]
+fn tuples_implement_tuple_trait() {
+    test! {
+        program {
+            #[lang(tuple_trait)]
+            trait Tuple { }
+        }
+
+        goal {
+            (): Tuple
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            (u8,): Tuple
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            (i32, i32): Tuple
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            ([u8],): Tuple
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            forall<T> { (T,): Tuple }
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            i32: Tuple
+        } yields {
+            expect![["No possible solution"]]
+        }
+
+        goal {
+            exists<T> { T: Tuple }
+        } yields {
+            expect![["Ambiguous; no inference guidance"]]
+        }
+    }
+}
