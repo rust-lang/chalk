@@ -330,9 +330,7 @@ impl<I: Interner> TypeSuperVisitable<I> for Lifetime<I> {
             LifetimeData::Placeholder(universe) => {
                 visitor.visit_free_placeholder(*universe, outer_binder)
             }
-            LifetimeData::Static | LifetimeData::Empty(_) | LifetimeData::Erased => {
-                ControlFlow::Continue(())
-            }
+            LifetimeData::Static | LifetimeData::Erased => ControlFlow::Continue(()),
             LifetimeData::Phantom(void, ..) => match *void {},
         }
     }

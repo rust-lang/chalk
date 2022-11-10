@@ -25,17 +25,6 @@ fn erased_lowering() {
 }
 
 #[test]
-fn empty_lowering() {
-    lowering_success! {
-        program {
-            struct A<'a> where 'a: 'empty {}
-            trait B<'a> where 'a: 'empty {}
-            fn foo(a: &'empty ());
-        }
-    }
-}
-
-#[test]
 fn static_outlives() {
     test! {
         program {
@@ -59,34 +48,6 @@ fn static_outlives() {
             }
         } yields {
             expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: 'static }]"]]
-        }
-    }
-}
-
-#[test]
-fn empty_outlives() {
-    test! {
-        program {
-            trait Foo<'a> where 'a: 'empty {}
-            struct Bar {}
-
-            impl<'a> Foo<'a> for Bar where 'a: 'empty {}
-        }
-
-        goal {
-            exists<'a> {
-                Bar: Foo<'a>
-            }
-        } yields {
-            expect![["Unique; for<?U0> { substitution [?0 := '^0.0], lifetime constraints [InEnvironment { environment: Env([]), goal: '^0.0: '<empty> }] }"]]
-        }
-
-        goal {
-            forall<'a> {
-                Bar: Foo<'a>
-            }
-        } yields {
-            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '<empty> }]"]]
         }
     }
 }
@@ -159,23 +120,6 @@ fn erased_impls() {
 
         goal {
             &'erased Foo: Bar
-        } yields {
-            expect![["Unique"]]
-        }
-    }
-}
-
-#[test]
-fn empty_impls() {
-    test! {
-        program {
-            struct Foo {}
-            trait Bar {}
-            impl<'a> Bar for &'a Foo {}
-        }
-
-        goal {
-            &'empty Foo: Bar
         } yields {
             expect![["Unique"]]
         }

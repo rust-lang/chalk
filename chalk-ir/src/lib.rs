@@ -1278,7 +1278,6 @@ impl<I: Interner> Lifetime<I> {
             LifetimeData::InferenceVar(_) => false,
             LifetimeData::Placeholder(_) => false,
             LifetimeData::Static => false,
-            LifetimeData::Empty(_) => false,
             LifetimeData::Erased => false,
             LifetimeData::Phantom(..) => unreachable!(),
         }
@@ -1297,7 +1296,7 @@ impl<I: Interner> Lifetime<I> {
                     | TypeFlags::HAS_FREE_LOCAL_REGIONS
                     | TypeFlags::HAS_FREE_REGIONS
             }
-            LifetimeData::Static | LifetimeData::Empty(_) => TypeFlags::HAS_FREE_REGIONS,
+            LifetimeData::Static => TypeFlags::HAS_FREE_REGIONS,
             LifetimeData::Phantom(_, _) => TypeFlags::empty(),
             LifetimeData::BoundVar(_) => TypeFlags::HAS_RE_LATE_BOUND,
             LifetimeData::Erased => TypeFlags::HAS_RE_ERASED,
@@ -1316,11 +1315,6 @@ pub enum LifetimeData<I: Interner> {
     Placeholder(PlaceholderIndex),
     /// Static lifetime
     Static,
-    /// An empty lifetime: a lifetime shorter than any other lifetime in a
-    /// universe with a lesser or equal index. The universe only non-zero in
-    /// lexical region resolve in rustc, so chalk shouldn't ever see a non-zero
-    /// index.
-    Empty(UniverseIndex),
     /// An erased lifetime, used by rustc to improve caching when we doesn't
     /// care about lifetimes
     Erased,

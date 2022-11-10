@@ -955,18 +955,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (
                 &LifetimeData::InferenceVar(a_var),
                 &LifetimeData::Placeholder(PlaceholderIndex { ui, .. }),
-            )
-            | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Empty(ui)) => {
-                self.unify_lifetime_var(variance, a_var, b, ui)
-            }
+            ) => self.unify_lifetime_var(variance, a_var, b, ui),
 
             (
                 &LifetimeData::Placeholder(PlaceholderIndex { ui, .. }),
                 &LifetimeData::InferenceVar(b_var),
-            )
-            | (&LifetimeData::Empty(ui), &LifetimeData::InferenceVar(b_var)) => {
-                self.unify_lifetime_var(variance.invert(), b_var, a, ui)
-            }
+            ) => self.unify_lifetime_var(variance.invert(), b_var, a, ui),
 
             (&LifetimeData::InferenceVar(a_var), &LifetimeData::Erased)
             | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static) => {
@@ -982,19 +976,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
             | (&LifetimeData::Erased, &LifetimeData::Erased) => Ok(()),
 
             (&LifetimeData::Static, &LifetimeData::Placeholder(_))
-            | (&LifetimeData::Static, &LifetimeData::Empty(_))
             | (&LifetimeData::Static, &LifetimeData::Erased)
             | (&LifetimeData::Placeholder(_), &LifetimeData::Static)
             | (&LifetimeData::Placeholder(_), &LifetimeData::Placeholder(_))
-            | (&LifetimeData::Placeholder(_), &LifetimeData::Empty(_))
             | (&LifetimeData::Placeholder(_), &LifetimeData::Erased)
-            | (&LifetimeData::Empty(_), &LifetimeData::Static)
-            | (&LifetimeData::Empty(_), &LifetimeData::Placeholder(_))
-            | (&LifetimeData::Empty(_), &LifetimeData::Empty(_))
-            | (&LifetimeData::Empty(_), &LifetimeData::Erased)
             | (&LifetimeData::Erased, &LifetimeData::Static)
-            | (&LifetimeData::Erased, &LifetimeData::Placeholder(_))
-            | (&LifetimeData::Erased, &LifetimeData::Empty(_)) => {
+            | (&LifetimeData::Erased, &LifetimeData::Placeholder(_)) => {
                 if a != b {
                     self.push_lifetime_outlives_goals(variance, a.clone(), b.clone());
                     Ok(())

@@ -821,7 +821,6 @@ where
                 folder.try_fold_free_placeholder_lifetime(*universe, outer_binder)
             }
             LifetimeData::Static => Ok(LifetimeData::<I>::Static.intern(folder.interner())),
-            LifetimeData::Empty(ui) => Ok(LifetimeData::<I>::Empty(*ui).intern(folder.interner())),
             LifetimeData::Erased => Ok(LifetimeData::<I>::Erased.intern(folder.interner())),
             LifetimeData::Phantom(void, ..) => match *void {},
         }
