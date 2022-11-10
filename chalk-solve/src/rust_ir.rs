@@ -277,6 +277,7 @@ pub enum WellKnownTrait {
     DiscriminantKind,
     Generator,
     DispatchFromDyn,
+    Tuple,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);

@@ -8,6 +8,7 @@ mod discriminant_kind;
 mod fn_family;
 mod generator;
 mod sized;
+mod tuple;
 mod unsize;
 
 /// For well known traits we have special hard-coded impls, either as an
@@ -49,6 +50,9 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::DiscriminantKind => builder.push_fact(trait_ref),
             WellKnownTrait::Generator => {
                 generator::add_generator_program_clauses(db, builder, self_ty)?;
+            }
+            WellKnownTrait::Tuple => {
+                tuple::add_tuple_program_clauses(db, builder, self_ty)?;
             }
             // There are no builtin impls provided for the following traits:
             WellKnownTrait::Unpin

@@ -435,7 +435,8 @@ where
             | WellKnownTrait::Unsize
             | WellKnownTrait::Sized
             | WellKnownTrait::DiscriminantKind
-            | WellKnownTrait::Generator => false,
+            | WellKnownTrait::Generator
+            | WellKnownTrait::Tuple => false,
         };
 
         if is_legal {

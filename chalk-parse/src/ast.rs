@@ -161,6 +161,7 @@ pub enum WellKnownTrait {
     DiscriminantKind,
     Generator,
     DispatchFromDyn,
+    Tuple,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
