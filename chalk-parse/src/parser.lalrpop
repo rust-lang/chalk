@@ -493,7 +493,6 @@ Lifetime: Lifetime = {
     <n:LifetimeId> => Lifetime::Id { name: n },
     "'static" => Lifetime::Static,
     "'erased" => Lifetime::Erased,
-    "'empty" => Lifetime::Empty,
 };
 
 ConstWithoutId: Const = {

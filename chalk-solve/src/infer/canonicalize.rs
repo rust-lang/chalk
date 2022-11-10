@@ -1,7 +1,7 @@
 use crate::debug_span;
 use chalk_derive::FallibleTypeFolder;
 use chalk_ir::fold::shift::Shift;
-use chalk_ir::fold::{TypeFoldable, TypeFolder, TypeSuperFoldable};
+use chalk_ir::fold::{TypeFoldable, TypeFolder};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;
 use std::cmp::max;
@@ -228,17 +228,6 @@ impl<'i, I: Interner> TypeFolder<I> for Canonicalizer<'i, I> {
                     .shifted_in_from(outer_binder)
                     .to_const(interner, ty)
             }
-        }
-    }
-
-    fn fold_lifetime(&mut self, lifetime: Lifetime<I>, outer_binder: DebruijnIndex) -> Lifetime<I> {
-        match *lifetime.data(self.interner) {
-            LifetimeData::Empty(ui) if ui.counter != 0 => {
-                // ReEmpty in non-root universes is only used by lexical region
-                // inference. We shouldn't see it in canonicalization.
-                panic!("Cannot canonicalize ReEmpty in non-root universe")
-            }
-            _ => lifetime.super_fold_with(self, outer_binder),
         }
     }
 

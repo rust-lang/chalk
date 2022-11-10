@@ -880,10 +880,6 @@ impl LowerWithEnv for Lifetime {
                 interner,
                 chalk_ir::LifetimeData::Static,
             )),
-            Lifetime::Empty => Ok(chalk_ir::Lifetime::new(
-                interner,
-                chalk_ir::LifetimeData::Empty(chalk_ir::UniverseIndex { counter: 0 }),
-            )),
             Lifetime::Erased => Ok(chalk_ir::Lifetime::new(
                 interner,
                 chalk_ir::LifetimeData::Erased,

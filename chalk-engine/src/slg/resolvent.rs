@@ -614,8 +614,7 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
 
             (LifetimeData::Static, LifetimeData::Static)
             | (LifetimeData::Placeholder(_), LifetimeData::Placeholder(_))
-            | (LifetimeData::Erased, LifetimeData::Erased)
-            | (LifetimeData::Empty(_), LifetimeData::Empty(_)) => {
+            | (LifetimeData::Erased, LifetimeData::Erased) => {
                 assert_eq!(answer, pending);
                 Ok(())
             }
@@ -628,8 +627,7 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
             (LifetimeData::Static, _)
             | (LifetimeData::BoundVar(_), _)
             | (LifetimeData::Placeholder(_), _)
-            | (LifetimeData::Erased, _)
-            | (LifetimeData::Empty(_), _) => panic!(
+            | (LifetimeData::Erased, _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),
