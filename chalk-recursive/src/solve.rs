@@ -44,7 +44,7 @@ pub(super) trait SolveIteration<I: Interner>: SolveDatabase<I> {
         should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
         if !should_continue() {
-            return Err(NoSolution);
+            return Ok(Solution::Ambig(Guidance::Unknown));
         }
 
         let UCanonical {
