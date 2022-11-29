@@ -218,7 +218,7 @@ where
                 self,
                 canonical_goal,
                 minimums,
-                should_continue.clone(),
+                should_continue.clone(), // Note: cloning required as workaround for https://github.com/rust-lang/rust/issues/95734
             );
 
             debug!(
