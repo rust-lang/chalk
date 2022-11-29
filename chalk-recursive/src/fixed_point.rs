@@ -43,6 +43,7 @@ where
         context: &mut RecursiveContext<K, V>,
         goal: &K,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> V;
     fn reached_fixed_point(self, old_value: &V, new_value: &V) -> bool;
     fn error_value(self) -> V;
@@ -104,22 +105,24 @@ where
         &mut self,
         canonical_goal: &K,
         solver_stuff: impl SolverStuff<K, V>,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> V {
         debug!("solve_root_goal(canonical_goal={:?})", canonical_goal);
         assert!(self.stack.is_empty());
         let minimums = &mut Minimums::new();
-        self.solve_goal(canonical_goal, minimums, solver_stuff)
+        self.solve_goal(canonical_goal, minimums, solver_stuff, should_continue)
     }
 
     /// Attempt to solve a goal that has been fully broken down into leaf form
     /// and canonicalized. This is where the action really happens, and is the
     /// place where we would perform caching in rustc (and may eventually do in Chalk).
-    #[instrument(level = "info", skip(self, minimums, solver_stuff,))]
+    #[instrument(level = "info", skip(self, minimums, solver_stuff, should_continue))]
     pub fn solve_goal(
         &mut self,
         goal: &K,
         minimums: &mut Minimums,
         solver_stuff: impl SolverStuff<K, V>,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> V {
         // First check the cache.
         if let Some(cache) = &self.cache {
@@ -159,7 +162,8 @@ where
             let depth = self.stack.push(coinductive_goal);
             let dfn = self.search_graph.insert(goal, depth, initial_solution);
 
-            let subgoal_minimums = self.solve_new_subgoal(goal, depth, dfn, solver_stuff);
+            let subgoal_minimums =
+                self.solve_new_subgoal(goal, depth, dfn, solver_stuff, should_continue);
 
             self.search_graph[dfn].links = subgoal_minimums;
             self.search_graph[dfn].stack_depth = None;
@@ -190,13 +194,14 @@ where
         }
     }
 
-    #[instrument(level = "debug", skip(self, solver_stuff))]
+    #[instrument(level = "debug", skip(self, solver_stuff, should_continue))]
     fn solve_new_subgoal(
         &mut self,
         canonical_goal: &K,
         depth: StackDepth,
         dfn: DepthFirstNumber,
         solver_stuff: impl SolverStuff<K, V>,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Minimums {
         // We start with `answer = None` and try to solve the goal. At the end of the iteration,
         // `answer` will be updated with the result of the solving process. If we detect a cycle
@@ -209,7 +214,12 @@ where
         // so this function will eventually be constant and the loop terminates.
         loop {
             let minimums = &mut Minimums::new();
-            let current_answer = solver_stuff.solve_iteration(self, canonical_goal, minimums);
+            let current_answer = solver_stuff.solve_iteration(
+                self,
+                canonical_goal,
+                minimums,
+                should_continue.clone(), // Note: cloning required as workaround for https://github.com/rust-lang/rust/issues/95734
+            );
 
             debug!(
                 "solve_new_subgoal: loop iteration result = {:?} with minimums {:?}",

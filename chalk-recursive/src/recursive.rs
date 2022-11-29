@@ -76,8 +76,9 @@ impl<I: Interner> SolverStuff<UCanonicalGoal<I>, Fallible<Solution<I>>> for &dyn
         context: &mut RecursiveContext<UCanonicalGoal<I>, Fallible<Solution<I>>>,
         goal: &UCanonicalGoal<I>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
-        Solver::new(context, self).solve_iteration(goal, minimums)
+        Solver::new(context, self).solve_iteration(goal, minimums, should_continue)
     }
 
     fn reached_fixed_point(
@@ -108,8 +109,10 @@ impl<'me, I: Interner> SolveDatabase<I> for Solver<'me, I> {
         &mut self,
         goal: UCanonicalGoal<I>,
         minimums: &mut Minimums,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Fallible<Solution<I>> {
-        self.context.solve_goal(&goal, minimums, self.program)
+        self.context
+            .solve_goal(&goal, minimums, self.program, should_continue)
     }
 
     fn interner(&self) -> I {
@@ -131,17 +134,18 @@ impl<I: Interner> chalk_solve::Solver<I> for RecursiveSolver<I> {
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
     ) -> Option<chalk_solve::Solution<I>> {
-        self.ctx.solve_root_goal(goal, program).ok()
+        self.ctx.solve_root_goal(goal, program, || true).ok()
     }
 
     fn solve_limited(
         &mut self,
         program: &dyn RustIrDatabase<I>,
         goal: &UCanonical<InEnvironment<Goal<I>>>,
-        _should_continue: &dyn std::ops::Fn() -> bool,
+        should_continue: &dyn std::ops::Fn() -> bool,
     ) -> Option<chalk_solve::Solution<I>> {
-        // TODO support should_continue in recursive solver
-        self.ctx.solve_root_goal(goal, program).ok()
+        self.ctx
+            .solve_root_goal(goal, program, should_continue)
+            .ok()
     }
 
     fn solve_multiple(

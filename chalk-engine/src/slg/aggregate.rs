@@ -17,7 +17,7 @@ pub trait AggregateOps<I: Interner> {
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,
         answers: impl context::AnswerStream<I>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Option<Solution<I>>;
 }
 
@@ -28,7 +28,7 @@ impl<I: Interner> AggregateOps<I> for SlgContextOps<'_, I> {
         &self,
         root_goal: &UCanonical<InEnvironment<Goal<I>>>,
         mut answers: impl context::AnswerStream<I>,
-        should_continue: impl std::ops::Fn() -> bool,
+        should_continue: impl std::ops::Fn() -> bool + Clone,
     ) -> Option<Solution<I>> {
         let interner = self.program.interner();
         let CompleteAnswer { subst, ambiguous } = match answers.next_answer(&should_continue) {
