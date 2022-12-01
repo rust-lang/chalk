@@ -847,3 +847,34 @@ fn recursive_hang() {
         }
     }
 }
+
+#[test]
+fn coinductive_wrapper() {
+    test! {
+        program {
+            #[coinductive]
+            trait Foo {}
+            struct Wrapper<T> {}
+
+            impl<T> Foo for Wrapper<Wrapper<T>>
+            where
+                Wrapper<T>: Foo
+            {}
+        }
+
+        goal {
+            exists<T> {
+                Wrapper<T>: Foo
+            }
+        } yields[SolverChoice::slg_default()] {
+            // FIXME: wrong??
+            expect![["Unique; for<?U0> { substitution [?0 := Wrapper<^0.0>] }"]]
+        }
+    }
+    /*
+       FIXME: overflows stack
+       yields[SolverChoice::recursive_default()] {
+           expect![[r#"Ambiguous; no inference guidance"#]]
+       }
+    */
+}
