@@ -52,15 +52,20 @@ pub(super) fn build_dyn_self_ty_clauses<I: Interner>(
 
     builder.push_binders(generalized_dyn_ty, |builder, dyn_ty| {
         for exists_qwc in dyn_ty.bounds.map_ref(|r| r.iter(interner)) {
+            let arg: chalk_ir::GenericArg<I> = chalk_ir::GenericArg::new(
+                interner,
+                chalk_ir::GenericArgData::Ty(chalk_ir::Ty::new(
+                    interner,
+                    TyKind::Dyn(dyn_ty.clone()),
+                )),
+            );
             // Replace the `T` from `exists<T> { .. }` with `self_ty`,
             // yielding clases like
             //
             // ```
             // forall<'a> { Implemented(dyn Fn(&u8): Fn<(&'a u8)>) }
             // ```
-            let qwc = exists_qwc
-                .cloned()
-                .substitute(interner, &[self_ty.clone().cast(interner)]);
+            let qwc = exists_qwc.cloned().substitute(interner, &[arg.clone()]);
 
             builder.push_binders(qwc, |builder, bound| match &bound {
                 // For the implemented traits, we need to elaborate super traits and add where clauses from the trait

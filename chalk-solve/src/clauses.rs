@@ -1062,9 +1062,12 @@ fn match_ty<I: Interner>(
             let generalized_ty =
                 generalize::Generalize::apply(builder.db.interner(), dyn_ty.clone());
             builder.push_binders(generalized_ty, |builder, dyn_ty| {
-                let bounds = dyn_ty
-                    .bounds
-                    .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
+                let dyn_ty_ty = chalk_ir::Ty::new(interner, TyKind::Dyn(dyn_ty.clone()));
+                let arg: chalk_ir::GenericArg<I> = chalk_ir::GenericArg::new(
+                    interner,
+                    chalk_ir::GenericArgData::Ty(dyn_ty_ty.clone()),
+                );
+                let bounds = dyn_ty.bounds.substitute(interner, &[arg.clone()]);
 
                 let mut wf_goals = Vec::new();
 
@@ -1081,7 +1084,7 @@ fn match_ty<I: Interner>(
                     })
                 }));
 
-                builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
+                builder.push_clause(WellFormed::Ty(dyn_ty_ty), wf_goals);
             });
         }
     }
