@@ -5,7 +5,7 @@ use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::iter;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 /// Trait for lowering a given piece of rust-ir source (e.g., an impl
 /// or struct definition) into its associated "program clauses" --

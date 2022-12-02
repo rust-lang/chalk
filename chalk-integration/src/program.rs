@@ -557,7 +557,7 @@ impl RustIrDatabase<ChalkIr> for Program {
         &self,
         closure_id: ClosureId<ChalkIr>,
         _substs: &Substitution<ChalkIr>,
-    ) -> ClosureKind {
+    ) -> Option<ClosureKind> {
         self.closure_closure_kind[&closure_id]
     }
 

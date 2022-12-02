@@ -164,7 +164,7 @@ where
         &self,
         closure_id: chalk_ir::ClosureId<I>,
         substs: &chalk_ir::Substitution<I>,
-    ) -> chalk_solve::rust_ir::ClosureKind {
+    ) -> Option<chalk_solve::rust_ir::ClosureKind> {
         self.db.closure_kind(closure_id, substs)
     }
     fn closure_inputs_and_output(

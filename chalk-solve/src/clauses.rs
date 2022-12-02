@@ -164,6 +164,7 @@ pub fn push_auto_trait_impls<I: Interner>(
         TyKind::Closure(closure_id, substs) => {
             let closure_fn_substitution = builder.db.closure_fn_substitution(*closure_id, substs);
             let binders = builder.db.closure_upvars(*closure_id, substs);
+            debug!(?binders, ?closure_fn_substitution);
             let upvars = binders.substitute(builder.db.interner(), &closure_fn_substitution);
 
             // in a same behavior as for non-auto traits (reuse the code) we can require that

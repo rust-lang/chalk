@@ -238,7 +238,7 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         &self,
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
-    ) -> ClosureKind {
+    ) -> Option<ClosureKind> {
         unimplemented!()
     }
 

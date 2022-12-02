@@ -199,7 +199,7 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         &self,
         _closure_id: chalk_ir::ClosureId<I>,
         _substs: &chalk_ir::Substitution<I>,
-    ) -> crate::rust_ir::ClosureKind {
+    ) -> Option<crate::rust_ir::ClosureKind> {
         unimplemented!("cannot stub closures")
     }
 

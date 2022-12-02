@@ -199,7 +199,7 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         &self,
         closure_id: ClosureId<ChalkIr>,
         substs: &Substitution<ChalkIr>,
-    ) -> ClosureKind {
+    ) -> Option<ClosureKind> {
         self.program_ir().unwrap().closure_kind(closure_id, substs)
     }
 
