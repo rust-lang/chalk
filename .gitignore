@@ -12,6 +12,7 @@ chalk-parse/src/parser.rs
 
 ## IDE files
 /.idea/
+/.vscode/
 
 ## Files used in changelog generation
 package.json

@@ -260,3 +260,37 @@ fn cycle_with_ambiguity() {
         }
     }
 }
+
+#[test]
+fn inductive_canonical_cycle() {
+    test! {
+        program {
+            trait Trait<T, U> {}
+
+            impl<T, U> Trait<T, U> for ()
+            where
+                (): Trait<U, T>,
+                T: OtherTrait,
+            {}
+
+            trait OtherTrait {}
+            impl OtherTrait for u32 {}
+        }
+
+        goal {
+            (): Trait<u32, u32>
+        } yields {
+            // FIXME: Should be unique
+            expect![["No possible solution"]]
+        }
+
+        goal {
+            exists<T, U> {
+                (): Trait<T, U>
+            }
+        } yields {
+            // FIXME: Should be unique
+            expect![["No possible solution"]]
+        }
+    }
+}
