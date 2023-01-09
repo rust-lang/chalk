@@ -267,30 +267,38 @@ fn inductive_canonical_cycle() {
         program {
             trait Trait<T, U> {}
 
+            trait IsNotU32 {}
+            impl IsNotU32 for i32 {}
+            impl IsNotU32 for i16 {}
+
             impl<T, U> Trait<T, U> for ()
             where
                 (): Trait<U, T>,
-                T: OtherTrait,
+                T: IsNotU32,
             {}
-
-            trait OtherTrait {}
-            impl OtherTrait for u32 {}
+            impl<T> Trait<u32, T> for () {}
         }
 
         goal {
-            (): Trait<u32, u32>
+            (): Trait<i32, u32>
         } yields {
-            // FIXME: Should be unique
-            expect![["No possible solution"]]
+            expect![["Unique"]]
+        }
+
+        goal {
+            (): Trait<u32, i32>
+        } yields {
+            expect![["Unique"]]
         }
 
         goal {
             exists<T, U> {
                 (): Trait<T, U>
             }
-        } yields {
-            // FIXME: Should be unique
-            expect![["No possible solution"]]
+        } yields[SolverChoice::slg(10, None)] {
+            expect![["Ambiguous; no inference guidance"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![["Ambiguous; no inference guidance"]]
         }
     }
 }
