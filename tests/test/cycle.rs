@@ -302,3 +302,83 @@ fn inductive_canonical_cycle() {
         }
     }
 }
+
+#[test]
+fn mixed_cycle_detection_not_on_stack1() {
+    test! {
+        program {
+            #[coinductive]
+            trait A<T> {}
+            #[coinductive]
+            trait B<T> {}
+            trait C<T> {}
+
+            impl<T> A<T> for ()
+            where
+                (): B<T>,
+                (): C<T>,
+            {}
+
+            impl<T> B<T> for ()
+            where
+                (): A<T>,
+            {}
+
+            impl<T> C<T> for ()
+            where
+                (): B<T>,
+            {}
+        }
+
+        goal {
+            exists<T> {
+                (): A<T>
+            }
+        } yields[SolverChoice::slg(10, None)] {
+            expect![["No possible solution"]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![["No possible solution"]]
+        }
+    }
+}
+
+#[test]
+fn mixed_cycle_detection_not_on_stack2() {
+    test! {
+        program {
+            #[coinductive]
+            trait A<T> {}
+            #[coinductive]
+            trait B<T> {}
+            trait C<T> {}
+
+            impl<T> A<T> for ()
+            where
+                (): C<T>,
+                (): B<T>,
+            {}
+
+            impl<T> B<T> for ()
+            where
+                (): A<T>,
+            {}
+
+            impl<T> C<T> for ()
+            where
+                (): B<T>,
+            {}
+        }
+
+        goal {
+            exists<T> {
+                (): A<T>
+            }
+        } yields[SolverChoice::slg(10, None)] {
+            // FIXME: this should be no solution as `C` is inductive
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
+        } yields[SolverChoice::recursive_default()] {
+            // FIXME: this should be no solution as `C` is inductive
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
+        }
+    }
+}
