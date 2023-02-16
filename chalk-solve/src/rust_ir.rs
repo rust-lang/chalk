@@ -214,11 +214,10 @@ pub struct FnDefDatumBound<I: Interner> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-// FIXME: unignore the doctest below when GATs hit stable.
 /// A rust intermediate representation (rust_ir) of a Trait Definition. For
 /// example, given the following rust code:
 ///
-/// ```ignore
+/// ```
 /// use std::fmt::Debug;
 ///
 /// trait Foo<T>
