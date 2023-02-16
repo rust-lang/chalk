@@ -610,6 +610,30 @@ fn normalize_gat_with_higher_ranked_trait_bound() {
 }
 
 #[test]
+fn gat_in_alias_in_alias_eq() {
+    test! {
+        program {
+            trait Foo {
+                type Rebind<U>: Foo;
+            }
+
+            struct S<T> { }
+            impl<T> Foo for S<T> {
+                type Rebind<U> = S<U>;
+            }
+        }
+
+        goal {
+            exists<T> {
+                <<S<u32> as Foo>::Rebind<i32> as Foo>::Rebind<usize>: Foo
+            }
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+    }
+}
+
+#[test]
 fn forall_projection() {
     test! {
         program {
