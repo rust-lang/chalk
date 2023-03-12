@@ -820,13 +820,14 @@ fn push_alias_alias_eq_clause<I: Interner>(
         //      <<X as Y>::A as Z>::B == U :- <T as Z>::B == U, <X as Y>::A == T
         // }
         builder.push_binders(binders, |builder, bound_var| {
+            let (_, trait_args, assoc_args) = builder.db.split_projection(&projection_ty);
             let fresh_self_subst = Substitution::from_iter(
                 interner,
-                std::iter::once(bound_var.clone().cast(interner)).chain(
-                    projection_ty.substitution.as_slice(interner)[1..]
-                        .iter()
-                        .cloned(),
-                ),
+                assoc_args
+                    .iter()
+                    .cloned()
+                    .chain(std::iter::once(bound_var.clone().cast(interner)))
+                    .chain(trait_args[1..].iter().cloned()),
             );
             let fresh_alias = AliasTy::Projection(ProjectionTy {
                 associated_ty_id: projection_ty.associated_ty_id,
