@@ -1189,3 +1189,40 @@ fn projection_from_super_trait_bounds() {
         }
     }
 }
+
+#[test]
+fn nested_proj_eq_nested_proj_should_flounder() {
+    test! {
+        program {
+            #[non_enumerable]
+            trait Trait1 {
+                type Assoc: Trait2;
+            }
+            #[non_enumerable]
+            trait Trait2 {
+                type Assoc;
+            }
+
+            impl Trait1 for () {
+                type Assoc = ();
+            }
+            impl Trait1 for i32 {
+                type Assoc = ();
+            }
+            impl Trait2 for () {
+                type Assoc = ();
+            }
+        }
+
+        goal {
+            exists<T, U> {
+                <<T as Trait1>::Assoc as Trait2>::Assoc = <<U as Trait1>::Assoc as Trait2>::Assoc
+            }
+        } yields[SolverChoice::slg_default()] {
+            // FIXME
+            expect![[r#"Ambiguous; definite substitution for<?U0> { [?0 := ^0.0, ?1 := ^0.0] }"#]]
+        } yields[SolverChoice::recursive_default()] {
+            expect![[r#"Ambiguous; no inference guidance"#]]
+        }
+    }
+}

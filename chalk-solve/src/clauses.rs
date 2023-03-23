@@ -512,12 +512,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                         // An alias could normalize to anything, including an
                         // opaque type, so push a clause that asks for the self
                         // type to be normalized and return.
-                        push_alias_alias_eq_clause(
-                            builder,
-                            proj.clone(),
-                            alias_eq.ty.clone(),
-                            alias.clone(),
-                        );
+                        push_alias_alias_eq_clause(builder, proj.clone(), alias.clone());
                         return Ok(clauses);
                     }
                     TyKind::OpaqueType(opaque_ty_id, _) => {
@@ -781,12 +776,10 @@ fn push_alias_implemented_clause<I: Interner>(
     // TODO: instead generate clauses without reference to the specific type parameters of the goal?
     let generalized = generalize::Generalize::apply(interner, (trait_ref, alias));
     builder.push_binders(generalized, |builder, (trait_ref, alias)| {
-        let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
-
         // forall<..., T> {
         //      <X as Y>::Z: Trait :- T: Trait, <X as Y>::Z == T
         // }
-        builder.push_binders(binders, |builder, bound_var| {
+        builder.push_bound_ty(|builder, bound_var| {
             let fresh_self_subst = Substitution::from_iter(
                 interner,
                 std::iter::once(bound_var.clone().cast(interner)).chain(
@@ -816,7 +809,6 @@ fn push_alias_implemented_clause<I: Interner>(
 fn push_alias_alias_eq_clause<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     projection_ty: ProjectionTy<I>,
-    ty: Ty<I>,
     alias: AliasTy<I>,
 ) {
     let interner = builder.interner();
@@ -827,43 +819,69 @@ fn push_alias_alias_eq_clause<I: Interner>(
     assert_eq!(*self_ty.kind(interner), TyKind::Alias(alias.clone()));
 
     // TODO: instead generate clauses without reference to the specific type parameters of the goal?
-    let generalized = generalize::Generalize::apply(interner, (projection_ty, ty, alias));
-    builder.push_binders(generalized, |builder, (projection_ty, ty, alias)| {
-        let binders = Binders::with_fresh_type_var(interner, |ty_var| ty_var);
-
-        // forall<..., T> {
+    let generalized = generalize::Generalize::apply(interner, (projection_ty, alias));
+    builder.push_binders(generalized, |builder, (projection_ty, alias)| {
+        // Given the following canonical goal:
+        //
+        // ```
+        // forall<...> {
+        //     <<X as Y>::A as Z>::B == W
+        // }
+        // ```
+        //
+        // we generate:
+        //
+        // ```
+        // forall<..., T, U> {
         //      <<X as Y>::A as Z>::B == U :- <T as Z>::B == U, <X as Y>::A == T
         // }
-        builder.push_binders(binders, |builder, bound_var| {
-            let (_, trait_args, assoc_args) = builder.db.split_projection(&projection_ty);
-            let fresh_self_subst = Substitution::from_iter(
-                interner,
-                assoc_args
-                    .iter()
-                    .cloned()
-                    .chain(std::iter::once(bound_var.clone().cast(interner)))
-                    .chain(trait_args[1..].iter().cloned()),
-            );
-            let fresh_alias = AliasTy::Projection(ProjectionTy {
-                associated_ty_id: projection_ty.associated_ty_id,
-                substitution: fresh_self_subst,
+        // ```
+        //
+        // `T` and `U` are `intermediate_eq_ty` and `eq_ty` respectively below.
+        //
+        // Note that we used to "reuse" `W` and push:
+        //
+        // ```
+        // forall<..., T> {
+        //      <<X as Y>::A as Z>::B == W :- <T as Z>::B == W, <X as Y>::A == T
+        // }
+        // ```
+        //
+        // but it caused a cycle which led to false `NoSolution` under certain conditions, in
+        // particular when `W` itself is a nested projection type. See test
+        // `nested_proj_eq_nested_proj_should_flounder`.
+        builder.push_bound_ty(|builder, intermediate_eq_ty| {
+            builder.push_bound_ty(|builder, eq_ty| {
+                let (_, trait_args, assoc_args) = builder.db.split_projection(&projection_ty);
+                let fresh_self_subst = Substitution::from_iter(
+                    interner,
+                    assoc_args
+                        .iter()
+                        .cloned()
+                        .chain(std::iter::once(intermediate_eq_ty.clone().cast(interner)))
+                        .chain(trait_args[1..].iter().cloned()),
+                );
+                let fresh_alias = AliasTy::Projection(ProjectionTy {
+                    associated_ty_id: projection_ty.associated_ty_id,
+                    substitution: fresh_self_subst,
+                });
+                builder.push_clause(
+                    DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                        alias: AliasTy::Projection(projection_ty.clone()),
+                        ty: eq_ty.clone(),
+                    })),
+                    &[
+                        DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                            alias: fresh_alias,
+                            ty: eq_ty,
+                        })),
+                        DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
+                            alias,
+                            ty: intermediate_eq_ty,
+                        })),
+                    ],
+                );
             });
-            builder.push_clause(
-                DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                    alias: AliasTy::Projection(projection_ty.clone()),
-                    ty: ty.clone(),
-                })),
-                &[
-                    DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                        alias: fresh_alias,
-                        ty: ty.clone(),
-                    })),
-                    DomainGoal::Holds(WhereClause::AliasEq(AliasEq {
-                        alias: alias.clone(),
-                        ty: bound_var,
-                    })),
-                ],
-            );
         });
     });
 }
