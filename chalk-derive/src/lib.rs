@@ -22,7 +22,7 @@ fn has_interner_attr(input: &DeriveInput) -> Option<TokenStream> {
         input
             .attrs
             .iter()
-            .find(|a| a.path.is_ident("has_interner"))?
+            .find(|a| a.path().is_ident("has_interner"))?
             .parse_args::<TokenStream>()
             .expect("Expected has_interner argument"),
     )
