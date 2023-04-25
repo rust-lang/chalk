@@ -427,6 +427,7 @@ mod never;
 mod numerics;
 mod object_safe;
 mod opaque_types;
+mod pointee;
 mod projection;
 mod refs;
 mod scalars;

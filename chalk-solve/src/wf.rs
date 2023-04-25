@@ -436,6 +436,7 @@ where
             | WellKnownTrait::Sized
             | WellKnownTrait::DiscriminantKind
             | WellKnownTrait::Generator
+            | WellKnownTrait::Pointee
             | WellKnownTrait::Tuple => false,
         };
 

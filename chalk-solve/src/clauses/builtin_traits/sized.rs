@@ -2,11 +2,12 @@ use std::iter;
 
 use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
-use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{
     AdtId, CanonicalVarKinds, Floundered, Substitution, TyKind, TyVariableKind, VariableKind,
 };
+
+use super::last_field_of_struct;
 
 fn push_adt_sized_conditions<I: Interner>(
     db: &dyn RustIrDatabase<I>,
@@ -15,26 +16,8 @@ fn push_adt_sized_conditions<I: Interner>(
     adt_id: AdtId<I>,
     substitution: &Substitution<I>,
 ) {
-    let adt_datum = db.adt_datum(adt_id);
-
-    // WF ensures that all enums are Sized, so we only have to consider structs.
-    if adt_datum.kind != AdtKind::Struct {
-        builder.push_fact(trait_ref);
-        return;
-    }
-
-    let interner = db.interner();
-
-    // To check if a struct S<..> is Sized, we only have to look at its last field.
-    // This is because the WF checks for ADTs require that all the other fields must be Sized.
-    let last_field_ty = adt_datum
-        .binders
-        .map_ref(|b| b.variants.clone())
-        .substitute(interner, substitution)
-        .into_iter()
-        .take(1) // We have a struct so we're guaranteed one variant
-        .flat_map(|mut v| v.fields.pop());
-
+    // We only need to check last field of the struct here. Rest of the fields and cases are handled in WF.
+    let last_field_ty = last_field_of_struct(db, adt_id, substitution).into_iter();
     needs_impl_for_tys(db, builder, trait_ref, last_field_ty);
 }
 

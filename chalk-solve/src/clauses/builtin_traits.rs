@@ -1,5 +1,7 @@
 use super::{builder::ClauseBuilder, generalize};
-use crate::{CanonicalVarKinds, Interner, RustIrDatabase, TraitRef, WellKnownTrait};
+use crate::{
+    rust_ir::AdtKind, CanonicalVarKinds, Interner, RustIrDatabase, TraitRef, WellKnownTrait,
+};
 use chalk_ir::{Floundered, Substitution, Ty};
 
 mod clone;
@@ -7,6 +9,7 @@ mod copy;
 mod discriminant_kind;
 mod fn_family;
 mod generator;
+mod pointee;
 mod sized;
 mod tuple;
 mod unsize;
@@ -54,6 +57,9 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Tuple => {
                 tuple::add_tuple_program_clauses(db, builder, self_ty)?;
             }
+            WellKnownTrait::Pointee => {
+                pointee::add_pointee_program_clauses(db, builder, self_ty)?;
+            }
             // There are no builtin impls provided for the following traits:
             WellKnownTrait::Unpin
             | WellKnownTrait::Drop
@@ -83,6 +89,16 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
                 Ok(())
             })
         }
+        WellKnownTrait::Pointee => {
+            // If `self_ty` contains bound vars, we want to universally quantify them.
+            // `Generalize` collects them for us.
+            let generalized = generalize::Generalize::apply(db.interner(), self_ty);
+
+            builder.push_binders(generalized, |builder, self_ty| {
+                pointee::add_pointee_program_clauses(db, builder, self_ty)?;
+                Ok(())
+            })
+        }
         WellKnownTrait::DiscriminantKind => {
             discriminant_kind::add_discriminant_clauses(db, builder, self_ty)
         }
@@ -95,6 +111,26 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
         }
         _ => Ok(()),
     }
+}
+
+/// Returns type of the last field of the input struct, which is useful for `Sized` and related
+/// traits. Returns `None` if the input is not a struct or it has no fields.
+fn last_field_of_struct<I: Interner>(
+    db: &dyn RustIrDatabase<I>,
+    id: chalk_ir::AdtId<I>,
+    subst: &Substitution<I>,
+) -> Option<Ty<I>> {
+    let adt_datum = db.adt_datum(id);
+    let interner = db.interner();
+    if adt_datum.kind != AdtKind::Struct {
+        return None;
+    }
+    let last_field_ty = adt_datum
+        .binders
+        .map_ref(|b| b.variants.last()?.fields.last().cloned())
+        .filter_map(|x| x)?
+        .substitute(interner, subst);
+    Some(last_field_ty)
 }
 
 /// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form
