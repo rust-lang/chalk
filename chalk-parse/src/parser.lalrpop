@@ -70,6 +70,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "generator" ")" "]" => WellKnownTrait::Generator,
      "#" "[" "lang" "(" "dispatch_from_dyn" ")" "]" => WellKnownTrait::DispatchFromDyn,
      "#" "[" "lang" "(" "tuple_trait" ")" "]" => WellKnownTrait::Tuple,
+     "#" "[" "lang" "(" "pointee_trait" ")" "]" => WellKnownTrait::Pointee,
 };
 
 AdtReprAttr: AdtReprAttr = {

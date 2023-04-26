@@ -277,6 +277,7 @@ pub enum WellKnownTrait {
     Generator,
     DispatchFromDyn,
     Tuple,
+    Pointee,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);

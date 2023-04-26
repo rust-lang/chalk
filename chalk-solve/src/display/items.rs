@@ -206,6 +206,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Generator => "generator",
                 WellKnownTrait::DispatchFromDyn => "dispatch_from_dyn",
                 WellKnownTrait::Tuple => "tuple_trait",
+                WellKnownTrait::Pointee => "pointee",
             };
             writeln!(f, "#[lang({})]", name)?;
         }
