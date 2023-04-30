@@ -768,6 +768,24 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
     /// `AliasEq` to fallback *or* normalize it. So instead we
     /// handle this kind of reasoning through the `FromEnv` predicate.
     ///
+    /// Another set of clauses we generate for each associated type is about placeholder associated
+    /// types (i.e. `TyKind::AssociatedType`). Given
+    ///
+    /// ```notrust
+    /// trait Foo {
+    ///     type Assoc<'a, T>: Bar<U = Ty> where WC;
+    /// }
+    /// ```
+    ///
+    /// we generate
+    ///
+    /// ```notrust
+    /// forall<Self, 'a, T> {
+    ///     Implemented((Foo::Assoc<'a, T>)<Self>: Bar) :- WC.
+    ///     AliasEq(<<(Foo::Assoc<'a, T>)<Self>> as Bar>::U = Ty) :- WC.
+    /// }
+    /// ```
+    ///
     /// We also generate rules specific to WF requirements and implied bounds:
     ///
     /// ```notrust
@@ -818,11 +836,11 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
 
                 // Construct an application from the projection. So if we have `<T as Iterator>::Item`,
                 // we would produce `(Iterator::Item)<T>`.
-                let ty = TyKind::AssociatedType(self.id, substitution).intern(interner);
+                let placeholder_ty = TyKind::AssociatedType(self.id, substitution).intern(interner);
 
                 let projection_eq = AliasEq {
                     alias: AliasTy::Projection(projection.clone()),
-                    ty: ty.clone(),
+                    ty: placeholder_ty.clone(),
                 };
 
                 // Fallback rule. The solver uses this to move between the projection
@@ -839,7 +857,7 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 //        WellFormed((Foo::Assoc)<Self>) :- WellFormed(Self: Foo), WellFormed(WC).
                 //    }
                 builder.push_clause(
-                    WellFormed::Ty(ty.clone()),
+                    WellFormed::Ty(placeholder_ty.clone()),
                     iter::once(WellFormed::Trait(trait_ref.clone()).cast::<Goal<_>>(interner))
                         .chain(
                             where_clauses
@@ -856,7 +874,10 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                 //    forall<Self> {
                 //        FromEnv(Self: Foo) :- FromEnv((Foo::Assoc)<Self>).
                 //    }
-                builder.push_clause(FromEnv::Trait(trait_ref.clone()), Some(ty.from_env()));
+                builder.push_clause(
+                    FromEnv::Trait(trait_ref.clone()),
+                    Some(placeholder_ty.from_env()),
+                );
 
                 // Reverse rule for where clauses.
                 //
@@ -869,18 +890,18 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                     builder.push_binders(qwc.clone(), |builder, wc| {
                         builder.push_clause(
                             wc.into_from_env_goal(interner),
-                            Some(FromEnv::Ty(ty.clone())),
+                            Some(FromEnv::Ty(placeholder_ty.clone())),
                         );
                     });
                 }
 
-                // Reverse rule for implied bounds.
-                //
-                //    forall<Self> {
-                //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
-                //    }
                 for quantified_bound in bounds {
                     builder.push_binders(quantified_bound, |builder, bound| {
+                        // Reverse rule for implied bounds.
+                        //
+                        //    forall<Self> {
+                        //        FromEnv(<Self as Foo>::Assoc: Bounds) :- FromEnv(Self: Foo), WC
+                        //    }
                         for wc in bound.into_where_clauses(interner, projection_ty.clone()) {
                             builder.push_clause(
                                 wc.into_from_env_goal(interner),
@@ -889,6 +910,18 @@ impl<I: Interner> ToProgramClauses<I> for AssociatedTyDatum<I> {
                                 )
                                 .chain(where_clauses.iter().cloned().casted(interner)),
                             );
+                        }
+
+                        // Rules for the corresponding placeholder type.
+                        //
+                        // When `Foo::Assoc` has a bound `type Assoc: Trait<T = Ty>`, we generate:
+                        //
+                        //    forall<Self> {
+                        //        Implemented((Foo::Assoc)<Self>: Trait) :- WC
+                        //        AliasEq(<(Foo::Assoc)<Self> as Trait>::T = Ty) :- WC
+                        //    }
+                        for wc in bound.into_where_clauses(interner, placeholder_ty.clone()) {
+                            builder.push_clause(wc, where_clauses.iter().cloned());
                         }
                     });
                 }
