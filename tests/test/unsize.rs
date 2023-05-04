@@ -143,6 +143,100 @@ fn dyn_to_dyn_unsizing() {
 }
 
 #[test]
+fn dyn_upcasting() {
+    test! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[object_safe]
+            trait Super {}
+            #[object_safe]
+            trait GenericSuper<T> {}
+            #[object_safe]
+            trait Sub
+            where
+                Self: Super,
+                Self: GenericSuper<i32>,
+                Self: GenericSuper<i64>,
+            {}
+            #[object_safe]
+            trait Principal where Self: Sub {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto1 {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto2 {}
+        }
+
+        goal {
+            forall<'a> {
+                dyn Principal + 'a: Unsize<dyn Sub + 'a>
+            }
+        } yields {
+            expect![[r#"Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"#]]
+        }
+
+        goal {
+            forall<'a> {
+                dyn Principal + Auto1 + 'a: Unsize<dyn Sub + Auto1 + 'a>
+            }
+        } yields {
+            expect![[r#"Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"#]]
+        }
+
+        // Different set of auto traits
+        goal {
+            forall<'a> {
+                dyn Principal + Auto1 + 'a: Unsize<dyn Sub + Auto2 + 'a>
+            }
+        } yields {
+            expect![[r#"No possible solution"#]]
+        }
+
+        // Dropping auto traits is allowed
+        goal {
+            forall<'a> {
+                dyn Principal + Auto1 + Auto2 + 'a: Unsize<dyn Sub + Auto1 + 'a>
+            }
+        } yields {
+            expect![[r#"Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"#]]
+        }
+
+        // Upcasting to indirect super traits
+        goal {
+            forall<'a> {
+                dyn Principal + 'a: Unsize<dyn Super + 'a>
+            }
+        } yields {
+            expect![[r#"Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"#]]
+        }
+
+        goal {
+            forall<'a> {
+                dyn Principal + 'a: Unsize<dyn GenericSuper<i32> + 'a>
+            }
+        } yields {
+            expect![[r#"Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"#]]
+        }
+
+        // Ambiguous if there are multiple super traits applicable
+        goal {
+            exists<T> {
+                forall<'a> {
+                    dyn Principal + 'a: Unsize<dyn GenericSuper<T> + 'a>
+                }
+            }
+        } yields {
+            expect![[r#"Ambiguous; no inference guidance"#]]
+        }
+    }
+}
+
+#[test]
 fn ty_to_dyn_unsizing() {
     test! {
         program {
