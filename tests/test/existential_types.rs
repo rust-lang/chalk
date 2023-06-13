@@ -407,6 +407,31 @@ fn dyn_associated_type_binding() {
 }
 
 #[test]
+fn dyn_assoc_in_super_trait_bounds() {
+    test! {
+        program {
+            trait Base { type Output; }
+            trait Trait where Self: Base<Output = usize> {}
+        }
+
+        goal {
+            forall<'s> {
+                dyn Trait + 's: Trait
+            }
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            forall<'s> {
+                dyn Trait + 's: Base
+            }
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+    }
+}
+#[test]
 fn dyn_well_formed() {
     test! {
         program {

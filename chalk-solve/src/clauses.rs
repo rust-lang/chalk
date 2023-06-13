@@ -624,7 +624,10 @@ pub fn program_clauses_that_could_match<I: Interner>(
 
                 if let Some(well_known) = trait_datum.well_known {
                     builtin_traits::add_builtin_assoc_program_clauses(
-                        db, builder, well_known, self_ty,
+                        db,
+                        builder,
+                        well_known,
+                        self_ty.clone(),
                     )?;
                 }
 
@@ -644,6 +647,18 @@ pub fn program_clauses_that_could_match<I: Interner>(
                         trait_id,
                         proj.associated_ty_id,
                     );
+                }
+
+                // When `self_ty` is dyn type or opaque type, there may be associated type bounds
+                // for which we generate `Normalize` clauses.
+                match self_ty.kind(interner) {
+                    // FIXME: see the fixme for the analogous code for Implemented goals.
+                    TyKind::Dyn(_) => dyn_ty::build_dyn_self_ty_clauses(db, builder, self_ty),
+                    TyKind::OpaqueType(id, _) => {
+                        db.opaque_ty_data(*id)
+                            .to_program_clauses(builder, environment);
+                    }
+                    _ => {}
                 }
             }
             AliasTy::Opaque(_) => (),

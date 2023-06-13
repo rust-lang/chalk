@@ -1158,3 +1158,34 @@ fn projection_to_opaque() {
         }
     }
 }
+
+#[test]
+fn projection_from_super_trait_bounds() {
+    test! {
+        program {
+            trait Foo {
+                type A;
+            }
+            trait Bar where Self: Foo<A = ()> {}
+            impl Foo for i32 {
+                type A = ();
+            }
+            impl Bar for i32 {}
+            opaque type Opaque: Bar = i32;
+        }
+
+        goal {
+            forall<'a> {
+                <dyn Bar + 'a as Foo>::A = ()
+            }
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            <Opaque as Foo>::A = ()
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+    }
+}

@@ -283,3 +283,33 @@ fn opaque_super_trait() {
         }
     }
 }
+
+#[test]
+fn opaque_assoc_in_super_trait_bounds() {
+    test! {
+        program {
+            trait Foo {
+                type A;
+            }
+            trait EmptyFoo where Self: Foo<A = ()> { }
+            impl Foo for i32 {
+                type A = ();
+            }
+            impl<T> EmptyFoo for T where T: Foo<A = ()> { }
+
+            opaque type T: EmptyFoo = i32;
+        }
+
+        goal {
+            T: EmptyFoo
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            T: Foo
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+    }
+}
