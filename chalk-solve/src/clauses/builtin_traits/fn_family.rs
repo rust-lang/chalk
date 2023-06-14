@@ -109,6 +109,12 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
         }
         TyKind::Closure(closure_id, substitution) => {
             let closure_kind = db.closure_kind(*closure_id, substitution);
+            let closure_kind = match  closure_kind{
+                Some(k) => k,
+                // If we haven't resolved the closure kind yet, don't add any program clauses.
+                // Really, we *could* add `FnOnce`, since closures will always at least be that.
+                None => return,
+            };
             let trait_matches = matches!(
                 (well_known, closure_kind),
                 (WellKnownTrait::Fn, ClosureKind::Fn)

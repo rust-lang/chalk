@@ -3,6 +3,8 @@ use crate::{
     rust_ir::AdtKind, CanonicalVarKinds, Interner, RustIrDatabase, TraitRef, WellKnownTrait,
 };
 use chalk_ir::{Floundered, Substitution, Ty};
+use tracing::instrument;
+
 
 mod clone;
 mod copy;
@@ -135,6 +137,7 @@ fn last_field_of_struct<I: Interner>(
 
 /// Given a trait ref `T0: Trait` and a list of types `U0..Un`, pushes a clause of the form
 /// `Implemented(T0: Trait) :- Implemented(U0: Trait) .. Implemented(Un: Trait)`
+#[instrument(level = "debug", skip(db, builder, tys))]
 pub fn needs_impl_for_tys<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,

@@ -262,7 +262,7 @@ where
         self.ws.db().fn_def_name(fn_def_id)
     }
 
-    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind {
+    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Option<ClosureKind> {
         // TODO: record closure IDs
         self.ws.db().closure_kind(closure_id, substs)
     }
@@ -516,7 +516,7 @@ where
         self.db.fn_def_name(fn_def_id)
     }
 
-    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind {
+    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Option<ClosureKind> {
         // TODO: record closure IDs
         self.db.closure_kind(closure_id, substs)
     }

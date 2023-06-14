@@ -132,7 +132,10 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     fn is_object_safe(&self, trait_id: TraitId<I>) -> bool;
 
     /// Gets the `ClosureKind` for a given closure and substitution.
-    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> ClosureKind;
+    ///
+    /// Sometimes we don't know the `ClosureKind` yet. In that case, we return `None`.
+    /// This probably isn't right and should probably be changed back to be infallible later.
+    fn closure_kind(&self, closure_id: ClosureId<I>, substs: &Substitution<I>) -> Option<ClosureKind>;
 
     /// Gets the inputs and output for a given closure id and substitution. We
     /// pass both the `ClosureId` and it's `Substituion` to give implementors

@@ -164,6 +164,7 @@ pub fn push_auto_trait_impls<I: Interner>(
         TyKind::Closure(closure_id, substs) => {
             let closure_fn_substitution = builder.db.closure_fn_substitution(*closure_id, substs);
             let binders = builder.db.closure_upvars(*closure_id, substs);
+            debug!(?binders, ?closure_fn_substitution);
             let upvars = binders.substitute(builder.db.interner(), &closure_fn_substitution);
 
             // in a same behavior as for non-auto traits (reuse the code) we can require that
@@ -1105,9 +1106,12 @@ fn match_ty<I: Interner>(
             let generalized_ty =
                 generalize::Generalize::apply(builder.db.interner(), dyn_ty.clone());
             builder.push_binders(generalized_ty, |builder, dyn_ty| {
-                let bounds = dyn_ty
-                    .bounds
-                    .substitute(interner, &[ty.clone().cast::<GenericArg<I>>(interner)]);
+                let dyn_ty_ty = chalk_ir::Ty::new(interner, TyKind::Dyn(dyn_ty.clone()));
+                let arg: chalk_ir::GenericArg<I> = chalk_ir::GenericArg::new(
+                    interner,
+                    chalk_ir::GenericArgData::Ty(dyn_ty_ty.clone()),
+                );
+                let bounds = dyn_ty.bounds.substitute(interner, &[arg.clone()]);
 
                 let mut wf_goals = Vec::new();
 
@@ -1124,7 +1128,7 @@ fn match_ty<I: Interner>(
                     })
                 }));
 
-                builder.push_clause(WellFormed::Ty(ty.clone()), wf_goals);
+                builder.push_clause(WellFormed::Ty(dyn_ty_ty), wf_goals);
             });
         }
     }
