@@ -440,6 +440,11 @@ pub fn program_clauses_that_could_match<I: Interner>(
                         .to_program_clauses(builder, environment);
                 }
 
+                TyKind::AssociatedType(assoc_ty_id, _) => {
+                    db.associated_ty_data(*assoc_ty_id)
+                        .to_program_clauses(builder, environment);
+                }
+
                 TyKind::Dyn(_) => {
                     // If the self type is a `dyn trait` type, generate program-clauses
                     // that indicates that it implements its own traits.
@@ -517,6 +522,10 @@ pub fn program_clauses_that_could_match<I: Interner>(
                     }
                     TyKind::OpaqueType(opaque_ty_id, _) => {
                         db.opaque_ty_data(*opaque_ty_id)
+                            .to_program_clauses(builder, environment);
+                    }
+                    TyKind::AssociatedType(assoc_ty_id, _) => {
+                        db.associated_ty_data(*assoc_ty_id)
                             .to_program_clauses(builder, environment);
                     }
                     // If the self type is a `dyn trait` type, generate program-clauses
