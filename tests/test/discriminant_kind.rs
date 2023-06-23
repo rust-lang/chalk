@@ -164,3 +164,25 @@ fn discriminant_kind_assoc() {
         }
     }
 }
+
+#[test]
+fn discriminant_kind_with_infer_var() {
+    test! {
+        program {
+            #[lang(discriminant_kind)]
+            trait DiscriminantKind {
+                type Discriminant;
+            }
+
+            enum Option<T> {}
+        }
+
+        goal {
+            exists<T> {
+                Normalize(<Option<T> as DiscriminantKind>::Discriminant -> isize)
+            }
+        } yields {
+            expect![[r#"Unique; for<?U0> { substitution [?0 := ^0.0] }"#]]
+        }
+    }
+}
