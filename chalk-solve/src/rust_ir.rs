@@ -278,6 +278,7 @@ pub enum WellKnownTrait {
     DispatchFromDyn,
     Tuple,
     Pointee,
+    FnPtr,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);

@@ -66,7 +66,6 @@ fn function_implement_fn_traits() {
             impl Clone for Ty { }
 
             opaque type MyOpaque: Clone = Ty;
-
         }
 
         // Simple test: make sure a fully monomorphic type implements FnOnce
@@ -243,6 +242,77 @@ fn function_implement_fn_traits() {
             MyOpaque: FnOnce<()>
         } yields {
             expect![["No possible solution"]]
+        }
+    }
+}
+
+#[test]
+fn functions_implement_fn_ptr_trait() {
+    test! {
+        program {
+            #[lang(fn_ptr_trait)]
+            trait FnPtr {}
+
+            closure closure_ty(self,) {}
+            fn fn_def();
+        }
+
+        goal {
+            fn(()) -> (): FnPtr
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            unsafe fn(): FnPtr
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            extern "C" fn(u32, ...): FnPtr
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            for<'a> fn(&'a ()): FnPtr
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            forall<T, U> {
+                fn(T) -> U: FnPtr
+            }
+        } yields {
+            expect![[r#"Unique"#]]
+        }
+
+        goal {
+            i32: FnPtr
+        } yields {
+            expect![[r#"No possible solution"#]]
+        }
+
+        goal {
+            closure_ty: FnPtr
+        } yields {
+            expect![[r#"No possible solution"#]]
+        }
+
+        goal {
+            fn_def: FnPtr
+        } yields {
+            expect![[r#"No possible solution"#]]
+        }
+
+        goal {
+            exists<T> {
+                T: FnPtr
+            }
+        } yields {
+            expect![[r#"Ambiguous; no inference guidance"#]]
         }
     }
 }

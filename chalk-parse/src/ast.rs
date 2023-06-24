@@ -163,6 +163,7 @@ pub enum WellKnownTrait {
     DispatchFromDyn,
     Tuple,
     Pointee,
+    FnPtr,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

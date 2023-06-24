@@ -437,7 +437,8 @@ where
             | WellKnownTrait::DiscriminantKind
             | WellKnownTrait::Generator
             | WellKnownTrait::Pointee
-            | WellKnownTrait::Tuple => false,
+            | WellKnownTrait::Tuple
+            | WellKnownTrait::FnPtr => false,
         };
 
         if is_legal {
