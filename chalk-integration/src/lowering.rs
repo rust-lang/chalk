@@ -1141,6 +1141,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::DispatchFromDyn => rust_ir::WellKnownTrait::DispatchFromDyn,
             WellKnownTrait::Tuple => rust_ir::WellKnownTrait::Tuple,
             WellKnownTrait::Pointee => rust_ir::WellKnownTrait::Pointee,
+            WellKnownTrait::FnPtr => rust_ir::WellKnownTrait::FnPtr,
         }
     }
 }

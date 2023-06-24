@@ -2,7 +2,7 @@ use super::{builder::ClauseBuilder, generalize};
 use crate::{
     rust_ir::AdtKind, CanonicalVarKinds, Interner, RustIrDatabase, TraitRef, WellKnownTrait,
 };
-use chalk_ir::{Floundered, Substitution, Ty};
+use chalk_ir::{Floundered, Substitution, Ty, TyKind};
 
 mod clone;
 mod copy;
@@ -59,6 +59,11 @@ pub fn add_builtin_program_clauses<I: Interner>(
             }
             WellKnownTrait::Pointee => {
                 pointee::add_pointee_program_clauses(db, builder, self_ty)?;
+            }
+            WellKnownTrait::FnPtr => {
+                if let TyKind::Function(_) = self_ty.kind(db.interner()) {
+                    builder.push_fact(trait_ref);
+                }
             }
             // There are no builtin impls provided for the following traits:
             WellKnownTrait::Unpin
