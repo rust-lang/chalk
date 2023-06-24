@@ -196,7 +196,7 @@ pub trait RustIrDatabase<I: Interner>: Debug {
         sanitize_debug_name(|f| I::debug_fn_def_id(fn_def_id, f))
     }
 
-    // Retrieves the discriminant type for a type (mirror of rustc `TyS::discriminant_ty`)
+    // Retrieves the discriminant type for a type (mirror of rustc `Ty::discriminant_ty`)
     fn discriminant_type(&self, ty: Ty<I>) -> Ty<I>;
 }
 
