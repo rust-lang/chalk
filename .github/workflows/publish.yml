@@ -27,6 +27,7 @@ jobs:
         uses: actions-rs/install@v0.1
         with:
           crate: cargo-workspaces
+          version: 0.2.44
 
       - name: Install Node (for changelog generation)
         uses: actions/setup-node@v2
