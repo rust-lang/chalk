@@ -39,24 +39,26 @@ pub fn add_discriminant_clauses<I: Interner>(
         | TyKind::InferenceVar(..) => false,
     };
 
-    if !can_determine_discriminant {
-        return Err(Floundered);
-    }
-
-    let disc_ty = db.discriminant_type(self_ty.clone());
-
     let trait_id = db
         .well_known_trait_id(WellKnownTrait::DiscriminantKind)
         .unwrap();
     let trait_datum = db.trait_datum(trait_id);
 
     let associated_ty_id = trait_datum.associated_ty_ids[0];
-    let substitution = Substitution::from1(interner, self_ty);
+    let substitution = Substitution::from1(interner, self_ty.clone());
 
     let trait_ref = TraitRef {
         trait_id,
         substitution: substitution.clone(),
     };
+
+    builder.push_fact(trait_ref);
+
+    if !can_determine_discriminant {
+        return Ok(());
+    }
+
+    let disc_ty = db.discriminant_type(self_ty);
 
     let normalize = Normalize {
         alias: AliasTy::Projection(ProjectionTy {
@@ -66,7 +68,6 @@ pub fn add_discriminant_clauses<I: Interner>(
         ty: disc_ty,
     };
 
-    builder.push_fact(trait_ref);
     builder.push_fact(normalize);
 
     Ok(())
