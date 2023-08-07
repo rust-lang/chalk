@@ -156,11 +156,11 @@ fn discriminant_kind_assoc() {
         goal {
             forall<T> {
                 exists<U> {
-                    Normalize(<T as DiscriminantKind>::Discriminant -> U)
+                    <T as DiscriminantKind>::Discriminant = U
                 }
             }
         } yields {
-            expect![["Ambiguous; no inference guidance"]]
+            expect![["Unique; substitution [?0 := (DiscriminantKind::Discriminant)<!1_0>]"]]
         }
     }
 }
