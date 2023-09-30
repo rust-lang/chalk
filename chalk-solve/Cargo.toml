@@ -20,7 +20,7 @@ rustc-hash = { version = "1.1.0" }
 
 chalk-derive = { version = "0.94.0-dev.0", path = "../chalk-derive" }
 chalk-ir = { version = "0.94.0-dev.0", path = "../chalk-ir" }
-indexmap = "1.8.0"
+indexmap = "2"
 
 [dev-dependencies]
 chalk-integration = { path = "../chalk-integration" }
