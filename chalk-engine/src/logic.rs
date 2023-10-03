@@ -1310,10 +1310,7 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
         }
     }
 
-    fn select_subgoal(
-        &mut self,
-        mut canonical_strand: &mut CanonicalStrand<I>,
-    ) -> SubGoalSelection {
+    fn select_subgoal(&mut self, canonical_strand: &mut CanonicalStrand<I>) -> SubGoalSelection {
         loop {
             while canonical_strand.value.selected_subgoal.is_none() {
                 if canonical_strand.value.ex_clause.subgoals.is_empty() {
