@@ -16,7 +16,7 @@ bench = []
 [dependencies]
 docopt = "1.1.0"
 itertools = "0.12.0"
-rustyline = { version = "7.1.0", default-features = false }
+rustyline = { version = "12.0.0", default-features = false }
 salsa = "0.16.0"
 serde = "1.0"
 serde_derive = "1.0"
