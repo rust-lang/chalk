@@ -531,6 +531,7 @@ pub struct TyData<I: Interner> {
 
 bitflags! {
     /// Contains flags indicating various properties of a Ty
+    #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
     pub struct TypeFlags : u16 {
         /// Does the type contain an InferenceVar
         const HAS_TY_INFER                = 1;
@@ -564,16 +565,16 @@ bitflags! {
         const STILL_FURTHER_SPECIALIZABLE = 1 << 14;
 
         /// True when the type contains free names local to a particular context
-        const HAS_FREE_LOCAL_NAMES        = TypeFlags::HAS_TY_INFER.bits
-                                          | TypeFlags::HAS_CT_INFER.bits
-                                          | TypeFlags::HAS_TY_PLACEHOLDER.bits
-                                          | TypeFlags::HAS_CT_PLACEHOLDER.bits
-                                          | TypeFlags::HAS_FREE_LOCAL_REGIONS.bits;
+        const HAS_FREE_LOCAL_NAMES        = TypeFlags::HAS_TY_INFER.bits()
+                                          | TypeFlags::HAS_CT_INFER.bits()
+                                          | TypeFlags::HAS_TY_PLACEHOLDER.bits()
+                                          | TypeFlags::HAS_CT_PLACEHOLDER.bits()
+                                          | TypeFlags::HAS_FREE_LOCAL_REGIONS.bits();
 
         /// Does the type contain any form of projection
-        const HAS_PROJECTION              = TypeFlags::HAS_TY_PROJECTION.bits
-                                          | TypeFlags::HAS_TY_OPAQUE.bits
-                                          | TypeFlags::HAS_CT_PROJECTION.bits;
+        const HAS_PROJECTION              = TypeFlags::HAS_TY_PROJECTION.bits()
+                                          | TypeFlags::HAS_TY_OPAQUE.bits()
+                                          | TypeFlags::HAS_CT_PROJECTION.bits();
     }
 }
 /// Type data, which holds the actual type information.

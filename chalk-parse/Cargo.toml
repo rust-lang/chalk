@@ -12,10 +12,10 @@ edition = "2018"
 publish = false
 
 [build-dependencies.lalrpop]
-version = "0.19"
+version = "0.20"
 features = ["lexer"]
 
 [dependencies]
-lalrpop-util = "0.19"
+lalrpop-util = "0.20"
 regex = "1.5"
 string_cache = "0.8.0"

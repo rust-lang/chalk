@@ -63,7 +63,7 @@ impl LoadedProgram {
     /// Parse a goal and attempt to solve it, using the specified solver.
     fn goal(
         &self,
-        mut rl: Option<&mut rustyline::Editor<()>>,
+        mut rl: Option<&mut rustyline::DefaultEditor>,
         text: &str,
         multiple_answers: bool,
     ) -> Result<()> {
@@ -134,7 +134,7 @@ fn run() -> Result<()> {
 
     if args.flag_goal.is_empty() {
         // The user specified no goal. Enter interactive mode.
-        readline_loop(&mut rustyline::Editor::new(), "?- ", |rl, line| {
+        readline_loop(&mut rustyline::Editor::new()?, "?- ", |rl, line| {
             if let Err(e) = process(args, line, rl, &mut prog) {
                 eprintln!("error: {}", e);
             }
@@ -167,15 +167,15 @@ fn run() -> Result<()> {
 ///
 /// The loop terminates (and the program ends) when EOF is reached or if an error
 /// occurs while reading the next line.
-fn readline_loop<F>(rl: &mut rustyline::Editor<()>, prompt: &str, mut f: F) -> Result<()>
+fn readline_loop<F>(rl: &mut rustyline::DefaultEditor, prompt: &str, mut f: F) -> Result<()>
 where
-    F: FnMut(&mut rustyline::Editor<()>, &str),
+    F: FnMut(&mut rustyline::DefaultEditor, &str),
 {
     loop {
         match rl.readline(prompt) {
             Ok(line) => {
                 // Save the line to the history list.
-                rl.add_history_entry(&line);
+                let _ = rl.add_history_entry(&line);
 
                 // Process the line.
                 f(rl, &line);
@@ -199,7 +199,7 @@ where
 fn process(
     args: &Args,
     command: &str,
-    rl: &mut rustyline::Editor<()>,
+    rl: &mut rustyline::DefaultEditor,
     prog: &mut Option<LoadedProgram>,
 ) -> Result<()> {
     if command.is_empty() {
@@ -279,7 +279,7 @@ fn help() {
 
 /// Read a program from the command-line. Stop reading when EOF is read. If
 /// an error occurs while reading, a `Err` is returned.
-fn read_program(rl: &mut rustyline::Editor<()>) -> Result<String> {
+fn read_program(rl: &mut rustyline::DefaultEditor) -> Result<String> {
     println!("Enter a program; press Ctrl-D when finished");
     let mut text = String::new();
     readline_loop(rl, "| ", |_, line| {
