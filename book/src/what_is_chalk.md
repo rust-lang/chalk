@@ -38,7 +38,7 @@ To do this, it takes as input key information about a Rust program, such as:
 
 Internally, Chalk works by converting the Rust-specific information, like traits
 and impls, into *logical predicates*. This process is called "lowering", and you
-can learn more about in the [*Lowering to Logic*][lowering-to-logic] and
+can learn more about it in the [*Lowering to Logic*][lowering-to-logic] and
 [*Lowering Rules*][lowering-rules]) sections.
 
 [lowering-rules]: ./clauses/lowering_rules.html
