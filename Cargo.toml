@@ -15,7 +15,7 @@ bench = []
 
 [dependencies]
 docopt = "1.1.0"
-itertools = "0.10.0"
+itertools = "0.12.0"
 rustyline = { version = "7.1.0", default-features = false }
 salsa = "0.16.0"
 serde = "1.0"
@@ -34,6 +34,6 @@ chalk-integration = { version = "0.95.0-dev.0", path = "chalk-integration" }
 [dev-dependencies]
 # used for program_writer test errors
 diff = "0.1"
-expect-test = "1.2.1"
+expect-test = "1.4.1"
 pretty_assertions = "0.6.1"
 regex = "1"
