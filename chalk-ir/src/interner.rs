@@ -6,9 +6,9 @@ use crate::CanonicalVarKinds;
 use crate::ClosureId;
 use crate::Constraint;
 use crate::Constraints;
+use crate::CoroutineId;
 use crate::FnDefId;
 use crate::ForeignDefId;
-use crate::GeneratorId;
 use crate::GenericArg;
 use crate::GenericArgData;
 use crate::Goal;
@@ -270,8 +270,8 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
     /// Prints the debug representation of an alias.
     /// Returns `None` to fallback to the default debug output.
     #[allow(unused_variables)]
-    fn debug_generator_id(
-        generator_id: GeneratorId<Self>,
+    fn debug_coroutine_id(
+        coroutine_id: CoroutineId<Self>,
         fmt: &mut fmt::Formatter<'_>,
     ) -> Option<fmt::Result> {
         None

@@ -107,10 +107,10 @@ where
                         TyKind::Closure(id_b, substitution_b),
                     ) => id_a == id_b && matches(substitution_a, substitution_b),
                     (
-                        TyKind::Generator(generator_a, substitution_a),
-                        TyKind::Generator(generator_b, substitution_b),
+                        TyKind::Coroutine(coroutine_a, substitution_a),
+                        TyKind::Coroutine(coroutine_b, substitution_b),
                     ) => {
-                        generator_a == generator_b
+                        coroutine_a == coroutine_b
                             && self
                                 .zip_substs(
                                     variance,
@@ -121,10 +121,10 @@ where
                                 .is_ok()
                     }
                     (
-                        TyKind::GeneratorWitness(generator_a, substitution_a),
-                        TyKind::GeneratorWitness(generator_b, substitution_b),
+                        TyKind::CoroutineWitness(coroutine_a, substitution_a),
+                        TyKind::CoroutineWitness(coroutine_b, substitution_b),
                     ) => {
-                        generator_a == generator_b
+                        coroutine_a == coroutine_b
                             && self
                                 .zip_substs(
                                     variance,

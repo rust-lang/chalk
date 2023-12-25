@@ -17,21 +17,21 @@ but have since moved away from that; nevertheless, the term is still useful in d
 
 ## Notable application types
 
-### Generator
+### Coroutine
 
-A `Generator` represents a Rust generator. There are three major components
-to a generator:
+A `Coroutine` represents a Rust coroutine. There are three major components
+to a coroutine:
 
-* Upvars - similar to closure upvars, they reference values outside of the generator,
+* Upvars - similar to closure upvars, they reference values outside of the coroutine,
   and are stored across all yield points.
-* Resume/yield/return types - the types produced/consumed by various generator methods.
-  These are not stored in the generator across yield points - they are only
-  used when the generator is running.
-* Generator witness - see the `Generator Witness` section below.
+* Resume/yield/return types - the types produced/consumed by various coroutine methods.
+  These are not stored in the coroutine across yield points - they are only
+  used when the coroutine is running.
+* Coroutine witness - see the `Coroutine Witness` section below.
 
-Of these types, only upvars and resume/yield/return are stored directly in `GeneratorDatum`
-(which is accessed via `RustIrDatabase`). The generator witness is implicitly associated with
-the generator by virtue of sharing the same `GeneratorId`. It is only used when determining
+Of these types, only upvars and resume/yield/return are stored directly in `CoroutineDatum`
+(which is accessed via `RustIrDatabase`). The coroutine witness is implicitly associated with
+the coroutine by virtue of sharing the same `CoroutineId`. It is only used when determining
 auto trait impls, where it is considered a 'constituent type'.
 
 For example:
@@ -49,20 +49,20 @@ fn use(_: usize) -> Bar {}
 The type of yield would be `usize`, the resume type would be the type of `a` and the return type
 would be `Bar`.
 
-### Generator witness types
+### Coroutine witness types
 
-The `GeneratorWitness` variant represents the generator witness of
-the generator with id `GeneratorId`. 
+The `CoroutineWitness` variant represents the coroutine witness of
+the coroutine with id `CoroutineId`. 
 
-The generator witness contains multiple witness types,
-which represent the types that may be part of a generator
+The coroutine witness contains multiple witness types,
+which represent the types that may be part of a coroutine
 state - that is, the types of all variables that may be live across
 a `yield` point.
 
 Unlike other types, witnesses include bound, existential
 lifetimes, which refer to lifetimes within the suspended stack frame.
 You can think of it as a type like `exists<'a> { (T...) }`.
-As an example, imagine that a type that isn't `Send` lives across a `yield`, then the generator
+As an example, imagine that a type that isn't `Send` lives across a `yield`, then the coroutine
 itself can't be `Send`.
 
 Witnesses have a binder for the erased lifetime(s), which must be

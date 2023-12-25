@@ -92,10 +92,10 @@ where
                 let v = ws.db().fn_def_datum(id);
                 write_item(f, &InternalWriterState::new(ws), &*v)?;
             }
-            RecordedItemId::Generator(id) => {
-                let generator = ws.db().generator_datum(id);
-                let witness = ws.db().generator_witness_datum(id);
-                write_item(f, &InternalWriterState::new(ws), &(&*generator, &*witness))?;
+            RecordedItemId::Coroutine(id) => {
+                let coroutine = ws.db().coroutine_datum(id);
+                let witness = ws.db().coroutine_witness_datum(id);
+                write_item(f, &InternalWriterState::new(ws), &(&*coroutine, &*witness))?;
             }
         }
     }

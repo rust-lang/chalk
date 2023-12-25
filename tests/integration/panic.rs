@@ -165,14 +165,14 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
-    fn generator_datum(&self, generator_id: GeneratorId<ChalkIr>) -> Arc<GeneratorDatum<ChalkIr>> {
+    fn coroutine_datum(&self, coroutine_id: CoroutineId<ChalkIr>) -> Arc<CoroutineDatum<ChalkIr>> {
         unimplemented!()
     }
 
-    fn generator_witness_datum(
+    fn coroutine_witness_datum(
         &self,
-        generator_id: GeneratorId<ChalkIr>,
-    ) -> Arc<GeneratorWitnessDatum<ChalkIr>> {
+        coroutine_id: CoroutineId<ChalkIr>,
+    ) -> Arc<CoroutineWitnessDatum<ChalkIr>> {
         unimplemented!()
     }
 

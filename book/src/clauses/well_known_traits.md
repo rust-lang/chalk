@@ -28,7 +28,7 @@ Some common examples of auto traits are `Send` and `Sync`.
 [coinductive_section]: ../engine/logic/coinduction.html#coinduction-and-refinement-strands
 
 # Current state 
-| Type            | Copy | Clone | Sized | Unsize | CoerceUnsized | Drop | FnOnce/FnMut/Fn  | Unpin  | Generator | auto traits |
+| Type            | Copy | Clone | Sized | Unsize | CoerceUnsized | Drop | FnOnce/FnMut/Fn  | Unpin  | Coroutine | auto traits |
 | ---             | ---  | ---   | ---   | ---   |      ---       | ---  | --- | ---    |  ---      |  ---        |
 | tuple types     | ✅    | ✅    | ✅     | ✅     |  ⚬             | ⚬    | ⚬  |  ⚬      |  ⚬       |   ✅         |
 | structs         | ⚬    | ⚬    |  ✅    | ✅     |  ⚬             | ⚬    | ⚬  |  ⚬      |  ⚬       |   ✅         |
@@ -44,7 +44,7 @@ Some common examples of auto traits are `Send` and `Sync`.
 | slices          | ⚬     | ⚬    | ⚬     |   ✅    | ⚬            | ⚬    | ⚬   | ⚬      |  ⚬       |    ✅       |
 | arrays          | ✅     | ✅    | ✅     |   ❌    | ⚬            | ⚬    | ⚬   | ⚬      |  ⚬       |    ✅        |
 | closures        | ✅     | ✅    | ✅     | ⚬      | ⚬            | ⚬    | ✅   | ⚬      |  ⚬       |    ✅        |
-| generators      |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬            | ⚬     | ⚬  | ✅      |   ❌       |    ✅       |
+| coroutines      |  ⚬    |  ⚬  | ❌     |  ⚬     | ⚬            | ⚬     | ⚬  | ✅      |   ❌       |    ✅       |
 | gen. witness    |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
 | opaque          |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |
 | foreign         |  ⚬    |   ⚬  |  ⚬   |   ⚬    |  ⚬            | ⚬    |  ⚬ |  ⚬    |   ⚬       |    ❌       |

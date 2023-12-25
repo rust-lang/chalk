@@ -1,6 +1,6 @@
 use chalk_ir::interner::HasInterner;
 use chalk_ir::{
-    self, AdtId, BoundVar, ClosureId, DebruijnIndex, FnDefId, GeneratorId, OpaqueTyId, TraitId,
+    self, AdtId, BoundVar, ClosureId, CoroutineId, DebruijnIndex, FnDefId, OpaqueTyId, TraitId,
     VariableKinds,
 };
 use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
@@ -16,7 +16,7 @@ pub type AdtIds = BTreeMap<Ident, chalk_ir::AdtId<ChalkIr>>;
 pub type FnDefIds = BTreeMap<Ident, chalk_ir::FnDefId<ChalkIr>>;
 pub type ClosureIds = BTreeMap<Ident, chalk_ir::ClosureId<ChalkIr>>;
 pub type TraitIds = BTreeMap<Ident, chalk_ir::TraitId<ChalkIr>>;
-pub type GeneratorIds = BTreeMap<Ident, chalk_ir::GeneratorId<ChalkIr>>;
+pub type CoroutineIds = BTreeMap<Ident, chalk_ir::CoroutineId<ChalkIr>>;
 pub type OpaqueTyIds = BTreeMap<Ident, chalk_ir::OpaqueTyId<ChalkIr>>;
 pub type AdtKinds = BTreeMap<chalk_ir::AdtId<ChalkIr>, TypeKind>;
 pub type FnDefKinds = BTreeMap<chalk_ir::FnDefId<ChalkIr>, TypeKind>;
@@ -24,7 +24,7 @@ pub type ClosureKinds = BTreeMap<chalk_ir::ClosureId<ChalkIr>, TypeKind>;
 pub type TraitKinds = BTreeMap<chalk_ir::TraitId<ChalkIr>, TypeKind>;
 pub type AutoTraits = BTreeMap<chalk_ir::TraitId<ChalkIr>, bool>;
 pub type OpaqueTyVariableKinds = BTreeMap<chalk_ir::OpaqueTyId<ChalkIr>, TypeKind>;
-pub type GeneratorKinds = BTreeMap<chalk_ir::GeneratorId<ChalkIr>, TypeKind>;
+pub type CoroutineKinds = BTreeMap<chalk_ir::CoroutineId<ChalkIr>, TypeKind>;
 pub type AssociatedTyLookups = BTreeMap<(chalk_ir::TraitId<ChalkIr>, Ident), AssociatedTyLookup>;
 pub type AssociatedTyValueIds =
     BTreeMap<(chalk_ir::ImplId<ChalkIr>, Ident), AssociatedTyValueId<ChalkIr>>;
@@ -49,8 +49,8 @@ pub struct Env<'k> {
     pub associated_ty_lookups: &'k AssociatedTyLookups,
     pub auto_traits: &'k AutoTraits,
     pub foreign_ty_ids: &'k ForeignIds,
-    pub generator_ids: &'k GeneratorIds,
-    pub generator_kinds: &'k GeneratorKinds,
+    pub coroutine_ids: &'k CoroutineIds,
+    pub coroutine_kinds: &'k CoroutineKinds,
     /// GenericArg identifiers are used as keys, therefore
     /// all identifiers in an environment must be unique (no shadowing).
     pub parameter_map: ParameterMap,
@@ -83,7 +83,7 @@ pub enum TypeLookup<'k> {
     Opaque(OpaqueTyId<ChalkIr>),
     Foreign(ForeignDefId<ChalkIr>),
     Trait(TraitId<ChalkIr>),
-    Generator(GeneratorId<ChalkIr>),
+    Coroutine(CoroutineId<ChalkIr>),
 }
 
 impl Env<'_> {
@@ -133,7 +133,7 @@ impl Env<'_> {
             Ok(TypeLookup::Adt(id)) => tykind!(self.adt_kind(id), Adt, id),
             Ok(TypeLookup::FnDef(id)) => tykind!(self.fn_def_kind(id), FnDef, id),
             Ok(TypeLookup::Closure(id)) => tykind!(self.closure_kind(id), Closure, id),
-            Ok(TypeLookup::Generator(id)) => tykind!(self.generator_kind(id), Generator, id),
+            Ok(TypeLookup::Coroutine(id)) => tykind!(self.coroutine_kind(id), Coroutine, id),
             Ok(TypeLookup::Opaque(id)) => Ok(chalk_ir::TyKind::Alias(chalk_ir::AliasTy::Opaque(
                 chalk_ir::OpaqueTy {
                     opaque_ty_id: id,
@@ -165,8 +165,8 @@ impl Env<'_> {
             Ok(TypeLookup::Foreign(*id))
         } else if let Some(id) = self.trait_ids.get(&name.str) {
             Ok(TypeLookup::Trait(*id))
-        } else if let Some(id) = self.generator_ids.get(&name.str) {
-            Ok(TypeLookup::Generator(*id))
+        } else if let Some(id) = self.coroutine_ids.get(&name.str) {
+            Ok(TypeLookup::Coroutine(*id))
         } else {
             Err(RustIrError::NotStruct(name.clone()))
         }
@@ -208,8 +208,8 @@ impl Env<'_> {
         &self.opaque_ty_kinds[&id]
     }
 
-    pub fn generator_kind(&self, id: chalk_ir::GeneratorId<ChalkIr>) -> &TypeKind {
-        &self.generator_kinds[&id]
+    pub fn coroutine_kind(&self, id: chalk_ir::CoroutineId<ChalkIr>) -> &TypeKind {
+        &self.coroutine_kinds[&id]
     }
 
     pub fn lookup_associated_ty(

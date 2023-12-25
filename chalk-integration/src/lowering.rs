@@ -752,7 +752,7 @@ impl LowerWithEnv for Ty {
                     TypeLookup::FnDef(id) => tykind!(env.fn_def_kind(id), FnDef, id),
                     TypeLookup::Closure(id) => tykind!(env.closure_kind(id), Closure, id),
                     TypeLookup::Opaque(id) => tykind!(env.opaque_kind(id), OpaqueType, id),
-                    TypeLookup::Generator(id) => tykind!(env.generator_kind(id), Generator, id),
+                    TypeLookup::Coroutine(id) => tykind!(env.coroutine_kind(id), Coroutine, id),
                     TypeLookup::Foreign(_) | TypeLookup::Trait(_) => {
                         panic!("Unexpected apply type")
                     }
@@ -1047,8 +1047,8 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         closure_ids: &program.closure_ids,
         trait_ids: &program.trait_ids,
         opaque_ty_ids: &program.opaque_ty_ids,
-        generator_ids: &program.generator_ids,
-        generator_kinds: &program.generator_kinds,
+        coroutine_ids: &program.coroutine_ids,
+        coroutine_kinds: &program.coroutine_kinds,
         adt_kinds: &program.adt_kinds,
         fn_def_kinds: &program.fn_def_kinds,
         closure_kinds: &program.closure_kinds,
@@ -1137,7 +1137,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::Unpin => rust_ir::WellKnownTrait::Unpin,
             WellKnownTrait::CoerceUnsized => rust_ir::WellKnownTrait::CoerceUnsized,
             WellKnownTrait::DiscriminantKind => rust_ir::WellKnownTrait::DiscriminantKind,
-            WellKnownTrait::Generator => rust_ir::WellKnownTrait::Generator,
+            WellKnownTrait::Coroutine => rust_ir::WellKnownTrait::Coroutine,
             WellKnownTrait::DispatchFromDyn => rust_ir::WellKnownTrait::DispatchFromDyn,
             WellKnownTrait::Tuple => rust_ir::WellKnownTrait::Tuple,
             WellKnownTrait::Pointee => rust_ir::WellKnownTrait::Pointee,

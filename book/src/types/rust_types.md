@@ -188,8 +188,8 @@ enum to chalk's [`TyKind`] on the fly, when `data()` is invoked.
 | `FnPtr` | `Function` |
 | `Dynamic` | `Dyn` |
 | `Closure` | `Closure` |
-| `Generator` | `Generator` |
-| `GeneratorWitness` | `GeneratorWitness` |
+| `Coroutine` | `Coroutine` |
+| `CoroutineWitness` | `CoroutineWitness` |
 | `Never` | `Never` |
 | `Tuple` | `Tuple` |
 | `Projection` | `Alias` |

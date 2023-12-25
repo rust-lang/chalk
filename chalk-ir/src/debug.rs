@@ -49,10 +49,10 @@ impl<I: Interner> Debug for ClosureId<I> {
     }
 }
 
-impl<I: Interner> Debug for GeneratorId<I> {
+impl<I: Interner> Debug for CoroutineId<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> std::fmt::Result {
-        I::debug_generator_id(*self, fmt)
-            .unwrap_or_else(|| write!(fmt, "GeneratorId({:?})", self.0))
+        I::debug_coroutine_id(*self, fmt)
+            .unwrap_or_else(|| write!(fmt, "CoroutineId({:?})", self.0))
     }
 }
 
@@ -232,10 +232,10 @@ impl<I: Interner> Debug for TyKind<I> {
             TyKind::Closure(id, substitution) => {
                 write!(fmt, "{{closure:{:?}}}<{:?}>", id, substitution)
             }
-            TyKind::Generator(generator, substitution) => {
-                write!(fmt, "{:?}<{:?}>", generator, substitution)
+            TyKind::Coroutine(coroutine, substitution) => {
+                write!(fmt, "{:?}<{:?}>", coroutine, substitution)
             }
-            TyKind::GeneratorWitness(witness, substitution) => {
+            TyKind::CoroutineWitness(witness, substitution) => {
                 write!(fmt, "{:?}<{:?}>", witness, substitution)
             }
             TyKind::Foreign(foreign_ty) => write!(fmt, "{:?}", foreign_ty),
@@ -537,13 +537,13 @@ impl<'a, I: Interner> Debug for TyKindDebug<'a, I> {
                 id,
                 substitution.with_angle(interner)
             ),
-            TyKind::Generator(generator, substitution) => write!(
+            TyKind::Coroutine(coroutine, substitution) => write!(
                 fmt,
                 "{:?}{:?}",
-                generator,
+                coroutine,
                 substitution.with_angle(interner)
             ),
-            TyKind::GeneratorWitness(witness, substitution) => {
+            TyKind::CoroutineWitness(witness, substitution) => {
                 write!(fmt, "{:?}{:?}", witness, substitution.with_angle(interner))
             }
             TyKind::Foreign(foreign_ty) => write!(fmt, "{:?}", foreign_ty,),

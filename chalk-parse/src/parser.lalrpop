@@ -18,7 +18,7 @@ Item: Option<Item> = {
     ClosureDefn => Some(Item::ClosureDefn(<>)),
     TraitDefn => Some(Item::TraitDefn(<>)),
     OpaqueTyDefn => Some(Item::OpaqueTyDefn(<>)),
-    GeneratorDefn => Some(Item::GeneratorDefn(<>)),
+    CoroutineDefn => Some(Item::CoroutineDefn(<>)),
     Impl => Some(Item::Impl(<>)),
     Clause => Some(Item::Clause(<>)),
     ForeignType => Some(Item::Foreign(<>)),
@@ -67,7 +67,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "unpin" ")" "]" => WellKnownTrait::Unpin,
      "#" "[" "lang" "(" "coerce_unsized" ")" "]" => WellKnownTrait::CoerceUnsized,
      "#" "[" "lang" "(" "discriminant_kind" ")" "]" => WellKnownTrait::DiscriminantKind,
-     "#" "[" "lang" "(" "generator" ")" "]" => WellKnownTrait::Generator,
+     "#" "[" "lang" "(" "coroutine" ")" "]" => WellKnownTrait::Coroutine,
      "#" "[" "lang" "(" "dispatch_from_dyn" ")" "]" => WellKnownTrait::DispatchFromDyn,
      "#" "[" "lang" "(" "tuple_trait" ")" "]" => WellKnownTrait::Tuple,
      "#" "[" "lang" "(" "pointee_trait" ")" "]" => WellKnownTrait::Pointee,
@@ -205,12 +205,12 @@ Movability: Movability = {
      => Movability::Movable
 }
 
-GeneratorDefn: GeneratorDefn = {
-    "generator" <m:Movability> <n:Id> <p:Angle<VariableKind>> "[" "resume" "=" <resume:Ty> "," "yield" "=" <yield_ty:Ty> "]" <ret_ty:FnReturn?>
+CoroutineDefn: CoroutineDefn = {
+    "coroutine" <m:Movability> <n:Id> <p:Angle<VariableKind>> "[" "resume" "=" <resume:Ty> "," "yield" "=" <yield_ty:Ty> "]" <ret_ty:FnReturn?>
     "{"
        "upvars" "[" <upvars:SemiColon<Ty>> "]"
        "witnesses" <l:ExistsLifetimes?> "[" <witnesses:SemiColon<Ty>> "]"
-    "}" => GeneratorDefn {
+    "}" => CoroutineDefn {
        name: n,
        movability: m,
        variable_kinds: p,

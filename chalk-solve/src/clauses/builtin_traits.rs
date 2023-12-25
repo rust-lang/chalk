@@ -6,9 +6,9 @@ use chalk_ir::{Floundered, Substitution, Ty, TyKind};
 
 mod clone;
 mod copy;
+mod coroutine;
 mod discriminant_kind;
 mod fn_family;
-mod generator;
 mod pointee;
 mod sized;
 mod tuple;
@@ -51,8 +51,8 @@ pub fn add_builtin_program_clauses<I: Interner>(
             }
             // DiscriminantKind is automatically implemented for all types
             WellKnownTrait::DiscriminantKind => builder.push_fact(trait_ref),
-            WellKnownTrait::Generator => {
-                generator::add_generator_program_clauses(db, builder, self_ty)?;
+            WellKnownTrait::Coroutine => {
+                coroutine::add_coroutine_program_clauses(db, builder, self_ty)?;
             }
             WellKnownTrait::Tuple => {
                 tuple::add_tuple_program_clauses(db, builder, self_ty)?;
@@ -95,7 +95,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
         WellKnownTrait::DiscriminantKind => {
             discriminant_kind::add_discriminant_clauses(db, builder, self_ty)
         }
-        WellKnownTrait::Generator => generator::add_generator_program_clauses(db, builder, self_ty),
+        WellKnownTrait::Coroutine => coroutine::add_coroutine_program_clauses(db, builder, self_ty),
         _ => Ok(()),
     })
 }

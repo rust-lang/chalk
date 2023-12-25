@@ -758,12 +758,12 @@ where
                 substitution.clone().try_fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
-            TyKind::Generator(id, substitution) => TyKind::Generator(
+            TyKind::Coroutine(id, substitution) => TyKind::Coroutine(
                 id.try_fold_with(folder, outer_binder)?,
                 substitution.clone().try_fold_with(folder, outer_binder)?,
             )
             .intern(folder.interner()),
-            TyKind::GeneratorWitness(id, substitution) => TyKind::GeneratorWitness(
+            TyKind::CoroutineWitness(id, substitution) => TyKind::CoroutineWitness(
                 id.try_fold_with(folder, outer_binder)?,
                 substitution.clone().try_fold_with(folder, outer_binder)?,
             )

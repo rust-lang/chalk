@@ -94,8 +94,8 @@ impl<I: Interner> RenderAsRust<I> for TyKind<I> {
             TyKind::FnDef(..) => write!(f, "<fn_def>"),
             TyKind::Closure(..) => write!(f, "<closure>"),
             TyKind::Foreign(..) => write!(f, "<foreign>"),
-            TyKind::Generator(..) => write!(f, "<generator>"),
-            TyKind::GeneratorWitness(..) => write!(f, "<generator_witness>"),
+            TyKind::Coroutine(..) => write!(f, "<coroutine>"),
+            TyKind::CoroutineWitness(..) => write!(f, "<coroutine_witness>"),
 
             TyKind::Array(ty, const_) => write!(f, "[{}; {}]", ty.display(s), const_.display(s),),
             TyKind::Dyn(dyn_ty) => {

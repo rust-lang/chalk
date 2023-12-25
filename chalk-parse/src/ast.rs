@@ -25,7 +25,7 @@ pub enum Item {
     ClosureDefn(ClosureDefn),
     TraitDefn(TraitDefn),
     OpaqueTyDefn(OpaqueTyDefn),
-    GeneratorDefn(GeneratorDefn),
+    CoroutineDefn(CoroutineDefn),
     Impl(Impl),
     Clause(Clause),
     Foreign(ForeignDefn),
@@ -57,7 +57,7 @@ pub enum Movability {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct GeneratorDefn {
+pub struct CoroutineDefn {
     pub name: Identifier,
     pub movability: Movability,
     pub variable_kinds: Vec<VariableKind>,
@@ -159,7 +159,7 @@ pub enum WellKnownTrait {
     Unpin,
     CoerceUnsized,
     DiscriminantKind,
-    Generator,
+    Coroutine,
     DispatchFromDyn,
     Tuple,
     Pointee,

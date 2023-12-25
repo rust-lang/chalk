@@ -398,9 +398,9 @@ pub struct FnDefId<I: Interner>(pub I::DefId);
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ClosureId<I: Interner>(pub I::DefId);
 
-/// Id for Rust generators.
+/// Id for Rust coroutines.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct GeneratorId<I: Interner>(pub I::DefId);
+pub struct CoroutineId<I: Interner>(pub I::DefId);
 
 /// Id for foreign types.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -620,11 +620,11 @@ pub enum TyKind<I: Interner> {
     /// A closure.
     Closure(ClosureId<I>, Substitution<I>),
 
-    /// A generator.
-    Generator(GeneratorId<I>, Substitution<I>),
+    /// A coroutine.
+    Coroutine(CoroutineId<I>, Substitution<I>),
 
-    /// A generator witness.
-    GeneratorWitness(GeneratorId<I>, Substitution<I>),
+    /// A coroutine witness.
+    CoroutineWitness(CoroutineId<I>, Substitution<I>),
 
     /// foreign types
     Foreign(ForeignDefId<I>),
@@ -691,8 +691,8 @@ impl<I: Interner> TyKind<I> {
             | TyKind::AssociatedType(_, substitution)
             | TyKind::Tuple(_, substitution)
             | TyKind::Closure(_, substitution)
-            | TyKind::Generator(_, substitution)
-            | TyKind::GeneratorWitness(_, substitution)
+            | TyKind::Coroutine(_, substitution)
+            | TyKind::CoroutineWitness(_, substitution)
             | TyKind::FnDef(_, substitution)
             | TyKind::OpaqueType(_, substitution) => substitution.compute_flags(interner),
             TyKind::Scalar(_) | TyKind::Str | TyKind::Never | TyKind::Foreign(_) => {

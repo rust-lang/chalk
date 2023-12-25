@@ -1,12 +1,12 @@
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    self, AdtId, AssocTypeId, BoundVar, ClosureId, DebruijnIndex, FnDefId, ForeignDefId,
-    GeneratorId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
+    self, AdtId, AssocTypeId, BoundVar, ClosureId, CoroutineId, DebruijnIndex, FnDefId,
+    ForeignDefId, ImplId, OpaqueTyId, TraitId, TyVariableKind, VariableKinds,
 };
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::{
-    self, Anonymize, AssociatedTyValueId, GeneratorDatum, GeneratorInputOutputDatum,
-    GeneratorWitnessDatum, GeneratorWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
+    self, Anonymize, AssociatedTyValueId, CoroutineDatum, CoroutineInputOutputDatum,
+    CoroutineWitnessDatum, CoroutineWitnessExistential, OpaqueTyDatum, OpaqueTyDatumBound,
 };
 use rust_ir::IntoWhereClauses;
 use std::collections::{BTreeMap, HashSet};
@@ -33,8 +33,8 @@ pub(super) struct ProgramLowerer {
     opaque_ty_ids: OpaqueTyIds,
     adt_kinds: AdtKinds,
     fn_def_kinds: FnDefKinds,
-    generator_ids: GeneratorIds,
-    generator_kinds: GeneratorKinds,
+    coroutine_ids: CoroutineIds,
+    coroutine_kinds: CoroutineKinds,
     closure_kinds: ClosureKinds,
     trait_kinds: TraitKinds,
     opaque_ty_kinds: OpaqueTyVariableKinds,
@@ -128,10 +128,10 @@ impl ProgramLowerer {
                     self.foreign_ty_ids
                         .insert(ident.str.clone(), ForeignDefId(raw_id));
                 }
-                Item::GeneratorDefn(defn) => {
-                    let id = GeneratorId(raw_id);
-                    self.generator_ids.insert(defn.name.str.clone(), id);
-                    self.generator_kinds.insert(id, defn.lower_type_kind()?);
+                Item::CoroutineDefn(defn) => {
+                    let id = CoroutineId(raw_id);
+                    self.coroutine_ids.insert(defn.name.str.clone(), id);
+                    self.coroutine_kinds.insert(id, defn.lower_type_kind()?);
                 }
                 Item::Impl(_) => continue,
                 Item::Clause(_) => continue,
@@ -156,8 +156,8 @@ impl ProgramLowerer {
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
         let mut opaque_ty_data = BTreeMap::new();
-        let mut generator_data = BTreeMap::new();
-        let mut generator_witness_data = BTreeMap::new();
+        let mut coroutine_data = BTreeMap::new();
+        let mut coroutine_witness_data = BTreeMap::new();
         let mut hidden_opaque_types = BTreeMap::new();
         let mut custom_clauses = Vec::new();
 
@@ -173,8 +173,8 @@ impl ProgramLowerer {
                 trait_kinds: &self.trait_kinds,
                 opaque_ty_ids: &self.opaque_ty_ids,
                 opaque_ty_kinds: &self.opaque_ty_kinds,
-                generator_ids: &self.generator_ids,
-                generator_kinds: &self.generator_kinds,
+                coroutine_ids: &self.coroutine_ids,
+                coroutine_kinds: &self.coroutine_kinds,
                 associated_ty_lookups: &self.associated_ty_lookups,
                 parameter_map: BTreeMap::new(),
                 auto_traits: &self.auto_traits,
@@ -418,7 +418,7 @@ impl ProgramLowerer {
                         );
                     }
                 }
-                Item::GeneratorDefn(ref defn) => {
+                Item::CoroutineDefn(ref defn) => {
                     let variable_kinds = defn
                         .variable_kinds
                         .iter()
@@ -438,7 +438,7 @@ impl ProgramLowerer {
                         let upvars: Result<Vec<_>, _> =
                             defn.upvars.iter().map(|ty| ty.lower(env)).collect();
 
-                        Ok(GeneratorInputOutputDatum {
+                        Ok(CoroutineInputOutputDatum {
                             resume_type,
                             yield_type,
                             return_type,
@@ -453,18 +453,18 @@ impl ProgramLowerer {
                             witnesses
                         })?;
 
-                        Ok(GeneratorWitnessExistential { types: witnesses })
+                        Ok(CoroutineWitnessExistential { types: witnesses })
                     })?;
 
-                    let generator_datum = GeneratorDatum {
+                    let coroutine_datum = CoroutineDatum {
                         movability: defn.movability.lower(),
                         input_output,
                     };
-                    let generator_witness = GeneratorWitnessDatum { inner_types };
+                    let coroutine_witness = CoroutineWitnessDatum { inner_types };
 
-                    let id = self.generator_ids[&defn.name.str];
-                    generator_data.insert(id, Arc::new(generator_datum));
-                    generator_witness_data.insert(id, Arc::new(generator_witness));
+                    let id = self.coroutine_ids[&defn.name.str];
+                    coroutine_data.insert(id, Arc::new(coroutine_datum));
+                    coroutine_witness_data.insert(id, Arc::new(coroutine_witness));
                 }
                 Item::Foreign(_) => {}
             }
@@ -488,10 +488,10 @@ impl ProgramLowerer {
             fn_def_variances,
             closure_inputs_and_output,
             closure_closure_kind,
-            generator_ids: self.generator_ids,
-            generator_kinds: self.generator_kinds,
-            generator_data,
-            generator_witness_data,
+            coroutine_ids: self.coroutine_ids,
+            coroutine_kinds: self.coroutine_kinds,
+            coroutine_data,
+            coroutine_witness_data,
             trait_data,
             well_known_traits,
             impl_data,
@@ -533,7 +533,7 @@ lower_type_kind!(AdtDefn, Adt, |defn: &AdtDefn| defn.all_parameters());
 lower_type_kind!(FnDefn, FnDef, |defn: &FnDefn| defn.all_parameters());
 lower_type_kind!(ClosureDefn, Closure, |defn: &ClosureDefn| defn
     .all_parameters());
-lower_type_kind!(GeneratorDefn, Generator, |defn: &GeneratorDefn| defn
+lower_type_kind!(CoroutineDefn, Coroutine, |defn: &CoroutineDefn| defn
     .variable_kinds
     .iter()
     .map(|k| k.lower())
