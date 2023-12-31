@@ -86,24 +86,24 @@ fn unpin_overwrite() {
 }
 
 #[test]
-fn generator_unpin() {
+fn coroutine_unpin() {
     test! {
         program {
             #[auto] #[lang(unpin)] trait Unpin { }
             struct A { }
             impl !Unpin for A {}
 
-            generator static static_gen<>[resume = (), yield = ()] {
+            coroutine static static_gen<>[resume = (), yield = ()] {
                 upvars []
                 witnesses []
             }
 
-            generator movable_gen<>[resume = (), yield = ()] {
+            coroutine movable_gen<>[resume = (), yield = ()] {
                 upvars []
                 witnesses []
             }
 
-            generator movable_with_pin<>[resume = (), yield = ()] {
+            coroutine movable_with_pin<>[resume = (), yield = ()] {
                 upvars [A]
                 witnesses []
             }

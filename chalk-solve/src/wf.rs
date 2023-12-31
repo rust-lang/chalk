@@ -165,11 +165,11 @@ impl<I: Interner> TypeVisitor<I> for InputTypeCollector<I> {
                 push_ty();
                 substitution.visit_with(self, outer_binder)
             }
-            TyKind::Generator(_generator, substitution) => {
+            TyKind::Coroutine(_coroutine, substitution) => {
                 push_ty();
                 substitution.visit_with(self, outer_binder)
             }
-            TyKind::GeneratorWitness(_witness, substitution) => {
+            TyKind::CoroutineWitness(_witness, substitution) => {
                 push_ty();
                 substitution.visit_with(self, outer_binder)
             }
@@ -435,7 +435,7 @@ where
             | WellKnownTrait::Unsize
             | WellKnownTrait::Sized
             | WellKnownTrait::DiscriminantKind
-            | WellKnownTrait::Generator
+            | WellKnownTrait::Coroutine
             | WellKnownTrait::Pointee
             | WellKnownTrait::Tuple
             | WellKnownTrait::FnPtr => false,

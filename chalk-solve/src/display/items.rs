@@ -63,7 +63,7 @@ macro_rules! write_flags {
     };
 }
 
-impl<'a, I: Interner> RenderAsRust<I> for (&'a GeneratorDatum<I>, &'a GeneratorWitnessDatum<I>) {
+impl<'a, I: Interner> RenderAsRust<I> for (&'a CoroutineDatum<I>, &'a CoroutineWitnessDatum<I>) {
     fn fmt(&self, _s: &InternalWriterState<'_, I>, _f: &'_ mut Formatter<'_>) -> Result {
         unimplemented!()
     }
@@ -203,7 +203,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Unpin => "unpin",
                 WellKnownTrait::CoerceUnsized => "coerce_unsized",
                 WellKnownTrait::DiscriminantKind => "discriminant_kind",
-                WellKnownTrait::Generator => "generator",
+                WellKnownTrait::Coroutine => "coroutine",
                 WellKnownTrait::DispatchFromDyn => "dispatch_from_dyn",
                 WellKnownTrait::Tuple => "tuple_trait",
                 WellKnownTrait::Pointee => "pointee",

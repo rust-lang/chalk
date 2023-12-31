@@ -4,13 +4,13 @@ use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
 use chalk_ir::{debug::Angle, Variance};
 use chalk_ir::{
     debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
-    FnDefId, ForeignDefId, GeneratorId, GenericArg, Goal, Goals, ImplId, IntTy, Lifetime, OpaqueTy,
+    CoroutineId, FnDefId, ForeignDefId, GenericArg, Goal, Goals, ImplId, IntTy, Lifetime, OpaqueTy,
     OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, Scalar,
     Substitution, TraitId, Ty, TyKind, UintTy, Variances,
 };
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
-    ClosureKind, FnDefDatum, FnDefInputsAndOutputDatum, GeneratorDatum, GeneratorWitnessDatum,
+    ClosureKind, CoroutineDatum, CoroutineWitnessDatum, FnDefDatum, FnDefInputsAndOutputDatum,
     ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
@@ -41,14 +41,14 @@ pub struct Program {
 
     pub closure_kinds: BTreeMap<ClosureId<ChalkIr>, TypeKind>,
 
-    /// For each generator
-    pub generator_ids: BTreeMap<Identifier, GeneratorId<ChalkIr>>,
+    /// For each coroutine
+    pub coroutine_ids: BTreeMap<Identifier, CoroutineId<ChalkIr>>,
 
-    pub generator_kinds: BTreeMap<GeneratorId<ChalkIr>, TypeKind>,
+    pub coroutine_kinds: BTreeMap<CoroutineId<ChalkIr>, TypeKind>,
 
-    pub generator_data: BTreeMap<GeneratorId<ChalkIr>, Arc<GeneratorDatum<ChalkIr>>>,
+    pub coroutine_data: BTreeMap<CoroutineId<ChalkIr>, Arc<CoroutineDatum<ChalkIr>>>,
 
-    pub generator_witness_data: BTreeMap<GeneratorId<ChalkIr>, Arc<GeneratorWitnessDatum<ChalkIr>>>,
+    pub coroutine_witness_data: BTreeMap<CoroutineId<ChalkIr>, Arc<CoroutineWitnessDatum<ChalkIr>>>,
 
     /// From trait name to item-id. Used during lowering only.
     pub trait_ids: BTreeMap<Identifier, TraitId<ChalkIr>>,
@@ -417,15 +417,15 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.adt_data[&id].clone()
     }
 
-    fn generator_datum(&self, id: GeneratorId<ChalkIr>) -> Arc<GeneratorDatum<ChalkIr>> {
-        self.generator_data[&id].clone()
+    fn coroutine_datum(&self, id: CoroutineId<ChalkIr>) -> Arc<CoroutineDatum<ChalkIr>> {
+        self.coroutine_data[&id].clone()
     }
 
-    fn generator_witness_datum(
+    fn coroutine_witness_datum(
         &self,
-        id: GeneratorId<ChalkIr>,
-    ) -> Arc<GeneratorWitnessDatum<ChalkIr>> {
-        self.generator_witness_data[&id].clone()
+        id: CoroutineId<ChalkIr>,
+    ) -> Arc<CoroutineWitnessDatum<ChalkIr>> {
+        self.coroutine_witness_data[&id].clone()
     }
 
     fn adt_repr(&self, id: AdtId<ChalkIr>) -> Arc<AdtRepr<ChalkIr>> {
@@ -510,8 +510,8 @@ impl RustIrDatabase<ChalkIr> for Program {
                 (TyKind::Never, TyKind::Never) => true,
                 (TyKind::Array(_, _), TyKind::Array(_, _)) => true,
                 (TyKind::Closure(id_a, _), TyKind::Closure(id_b, _)) => id_a == id_b,
-                (TyKind::Generator(id_a, _), TyKind::Generator(id_b, _)) => id_a == id_b,
-                (TyKind::GeneratorWitness(id_a, _), TyKind::GeneratorWitness(id_b, _)) => {
+                (TyKind::Coroutine(id_a, _), TyKind::Coroutine(id_b, _)) => id_a == id_b,
+                (TyKind::CoroutineWitness(id_a, _), TyKind::CoroutineWitness(id_b, _)) => {
                     id_a == id_b
                 }
                 (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => id_a == id_b,
@@ -604,7 +604,7 @@ impl RustIrDatabase<ChalkIr> for Program {
                 .int
                 .clone()
                 .unwrap_or_else(|| TyKind::Scalar(Scalar::Int(IntTy::Isize)).intern(interner)),
-            TyKind::Generator(..) => TyKind::Scalar(Scalar::Uint(UintTy::U32)).intern(interner),
+            TyKind::Coroutine(..) => TyKind::Scalar(Scalar::Uint(UintTy::U32)).intern(interner),
             _ => TyKind::Scalar(Scalar::Uint(UintTy::U8)).intern(interner),
         }
     }

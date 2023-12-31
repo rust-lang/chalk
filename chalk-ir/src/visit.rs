@@ -287,11 +287,11 @@ where
                 try_break!(id.visit_with(visitor, outer_binder));
                 substitution.visit_with(visitor, outer_binder)
             }
-            TyKind::Generator(generator, substitution) => {
-                try_break!(generator.visit_with(visitor, outer_binder));
+            TyKind::Coroutine(coroutine, substitution) => {
+                try_break!(coroutine.visit_with(visitor, outer_binder));
                 substitution.visit_with(visitor, outer_binder)
             }
-            TyKind::GeneratorWitness(witness, substitution) => {
+            TyKind::CoroutineWitness(witness, substitution) => {
                 try_break!(witness.visit_with(visitor, outer_binder));
                 substitution.visit_with(visitor, outer_binder)
             }

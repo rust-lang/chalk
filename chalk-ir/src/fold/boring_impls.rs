@@ -205,7 +205,7 @@ id_fold!(AssocTypeId);
 id_fold!(OpaqueTyId);
 id_fold!(FnDefId);
 id_fold!(ClosureId);
-id_fold!(GeneratorId);
+id_fold!(CoroutineId);
 id_fold!(ForeignDefId);
 
 impl<I: Interner> TypeSuperFoldable<I> for ProgramClauseData<I> {

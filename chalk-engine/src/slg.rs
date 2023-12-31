@@ -230,12 +230,12 @@ impl<I: Interner> MayInvalidate<I> {
             (TyKind::Closure(id_a, substitution_a), TyKind::Closure(id_b, substitution_b)) => {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
             }
-            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+            (TyKind::Coroutine(id_a, substitution_a), TyKind::Coroutine(id_b, substitution_b)) => {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
             }
             (
-                TyKind::GeneratorWitness(id_a, substitution_a),
-                TyKind::GeneratorWitness(id_b, substitution_b),
+                TyKind::CoroutineWitness(id_a, substitution_a),
+                TyKind::CoroutineWitness(id_b, substitution_b),
             ) => self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b),
             (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => id_a != id_b,
             (TyKind::Error, TyKind::Error) => false,

@@ -63,8 +63,8 @@ pub fn add_pointee_program_clauses<I: Interner>(
         | TyKind::Function(_)
         | TyKind::InferenceVar(_, TyVariableKind::Float)
         | TyKind::InferenceVar(_, TyVariableKind::Integer)
-        | TyKind::Generator(_, _)
-        | TyKind::GeneratorWitness(_, _)
+        | TyKind::Coroutine(_, _)
+        | TyKind::CoroutineWitness(_, _)
         | TyKind::Ref(_, _, _) => push_clauses(
             db,
             builder,

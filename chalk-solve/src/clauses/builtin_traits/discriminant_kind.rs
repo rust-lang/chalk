@@ -22,9 +22,9 @@ pub fn add_discriminant_clauses<I: Interner>(
         | TyKind::Str
         | TyKind::Never
         | TyKind::FnDef(..)
-        | TyKind::Generator(..)
+        | TyKind::Coroutine(..)
         | TyKind::Closure(..)
-        | TyKind::GeneratorWitness(..)
+        | TyKind::CoroutineWitness(..)
         | TyKind::Foreign(_)
         | TyKind::Dyn(_)
         | TyKind::Function(..)

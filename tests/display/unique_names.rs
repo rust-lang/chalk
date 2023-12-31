@@ -100,17 +100,17 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::AssociatedTyValue<I>> {
         self.db.associated_ty_value(id)
     }
-    fn generator_datum(
+    fn coroutine_datum(
         &self,
-        generator_id: chalk_ir::GeneratorId<I>,
-    ) -> std::sync::Arc<chalk_solve::rust_ir::GeneratorDatum<I>> {
-        self.db.generator_datum(generator_id)
+        coroutine_id: chalk_ir::CoroutineId<I>,
+    ) -> std::sync::Arc<chalk_solve::rust_ir::CoroutineDatum<I>> {
+        self.db.coroutine_datum(coroutine_id)
     }
-    fn generator_witness_datum(
+    fn coroutine_witness_datum(
         &self,
-        generator_id: chalk_ir::GeneratorId<I>,
-    ) -> std::sync::Arc<chalk_solve::rust_ir::GeneratorWitnessDatum<I>> {
-        self.db.generator_witness_datum(generator_id)
+        coroutine_id: chalk_ir::CoroutineId<I>,
+    ) -> std::sync::Arc<chalk_solve::rust_ir::CoroutineWitnessDatum<I>> {
+        self.db.coroutine_witness_datum(coroutine_id)
     }
     fn opaque_ty_data(
         &self,

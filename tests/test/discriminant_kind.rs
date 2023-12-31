@@ -89,7 +89,7 @@ fn discriminant_kind_assoc() {
             #[repr(usize)]
             enum E {}
 
-            generator empty_gen<>[resume = (), yield = ()] {
+            coroutine empty_gen<>[resume = (), yield = ()] {
                 upvars []
                 witnesses []
             }
@@ -145,7 +145,7 @@ fn discriminant_kind_assoc() {
         }
         //--------
 
-        // Generators have u32 as the discriminant
+        // Coroutines have u32 as the discriminant
         goal {
             Normalize(<empty_gen as DiscriminantKind>::Discriminant -> u32)
         } yields {

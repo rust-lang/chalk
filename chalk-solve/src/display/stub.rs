@@ -2,7 +2,7 @@
 //! queried.
 use std::sync::Arc;
 
-use crate::rust_ir::{GeneratorDatum, GeneratorWitnessDatum};
+use crate::rust_ir::{CoroutineDatum, CoroutineWitnessDatum};
 use crate::{
     rust_ir::{
         AdtDatumBound, AdtKind, AdtVariantDatum, AssociatedTyDatumBound, FnDefDatumBound,
@@ -11,7 +11,7 @@ use crate::{
     RustIrDatabase,
 };
 use chalk_ir::{
-    interner::Interner, Binders, CanonicalVarKinds, GeneratorId, Substitution, Ty,
+    interner::Interner, Binders, CanonicalVarKinds, CoroutineId, Substitution, Ty,
     UnificationDatabase, VariableKinds, Variances,
 };
 
@@ -219,15 +219,15 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         unimplemented!("cannot stub closures")
     }
 
-    fn generator_datum(&self, _generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>> {
-        unimplemented!("cannot stub generator")
+    fn coroutine_datum(&self, _coroutine_id: CoroutineId<I>) -> Arc<CoroutineDatum<I>> {
+        unimplemented!("cannot stub coroutine")
     }
 
-    fn generator_witness_datum(
+    fn coroutine_witness_datum(
         &self,
-        _generator_id: GeneratorId<I>,
-    ) -> Arc<GeneratorWitnessDatum<I>> {
-        unimplemented!("cannot stub generator witness")
+        _coroutine_id: CoroutineId<I>,
+    ) -> Arc<CoroutineWitnessDatum<I>> {
+        unimplemented!("cannot stub coroutine witness")
     }
 
     fn closure_fn_substitution(

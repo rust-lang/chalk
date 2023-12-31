@@ -55,14 +55,14 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns the datum for the ADT with the given id.
     fn adt_datum(&self, adt_id: AdtId<I>) -> Arc<AdtDatum<I>>;
 
-    /// Returns the generator datum for the generator with the given id.
-    fn generator_datum(&self, generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>>;
+    /// Returns the coroutine datum for the coroutine with the given id.
+    fn coroutine_datum(&self, coroutine_id: CoroutineId<I>) -> Arc<CoroutineDatum<I>>;
 
-    /// Returns the generator witness datum for the generator with the given id.
-    fn generator_witness_datum(
+    /// Returns the coroutine witness datum for the coroutine with the given id.
+    fn coroutine_witness_datum(
         &self,
-        generator_id: GeneratorId<I>,
-    ) -> Arc<GeneratorWitnessDatum<I>>;
+        coroutine_id: CoroutineId<I>,
+    ) -> Arc<CoroutineWitnessDatum<I>>;
 
     /// Returns the representation for the ADT definition with the given id.
     fn adt_repr(&self, id: AdtId<I>) -> Arc<AdtRepr<I>>;

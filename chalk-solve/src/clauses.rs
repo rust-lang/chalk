@@ -52,23 +52,23 @@ fn constituent_types<I: Interner>(db: &dyn RustIrDatabase<I>, ty: &TyKind<I>) ->
 
         TyKind::Str | TyKind::Never | TyKind::Scalar(_) => Vec::new(),
 
-        TyKind::Generator(generator_id, substitution) => {
-            let generator_datum = &db.generator_datum(*generator_id);
-            let generator_datum_bound = generator_datum
+        TyKind::Coroutine(coroutine_id, substitution) => {
+            let coroutine_datum = &db.coroutine_datum(*coroutine_id);
+            let coroutine_datum_bound = coroutine_datum
                 .input_output
                 .clone()
                 .substitute(interner, &substitution);
 
-            let mut tys = generator_datum_bound.upvars;
+            let mut tys = coroutine_datum_bound.upvars;
             tys.push(
-                TyKind::GeneratorWitness(*generator_id, substitution.clone()).intern(interner),
+                TyKind::CoroutineWitness(*coroutine_id, substitution.clone()).intern(interner),
             );
             tys
         }
 
         TyKind::Closure(_, _) => panic!("this function should not be called for closures"),
-        TyKind::GeneratorWitness(_, _) => {
-            panic!("this function should not be called for generator witnesses")
+        TyKind::CoroutineWitness(_, _) => {
+            panic!("this function should not be called for coroutine witnesses")
         }
         TyKind::Function(_) => panic!("this function should not be called for functions"),
         TyKind::InferenceVar(_, _) | TyKind::BoundVar(_) => {
@@ -173,12 +173,12 @@ pub fn push_auto_trait_impls<I: Interner>(
 
             Ok(())
         }
-        TyKind::Generator(generator_id, _) => {
+        TyKind::Coroutine(coroutine_id, _) => {
             if Some(auto_trait_id) == builder.db.well_known_trait_id(WellKnownTrait::Unpin) {
-                match builder.db.generator_datum(*generator_id).movability {
-                    // immovable generators are never `Unpin`
+                match builder.db.coroutine_datum(*coroutine_id).movability {
+                    // immovable coroutines are never `Unpin`
                     Movability::Static => (),
-                    // movable generators are always `Unpin`
+                    // movable coroutines are always `Unpin`
                     Movability::Movable => builder.push_fact(consequence),
                 }
             } else {
@@ -189,8 +189,8 @@ pub fn push_auto_trait_impls<I: Interner>(
             Ok(())
         }
 
-        TyKind::GeneratorWitness(generator_id, _) => {
-            push_auto_trait_impls_generator_witness(builder, auto_trait_id, *generator_id);
+        TyKind::CoroutineWitness(coroutine_id, _) => {
+            push_auto_trait_impls_coroutine_witness(builder, auto_trait_id, *coroutine_id);
             Ok(())
         }
 
@@ -272,12 +272,12 @@ pub fn push_auto_trait_impls_opaque<I: Interner>(
 }
 
 #[instrument(level = "debug", skip(builder))]
-pub fn push_auto_trait_impls_generator_witness<I: Interner>(
+pub fn push_auto_trait_impls_coroutine_witness<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     auto_trait_id: TraitId<I>,
-    generator_id: GeneratorId<I>,
+    coroutine_id: CoroutineId<I>,
 ) {
-    let witness_datum = builder.db.generator_witness_datum(generator_id);
+    let witness_datum = builder.db.coroutine_witness_datum(coroutine_id);
     let interner = builder.interner();
 
     // Must be an auto trait.
@@ -289,13 +289,13 @@ pub fn push_auto_trait_impls_generator_witness<I: Interner>(
         1
     );
 
-    // Push binders for the generator generic parameters. These can be used by
+    // Push binders for the coroutine generic parameters. These can be used by
     // both upvars and witness types
     builder.push_binders(witness_datum.inner_types.clone(), |builder, inner_types| {
-        let witness_ty = TyKind::GeneratorWitness(generator_id, builder.substitution_in_scope())
+        let witness_ty = TyKind::CoroutineWitness(coroutine_id, builder.substitution_in_scope())
             .intern(interner);
 
-        // trait_ref = `GeneratorWitness<...>: MyAutoTrait`
+        // trait_ref = `CoroutineWitness<...>: MyAutoTrait`
         let auto_trait_ref = TraitRef {
             trait_id: auto_trait_id,
             substitution: Substitution::from1(interner, witness_ty),
@@ -310,7 +310,7 @@ pub fn push_auto_trait_impls_generator_witness<I: Interner>(
         // }
         //
         // where `L0, L1, ...LN` are our existentially bound witness lifetimes,
-        // and `P0, P1, ..., PN` are the normal generator generics.
+        // and `P0, P1, ..., PN` are the normal coroutine generics.
         //
         // We create a 'forall' goal due to the fact that our witness lifetimes
         // are *existentially* quantified - the precise reigon is erased during
@@ -345,7 +345,7 @@ pub fn push_auto_trait_impls_generator_witness<I: Interner>(
             },
         );
 
-        // GeneratorWitnessType: AutoTrait :- forall<...> ...
+        // CoroutineWitnessType: AutoTrait :- forall<...> ...
         // where 'forall<...> ...' is the goal described above.
         builder.push_clause(auto_trait_ref, std::iter::once(witness_goal));
     })
@@ -1069,7 +1069,7 @@ fn match_ty<I: Interner>(
                 );
             });
         }
-        TyKind::Closure(_, _) | TyKind::Generator(_, _) | TyKind::GeneratorWitness(_, _) => {
+        TyKind::Closure(_, _) | TyKind::Coroutine(_, _) | TyKind::CoroutineWitness(_, _) => {
             let ty = generalize::Generalize::apply(builder.db.interner(), ty.clone());
             builder.push_binders(ty, |builder, ty| {
                 builder.push_fact(WellFormed::Ty(ty));

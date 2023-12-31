@@ -138,17 +138,17 @@ where
         self.ws.db().adt_datum(adt_id)
     }
 
-    fn generator_datum(&self, generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>> {
-        self.record(generator_id);
-        self.ws.db().borrow().generator_datum(generator_id)
+    fn coroutine_datum(&self, coroutine_id: CoroutineId<I>) -> Arc<CoroutineDatum<I>> {
+        self.record(coroutine_id);
+        self.ws.db().borrow().coroutine_datum(coroutine_id)
     }
 
-    fn generator_witness_datum(
+    fn coroutine_witness_datum(
         &self,
-        generator_id: GeneratorId<I>,
-    ) -> Arc<GeneratorWitnessDatum<I>> {
-        self.record(generator_id);
-        self.ws.db().borrow().generator_witness_datum(generator_id)
+        coroutine_id: CoroutineId<I>,
+    ) -> Arc<CoroutineWitnessDatum<I>> {
+        self.record(coroutine_id);
+        self.ws.db().borrow().coroutine_witness_datum(coroutine_id)
     }
 
     fn adt_repr(&self, id: AdtId<I>) -> Arc<AdtRepr<I>> {
@@ -410,16 +410,16 @@ where
         self.db.adt_datum(adt_id)
     }
 
-    fn generator_datum(&self, generator_id: GeneratorId<I>) -> Arc<GeneratorDatum<I>> {
-        self.db.borrow().generator_datum(generator_id)
+    fn coroutine_datum(&self, coroutine_id: CoroutineId<I>) -> Arc<CoroutineDatum<I>> {
+        self.db.borrow().coroutine_datum(coroutine_id)
     }
 
-    /// Returns the generator witness datum for the generator with the given id.
-    fn generator_witness_datum(
+    /// Returns the coroutine witness datum for the coroutine with the given id.
+    fn coroutine_witness_datum(
         &self,
-        generator_id: GeneratorId<I>,
-    ) -> Arc<GeneratorWitnessDatum<I>> {
-        self.db.borrow().generator_witness_datum(generator_id)
+        coroutine_id: CoroutineId<I>,
+    ) -> Arc<CoroutineWitnessDatum<I>> {
+        self.db.borrow().coroutine_witness_datum(coroutine_id)
     }
 
     fn adt_repr(&self, id: AdtId<I>) -> Arc<AdtRepr<I>> {
@@ -553,7 +553,7 @@ pub enum RecordedItemId<I: Interner> {
     Impl(ImplId<I>),
     OpaqueTy(OpaqueTyId<I>),
     FnDef(FnDefId<I>),
-    Generator(GeneratorId<I>),
+    Coroutine(CoroutineId<I>),
 }
 
 impl<I: Interner> From<AdtId<I>> for RecordedItemId<I> {
@@ -586,8 +586,8 @@ impl<I: Interner> From<FnDefId<I>> for RecordedItemId<I> {
     }
 }
 
-impl<I: Interner> From<GeneratorId<I>> for RecordedItemId<I> {
-    fn from(v: GeneratorId<I>) -> Self {
-        RecordedItemId::Generator(v)
+impl<I: Interner> From<CoroutineId<I>> for RecordedItemId<I> {
+    fn from(v: CoroutineId<I>) -> Self {
+        RecordedItemId::Coroutine(v)
     }
 }

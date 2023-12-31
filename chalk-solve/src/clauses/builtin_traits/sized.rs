@@ -69,8 +69,8 @@ pub fn add_sized_program_clauses<I: Interner>(
         | TyKind::FnDef(_, _)
         | TyKind::Scalar(_)
         | TyKind::Raw(_, _)
-        | TyKind::Generator(_, _)
-        | TyKind::GeneratorWitness(_, _)
+        | TyKind::Coroutine(_, _)
+        | TyKind::CoroutineWitness(_, _)
         | TyKind::Ref(_, _, _) => builder.push_fact(trait_ref),
 
         TyKind::AssociatedType(_, _)

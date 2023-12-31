@@ -168,7 +168,7 @@ types. The intention is that, at least when transitioning, rustc would
 implement the `Interner` trait and would map from the [`TyKind`][Rustc-TyKind]
 enum to chalk's [`TyKind`] on the fly, when `data()` is invoked.
 
-[Rustc-TyKind]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/sty/enum.TyKind.html
+[Rustc-TyKind]: https://doc.rust-lang.org/nightly/nightly-rustc/rustc_type_ir/ty_kind/enum.TyKind.html
 
 | rustc type | chalk variant (and some notes) |
 | ------------- | ------------------ |
@@ -188,8 +188,8 @@ enum to chalk's [`TyKind`] on the fly, when `data()` is invoked.
 | `FnPtr` | `Function` |
 | `Dynamic` | `Dyn` |
 | `Closure` | `Closure` |
-| `Generator` | `Generator` |
-| `GeneratorWitness` | `GeneratorWitness` |
+| `Coroutine` | `Coroutine` |
+| `CoroutineWitness` | `CoroutineWitness` |
 | `Never` | `Never` |
 | `Tuple` | `Tuple` |
 | `Projection` | `Alias` |

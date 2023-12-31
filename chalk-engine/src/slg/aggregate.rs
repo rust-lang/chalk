@@ -338,20 +338,20 @@ impl<I: Interner> AntiUnifier<'_, I> {
                 .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
                 .map(|(&name, substitution)| TyKind::Closure(name, substitution).intern(interner))
                 .unwrap_or_else(|| self.new_ty_variable()),
-            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+            (TyKind::Coroutine(id_a, substitution_a), TyKind::Coroutine(id_b, substitution_b)) => {
                 self.aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
                     .map(|(&name, substitution)| {
-                        TyKind::Generator(name, substitution).intern(interner)
+                        TyKind::Coroutine(name, substitution).intern(interner)
                     })
                     .unwrap_or_else(|| self.new_ty_variable())
             }
             (
-                TyKind::GeneratorWitness(id_a, substitution_a),
-                TyKind::GeneratorWitness(id_b, substitution_b),
+                TyKind::CoroutineWitness(id_a, substitution_a),
+                TyKind::CoroutineWitness(id_b, substitution_b),
             ) => self
                 .aggregate_name_and_substs(id_a, substitution_a, id_b, substitution_b)
                 .map(|(&name, substitution)| {
-                    TyKind::GeneratorWitness(name, substitution).intern(interner)
+                    TyKind::CoroutineWitness(name, substitution).intern(interner)
                 })
                 .unwrap_or_else(|| self.new_ty_variable()),
             (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => {

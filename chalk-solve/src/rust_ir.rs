@@ -274,7 +274,7 @@ pub enum WellKnownTrait {
     Unpin,
     CoerceUnsized,
     DiscriminantKind,
-    Generator,
+    Coroutine,
     DispatchFromDyn,
     Tuple,
     Pointee,
@@ -652,7 +652,7 @@ pub struct OpaqueTyDatumBound<I: Interner> {
     pub where_clauses: Binders<Vec<QuantifiedWhereClause<I>>>,
 }
 
-// The movability of a generator: whether a generator contains self-references,
+// The movability of a coroutine: whether a coroutine contains self-references,
 // causing it to be !Unpin
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Movability {
@@ -661,67 +661,67 @@ pub enum Movability {
 }
 chalk_ir::copy_fold!(Movability);
 
-/// Represents a generator type.
+/// Represents a coroutine type.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
-pub struct GeneratorDatum<I: Interner> {
-    // Can the generator be moved (is Unpin or not)
+pub struct CoroutineDatum<I: Interner> {
+    // Can the coroutine be moved (is Unpin or not)
     pub movability: Movability,
-    /// All of the nested types for this generator. The `Binder`
-    /// represents the types and lifetimes that this generator is generic over -
+    /// All of the nested types for this coroutine. The `Binder`
+    /// represents the types and lifetimes that this coroutine is generic over -
     /// this behaves in the same way as `AdtDatum.binders`
-    pub input_output: Binders<GeneratorInputOutputDatum<I>>,
+    pub input_output: Binders<CoroutineInputOutputDatum<I>>,
 }
 
-/// The nested types for a generator. This always appears inside a `GeneratorDatum`
+/// The nested types for a coroutine. This always appears inside a `CoroutineDatum`
 #[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
-pub struct GeneratorInputOutputDatum<I: Interner> {
-    /// The generator resume type - a value of this type
-    /// is supplied by the caller when resuming the generator.
+pub struct CoroutineInputOutputDatum<I: Interner> {
+    /// The coroutine resume type - a value of this type
+    /// is supplied by the caller when resuming the coroutine.
     /// Currently, this plays no rule in goal resolution.
     pub resume_type: Ty<I>,
-    /// The generator yield type - a value of this type
-    /// is supplied by the generator during a yield.
+    /// The coroutine yield type - a value of this type
+    /// is supplied by the coroutine during a yield.
     /// Currently, this plays no role in goal resolution.
     pub yield_type: Ty<I>,
-    /// The generator return type - a value of this type
-    /// is supplied by the generator when it returns.
+    /// The coroutine return type - a value of this type
+    /// is supplied by the coroutine when it returns.
     /// Currently, this plays no role in goal resolution
     pub return_type: Ty<I>,
-    /// The upvars stored by the generator. These represent
-    /// types captured from the generator's environment,
+    /// The upvars stored by the coroutine. These represent
+    /// types captured from the coroutine's environment,
     /// and are stored across all yields. These types (along with the witness types)
     /// are considered 'constituent types' for the purposes of determining auto trait
-    /// implementations - that its, a generator impls an auto trait A
+    /// implementations - that its, a coroutine impls an auto trait A
     /// iff all of its constituent types implement A.
     pub upvars: Vec<Ty<I>>,
 }
 
-/// The generator witness data. Each `GeneratorId` has both a `GeneratorDatum`
-/// and a `GeneratorWitnessDatum` - these represent two distinct types in Rust.
-/// `GeneratorWitnessDatum` is logically 'inside' a generator - this only
+/// The coroutine witness data. Each `CoroutineId` has both a `CoroutineDatum`
+/// and a `CoroutineWitnessDatum` - these represent two distinct types in Rust.
+/// `CoroutineWitnessDatum` is logically 'inside' a coroutine - this only
 /// matters when we treat the witness type as a 'constituent type for the
 /// purposes of determining auto trait implementations.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
-pub struct GeneratorWitnessDatum<I: Interner> {
-    /// This binder is identical to the `input_output` binder in `GeneratorWitness` -
-    /// it binds the types and lifetimes that the generator is generic over.
-    /// There is an additional binder inside `GeneratorWitnessExistential`, which
+pub struct CoroutineWitnessDatum<I: Interner> {
+    /// This binder is identical to the `input_output` binder in `CoroutineWitness` -
+    /// it binds the types and lifetimes that the coroutine is generic over.
+    /// There is an additional binder inside `CoroutineWitnessExistential`, which
     /// is treated specially.
-    pub inner_types: Binders<GeneratorWitnessExistential<I>>,
+    pub inner_types: Binders<CoroutineWitnessExistential<I>>,
 }
 
-/// The generator witness types, together with existentially bound lifetimes.
-/// Each 'witness type' represents a type stored inside the generator across
-/// a yield. When a generator type is constructed, the precise region relationships
-/// found in the generator body are erased. As a result, we are left with existential
+/// The coroutine witness types, together with existentially bound lifetimes.
+/// Each 'witness type' represents a type stored inside the coroutine across
+/// a yield. When a coroutine type is constructed, the precise region relationships
+/// found in the coroutine body are erased. As a result, we are left with existential
 /// lifetimes - each type is parameterized over *some* lifetimes, but we do not
 /// know their precise values.
 ///
-/// Unlike the binder in `GeneratorWitnessDatum`, this `Binder` never gets substituted
+/// Unlike the binder in `CoroutineWitnessDatum`, this `Binder` never gets substituted
 /// via an `Ty`. Instead, we handle this `Binders` specially when determining
-/// auto trait impls. See `push_auto_trait_impls_generator_witness` for more details.
+/// auto trait impls. See `push_auto_trait_impls_coroutine_witness` for more details.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, TypeFoldable, HasInterner)]
-pub struct GeneratorWitnessExistential<I: Interner> {
+pub struct CoroutineWitnessExistential<I: Interner> {
     pub types: Binders<Vec<Ty<I>>>,
 }
 

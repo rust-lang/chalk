@@ -1,13 +1,13 @@
 use super::*;
 
 #[test]
-fn generator_test() {
+fn coroutine_test() {
     test! {
         program {
             #[auto] trait Send { }
 
-            #[lang(generator)]
-            trait Generator<R> {
+            #[lang(coroutine)]
+            trait Coroutine<R> {
                 type Yield;
                 type Return;
             }
@@ -22,27 +22,27 @@ fn generator_test() {
             impl !Send for NotSend {}
             struct StructThree<'a> { val: &'a () }
 
-            generator empty_gen<>[resume = (), yield = ()] {
+            coroutine empty_gen<>[resume = (), yield = ()] {
                 upvars []
                 witnesses []
             }
 
-            generator upvar_lifetime_restrict<T>[resume = (), yield = ()] {
+            coroutine upvar_lifetime_restrict<T>[resume = (), yield = ()] {
                 upvars [T; StructOne]
                 witnesses exists<'a, 'b> [SendSameLifetime<'a, 'b, T>]
             }
 
-            generator send_any_lifetime<T>[resume = (), yield = ()] {
+            coroutine send_any_lifetime<T>[resume = (), yield = ()] {
                 upvars []
                 witnesses exists<'a, 'b> [SendAnyLifetime<'a, 'b, T>; u8]
             }
 
-            generator not_send_resume_yield<>[resume = NotSend, yield = NotSend] {
+            coroutine not_send_resume_yield<>[resume = NotSend, yield = NotSend] {
                 upvars []
                 witnesses []
             }
 
-            generator gen_with_types<U>[resume = U, yield = StructOne] -> NotSend {
+            coroutine gen_with_types<U>[resume = U, yield = StructOne] -> NotSend {
                 upvars []
                 witnesses []
             }
@@ -61,14 +61,14 @@ fn generator_test() {
         }
 
         goal {
-            empty_gen: Generator<()>
+            empty_gen: Coroutine<()>
         } yields {
             expect![["Unique"]]
         }
 
         goal {
             forall<T> {
-                gen_with_types<T>: Generator<T>
+                gen_with_types<T>: Coroutine<T>
             }
         } yields {
             expect![["Unique"]]
@@ -76,7 +76,7 @@ fn generator_test() {
 
         goal {
             forall<T> {
-                Normalize(<gen_with_types<T> as Generator<T>>::Yield -> StructOne)
+                Normalize(<gen_with_types<T> as Coroutine<T>>::Yield -> StructOne)
             }
         } yields {
             expect![["Unique"]]
@@ -84,7 +84,7 @@ fn generator_test() {
 
         goal {
             forall<T> {
-                Normalize(<gen_with_types<T> as Generator<T>>::Return -> NotSend)
+                Normalize(<gen_with_types<T> as Coroutine<T>>::Return -> NotSend)
             }
         } yields {
             expect![["Unique"]]

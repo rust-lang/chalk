@@ -67,8 +67,8 @@ pub fn add_copy_program_clauses<I: Interner>(
         | TyKind::Slice(_)
         | TyKind::OpaqueType(_, _)
         | TyKind::Foreign(_)
-        | TyKind::Generator(_, _)
-        | TyKind::GeneratorWitness(_, _)
+        | TyKind::Coroutine(_, _)
+        | TyKind::CoroutineWitness(_, _)
         | TyKind::Error => {}
 
         TyKind::Function(_) => builder.push_fact(trait_ref),

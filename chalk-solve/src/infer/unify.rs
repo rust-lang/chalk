@@ -321,7 +321,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                     substitution_b.as_slice(interner),
                 )
             }
-            (TyKind::Generator(id_a, substitution_a), TyKind::Generator(id_b, substitution_b)) => {
+            (TyKind::Coroutine(id_a, substitution_a), TyKind::Coroutine(id_b, substitution_b)) => {
                 if id_a != id_b {
                     return Err(NoSolution);
                 }
@@ -333,8 +333,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 )
             }
             (
-                TyKind::GeneratorWitness(id_a, substitution_a),
-                TyKind::GeneratorWitness(id_b, substitution_b),
+                TyKind::CoroutineWitness(id_a, substitution_a),
+                TyKind::CoroutineWitness(id_b, substitution_b),
             ) => {
                 if id_a != id_b {
                     return Err(NoSolution);
@@ -588,12 +588,12 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 self.generalize_substitution(substitution, universe_index, |_| variance),
             )
             .intern(interner),
-            TyKind::Generator(id, substitution) => TyKind::Generator(
+            TyKind::Coroutine(id, substitution) => TyKind::Coroutine(
                 *id,
                 self.generalize_substitution(substitution, universe_index, |_| variance),
             )
             .intern(interner),
-            TyKind::GeneratorWitness(id, substitution) => TyKind::GeneratorWitness(
+            TyKind::CoroutineWitness(id, substitution) => TyKind::CoroutineWitness(
                 *id,
                 self.generalize_substitution(substitution, universe_index, |_| variance),
             )
