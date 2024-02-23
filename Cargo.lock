@@ -126,7 +126,6 @@ version = "0.97.0-dev.0"
 dependencies = [
  "bitflags 2.4.1",
  "chalk-derive",
- "lazy_static",
 ]
 
 [[package]]
