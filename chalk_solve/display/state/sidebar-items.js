@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["UnifiedId"],"struct":["IdAliasStore","IdAliases","InternalWriterState","InvertedBoundVar","WriterState"],"type":["IndexWithinBinding"]};

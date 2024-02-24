@@ -1,0 +1,4 @@
+(function() {var implementors = {
+"chalk_engine":[["impl&lt;I: Interner&gt; Solver&lt;I&gt; for <a class=\"struct\" href=\"chalk_engine/solve/struct.SLGSolver.html\" title=\"struct chalk_engine::solve::SLGSolver\">SLGSolver</a>&lt;I&gt;"]],
+"chalk_recursive":[["impl&lt;I: Interner&gt; Solver&lt;I&gt; for <a class=\"struct\" href=\"chalk_recursive/recursive/struct.RecursiveSolver.html\" title=\"struct chalk_recursive::recursive::RecursiveSolver\">RecursiveSolver</a>&lt;I&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

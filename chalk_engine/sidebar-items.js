@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AnswerMode","Literal"],"macro":["index_struct"],"mod":["context","derived","forest","logic","normalize_deep","simplify","slg","solve","stack","strand","table","tables"],"struct":["Answer","CompleteAnswer","ExClause","FlounderedSubgoal","Minimums","TableIndex","TimeStamp"]};

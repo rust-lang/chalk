@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["write_flags"]};

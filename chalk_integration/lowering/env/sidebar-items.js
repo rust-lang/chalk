@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TypeLookup"],"struct":["AssociatedTyLookup","Env"],"type":["AdtIds","AdtKinds","AssociatedTyLookups","AssociatedTyValueIds","AutoTraits","ClosureIds","ClosureKinds","CoroutineIds","CoroutineKinds","FnDefIds","FnDefKinds","ForeignIds","LowerResult","OpaqueTyIds","OpaqueTyVariableKinds","ParameterMap","TraitIds","TraitKinds"]};

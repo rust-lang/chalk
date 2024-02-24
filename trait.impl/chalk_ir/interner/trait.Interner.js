@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"chalk_integration":[["impl <a class=\"trait\" href=\"chalk_ir/interner/trait.Interner.html\" title=\"trait chalk_ir::interner::Interner\">Interner</a> for <a class=\"struct\" href=\"chalk_integration/interner/struct.ChalkIr.html\" title=\"struct chalk_integration::interner::ChalkIr\">ChalkIr</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

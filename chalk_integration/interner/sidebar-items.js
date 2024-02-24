@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ChalkFnAbi"],"struct":["ChalkIr","RawId"],"type":["Identifier"]};
