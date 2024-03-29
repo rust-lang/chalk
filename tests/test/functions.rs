@@ -108,7 +108,7 @@ fn function_implement_fn_traits() {
             expect![["No possible solution"]]
         }
 
-        // Function pointres implicity return `()` when no return
+        // Function pointers implicit return `()` when no return
         // type is specified - make sure that normalization understands
         // this
         goal {
@@ -205,7 +205,7 @@ fn function_implement_fn_traits() {
             expect![["Unique"]]
         }
 
-        // Similiar to the above test, but for types instead of lifetimes:
+        // Similar to the above test, but for types instead of lifetimes:
         // a 'stricter' function (requires types to be the same) can never
         // implement `FnOnce` for a 'less strict' signature (does not require
         // types to be the same)

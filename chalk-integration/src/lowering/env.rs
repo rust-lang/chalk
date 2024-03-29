@@ -230,7 +230,7 @@ impl Env<'_> {
         I: IntoIterator<Item = chalk_ir::WithKind<ChalkIr, Ident>>,
         I::IntoIter: ExactSizeIterator,
     {
-        // As binders to introduce we recieve `ParameterKind<Ident>`,
+        // As binders to introduce we receive `ParameterKind<Ident>`,
         // which we need to transform into `(Ident, ParameterKind<BoundVar>)`,
         // because that is the key-value pair for ParameterMap.
         // `swap_inner` lets us do precisely that, replacing `Ident` inside

@@ -138,7 +138,7 @@ impl AdtSizeAlign {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// A rust intermediate represention (rust_ir) of a function definition/declaration.
+/// A rust intermediate representation (rust_ir) of a function definition/declaration.
 /// For example, in the following rust code:
 ///
 /// ```ignore
