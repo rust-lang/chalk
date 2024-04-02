@@ -241,6 +241,7 @@ impl<I: Interner> RenderAsRust<I> for LifetimeData<I> {
             }
             LifetimeData::Static => write!(f, "'static"),
             LifetimeData::Erased => write!(f, "'_"),
+            LifetimeData::Error => write!(f, "'{{error}}"),
             // Matching the void ensures at compile time that this code is
             // unreachable
             LifetimeData::Phantom(void, _) => match *void {},

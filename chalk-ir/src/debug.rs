@@ -307,6 +307,7 @@ impl<I: Interner> Debug for LifetimeData<I> {
             LifetimeData::Placeholder(index) => write!(fmt, "'{:?}", index),
             LifetimeData::Static => write!(fmt, "'static"),
             LifetimeData::Erased => write!(fmt, "'<erased>"),
+            LifetimeData::Error => write!(fmt, "'{{error}}"),
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }
