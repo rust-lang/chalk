@@ -963,12 +963,14 @@ impl<'t, I: Interner> Unifier<'t, I> {
             ) => self.unify_lifetime_var(variance.invert(), b_var, a, ui),
 
             (&LifetimeData::InferenceVar(a_var), &LifetimeData::Erased)
-            | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static) => {
+            | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Static)
+            | (&LifetimeData::InferenceVar(a_var), &LifetimeData::Error) => {
                 self.unify_lifetime_var(variance, a_var, b, UniverseIndex::root())
             }
 
             (&LifetimeData::Erased, &LifetimeData::InferenceVar(b_var))
-            | (&LifetimeData::Static, &LifetimeData::InferenceVar(b_var)) => {
+            | (&LifetimeData::Static, &LifetimeData::InferenceVar(b_var))
+            | (&LifetimeData::Error, &LifetimeData::InferenceVar(b_var)) => {
                 self.unify_lifetime_var(variance.invert(), b_var, a, UniverseIndex::root())
             }
 
@@ -990,6 +992,7 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 }
             }
 
+            (LifetimeData::Error, _) | (_, LifetimeData::Error) => Ok(()),
             (LifetimeData::BoundVar(_), _) | (_, LifetimeData::BoundVar(_)) => panic!(
                 "unification encountered bound variable: a={:?} b={:?}",
                 a, b

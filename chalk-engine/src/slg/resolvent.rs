@@ -627,7 +627,8 @@ impl<'i, I: Interner> Zipper<I> for AnswerSubstitutor<'i, I> {
             (LifetimeData::Static, _)
             | (LifetimeData::BoundVar(_), _)
             | (LifetimeData::Placeholder(_), _)
-            | (LifetimeData::Erased, _) => panic!(
+            | (LifetimeData::Erased, _)
+            | (LifetimeData::Error, _) => panic!(
                 "structural mismatch between answer `{:?}` and pending goal `{:?}`",
                 answer, pending,
             ),

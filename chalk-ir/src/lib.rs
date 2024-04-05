@@ -555,14 +555,16 @@ bitflags! {
         const HAS_CT_PROJECTION           = 1 << 9;
         /// Does the type contain an error
         const HAS_ERROR                   = 1 << 10;
+        /// Does the type contain an error lifetime
+        const HAS_RE_ERROR                = 1 << 11;
         /// Does the type contain any free lifetimes
-        const HAS_FREE_REGIONS            = 1 << 11;
+        const HAS_FREE_REGIONS            = 1 << 12;
         /// True when the type contains lifetimes that will be substituted when function is called
-        const HAS_RE_LATE_BOUND           = 1 << 12;
+        const HAS_RE_LATE_BOUND           = 1 << 13;
         /// True when the type contains an erased lifetime
-        const HAS_RE_ERASED               = 1 << 13;
+        const HAS_RE_ERASED               = 1 << 14;
         /// Does the type contain placeholders or inference variables that could be replaced later
-        const STILL_FURTHER_SPECIALIZABLE = 1 << 14;
+        const STILL_FURTHER_SPECIALIZABLE = 1 << 15;
 
         /// True when the type contains free names local to a particular context
         const HAS_FREE_LOCAL_NAMES        = TypeFlags::HAS_TY_INFER.bits()
@@ -1280,6 +1282,7 @@ impl<I: Interner> Lifetime<I> {
             LifetimeData::Placeholder(_) => false,
             LifetimeData::Static => false,
             LifetimeData::Erased => false,
+            LifetimeData::Error => false,
             LifetimeData::Phantom(..) => unreachable!(),
         }
     }
@@ -1301,6 +1304,7 @@ impl<I: Interner> Lifetime<I> {
             LifetimeData::Phantom(_, _) => TypeFlags::empty(),
             LifetimeData::BoundVar(_) => TypeFlags::HAS_RE_LATE_BOUND,
             LifetimeData::Erased => TypeFlags::HAS_RE_ERASED,
+            LifetimeData::Error => TypeFlags::HAS_RE_ERROR,
         }
     }
 }
@@ -1321,6 +1325,8 @@ pub enum LifetimeData<I: Interner> {
     Erased,
     /// Lifetime on phantom data.
     Phantom(Void, PhantomData<I>),
+    /// A lifetime that resulted from some error
+    Error,
 }
 
 impl<I: Interner> LifetimeData<I> {

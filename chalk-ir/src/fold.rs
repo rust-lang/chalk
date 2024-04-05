@@ -822,6 +822,7 @@ where
             }
             LifetimeData::Static => Ok(LifetimeData::<I>::Static.intern(folder.interner())),
             LifetimeData::Erased => Ok(LifetimeData::<I>::Erased.intern(folder.interner())),
+            LifetimeData::Error => Ok(LifetimeData::<I>::Error.intern(folder.interner())),
             LifetimeData::Phantom(void, ..) => match *void {},
         }
     }
