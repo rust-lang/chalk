@@ -45,7 +45,7 @@ impl Stack {
         };
 
         if depth.depth >= self.overflow_depth {
-            // This shoudl perhaps be a result or something, though
+            // This should perhaps be a result or something, though
             // really I'd prefer to move to subgoal abstraction for
             // guaranteeing termination. -nmatsakis
             panic!("overflow depth reached")

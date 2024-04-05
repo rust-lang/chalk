@@ -11,6 +11,6 @@ pub fn add_clone_program_clauses<I: Interner>(
     ty: TyKind<I>,
     binders: &CanonicalVarKinds<I>,
 ) -> Result<(), Floundered> {
-    // Implement Clone for types that automaticly implement Copy
+    // Implement Clone for types that automatically implement Copy
     add_copy_program_clauses(db, builder, trait_ref, ty, binders)
 }
