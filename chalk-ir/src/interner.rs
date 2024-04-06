@@ -662,11 +662,11 @@ impl<T: HasInterner> HasInterner for Vec<T> {
     type Interner = T::Interner;
 }
 
-impl<T: HasInterner> HasInterner for Box<T> {
+impl<T: HasInterner + ?Sized> HasInterner for Box<T> {
     type Interner = T::Interner;
 }
 
-impl<T: HasInterner> HasInterner for Arc<T> {
+impl<T: HasInterner + ?Sized> HasInterner for Arc<T> {
     type Interner = T::Interner;
 }
 
