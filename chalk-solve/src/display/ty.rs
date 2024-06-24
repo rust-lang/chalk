@@ -223,8 +223,10 @@ impl<I: Interner> RenderAsRust<I> for Scalar {
                     U128 => "u128",
                 },
                 Scalar::Float(float) => match float {
+                    F16 => "f16",
                     F32 => "f32",
                     F64 => "f64",
+                    F128 => "f128",
                 },
             }
         )

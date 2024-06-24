@@ -1206,8 +1206,10 @@ impl Lower for FloatTy {
 
     fn lower(&self) -> Self::Lowered {
         match self {
+            FloatTy::F16 => chalk_ir::FloatTy::F16,
             FloatTy::F32 => chalk_ir::FloatTy::F32,
             FloatTy::F64 => chalk_ir::FloatTy::F64,
+            FloatTy::F128 => chalk_ir::FloatTy::F128,
         }
     }
 }

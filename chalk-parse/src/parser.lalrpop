@@ -463,8 +463,10 @@ UintTy: UintTy = {
 };
 
 FloatTy: FloatTy = {
+    "f16" => FloatTy::F16,
     "f32" => FloatTy::F32,
     "f64" => FloatTy::F64,
+    "f128" => FloatTy::F128,
 };
 
 ScalarType: ScalarType = {
