@@ -265,8 +265,10 @@ pub enum UintTy {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(missing_docs)]
 pub enum FloatTy {
+    F16,
     F32,
     F64,
+    F128,
 }
 
 /// Types of scalar values.

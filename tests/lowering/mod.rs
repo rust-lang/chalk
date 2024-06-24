@@ -490,8 +490,10 @@ fn scalars() {
             impl Foo for u64 { }
             impl Foo for u128 { }
             impl Foo for usize { }
+            impl Foo for f16 { }
             impl Foo for f32 { }
             impl Foo for f64 { }
+            impl Foo for f128 { }
             impl Foo for bool { }
             impl Foo for char { }
         }

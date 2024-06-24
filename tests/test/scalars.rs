@@ -62,8 +62,10 @@ fn scalar_trait_impl() {
             impl Foo for u64 { }
             impl Foo for u128 { }
             impl Foo for usize { }
+            impl Foo for f16 { }
             impl Foo for f32 { }
             impl Foo for f64 { }
+            impl Foo for f128 { }
             impl Foo for bool { }
             impl Foo for char { }
 
@@ -88,8 +90,10 @@ fn scalar_trait_impl() {
         goal { u64: Foo } yields { expect![["Unique"]] }
         goal { u128: Foo } yields { expect![["Unique"]] }
         goal { usize: Foo } yields { expect![["Unique"]] }
+        goal { f16: Foo } yields { expect![["Unique"]] }
         goal { f32: Foo } yields { expect![["Unique"]] }
         goal { f64: Foo } yields { expect![["Unique"]] }
+        goal { f128: Foo } yields { expect![["Unique"]] }
         goal { bool: Foo } yields { expect![["Unique"]] }
         goal { char: Foo } yields { expect![["Unique"]] }
 
@@ -105,8 +109,10 @@ fn scalar_trait_impl() {
         goal { u64: UnsignedFoo } yields { expect![["Unique"]] }
         goal { u128: UnsignedFoo } yields { expect![["Unique"]] }
         goal { usize: UnsignedFoo } yields { expect![["Unique"]] }
+        goal { f16: UnsignedFoo } yields { expect![["No possible solution"]] }
         goal { f32: UnsignedFoo } yields { expect![["No possible solution"]] }
         goal { f64: UnsignedFoo } yields { expect![["No possible solution"]] }
+        goal { f128: UnsignedFoo } yields { expect![["No possible solution"]] }
         goal { bool: UnsignedFoo } yields { expect![["No possible solution"]] }
         goal { char: UnsignedFoo } yields { expect![["No possible solution"]] }
 
@@ -128,8 +134,10 @@ fn scalars_are_well_formed() {
         goal { WellFormed(u64) } yields { expect![["Unique"]] }
         goal { WellFormed(u128) } yields { expect![["Unique"]] }
         goal { WellFormed(usize) } yields { expect![["Unique"]] }
+        goal { WellFormed(f16) } yields { expect![["Unique"]] }
         goal { WellFormed(f32) } yields { expect![["Unique"]] }
         goal { WellFormed(f64) } yields { expect![["Unique"]] }
+        goal { WellFormed(f128) } yields { expect![["Unique"]] }
         goal { WellFormed(bool) } yields { expect![["Unique"]] }
         goal { WellFormed(char) } yields { expect![["Unique"]] }
     }
@@ -154,8 +162,10 @@ fn scalars_are_sized() {
         goal { u64: Sized } yields { expect![["Unique"]] }
         goal { u128: Sized } yields { expect![["Unique"]] }
         goal { usize: Sized } yields { expect![["Unique"]] }
+        goal { f16: Sized } yields { expect![["Unique"]] }
         goal { f32: Sized } yields { expect![["Unique"]] }
         goal { f64: Sized } yields { expect![["Unique"]] }
+        goal { f128: Sized } yields { expect![["Unique"]] }
         goal { bool: Sized } yields { expect![["Unique"]] }
         goal { char: Sized } yields { expect![["Unique"]] }
     }

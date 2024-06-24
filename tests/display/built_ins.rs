@@ -34,7 +34,7 @@ fn test_scalar_types() {
     // words, test the matrix of {every scalar} x {concrete type usages}. This
     // test should be updated to include new scalars, but it isn't super
     // important that it includes every place a concrete type can be used.
-    let basic = &["bool", "char", "f32", "f64"];
+    let basic = &["bool", "char", "f16", "f32", "f64", "f128"];
     let ints = {
         let prefixes = &["u", "i"];
         let sizes = &["size", "8", "16", "32", "64", "128"];
