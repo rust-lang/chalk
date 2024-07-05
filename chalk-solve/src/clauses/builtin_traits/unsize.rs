@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::iter;
 use std::ops::ControlFlow;
 
-use crate::clauses::ClauseBuilder;
+use crate::clauses::{super_traits::super_traits, ClauseBuilder};
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
 use chalk_ir::{
@@ -136,17 +136,27 @@ fn uses_outer_binder_params<I: Interner>(
     matches!(flow, ControlFlow::Break(_))
 }
 
-fn principal_id<I: Interner>(
+fn principal_trait_ref<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     bounds: &Binders<QuantifiedWhereClauses<I>>,
-) -> Option<TraitId<I>> {
-    let interner = db.interner();
-
+) -> Option<Binders<Binders<TraitRef<I>>>> {
     bounds
-        .skip_binders()
-        .iter(interner)
-        .filter_map(|b| b.trait_id())
-        .find(|&id| !db.trait_datum(id).is_auto_trait())
+        .map_ref(|b| b.iter(db.interner()))
+        .into_iter()
+        .find_map(|b| {
+            b.filter_map(|qwc| {
+                qwc.as_ref().filter_map(|wc| match wc {
+                    WhereClause::Implemented(trait_ref) => {
+                        if db.trait_datum(trait_ref.trait_id).is_auto_trait() {
+                            None
+                        } else {
+                            Some(trait_ref.clone())
+                        }
+                    }
+                    _ => None,
+                })
+            })
+        })
 }
 
 fn auto_trait_ids<'a, I: Interner>(
@@ -191,6 +201,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
     match (source_ty.kind(interner), target_ty.kind(interner)) {
         // dyn Trait + AutoX + 'a -> dyn Trait + AutoY + 'b
+        // dyn TraitA + AutoX + 'a -> dyn TraitB + AutoY + 'b (upcasting)
         (
             TyKind::Dyn(DynTy {
                 bounds: bounds_a,
@@ -201,20 +212,29 @@ pub fn add_unsize_program_clauses<I: Interner>(
                 lifetime: lifetime_b,
             }),
         ) => {
-            let principal_a = principal_id(db, bounds_a);
-            let principal_b = principal_id(db, bounds_b);
+            let principal_trait_ref_a = principal_trait_ref(db, bounds_a);
+            let principal_a = principal_trait_ref_a
+                .as_ref()
+                .map(|trait_ref| trait_ref.skip_binders().skip_binders().trait_id);
+            let principal_b = principal_trait_ref(db, bounds_b)
+                .map(|trait_ref| trait_ref.skip_binders().skip_binders().trait_id);
 
             let auto_trait_ids_a: Vec<_> = auto_trait_ids(db, bounds_a).collect();
             let auto_trait_ids_b: Vec<_> = auto_trait_ids(db, bounds_b).collect();
 
-            let may_apply = principal_a == principal_b
-                && auto_trait_ids_b
-                    .iter()
-                    .all(|id_b| auto_trait_ids_a.iter().any(|id_a| id_a == id_b));
-
-            if !may_apply {
+            let auto_traits_compatible = auto_trait_ids_a
+                .iter()
+                .all(|id_b| auto_trait_ids_a.contains(&id_b));
+            if !auto_traits_compatible {
                 return;
             }
+
+            // Check that source lifetime outlives target lifetime
+            let lifetime_outlives_goal: Goal<I> = WhereClause::LifetimeOutlives(LifetimeOutlives {
+                a: lifetime_a.clone(),
+                b: lifetime_b.clone(),
+            })
+            .cast(interner);
 
             // COMMENT FROM RUSTC:
             // ------------------
@@ -239,42 +259,108 @@ pub fn add_unsize_program_clauses<I: Interner>(
             //
             // In order for the coercion to be valid, this new type
             // should be equal to target type.
-            let new_source_ty = TyKind::Dyn(DynTy {
-                bounds: bounds_a.map_ref(|bounds| {
-                    QuantifiedWhereClauses::from_iter(
-                        interner,
-                        bounds.iter(interner).filter(|bound| {
-                            let trait_id = match bound.trait_id() {
-                                Some(id) => id,
-                                None => return true,
-                            };
+            if principal_a == principal_b {
+                let new_source_ty = TyKind::Dyn(DynTy {
+                    bounds: bounds_a.map_ref(|bounds| {
+                        QuantifiedWhereClauses::from_iter(
+                            interner,
+                            bounds.iter(interner).filter(|bound| {
+                                let trait_id = match bound.trait_id() {
+                                    Some(id) => id,
+                                    None => return true,
+                                };
 
-                            if auto_trait_ids_a.iter().all(|&id_a| id_a != trait_id) {
-                                return true;
-                            }
-                            auto_trait_ids_b.iter().any(|&id_b| id_b == trait_id)
+                                if !auto_trait_ids_a.contains(&trait_id) {
+                                    return true;
+                                }
+                                auto_trait_ids_b.contains(&trait_id)
+                            }),
+                        )
+                    }),
+                    lifetime: lifetime_b.clone(),
+                })
+                .intern(interner);
+
+                // Check that new source is equal to target
+                let eq_goal = EqGoal {
+                    a: new_source_ty.cast(interner),
+                    b: target_ty.clone().cast(interner),
+                }
+                .cast(interner);
+
+                builder.push_clause(trait_ref, [eq_goal, lifetime_outlives_goal]);
+            } else if let (Some(principal_a), Some(principal_b)) = (principal_a, principal_b) {
+                let principal_trait_ref_a = principal_trait_ref_a.unwrap();
+                let applicable_super_traits = super_traits(db, principal_a)
+                    .map(|(super_trait_refs, _)| super_trait_refs)
+                    .into_iter()
+                    .filter(|trait_ref| {
+                        trait_ref.skip_binders().skip_binders().trait_id == principal_b
+                    });
+
+                for super_trait_ref in applicable_super_traits {
+                    // `super_trait_ref` is, at this point, quantified over generic params of
+                    // `principal_a` and relevant higher-ranked lifetimes that come from super
+                    // trait elaboration (see comments on `super_traits()`).
+                    //
+                    // So if we have `trait Trait<'a, T>: for<'b> Super<'a, 'b, T> {}`,
+                    // `super_trait_ref` can be something like
+                    // `for<Self, 'a, T> for<'b> Self: Super<'a, 'b, T>`.
+                    //
+                    // We need to convert it into a bound for `DynTy`. We do this by substituting
+                    // bound vars of `principal_trait_ref_a` and then fusing inner binders for
+                    // higher-ranked lifetimes.
+                    let rebound_super_trait_ref = principal_trait_ref_a.map_ref(|q_trait_ref_a| {
+                        q_trait_ref_a
+                            .map_ref(|trait_ref_a| {
+                                super_trait_ref.substitute(interner, &trait_ref_a.substitution)
+                            })
+                            .fuse_binders(interner)
+                    });
+
+                    // Skip `for<Self>` binder. We'll rebind it immediately below.
+                    let new_principal_trait_ref = rebound_super_trait_ref
+                        .into_value_and_skipped_binders()
+                        .0
+                        .map(|it| it.cast(interner));
+
+                    // Swap trait ref for `principal_a` with the new trait ref, drop the auto
+                    // traits not included in the upcast target.
+                    let new_source_ty = TyKind::Dyn(DynTy {
+                        bounds: bounds_a.map_ref(|bounds| {
+                            QuantifiedWhereClauses::from_iter(
+                                interner,
+                                bounds.iter(interner).cloned().filter_map(|bound| {
+                                    let trait_id = match bound.trait_id() {
+                                        Some(id) => id,
+                                        None => return Some(bound),
+                                    };
+
+                                    if principal_a == trait_id {
+                                        Some(new_principal_trait_ref.clone())
+                                    } else {
+                                        auto_trait_ids_b.contains(&trait_id).then_some(bound)
+                                    }
+                                }),
+                            )
                         }),
-                    )
-                }),
-                lifetime: lifetime_b.clone(),
-            })
-            .intern(interner);
+                        lifetime: lifetime_b.clone(),
+                    })
+                    .intern(interner);
 
-            // Check that new source is equal to target
-            let eq_goal = EqGoal {
-                a: new_source_ty.cast(interner),
-                b: target_ty.clone().cast(interner),
+                    // Check that new source is equal to target
+                    let eq_goal = EqGoal {
+                        a: new_source_ty.cast(interner),
+                        b: target_ty.clone().cast(interner),
+                    }
+                    .cast(interner);
+
+                    // We don't push goal for `principal_b`'s object safety because it's implied by
+                    // `principal_a`'s object safety.
+                    builder
+                        .push_clause(trait_ref.clone(), [eq_goal, lifetime_outlives_goal.clone()]);
+                }
             }
-            .cast(interner);
-
-            // Check that source lifetime outlives target lifetime
-            let lifetime_outlives_goal: Goal<I> = WhereClause::LifetimeOutlives(LifetimeOutlives {
-                a: lifetime_a.clone(),
-                b: lifetime_b.clone(),
-            })
-            .cast(interner);
-
-            builder.push_clause(trait_ref, [eq_goal, lifetime_outlives_goal].iter());
         }
 
         // T -> dyn Trait + 'a
