@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["parse_goal","parse_program","parse_ty","position_string"],"mod":["ast","parser"],"type":["Result"]};

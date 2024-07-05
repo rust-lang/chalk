@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["aggregate","resolvent"],"struct":["MayInvalidate","SlgContext","SlgContextOps"],"trait":["ResolventOps","SubstitutionExt"]};

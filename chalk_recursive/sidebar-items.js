@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["combine","fixed_point","fulfill","recursive","solve"],"struct":["Cache","RecursiveSolver"],"type":["UCanonicalGoal"]};

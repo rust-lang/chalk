@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["binder_impls","boring_impls","in_place","shift","subst"],"struct":["Subst"],"trait":["FallibleTypeFolder","TypeFoldable","TypeFolder","TypeSuperFoldable"]};

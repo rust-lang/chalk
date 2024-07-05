@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["UCanonicalized","UCollector","UMapFromCanonical","UMapToCanonical"],"trait":["UniverseMapExt"]};

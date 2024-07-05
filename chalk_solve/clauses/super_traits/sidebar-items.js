@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["push_trait_super_clauses","super_traits"]};
