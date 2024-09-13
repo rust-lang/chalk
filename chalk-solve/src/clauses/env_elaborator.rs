@@ -19,7 +19,7 @@ use tracing::instrument;
 ///
 /// For example, when `T: Clone` is in the environment, we can prove
 /// `T: Copy` by adding the clauses from `trait Clone`, which includes
-/// the rule `FromEnv(T: Copy) :- FromEnv(T: Clone)
+/// the rule `FromEnv(T: Copy) :- FromEnv(T: Clone)`
 pub(super) fn elaborate_env_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     in_clauses: &[ProgramClause<I>],

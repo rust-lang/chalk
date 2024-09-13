@@ -1698,7 +1698,7 @@ impl<I: Interner> TraitRef<I> {
     }
 }
 
-/// Lifetime outlives, which for `'a: 'b`` checks that the lifetime `'a`
+/// Lifetime outlives, which for `'a: 'b` checks that the lifetime `'a`
 /// is a superset of the value of `'b`.
 #[derive(Clone, PartialEq, Eq, Hash, TypeFoldable, TypeVisitable, HasInterner, Zip)]
 #[allow(missing_docs)]
