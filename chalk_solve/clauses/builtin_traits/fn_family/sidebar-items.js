@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_fn_trait_program_clauses","push_clauses","push_clauses_for_apply"]};

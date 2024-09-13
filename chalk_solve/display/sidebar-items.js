@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["display_self_where_clauses_as_bounds","display_trait_with_assoc_ty_value","display_type_with_generics","sanitize_debug_name","write_item","write_items","write_stub_items"],"mod":["bounds","identifiers","items","render_trait","state","stub","ty","utils"],"struct":["IdAliasStore","InvertedBoundVar","WriterState"]};

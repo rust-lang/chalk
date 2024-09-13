@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["lower_type_kind"],"struct":["ProgramLowerer"],"trait":["LowerTypeKind"]};

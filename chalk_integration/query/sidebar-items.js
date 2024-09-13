@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["checked_program","coherence","environment","orphan_check","program_ir","solver"],"struct":["ArcEq","CheckedProgramQuery","CoherenceQuery","EnvironmentQuery","Lowering","LoweringDatabaseGroupStorage__","OrphanCheckQuery","ProgramIrQuery","ProgramTextQuery","SolverChoiceQuery","SolverQuery"],"trait":["LoweringDatabase","Upcast","UpcastFrom"]};

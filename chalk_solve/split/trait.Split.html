@@ -1,0 +1,109 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Methods for splitting up the projections for associated types from the surrounding context."><title>Split in chalk_solve::split - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="chalk_solve" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../chalk_solve/index.html">chalk_solve</a><span class="version">0.98.0-dev.0</span></h2></div><h2 class="location"><a href="#">Split</a></h2><div class="sidebar-elems"><section><h3><a href="#provided-methods">Provided Methods</a></h3><ul class="block"><li><a href="#method.impl_parameters_and_projection_from_associated_ty_value">impl_parameters_and_projection_from_associated_ty_value</a></li><li><a href="#method.split_associated_ty_parameters">split_associated_ty_parameters</a></li><li><a href="#method.split_associated_ty_value_parameters">split_associated_ty_value_parameters</a></li><li><a href="#method.split_projection">split_projection</a></li><li><a href="#method.trait_parameters_from_projection">trait_parameters_from_projection</a></li><li><a href="#method.trait_ref_from_projection">trait_ref_from_projection</a></li></ul><h3><a href="#object-safety">Object Safety</a></h3><h3><a href="#implementors">Implementors</a></h3></section><h2><a href="index.html">In chalk_solve::split</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../index.html">chalk_solve</a>::<wbr><a href="index.html">split</a>::<wbr><a class="trait" href="#">Split</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../src/chalk_solve/split.rs.html#10-197">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub trait Split&lt;I: <a class="trait" href="../../chalk_ir/interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>&gt;: <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt; {
+    // Provided methods
+    fn <a href="#method.split_projection" class="fn">split_projection</a>&lt;'p&gt;(
+        &amp;self,
+        projection: &amp;'p <a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;,
+    ) -&gt; (<a class="struct" href="https://doc.rust-lang.org/1.81.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="struct" href="../rust_ir/struct.AssociatedTyDatum.html" title="struct chalk_solve::rust_ir::AssociatedTyDatum">AssociatedTyDatum</a>&lt;I&gt;&gt;, &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;], &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;]) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.trait_parameters_from_projection" class="fn">trait_parameters_from_projection</a>&lt;'p&gt;(
+        &amp;self,
+        projection: &amp;'p <a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;,
+    ) -&gt; &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;] { ... }
+<span class="item-spacer"></span>    fn <a href="#method.trait_ref_from_projection" class="fn">trait_ref_from_projection</a>(
+        &amp;self,
+        projection: &amp;<a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;,
+    ) -&gt; <a class="struct" href="../../chalk_ir/struct.TraitRef.html" title="struct chalk_ir::TraitRef">TraitRef</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.split_associated_ty_value_parameters" class="fn">split_associated_ty_value_parameters</a>&lt;'p, P&gt;(
+        &amp;self,
+        parameters: &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>,
+        associated_ty_value: &amp;<a class="struct" href="../rust_ir/struct.AssociatedTyValue.html" title="struct chalk_solve::rust_ir::AssociatedTyValue">AssociatedTyValue</a>&lt;I&gt;,
+    ) -&gt; (&amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>, &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.impl_parameters_and_projection_from_associated_ty_value" class="fn">impl_parameters_and_projection_from_associated_ty_value</a>&lt;'p&gt;(
+        &amp;self,
+        parameters: &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;],
+        associated_ty_value: &amp;<a class="struct" href="../rust_ir/struct.AssociatedTyValue.html" title="struct chalk_solve::rust_ir::AssociatedTyValue">AssociatedTyValue</a>&lt;I&gt;,
+    ) -&gt; (&amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;], <a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;) { ... }
+<span class="item-spacer"></span>    fn <a href="#method.split_associated_ty_parameters" class="fn">split_associated_ty_parameters</a>&lt;'p, P&gt;(
+        &amp;self,
+        parameters: &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>,
+        associated_ty_datum: &amp;<a class="struct" href="../rust_ir/struct.AssociatedTyDatum.html" title="struct chalk_solve::rust_ir::AssociatedTyDatum">AssociatedTyDatum</a>&lt;I&gt;,
+    ) -&gt; (&amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>, &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>) { ... }
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Methods for splitting up the projections for associated types from
+the surrounding context.</p>
+</div></details><h2 id="provided-methods" class="section-header">Provided Methods<a href="#provided-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="method.split_projection" class="method"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#17-35">source</a><h4 class="code-header">fn <a href="#method.split_projection" class="fn">split_projection</a>&lt;'p&gt;(
+    &amp;self,
+    projection: &amp;'p <a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;,
+) -&gt; (<a class="struct" href="https://doc.rust-lang.org/1.81.0/alloc/sync/struct.Arc.html" title="struct alloc::sync::Arc">Arc</a>&lt;<a class="struct" href="../rust_ir/struct.AssociatedTyDatum.html" title="struct chalk_solve::rust_ir::AssociatedTyDatum">AssociatedTyDatum</a>&lt;I&gt;&gt;, &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;], &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;])</h4></section></summary><div class="docblock"><p>Given a projection of an associated type, split the type
+parameters into those that come from the <em>trait</em> and those
+that come from the <em>associated type itself</em>. So e.g. if you
+have <code>(Iterator::Item)&lt;F&gt;</code>, this would return <code>([F], [])</code>,
+since <code>Iterator::Item</code> is not generic and hence doesn’t have
+any type parameters itself.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.trait_parameters_from_projection" class="method"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#40-46">source</a><h4 class="code-header">fn <a href="#method.trait_parameters_from_projection" class="fn">trait_parameters_from_projection</a>&lt;'p&gt;(
+    &amp;self,
+    projection: &amp;'p <a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;,
+) -&gt; &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;]</h4></section></summary><div class="docblock"><p>Given a projection <code>&lt;P0 as Trait&lt;P1..Pn&gt;&gt;::Item&lt;Pn..Pm&gt;</code>,
+returns the trait parameters <code>[P0..Pn]</code> (see
+<code>split_projection</code>).</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.trait_ref_from_projection" class="method"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#51-58">source</a><h4 class="code-header">fn <a href="#method.trait_ref_from_projection" class="fn">trait_ref_from_projection</a>(&amp;self, projection: &amp;<a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;) -&gt; <a class="struct" href="../../chalk_ir/struct.TraitRef.html" title="struct chalk_ir::TraitRef">TraitRef</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Given a projection <code>&lt;P0 as Trait&lt;P1..Pn&gt;&gt;::Item&lt;Pn..Pm&gt;</code>,
+returns the trait parameters <code>[P0..Pn]</code> (see
+<code>split_projection</code>).</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.split_associated_ty_value_parameters" class="method"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#83-100">source</a><h4 class="code-header">fn <a href="#method.split_associated_ty_value_parameters" class="fn">split_associated_ty_value_parameters</a>&lt;'p, P&gt;(
+    &amp;self,
+    parameters: &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>,
+    associated_ty_value: &amp;<a class="struct" href="../rust_ir/struct.AssociatedTyValue.html" title="struct chalk_solve::rust_ir::AssociatedTyValue">AssociatedTyValue</a>&lt;I&gt;,
+) -&gt; (&amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>, &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>)</h4></section></summary><div class="docblock"><p>Given the full set of parameters (or binders) for an
+associated type <em>value</em> (which appears in an impl), splits
+them into the substitutions for the <em>impl</em> and those for the
+<em>associated type</em>.</p>
+<h5 id="example"><a class="doc-anchor" href="#example">§</a>Example</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">impl</span>&lt;T&gt; Iterable <span class="kw">for </span>Vec&lt;T&gt; {
+    <span class="kw">type </span>Iter&lt;<span class="lifetime">'a</span>&gt;;
+}</code></pre></div>
+<p>in this example, the full set of parameters would be <code>['x, Y]</code>, where <code>'x</code> is the value for <code>'a</code> and <code>Y</code> is the value for
+<code>T</code>.</p>
+<h5 id="returns"><a class="doc-anchor" href="#returns">§</a>Returns</h5>
+<p>Returns the pair of:</p>
+<ul>
+<li>the parameters for the impl (<code>[Y]</code>, in our example)</li>
+<li>the parameters for the associated type value (<code>['a]</code>, in our example)</li>
+</ul>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.impl_parameters_and_projection_from_associated_ty_value" class="method"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#122">source</a><h4 class="code-header">fn <a href="#method.impl_parameters_and_projection_from_associated_ty_value" class="fn">impl_parameters_and_projection_from_associated_ty_value</a>&lt;'p&gt;(
+    &amp;self,
+    parameters: &amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;],
+    associated_ty_value: &amp;<a class="struct" href="../rust_ir/struct.AssociatedTyValue.html" title="struct chalk_solve::rust_ir::AssociatedTyValue">AssociatedTyValue</a>&lt;I&gt;,
+) -&gt; (&amp;'p [<a class="struct" href="../../chalk_ir/struct.GenericArg.html" title="struct chalk_ir::GenericArg">GenericArg</a>&lt;I&gt;], <a class="struct" href="../../chalk_ir/struct.ProjectionTy.html" title="struct chalk_ir::ProjectionTy">ProjectionTy</a>&lt;I&gt;)</h4></section></summary><div class="docblock"><p>Given the full set of parameters for an associated type <em>value</em>
+(which appears in an impl), returns the trait reference
+and projection that are being satisfied by that value.</p>
+<h5 id="example-1"><a class="doc-anchor" href="#example-1">§</a>Example</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">impl</span>&lt;T&gt; Iterable <span class="kw">for </span>Vec&lt;T&gt; {
+    <span class="kw">type </span>Iter&lt;<span class="lifetime">'a</span>&gt;;
+}</code></pre></div>
+<p>Here we expect the full set of parameters for <code>Iter</code>, which
+would be <code>['x, Y]</code>, where <code>'x</code> is the value for <code>'a</code> and <code>Y</code>
+is the value for <code>T</code>.</p>
+<p>Returns the pair of:</p>
+<ul>
+<li>the parameters that apply to the impl (<code>Y</code>, in our example)</li>
+<li>the projection <code>&lt;Vec&lt;Y&gt; as Iterable&gt;::Iter&lt;'x&gt;</code></li>
+</ul>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.split_associated_ty_parameters" class="method"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#186-196">source</a><h4 class="code-header">fn <a href="#method.split_associated_ty_parameters" class="fn">split_associated_ty_parameters</a>&lt;'p, P&gt;(
+    &amp;self,
+    parameters: &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>,
+    associated_ty_datum: &amp;<a class="struct" href="../rust_ir/struct.AssociatedTyDatum.html" title="struct chalk_solve::rust_ir::AssociatedTyDatum">AssociatedTyDatum</a>&lt;I&gt;,
+) -&gt; (&amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>, &amp;'p <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.slice.html">[P]</a>)</h4></section></summary><div class="docblock"><p>Given the full set of parameters (or binders) for an
+associated type datum (the one appearing in a trait), splits
+them into the parameters for the <em>trait</em> and those for the
+<em>associated type</em>.</p>
+<h5 id="example-2"><a class="doc-anchor" href="#example-2">§</a>Example</h5>
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">trait </span>Foo&lt;T&gt; {
+    <span class="kw">type </span>Assoc&lt;<span class="lifetime">'a</span>&gt;;
+}</code></pre></div>
+<p>in this example, the full set of parameters would be <code>['x, Y]</code>, where <code>'x</code> is the value for <code>'a</code> and <code>Y</code> is the value for
+<code>T</code>.</p>
+<h5 id="returns-1"><a class="doc-anchor" href="#returns-1">§</a>Returns</h5>
+<p>Returns the tuple of:</p>
+<ul>
+<li>the parameters for the impl (<code>[Y]</code>, in our example)</li>
+<li>the parameters for the associated type value (<code>['a]</code>, in our example)</li>
+</ul>
+</div></details></div><h2 id="object-safety" class="section-header">Object Safety<a href="#object-safety" class="anchor">§</a></h2><div class="object-safety-info">This trait is <b>not</b> <a href="https://doc.rust-lang.org/1.81.0/reference/items/traits.html#object-safety">object safe</a>.</div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-Split%3CI%3E-for-DB" class="impl"><a class="src rightside" href="../../src/chalk_solve/split.rs.html#199">source</a><a href="#impl-Split%3CI%3E-for-DB" class="anchor">§</a><h3 class="code-header">impl&lt;DB: <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt; + ?<a class="trait" href="https://doc.rust-lang.org/1.81.0/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>, I: <a class="trait" href="../../chalk_ir/interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>&gt; <a class="trait" href="trait.Split.html" title="trait chalk_solve::split::Split">Split</a>&lt;I&gt; for DB</h3></section></div><script src="../../trait.impl/chalk_solve/split/trait.Split.js" async></script></section></div></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["reflexive_impl"],"struct":["Casted"],"trait":["Cast","CastTo","Caster"]};

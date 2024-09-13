@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_builtin_assoc_program_clauses","add_builtin_program_clauses","last_field_of_struct","needs_impl_for_tys"],"mod":["clone","copy","coroutine","discriminant_kind","fn_family","pointee","sized","tuple","unsize"]};

@@ -1,0 +1,126 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Finds the solution to “goals”, or trait queries – i.e., figures out what sets of types implement which traits. Also, between queries, this struct stores the cached state from previous solver attempts, which can then be re-used later."><title>Solver in chalk_solve::solve - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="chalk_solve" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../chalk_solve/index.html">chalk_solve</a><span class="version">0.98.0-dev.0</span></h2></div><h2 class="location"><a href="#">Solver</a></h2><div class="sidebar-elems"><section><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.solve">solve</a></li><li><a href="#tymethod.solve_limited">solve_limited</a></li><li><a href="#tymethod.solve_multiple">solve_multiple</a></li></ul><h3><a href="#provided-methods">Provided Methods</a></h3><ul class="block"><li><a href="#method.has_unique_solution">has_unique_solution</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><h2><a href="index.html">In chalk_solve::solve</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../index.html">chalk_solve</a>::<wbr><a href="index.html">solve</a>::<wbr><a class="trait" href="#">Solver</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../src/chalk_solve/solve.rs.html#252-350">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub trait Solver&lt;I: <a class="trait" href="../../chalk_ir/interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>&gt;<div class="where">where
+    Self: <a class="trait" href="https://doc.rust-lang.org/1.81.0/core/fmt/trait.Debug.html" title="trait core::fmt::Debug">Debug</a>,</div>{
+    // Required methods
+    fn <a href="#tymethod.solve" class="fn">solve</a>(
+        &amp;mut self,
+        program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+        goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+    ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.81.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="enum.Solution.html" title="enum chalk_solve::solve::Solution">Solution</a>&lt;I&gt;&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.solve_limited" class="fn">solve_limited</a>(
+        &amp;mut self,
+        program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+        goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+        should_continue: &amp;dyn <a class="trait" href="https://doc.rust-lang.org/1.81.0/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>() -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>,
+    ) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.81.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="enum.Solution.html" title="enum chalk_solve::solve::Solution">Solution</a>&lt;I&gt;&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.solve_multiple" class="fn">solve_multiple</a>(
+        &amp;mut self,
+        program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+        goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+        f: &amp;mut dyn <a class="trait" href="https://doc.rust-lang.org/1.81.0/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(<a class="enum" href="enum.SubstitutionResult.html" title="enum chalk_solve::solve::SubstitutionResult">SubstitutionResult</a>&lt;<a class="struct" href="../../chalk_ir/struct.Canonical.html" title="struct chalk_ir::Canonical">Canonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.ConstrainedSubst.html" title="struct chalk_ir::ConstrainedSubst">ConstrainedSubst</a>&lt;I&gt;&gt;&gt;, <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>,
+    ) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>;
+
+    // Provided method
+    fn <a href="#method.has_unique_solution" class="fn">has_unique_solution</a>(
+        &amp;mut self,
+        program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+        goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+    ) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a> { ... }
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Finds the solution to “goals”, or trait queries – i.e., figures
+out what sets of types implement which traits. Also, between
+queries, this struct stores the cached state from previous solver
+attempts, which can then be re-used later.</p>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.solve" class="method"><a class="src rightside" href="../../src/chalk_solve/solve.rs.html#274-278">source</a><h4 class="code-header">fn <a href="#tymethod.solve" class="fn">solve</a>(
+    &amp;mut self,
+    program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+    goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.81.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="enum.Solution.html" title="enum chalk_solve::solve::Solution">Solution</a>&lt;I&gt;&gt;</h4></section></summary><div class="docblock"><p>Attempts to solve the given goal, which must be in canonical
+form. Returns a unique solution (if one exists).  This will do
+only as much work towards <code>goal</code> as it has to (and that work
+is cached for future attempts).</p>
+<h5 id="parameters"><a class="doc-anchor" href="#parameters">§</a>Parameters</h5>
+<ul>
+<li><code>program</code> – defines the program clauses in scope.
+<ul>
+<li><strong>Important:</strong> You must supply the same set of program clauses
+each time you invoke <code>solve</code>, as otherwise the cached data may be
+invalid.</li>
+</ul>
+</li>
+<li><code>goal</code> the goal to solve</li>
+</ul>
+<h5 id="returns"><a class="doc-anchor" href="#returns">§</a>Returns</h5>
+<ul>
+<li><code>None</code> is the goal cannot be proven.</li>
+<li><code>Some(solution)</code> if we succeeded in finding <em>some</em> answers,
+although <code>solution</code> may reflect ambiguity and unknowns.</li>
+</ul>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.solve_limited" class="method"><a class="src rightside" href="../../src/chalk_solve/solve.rs.html#302-307">source</a><h4 class="code-header">fn <a href="#tymethod.solve_limited" class="fn">solve_limited</a>(
+    &amp;mut self,
+    program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+    goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+    should_continue: &amp;dyn <a class="trait" href="https://doc.rust-lang.org/1.81.0/core/ops/function/trait.Fn.html" title="trait core::ops::function::Fn">Fn</a>() -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>,
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/1.81.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="enum" href="enum.Solution.html" title="enum chalk_solve::solve::Solution">Solution</a>&lt;I&gt;&gt;</h4></section></summary><div class="docblock"><p>Attempts to solve the given goal, which must be in canonical
+form. Returns a unique solution (if one exists).  This will do
+only as much work towards <code>goal</code> as it has to (and that work
+is cached for future attempts). In addition, the solving of the
+goal can be limited by returning <code>false</code> from <code>should_continue</code>.</p>
+<h5 id="parameters-1"><a class="doc-anchor" href="#parameters-1">§</a>Parameters</h5>
+<ul>
+<li><code>program</code> – defines the program clauses in scope.
+<ul>
+<li><strong>Important:</strong> You must supply the same set of program clauses
+each time you invoke <code>solve</code>, as otherwise the cached data may be
+invalid.</li>
+</ul>
+</li>
+<li><code>goal</code> the goal to solve</li>
+<li><code>should_continue</code> if <code>false</code> is returned, the no further solving
+will be done. A <code>Guidance(Suggested(...))</code> will be returned a
+<code>Solution</code>, using any answers that were generated up to that point.</li>
+</ul>
+<h5 id="returns-1"><a class="doc-anchor" href="#returns-1">§</a>Returns</h5>
+<ul>
+<li><code>None</code> is the goal cannot be proven.</li>
+<li><code>Some(solution)</code> if we succeeded in finding <em>some</em> answers,
+although <code>solution</code> may reflect ambiguity and unknowns.</li>
+</ul>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.solve_multiple" class="method"><a class="src rightside" href="../../src/chalk_solve/solve.rs.html#331-336">source</a><h4 class="code-header">fn <a href="#tymethod.solve_multiple" class="fn">solve_multiple</a>(
+    &amp;mut self,
+    program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+    goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+    f: &amp;mut dyn <a class="trait" href="https://doc.rust-lang.org/1.81.0/core/ops/function/trait.FnMut.html" title="trait core::ops::function::FnMut">FnMut</a>(<a class="enum" href="enum.SubstitutionResult.html" title="enum chalk_solve::solve::SubstitutionResult">SubstitutionResult</a>&lt;<a class="struct" href="../../chalk_ir/struct.Canonical.html" title="struct chalk_ir::Canonical">Canonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.ConstrainedSubst.html" title="struct chalk_ir::ConstrainedSubst">ConstrainedSubst</a>&lt;I&gt;&gt;&gt;, <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a>,
+) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Attempts to solve the given goal, which must be in canonical
+form. Provides multiple solutions to function <code>f</code>.  This will do
+only as much work towards <code>goal</code> as it has to (and that work
+is cached for future attempts).</p>
+<h5 id="parameters-2"><a class="doc-anchor" href="#parameters-2">§</a>Parameters</h5>
+<ul>
+<li><code>program</code> – defines the program clauses in scope.
+<ul>
+<li><strong>Important:</strong> You must supply the same set of program clauses
+each time you invoke <code>solve</code>, as otherwise the cached data may be
+invalid.</li>
+</ul>
+</li>
+<li><code>goal</code> the goal to solve</li>
+<li><code>f</code> – function to proceed solution. New solutions will be generated
+while function returns <code>true</code>.
+<ul>
+<li>first argument is solution found</li>
+<li>second argument is the next solution present</li>
+<li>returns true if next solution should be handled</li>
+</ul>
+</li>
+</ul>
+<h5 id="returns-2"><a class="doc-anchor" href="#returns-2">§</a>Returns</h5>
+<ul>
+<li><code>true</code> all solutions were processed with the function.</li>
+<li><code>false</code> the function returned <code>false</code> and solutions were interrupted.</li>
+</ul>
+</div></details></div><h2 id="provided-methods" class="section-header">Provided Methods<a href="#provided-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="method.has_unique_solution" class="method"><a class="src rightside" href="../../src/chalk_solve/solve.rs.html#340-349">source</a><h4 class="code-header">fn <a href="#method.has_unique_solution" class="fn">has_unique_solution</a>(
+    &amp;mut self,
+    program: &amp;dyn <a class="trait" href="../trait.RustIrDatabase.html" title="trait chalk_solve::RustIrDatabase">RustIrDatabase</a>&lt;I&gt;,
+    goal: &amp;<a class="struct" href="../../chalk_ir/struct.UCanonical.html" title="struct chalk_ir::UCanonical">UCanonical</a>&lt;<a class="struct" href="../../chalk_ir/struct.InEnvironment.html" title="struct chalk_ir::InEnvironment">InEnvironment</a>&lt;<a class="struct" href="../../chalk_ir/struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;&gt;&gt;,
+) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>A convenience method for when one doesn’t need the actual solution,
+only whether or not one exists.</p>
+</div></details></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"></div><script src="../../trait.impl/chalk_solve/solve/trait.Solver.js" async></script></section></div></main></body></html>

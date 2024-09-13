@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["add_pointee_program_clauses","push_clauses","push_for_last_field"]};

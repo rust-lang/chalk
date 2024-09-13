@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="A “folder” is a transformer that can be used to make a copy of some term – that is, some bit of IR, such as a `Goal` – with certain changes applied. The idea is that it contains methods that let you swap types/lifetimes for new types/lifetimes; meanwhile, each bit of IR implements the `TypeFoldable` trait which, given a `TypeFolder`, will reconstruct itself, invoking the folder’s methods to transform each of the types/lifetimes embedded within."><title>TypeFolder in chalk_ir::fold - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="chalk_ir" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../chalk_ir/index.html">chalk_ir</a><span class="version">0.98.0-dev.0</span></h2></div><h2 class="location"><a href="#">TypeFolder</a></h2><div class="sidebar-elems"><section><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.as_dyn">as_dyn</a></li><li><a href="#tymethod.interner">interner</a></li></ul><h3><a href="#provided-methods">Provided Methods</a></h3><ul class="block"><li><a href="#method.fold_const">fold_const</a></li><li><a href="#method.fold_free_placeholder_const">fold_free_placeholder_const</a></li><li><a href="#method.fold_free_placeholder_lifetime">fold_free_placeholder_lifetime</a></li><li><a href="#method.fold_free_placeholder_ty">fold_free_placeholder_ty</a></li><li><a href="#method.fold_free_var_const">fold_free_var_const</a></li><li><a href="#method.fold_free_var_lifetime">fold_free_var_lifetime</a></li><li><a href="#method.fold_free_var_ty">fold_free_var_ty</a></li><li><a href="#method.fold_goal">fold_goal</a></li><li><a href="#method.fold_inference_const">fold_inference_const</a></li><li><a href="#method.fold_inference_lifetime">fold_inference_lifetime</a></li><li><a href="#method.fold_inference_ty">fold_inference_ty</a></li><li><a href="#method.fold_lifetime">fold_lifetime</a></li><li><a href="#method.fold_program_clause">fold_program_clause</a></li><li><a href="#method.fold_ty">fold_ty</a></li><li><a href="#method.forbid_free_placeholders">forbid_free_placeholders</a></li><li><a href="#method.forbid_free_vars">forbid_free_vars</a></li><li><a href="#method.forbid_inference_vars">forbid_inference_vars</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><h2><a href="index.html">In chalk_ir::fold</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../index.html">chalk_ir</a>::<wbr><a href="index.html">fold</a>::<wbr><a class="trait" href="#">TypeFolder</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../src/chalk_ir/fold.rs.html#371-606">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub trait TypeFolder&lt;I: <a class="trait" href="../interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>&gt;: <a class="trait" href="trait.FallibleTypeFolder.html" title="trait chalk_ir::fold::FallibleTypeFolder">FallibleTypeFolder</a>&lt;I, Error = <a class="enum" href="https://doc.rust-lang.org/1.81.0/core/convert/enum.Infallible.html" title="enum core::convert::Infallible">Infallible</a>&gt; {
+<details class="toggle type-contents-toggle"><summary class="hideme"><span>Show 19 methods</span></summary>    // Required methods
+    fn <a href="#tymethod.as_dyn" class="fn">as_dyn</a>(&amp;mut self) -&gt; &amp;mut dyn <a class="trait" href="trait.TypeFolder.html" title="trait chalk_ir::fold::TypeFolder">TypeFolder</a>&lt;I&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.interner" class="fn">interner</a>(&amp;self) -&gt; I;
+
+    // Provided methods
+    fn <a href="#method.fold_ty" class="fn">fold_ty</a>(&amp;mut self, ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;, outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_lifetime" class="fn">fold_lifetime</a>(
+        &amp;mut self,
+        lifetime: <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt;,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_const" class="fn">fold_const</a>(
+        &amp;mut self,
+        constant: <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt;,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_program_clause" class="fn">fold_program_clause</a>(
+        &amp;mut self,
+        clause: <a class="struct" href="../struct.ProgramClause.html" title="struct chalk_ir::ProgramClause">ProgramClause</a>&lt;I&gt;,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.ProgramClause.html" title="struct chalk_ir::ProgramClause">ProgramClause</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_goal" class="fn">fold_goal</a>(
+        &amp;mut self,
+        goal: <a class="struct" href="../struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.forbid_free_vars" class="fn">forbid_free_vars</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_free_var_ty" class="fn">fold_free_var_ty</a>(
+        &amp;mut self,
+        bound_var: <a class="struct" href="../struct.BoundVar.html" title="struct chalk_ir::BoundVar">BoundVar</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_free_var_lifetime" class="fn">fold_free_var_lifetime</a>(
+        &amp;mut self,
+        bound_var: <a class="struct" href="../struct.BoundVar.html" title="struct chalk_ir::BoundVar">BoundVar</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_free_var_const" class="fn">fold_free_var_const</a>(
+        &amp;mut self,
+        ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;,
+        bound_var: <a class="struct" href="../struct.BoundVar.html" title="struct chalk_ir::BoundVar">BoundVar</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.forbid_free_placeholders" class="fn">forbid_free_placeholders</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_free_placeholder_ty" class="fn">fold_free_placeholder_ty</a>(
+        &amp;mut self,
+        universe: <a class="struct" href="../struct.PlaceholderIndex.html" title="struct chalk_ir::PlaceholderIndex">PlaceholderIndex</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_free_placeholder_lifetime" class="fn">fold_free_placeholder_lifetime</a>(
+        &amp;mut self,
+        universe: <a class="struct" href="../struct.PlaceholderIndex.html" title="struct chalk_ir::PlaceholderIndex">PlaceholderIndex</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_free_placeholder_const" class="fn">fold_free_placeholder_const</a>(
+        &amp;mut self,
+        ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;,
+        universe: <a class="struct" href="../struct.PlaceholderIndex.html" title="struct chalk_ir::PlaceholderIndex">PlaceholderIndex</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.forbid_inference_vars" class="fn">forbid_inference_vars</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a> { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_inference_ty" class="fn">fold_inference_ty</a>(
+        &amp;mut self,
+        var: <a class="struct" href="../struct.InferenceVar.html" title="struct chalk_ir::InferenceVar">InferenceVar</a>,
+        kind: <a class="enum" href="../enum.TyVariableKind.html" title="enum chalk_ir::TyVariableKind">TyVariableKind</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_inference_lifetime" class="fn">fold_inference_lifetime</a>(
+        &amp;mut self,
+        var: <a class="struct" href="../struct.InferenceVar.html" title="struct chalk_ir::InferenceVar">InferenceVar</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt; { ... }
+<span class="item-spacer"></span>    fn <a href="#method.fold_inference_const" class="fn">fold_inference_const</a>(
+        &amp;mut self,
+        ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;,
+        var: <a class="struct" href="../struct.InferenceVar.html" title="struct chalk_ir::InferenceVar">InferenceVar</a>,
+        outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+    ) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt; { ... }
+</details>}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>A “folder” is a transformer that can be used to make a copy of
+some term – that is, some bit of IR, such as a <code>Goal</code> – with
+certain changes applied. The idea is that it contains methods that
+let you swap types/lifetimes for new types/lifetimes; meanwhile,
+each bit of IR implements the <code>TypeFoldable</code> trait which, given a
+<code>TypeFolder</code>, will reconstruct itself, invoking the folder’s methods
+to transform each of the types/lifetimes embedded within.</p>
+<p>Folds performed by <code>TypeFolder</code> cannot fail.  If folds might fail,
+consider implementing <code>FallibleTypeFolder</code> instead (which is a
+fallible, but otherwise equivalent, trait).</p>
+<h2 id="usage-patterns"><a class="doc-anchor" href="#usage-patterns">§</a>Usage patterns</h2><h3 id="substituting-for-free-variables"><a class="doc-anchor" href="#substituting-for-free-variables">§</a>Substituting for free variables</h3>
+<p>Most of the time, though, we are not interested in adjust
+arbitrary types/lifetimes, but rather just free variables (even
+more often, just free existential variables) that appear within
+the term.</p>
+<p>For this reason, the <code>TypeFolder</code> trait extends two other traits that
+contain methods that are invoked when just those particular</p>
+<p>In particular, folders can intercept references to free variables
+(either existentially or universally quantified) and replace them
+with other types/lifetimes as appropriate.</p>
+<p>To create a folder <code>F</code>, one never implements <code>TypeFolder</code> directly, but instead
+implements one of each of these three sub-traits:</p>
+<ul>
+<li><code>FreeVarFolder</code> – folds <code>BoundVar</code> instances that appear free
+in the term being folded (use <code>DefaultFreeVarFolder</code> to
+ignore/forbid these altogether)</li>
+<li><code>InferenceFolder</code> – folds existential <code>InferenceVar</code> instances
+that appear in the term being folded (use
+<code>DefaultInferenceFolder</code> to ignore/forbid these altogether)</li>
+<li><code>PlaceholderFolder</code> – folds universal <code>Placeholder</code> instances
+that appear in the term being folded (use
+<code>DefaultPlaceholderFolder</code> to ignore/forbid these altogether)</li>
+</ul>
+<p>To <strong>apply</strong> a folder, use the <code>TypeFoldable::fold_with</code> method, like so</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="kw">let </span>x = x.fold_with(<span class="kw-2">&amp;mut </span>folder, <span class="number">0</span>);</code></pre></div>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.as_dyn" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#379">source</a><h4 class="code-header">fn <a href="#tymethod.as_dyn" class="fn">as_dyn</a>(&amp;mut self) -&gt; &amp;mut dyn <a class="trait" href="trait.TypeFolder.html" title="trait chalk_ir::fold::TypeFolder">TypeFolder</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Creates a <code>dyn</code> value from this folder. Unfortunately, this
+must be added manually to each impl of TypeFolder; it permits the
+default implements below to create a <code>&amp;mut dyn TypeFolder</code> from
+<code>Self</code> without knowing what <code>Self</code> is (by invoking this
+method). Effectively, this limits impls of <code>TypeFolder</code> to types
+for which we are able to create a dyn value (i.e., not <code>[T]</code>
+types).</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.interner" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#605">source</a><h4 class="code-header">fn <a href="#tymethod.interner" class="fn">interner</a>(&amp;self) -&gt; I</h4></section></summary><div class="docblock"><p>Gets the interner that is being folded from.</p>
+</div></details></div><h2 id="provided-methods" class="section-header">Provided Methods<a href="#provided-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="method.fold_ty" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#385-387">source</a><h4 class="code-header">fn <a href="#method.fold_ty" class="fn">fold_ty</a>(&amp;mut self, ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;, outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Top-level callback: invoked for each <code>Ty&lt;I&gt;</code> that is
+encountered when folding. By default, invokes
+<code>super_fold_with</code>, which will in turn invoke the more
+specialized folding methods below, like <code>fold_free_var_ty</code>.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_lifetime" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#393-395">source</a><h4 class="code-header">fn <a href="#method.fold_lifetime" class="fn">fold_lifetime</a>(
+    &amp;mut self,
+    lifetime: <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt;,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Top-level callback: invoked for each <code>Lifetime&lt;I&gt;</code> that is
+encountered when folding. By default, invokes
+<code>super_fold_with</code>, which will in turn invoke the more
+specialized folding methods below, like <code>fold_free_var_lifetime</code>.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_const" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#401-403">source</a><h4 class="code-header">fn <a href="#method.fold_const" class="fn">fold_const</a>(
+    &amp;mut self,
+    constant: <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt;,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Top-level callback: invoked for each <code>Const&lt;I&gt;</code> that is
+encountered when folding. By default, invokes
+<code>super_fold_with</code>, which will in turn invoke the more
+specialized folding methods below, like <code>fold_free_var_const</code>.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_program_clause" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#406-412">source</a><h4 class="code-header">fn <a href="#method.fold_program_clause" class="fn">fold_program_clause</a>(
+    &amp;mut self,
+    clause: <a class="struct" href="../struct.ProgramClause.html" title="struct chalk_ir::ProgramClause">ProgramClause</a>&lt;I&gt;,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.ProgramClause.html" title="struct chalk_ir::ProgramClause">ProgramClause</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Invoked for every program clause. By default, recursively folds the goals contents.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_goal" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#415-417">source</a><h4 class="code-header">fn <a href="#method.fold_goal" class="fn">fold_goal</a>(&amp;mut self, goal: <a class="struct" href="../struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;, outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>) -&gt; <a class="struct" href="../struct.Goal.html" title="struct chalk_ir::Goal">Goal</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Invoked for every goal. By default, recursively folds the goals contents.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.forbid_free_vars" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#422-424">source</a><h4 class="code-header">fn <a href="#method.forbid_free_vars" class="fn">forbid_free_vars</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>If overridden to return true, then folding will panic if a
+free variable is encountered. This should be done if free
+type/lifetime variables are not expected.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_free_var_ty" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#435-445">source</a><h4 class="code-header">fn <a href="#method.fold_free_var_ty" class="fn">fold_free_var_ty</a>(
+    &amp;mut self,
+    bound_var: <a class="struct" href="../struct.BoundVar.html" title="struct chalk_ir::BoundVar">BoundVar</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Invoked for <code>TyKind::BoundVar</code> instances that are not bound
+within the type being folded over:</p>
+<ul>
+<li><code>depth</code> is the depth of the <code>TyKind::BoundVar</code>; this has
+been adjusted to account for binders in scope.</li>
+<li><code>binders</code> is the number of binders in scope.</li>
+</ul>
+<p>This should return a type suitable for a context with
+<code>binders</code> in scope.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_free_var_lifetime" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#448-462">source</a><h4 class="code-header">fn <a href="#method.fold_free_var_lifetime" class="fn">fold_free_var_lifetime</a>(
+    &amp;mut self,
+    bound_var: <a class="struct" href="../struct.BoundVar.html" title="struct chalk_ir::BoundVar">BoundVar</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>As <code>fold_free_var_ty</code>, but for lifetimes.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_free_var_const" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#465-484">source</a><h4 class="code-header">fn <a href="#method.fold_free_var_const" class="fn">fold_free_var_const</a>(
+    &amp;mut self,
+    ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;,
+    bound_var: <a class="struct" href="../struct.BoundVar.html" title="struct chalk_ir::BoundVar">BoundVar</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>As <code>fold_free_var_ty</code>, but for constants.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.forbid_free_placeholders" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#488-490">source</a><h4 class="code-header">fn <a href="#method.forbid_free_placeholders" class="fn">forbid_free_placeholders</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>If overridden to return true, we will panic when a free
+placeholder type/lifetime/const is encountered.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_free_placeholder_ty" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#500-510">source</a><h4 class="code-header">fn <a href="#method.fold_free_placeholder_ty" class="fn">fold_free_placeholder_ty</a>(
+    &amp;mut self,
+    universe: <a class="struct" href="../struct.PlaceholderIndex.html" title="struct chalk_ir::PlaceholderIndex">PlaceholderIndex</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Invoked for each occurrence of a placeholder type; these are
+used when we instantiate binders universally. Returns a type
+to use instead, which should be suitably shifted to account
+for <code>binders</code>.</p>
+<ul>
+<li><code>universe</code> is the universe of the <code>TypeName::ForAll</code> that was found</li>
+<li><code>binders</code> is the number of binders in scope</li>
+</ul>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_free_placeholder_lifetime" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#514-524">source</a><h4 class="code-header">fn <a href="#method.fold_free_placeholder_lifetime" class="fn">fold_free_placeholder_lifetime</a>(
+    &amp;mut self,
+    universe: <a class="struct" href="../struct.PlaceholderIndex.html" title="struct chalk_ir::PlaceholderIndex">PlaceholderIndex</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>As with <code>fold_free_placeholder_ty</code>, but for lifetimes.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_free_placeholder_const" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#528-542">source</a><h4 class="code-header">fn <a href="#method.fold_free_placeholder_const" class="fn">fold_free_placeholder_const</a>(
+    &amp;mut self,
+    ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;,
+    universe: <a class="struct" href="../struct.PlaceholderIndex.html" title="struct chalk_ir::PlaceholderIndex">PlaceholderIndex</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>As with <code>fold_free_placeholder_ty</code>, but for constants.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.forbid_inference_vars" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#547-549">source</a><h4 class="code-header">fn <a href="#method.forbid_inference_vars" class="fn">forbid_inference_vars</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>If overridden to return true, inference variables will trigger
+panics when folded. Used when inference variables are
+unexpected.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_inference_ty" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#559-570">source</a><h4 class="code-header">fn <a href="#method.fold_inference_ty" class="fn">fold_inference_ty</a>(
+    &amp;mut self,
+    var: <a class="struct" href="../struct.InferenceVar.html" title="struct chalk_ir::InferenceVar">InferenceVar</a>,
+    kind: <a class="enum" href="../enum.TyVariableKind.html" title="enum chalk_ir::TyVariableKind">TyVariableKind</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>Invoked for each occurrence of a inference type; these are
+used when we instantiate binders universally. Returns a type
+to use instead, which should be suitably shifted to account
+for <code>binders</code>.</p>
+<ul>
+<li><code>universe</code> is the universe of the <code>TypeName::ForAll</code> that was found</li>
+<li><code>binders</code> is the number of binders in scope</li>
+</ul>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_inference_lifetime" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#574-584">source</a><h4 class="code-header">fn <a href="#method.fold_inference_lifetime" class="fn">fold_inference_lifetime</a>(
+    &amp;mut self,
+    var: <a class="struct" href="../struct.InferenceVar.html" title="struct chalk_ir::InferenceVar">InferenceVar</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Lifetime.html" title="struct chalk_ir::Lifetime">Lifetime</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>As with <code>fold_inference_ty</code>, but for lifetimes.</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="method.fold_inference_const" class="method"><a class="src rightside" href="../../src/chalk_ir/fold.rs.html#588-602">source</a><h4 class="code-header">fn <a href="#method.fold_inference_const" class="fn">fold_inference_const</a>(
+    &amp;mut self,
+    ty: <a class="struct" href="../struct.Ty.html" title="struct chalk_ir::Ty">Ty</a>&lt;I&gt;,
+    var: <a class="struct" href="../struct.InferenceVar.html" title="struct chalk_ir::InferenceVar">InferenceVar</a>,
+    outer_binder: <a class="struct" href="../struct.DebruijnIndex.html" title="struct chalk_ir::DebruijnIndex">DebruijnIndex</a>,
+) -&gt; <a class="struct" href="../struct.Const.html" title="struct chalk_ir::Const">Const</a>&lt;I&gt;</h4></section></summary><div class="docblock"><p>As with <code>fold_inference_ty</code>, but for constants.</p>
+</div></details></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-TypeFolder%3CI%3E-for-SubstFolder%3C'i,+I,+A%3E" class="impl"><a class="src rightside" href="../../src/chalk_ir/lib.rs.html#2823-2864">source</a><a href="#impl-TypeFolder%3CI%3E-for-SubstFolder%3C'i,+I,+A%3E" class="anchor">§</a><h3 class="code-header">impl&lt;'i, I: <a class="trait" href="../interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>, A: <a class="trait" href="../trait.AsParameters.html" title="trait chalk_ir::AsParameters">AsParameters</a>&lt;I&gt;&gt; <a class="trait" href="trait.TypeFolder.html" title="trait chalk_ir::fold::TypeFolder">TypeFolder</a>&lt;I&gt; for <a class="struct" href="../struct.SubstFolder.html" title="struct chalk_ir::SubstFolder">SubstFolder</a>&lt;'i, I, A&gt;</h3></section><section id="impl-TypeFolder%3CI%3E-for-Shifter%3CI%3E" class="impl"><a class="src rightside" href="../../src/chalk_ir/fold/shift.rs.html#74-107">source</a><a href="#impl-TypeFolder%3CI%3E-for-Shifter%3CI%3E" class="anchor">§</a><h3 class="code-header">impl&lt;I: <a class="trait" href="../interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>&gt; <a class="trait" href="trait.TypeFolder.html" title="trait chalk_ir::fold::TypeFolder">TypeFolder</a>&lt;I&gt; for <a class="struct" href="shift/struct.Shifter.html" title="struct chalk_ir::fold::shift::Shifter">Shifter</a>&lt;I&gt;</h3></section><section id="impl-TypeFolder%3CI%3E-for-Subst%3C'_,+I%3E" class="impl"><a class="src rightside" href="../../src/chalk_ir/fold/subst.rs.html#29-118">source</a><a href="#impl-TypeFolder%3CI%3E-for-Subst%3C'_,+I%3E" class="anchor">§</a><h3 class="code-header">impl&lt;I: <a class="trait" href="../interner/trait.Interner.html" title="trait chalk_ir::interner::Interner">Interner</a>&gt; <a class="trait" href="trait.TypeFolder.html" title="trait chalk_ir::fold::TypeFolder">TypeFolder</a>&lt;I&gt; for <a class="struct" href="subst/struct.Subst.html" title="struct chalk_ir::fold::subst::Subst">Subst</a>&lt;'_, I&gt;</h3></section></div><script src="../../trait.impl/chalk_ir/fold/trait.TypeFolder.js" async></script></section></div></main></body></html>

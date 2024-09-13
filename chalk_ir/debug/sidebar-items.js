@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Angle","CanonicalDisplay","Fmt","GenericArgDataInnerDebug","GoalsDebug","OpaqueTyDebug","ProgramClauseImplicationDebug","ProjectionTyDebug","SeparatorTraitRef","SeparatorTraitRefDebug","SubstitutionDebug","TyKindDebug","VariableKindsDebug","VariableKindsInnerDebug"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["eq_zip"],"trait":["Zip","Zipper"]};

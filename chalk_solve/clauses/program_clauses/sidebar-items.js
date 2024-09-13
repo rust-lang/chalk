@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["fully_visible_program_clauses","implied_bounds_program_clauses","well_formed_program_clauses"],"trait":["ToProgramClauses"]};

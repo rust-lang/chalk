@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NoRemainingSubgoalsResult","RootSearchFail","SubGoalSelection"],"struct":["SolveState"],"type":["RootSearchResult"]};

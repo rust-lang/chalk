@@ -1,0 +1,65 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `ResolventOps` trait in crate `chalk_engine`."><title>ResolventOps in chalk_engine::slg - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c5d6553a23f1e5a6.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="chalk_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0 (eeb90cda1 2024-09-04)" data-channel="1.81.0" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-d2fab2bf619172d3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../chalk_engine/index.html">chalk_engine</a><span class="version">0.98.0-dev.0</span></h2></div><h2 class="location"><a href="#">ResolventOps</a></h2><div class="sidebar-elems"><section><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.apply_answer_subst">apply_answer_subst</a></li><li><a href="#tymethod.resolvent_clause">resolvent_clause</a></li></ul><h3><a href="#foreign-impls">Implementations on Foreign Types</a></h3><ul class="block"><li><a href="#impl-ResolventOps%3CI%3E-for-InferenceTable%3CI%3E">InferenceTable&lt;I&gt;</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><h2><a href="index.html">In chalk_engine::slg</a></h2></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Trait <a href="../index.html">chalk_engine</a>::<wbr><a href="index.html">slg</a>::<wbr><a class="trait" href="#">ResolventOps</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../../src/chalk_engine/slg.rs.html#85-110">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><pre class="rust item-decl"><code>pub trait ResolventOps&lt;I: Interner&gt; {
+    // Required methods
+    fn <a href="#tymethod.resolvent_clause" class="fn">resolvent_clause</a>(
+        &amp;mut self,
+        ops: &amp;dyn UnificationDatabase&lt;I&gt;,
+        interner: I,
+        environment: &amp;Environment&lt;I&gt;,
+        goal: &amp;DomainGoal&lt;I&gt;,
+        subst: &amp;Substitution&lt;I&gt;,
+        clause: &amp;ProgramClause&lt;I&gt;,
+    ) -&gt; Fallible&lt;<a class="struct" href="../struct.ExClause.html" title="struct chalk_engine::ExClause">ExClause</a>&lt;I&gt;&gt;;
+<span class="item-spacer"></span>    fn <a href="#tymethod.apply_answer_subst" class="fn">apply_answer_subst</a>(
+        &amp;mut self,
+        interner: I,
+        unification_database: &amp;dyn UnificationDatabase&lt;I&gt;,
+        ex_clause: &amp;mut <a class="struct" href="../struct.ExClause.html" title="struct chalk_engine::ExClause">ExClause</a>&lt;I&gt;,
+        selected_goal: &amp;InEnvironment&lt;Goal&lt;I&gt;&gt;,
+        answer_table_goal: &amp;Canonical&lt;InEnvironment&lt;Goal&lt;I&gt;&gt;&gt;,
+        canonical_answer_subst: Canonical&lt;AnswerSubst&lt;I&gt;&gt;,
+    ) -&gt; Fallible&lt;<a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.unit.html">()</a>&gt;;
+}</code></pre><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.resolvent_clause" class="method"><a class="src rightside" href="../../src/chalk_engine/slg.rs.html#91-99">source</a><h4 class="code-header">fn <a href="#tymethod.resolvent_clause" class="fn">resolvent_clause</a>(
+    &amp;mut self,
+    ops: &amp;dyn UnificationDatabase&lt;I&gt;,
+    interner: I,
+    environment: &amp;Environment&lt;I&gt;,
+    goal: &amp;DomainGoal&lt;I&gt;,
+    subst: &amp;Substitution&lt;I&gt;,
+    clause: &amp;ProgramClause&lt;I&gt;,
+) -&gt; Fallible&lt;<a class="struct" href="../struct.ExClause.html" title="struct chalk_engine::ExClause">ExClause</a>&lt;I&gt;&gt;</h4></section></summary><div class="docblock"><p>Combines the <code>goal</code> (instantiated within <code>infer</code>) with the
+given program clause to yield the start of a new strand (a
+canonical ex-clause).</p>
+<p>The bindings in <code>infer</code> are unaffected by this operation.</p>
+</div></details><section id="tymethod.apply_answer_subst" class="method"><a class="src rightside" href="../../src/chalk_engine/slg.rs.html#101-109">source</a><h4 class="code-header">fn <a href="#tymethod.apply_answer_subst" class="fn">apply_answer_subst</a>(
+    &amp;mut self,
+    interner: I,
+    unification_database: &amp;dyn UnificationDatabase&lt;I&gt;,
+    ex_clause: &amp;mut <a class="struct" href="../struct.ExClause.html" title="struct chalk_engine::ExClause">ExClause</a>&lt;I&gt;,
+    selected_goal: &amp;InEnvironment&lt;Goal&lt;I&gt;&gt;,
+    answer_table_goal: &amp;Canonical&lt;InEnvironment&lt;Goal&lt;I&gt;&gt;&gt;,
+    canonical_answer_subst: Canonical&lt;AnswerSubst&lt;I&gt;&gt;,
+) -&gt; Fallible&lt;<a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.unit.html">()</a>&gt;</h4></section></div><h2 id="foreign-impls" class="section-header">Implementations on Foreign Types<a href="#foreign-impls" class="anchor">§</a></h2><details class="toggle implementors-toggle"><summary><section id="impl-ResolventOps%3CI%3E-for-InferenceTable%3CI%3E" class="impl"><a class="src rightside" href="../../src/chalk_engine/slg/resolvent.rs.html#49-258">source</a><a href="#impl-ResolventOps%3CI%3E-for-InferenceTable%3CI%3E" class="anchor">§</a><h3 class="code-header">impl&lt;I: Interner&gt; <a class="trait" href="trait.ResolventOps.html" title="trait chalk_engine::slg::ResolventOps">ResolventOps</a>&lt;I&gt; for InferenceTable&lt;I&gt;</h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.resolvent_clause" class="method trait-impl"><a class="src rightside" href="../../src/chalk_engine/slg/resolvent.rs.html#58">source</a><a href="#method.resolvent_clause" class="anchor">§</a><h4 class="code-header">fn <a href="#tymethod.resolvent_clause" class="fn">resolvent_clause</a>(
+    &amp;mut self,
+    db: &amp;dyn UnificationDatabase&lt;I&gt;,
+    interner: I,
+    environment: &amp;Environment&lt;I&gt;,
+    goal: &amp;DomainGoal&lt;I&gt;,
+    subst: &amp;Substitution&lt;I&gt;,
+    clause: &amp;ProgramClause&lt;I&gt;,
+) -&gt; Fallible&lt;<a class="struct" href="../struct.ExClause.html" title="struct chalk_engine::ExClause">ExClause</a>&lt;I&gt;&gt;</h4></section></summary><div class="docblock"><p>Applies the SLG resolvent algorithm to incorporate a program
+clause into the main X-clause, producing a new X-clause that
+must be solved.</p>
+<h5 id="parameters"><a class="doc-anchor" href="#parameters">§</a>Parameters</h5>
+<ul>
+<li><code>goal</code> is the goal G that we are trying to solve</li>
+<li><code>clause</code> is the program clause that may be useful to that end</li>
+</ul>
+</div></details><section id="method.apply_answer_subst" class="method trait-impl"><a class="src rightside" href="../../src/chalk_engine/slg/resolvent.rs.html#214">source</a><a href="#method.apply_answer_subst" class="anchor">§</a><h4 class="code-header">fn <a href="#tymethod.apply_answer_subst" class="fn">apply_answer_subst</a>(
+    &amp;mut self,
+    interner: I,
+    unification_database: &amp;dyn UnificationDatabase&lt;I&gt;,
+    ex_clause: &amp;mut <a class="struct" href="../struct.ExClause.html" title="struct chalk_engine::ExClause">ExClause</a>&lt;I&gt;,
+    selected_goal: &amp;InEnvironment&lt;Goal&lt;I&gt;&gt;,
+    answer_table_goal: &amp;Canonical&lt;InEnvironment&lt;Goal&lt;I&gt;&gt;&gt;,
+    canonical_answer_subst: Canonical&lt;AnswerSubst&lt;I&gt;&gt;,
+) -&gt; Fallible&lt;<a class="primitive" href="https://doc.rust-lang.org/1.81.0/std/primitive.unit.html">()</a>&gt;</h4></section></div></details><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"></div><script src="../../trait.impl/chalk_engine/slg/trait.ResolventOps.js" data-ignore-extern-crates="chalk_solve" async></script></section></div></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["DownShifter","Shifter"],"trait":["Shift"]};

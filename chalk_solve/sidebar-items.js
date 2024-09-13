@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["debug_span"],"mod":["clauses","coherence","coinductive_goal","debug_macros","display","ext","goal_builder","infer","logging","logging_db","rust_ir","solve","split","wf"],"trait":["RustIrDatabase"]};
