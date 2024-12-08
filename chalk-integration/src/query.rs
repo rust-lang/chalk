@@ -24,14 +24,14 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::Mutex;
 
-#[salsa::query_group(Lowering)]
+#[db_ext_macro::query_group]
 pub trait LoweringDatabase:
     RustIrDatabase<ChalkIr> + Database + Upcast<dyn RustIrDatabase<ChalkIr>>
 {
-    #[salsa::input]
+    #[db_ext_macro::input]
     fn program_text(&self) -> Arc<String>;
 
-    #[salsa::input]
+    #[db_ext_macro::input]
     fn solver_choice(&self) -> SolverChoice;
 
     fn program_ir(&self) -> Result<Arc<Program>, ChalkError>;
@@ -50,14 +50,14 @@ pub trait LoweringDatabase:
     /// The program as logic.
     fn environment(&self) -> Result<Arc<ProgramEnvironment>, ChalkError>;
 
-    /// Creates the solver we can use to solve goals. This solver
-    /// stores intermediate, cached state, which is why it is behind a
-    /// mutex. Moreover, if the set of program clauses change, that
-    /// cached state becomes invalid, so the query is marked as
-    /// volatile, thus ensuring that the solver is recreated in every
-    /// revision (i.e., each time source program changes).
+    // /// Creates the solver we can use to solve goals. This solver
+    // /// stores intermediate, cached state, which is why it is behind a
+    // /// mutex. Moreover, if the set of program clauses change, that
+    // /// cached state becomes invalid, so the query is marked as
+    // /// volatile, thus ensuring that the solver is recreated in every
+    // /// revision (i.e., each time source program changes).
     // HACK: salsa requires that queries return types that implement `Eq`
-    fn solver(&self) -> ArcEq<Mutex<Box<dyn Solver<ChalkIr>>>>;
+    // fn solver(&self) -> ArcEq<Mutex<Box<dyn Solver<ChalkIr>>>>;
 }
 
 // Needed to go from dyn LoweringDatabase -> dyn RustIrDatabase
@@ -250,8 +250,8 @@ fn environment(db: &dyn LoweringDatabase) -> Result<Arc<ProgramEnvironment>, Cha
     Ok(Arc::new(ProgramEnvironment::new(program_clauses)))
 }
 
-fn solver(db: &dyn LoweringDatabase) -> ArcEq<Mutex<Box<dyn Solver<ChalkIr>>>> {
-    db.salsa_runtime().report_untracked_read();
+pub fn solver(db: &dyn LoweringDatabase) -> ArcEq<Mutex<Box<dyn Solver<ChalkIr>>>> {
+    // db.salsa_runtime().report_untracked_read();
     let choice = db.solver_choice();
     ArcEq::new(Mutex::new(choice.into_solver()))
 }

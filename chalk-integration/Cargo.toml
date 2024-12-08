@@ -11,7 +11,8 @@ publish = false
 
 [dependencies]
 string_cache = "0.8.0"
-salsa = "0.16.0"
+salsa = { git = "https://github.com/salsa-rs/salsa.git" }
+db-ext-macro = { git = "https://github.com/davidbarsky/db-ext-macro.git" }
 tracing = "0.1"
 
 chalk-derive = { version = "0.98.0-dev.0", path = "../chalk-derive" }

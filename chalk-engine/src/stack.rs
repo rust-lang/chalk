@@ -17,7 +17,7 @@ pub(crate) struct Stack<I: Interner> {
 impl<I: Interner> Stack<I> {
     // This isn't actually used, but it can be helpful when debugging stack issues
     #[allow(dead_code)]
-    pub(crate) fn debug_with<'a>(&'a self, tables: &'a Tables<I>) -> StackDebug<'_, I> {
+    pub(crate) fn debug_with<'a>(&'a self, tables: &'a Tables<I>) -> StackDebug<'a, I> {
         StackDebug {
             stack: self,
             tables,
