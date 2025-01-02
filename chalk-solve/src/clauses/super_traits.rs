@@ -73,7 +73,7 @@ pub(super) fn push_trait_super_clauses<I: Interner>(
     }
 }
 
-fn super_traits<I: Interner>(
+pub(crate) fn super_traits<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     trait_id: TraitId<I>,
 ) -> Binders<(

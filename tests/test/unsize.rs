@@ -143,6 +143,43 @@ fn dyn_to_dyn_unsizing() {
 }
 
 #[test]
+fn super_auto_trait() {
+    test! {
+        program {
+            #[lang(unsize)]
+            trait Unsize<T> {}
+
+            #[object_safe]
+            trait Principal where Self: SuperAuto {}
+
+            #[auto]
+            #[object_safe]
+            trait SuperAuto {}
+
+            #[auto]
+            #[object_safe]
+            trait Auto {}
+        }
+
+        goal {
+            forall<'a> {
+                dyn Principal + 'a: Unsize<dyn Principal + SuperAuto + 'a>
+            }
+        } yields {
+            expect!["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]
+        }
+
+        goal {
+            forall<'a> {
+                dyn Principal + Auto + 'a: Unsize<dyn Principal + Auto + SuperAuto + 'a>
+            }
+        } yields {
+            expect!["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]
+        }
+    }
+}
+
+#[test]
 fn ty_to_dyn_unsizing() {
     test! {
         program {

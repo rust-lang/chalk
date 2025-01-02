@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::iter;
 use std::ops::ControlFlow;
 
+use crate::clauses::super_traits::super_traits;
 use crate::clauses::ClauseBuilder;
 use crate::rust_ir::AdtKind;
 use crate::{Interner, RustIrDatabase, TraitRef, WellKnownTrait};
@@ -204,7 +205,20 @@ pub fn add_unsize_program_clauses<I: Interner>(
             let principal_a = principal_id(db, bounds_a);
             let principal_b = principal_id(db, bounds_b);
 
-            let auto_trait_ids_a: Vec<_> = auto_trait_ids(db, bounds_a).collect();
+            // Include super traits in a list of auto traits for A,
+            // to allow `dyn Trait -> dyn Trait + X` if `Trait: X`.
+            let auto_trait_ids_a: Vec<_> = auto_trait_ids(db, bounds_a)
+                .chain(principal_a.into_iter().flat_map(|principal_a| {
+                    super_traits(db, principal_a)
+                        .into_value_and_skipped_binders()
+                        .0
+                         .0
+                        .into_iter()
+                        .map(|x| x.skip_binders().trait_id)
+                        .filter(|&x| db.trait_datum(x).is_auto_trait())
+                }))
+                .collect();
+
             let auto_trait_ids_b: Vec<_> = auto_trait_ids(db, bounds_b).collect();
 
             let may_apply = principal_a == principal_b
@@ -234,7 +248,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
             // ------------------
 
             // Construct a new trait object type by taking the source ty,
-            // filtering out auto traits of source that are not present in target
+            // replacing auto traits of source with those of target,
             // and changing source lifetime to target lifetime.
             //
             // In order for the coercion to be valid, this new type
@@ -243,17 +257,33 @@ pub fn add_unsize_program_clauses<I: Interner>(
                 bounds: bounds_a.map_ref(|bounds| {
                     QuantifiedWhereClauses::from_iter(
                         interner,
-                        bounds.iter(interner).filter(|bound| {
-                            let trait_id = match bound.trait_id() {
-                                Some(id) => id,
-                                None => return true,
-                            };
+                        bounds
+                            .iter(interner)
+                            .cloned()
+                            .filter_map(|bound| {
+                                let Some(trait_id) = bound.trait_id() else {
+                                    // Keep non-"implements" bounds as-is
+                                    return Some(bound);
+                                };
 
-                            if auto_trait_ids_a.iter().all(|&id_a| id_a != trait_id) {
-                                return true;
-                            }
-                            auto_trait_ids_b.iter().any(|&id_b| id_b == trait_id)
-                        }),
+                                // Auto traits are already checked above, ignore them
+                                // (we'll use the ones from B below)
+                                if db.trait_datum(trait_id).is_auto_trait() {
+                                    return None;
+                                }
+
+                                // The only "implements" bound that is not an auto trait, is the principal
+                                assert_eq!(Some(trait_id), principal_a);
+                                Some(bound)
+                            })
+                            // Add auto traits from B (again, they are already checked above).
+                            .chain(bounds_b.skip_binders().iter(interner).cloned().filter(
+                                |bound| {
+                                    bound.trait_id().is_some_and(|trait_id| {
+                                        db.trait_datum(trait_id).is_auto_trait()
+                                    })
+                                },
+                            )),
                     )
                 }),
                 lifetime: lifetime_b.clone(),
