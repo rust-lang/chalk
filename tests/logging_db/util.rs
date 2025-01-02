@@ -5,12 +5,12 @@
 //! to `test/`. We can't compile without access to `test/`, so we can't be under
 //! of `test_util.rs`.
 use chalk_integration::{
-    db::ChalkDatabase, lowering::lower_goal, program::Program, query::LoweringDatabase,
-    SolverChoice,
+    SolverChoice, db::ChalkDatabase, lowering::lower_goal, program::Program,
+    query::LoweringDatabase,
 };
+use chalk_solve::RustIrDatabase;
 use chalk_solve::ext::*;
 use chalk_solve::logging_db::LoggingRustIrDatabase;
-use chalk_solve::RustIrDatabase;
 
 use crate::test::assert_result_str;
 

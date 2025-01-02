@@ -2,10 +2,10 @@ use itertools::{Either, Itertools};
 use rustc_hash::FxHashSet;
 
 use super::builder::ClauseBuilder;
-use crate::{split::Split, RustIrDatabase};
+use crate::{RustIrDatabase, split::Split};
 use chalk_ir::{
-    fold::shift::Shift, interner::Interner, AliasEq, AliasTy, Binders, BoundVar, DebruijnIndex,
-    Normalize, ProjectionTy, TraitId, TraitRef, Ty, WhereClause,
+    AliasEq, AliasTy, Binders, BoundVar, DebruijnIndex, Normalize, ProjectionTy, TraitId, TraitRef,
+    Ty, WhereClause, fold::shift::Shift, interner::Interner,
 };
 
 /// Generate `Implemented` and `Normalize` clauses for `dyn Trait` and opaque types.
@@ -83,16 +83,13 @@ fn super_traits<I: Interner>(
     let interner = db.interner();
     let mut seen_traits = FxHashSet::default();
     let trait_datum = db.trait_datum(trait_id);
-    let trait_ref = Binders::empty(
-        db.interner(),
-        TraitRef {
-            trait_id,
-            substitution: trait_datum
-                .binders
-                .identity_substitution(interner)
-                .shifted_in(interner),
-        },
-    );
+    let trait_ref = Binders::empty(db.interner(), TraitRef {
+        trait_id,
+        substitution: trait_datum
+            .binders
+            .identity_substitution(interner)
+            .shifted_in(interner),
+    });
     let mut trait_refs = Vec::new();
     let mut aliases = Vec::new();
     go(

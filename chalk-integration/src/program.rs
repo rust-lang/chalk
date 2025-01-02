@@ -1,20 +1,20 @@
 use crate::interner::ChalkIr;
-use crate::{tls, Identifier, TypeKind};
-use chalk_ir::{could_match::CouldMatch, UnificationDatabase};
-use chalk_ir::{debug::Angle, Variance};
+use crate::{Identifier, TypeKind, tls};
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId,
-    CoroutineId, FnDefId, ForeignDefId, GenericArg, Goal, Goals, ImplId, IntTy, Lifetime, OpaqueTy,
-    OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, Scalar,
-    Substitution, TraitId, Ty, TyKind, UintTy, Variances,
+    AdtId, AliasTy, AssocTypeId, Binders, CanonicalVarKinds, ClosureId, CoroutineId, FnDefId,
+    ForeignDefId, GenericArg, Goal, Goals, ImplId, IntTy, Lifetime, OpaqueTy, OpaqueTyId,
+    ProgramClause, ProgramClauseImplication, ProgramClauses, ProjectionTy, Scalar, Substitution,
+    TraitId, Ty, TyKind, UintTy, Variances, debug::SeparatorTraitRef,
 };
+use chalk_ir::{UnificationDatabase, could_match::CouldMatch};
+use chalk_ir::{Variance, debug::Angle};
+use chalk_solve::RustIrDatabase;
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
     ClosureKind, CoroutineDatum, CoroutineWitnessDatum, FnDefDatum, FnDefInputsAndOutputDatum,
     ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::split::Split;
-use chalk_solve::RustIrDatabase;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::sync::Arc;

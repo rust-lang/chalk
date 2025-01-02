@@ -3,8 +3,8 @@
 use self::test::Bencher;
 
 use chalk_ir;
-use chalk_solve::ext::*;
 use chalk_solve::SolverChoice;
+use chalk_solve::ext::*;
 
 use super::{assert_result, parse_and_lower_goal, parse_and_lower_program_with_env};
 

@@ -1,6 +1,6 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::{
-    rust_ir::AdtKind, CanonicalVarKinds, Interner, RustIrDatabase, TraitRef, WellKnownTrait,
+    CanonicalVarKinds, Interner, RustIrDatabase, TraitRef, WellKnownTrait, rust_ir::AdtKind,
 };
 use chalk_ir::{Floundered, Substitution, Ty, TyKind};
 

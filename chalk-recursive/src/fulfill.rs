@@ -548,14 +548,11 @@ impl<'s, I: Interner, Solver: SolveDatabase<I>> Fulfill<'s, I, Solver> {
             // and the current inference state is the unique way to solve them.
 
             let constraints = Constraints::from_iter(self.interner(), self.constraints.clone());
-            let constrained = canonicalize(
-                &mut self.infer,
-                self.solver.interner(),
-                ConstrainedSubst {
+            let constrained =
+                canonicalize(&mut self.infer, self.solver.interner(), ConstrainedSubst {
                     subst: self.subst,
                     constraints,
-                },
-            );
+                });
             return Ok(Solution::Unique(constrained.0));
         }
 

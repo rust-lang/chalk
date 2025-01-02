@@ -30,13 +30,10 @@ pub fn add_coroutine_program_clauses<I: Interner>(
                 trait_datum.associated_ty_ids
             );
 
-            let substitution = Substitution::from_iter(
-                interner,
-                &[
-                    self_ty.cast(interner),
-                    coroutine_io_datum.resume_type.cast(interner),
-                ],
-            );
+            let substitution = Substitution::from_iter(interner, &[
+                self_ty.cast(interner),
+                coroutine_io_datum.resume_type.cast(interner),
+            ]);
 
             // coroutine: Coroutine<resume_type>
             builder.push_fact(TraitRef {

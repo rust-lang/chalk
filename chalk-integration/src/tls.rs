@@ -1,9 +1,9 @@
 use crate::interner::ChalkIr;
 use chalk_ir::{
-    debug::SeparatorTraitRef, AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, Constraints, FnDefId,
-    GenericArg, Goal, Goals, Lifetime, OpaqueTy, OpaqueTyId, ProgramClause,
-    ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses, Substitution,
-    TraitId, Ty, VariableKinds, Variances,
+    AdtId, AliasTy, AssocTypeId, CanonicalVarKinds, Constraints, FnDefId, GenericArg, Goal, Goals,
+    Lifetime, OpaqueTy, OpaqueTyId, ProgramClause, ProgramClauseImplication, ProgramClauses,
+    ProjectionTy, QuantifiedWhereClauses, Substitution, TraitId, Ty, VariableKinds, Variances,
+    debug::SeparatorTraitRef,
 };
 use std::cell::RefCell;
 use std::fmt;

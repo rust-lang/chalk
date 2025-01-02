@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use crate::cast::{Cast, CastTo};
 use crate::RustIrDatabase;
+use crate::cast::{Cast, CastTo};
 use chalk_ir::fold::{Shift, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::*;

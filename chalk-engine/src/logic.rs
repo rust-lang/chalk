@@ -17,8 +17,8 @@ use chalk_ir::{
 };
 use chalk_solve::clauses::program_clauses_that_could_match;
 use chalk_solve::coinductive_goal::IsCoinductive;
-use chalk_solve::infer::ucanonicalize::UCanonicalized;
 use chalk_solve::infer::InferenceTable;
+use chalk_solve::infer::ucanonicalize::UCanonicalized;
 use chalk_solve::solve::truncate;
 use tracing::{debug, debug_span, info, instrument};
 
@@ -678,7 +678,9 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                         // the SLG FACTOR operation, though NFTD just makes it
                         // part of computing the SLG resolvent.
                         if self.forest.answer(subgoal_table, answer_index).ambiguous {
-                            debug!("Marking Strand as ambiguous because answer to (positive) subgoal was ambiguous");
+                            debug!(
+                                "Marking Strand as ambiguous because answer to (positive) subgoal was ambiguous"
+                            );
                             ex_clause.ambiguous = true;
                         }
 
@@ -745,7 +747,10 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                 // We want to disproval the subgoal, but we
                 // have an unconditional answer for the subgoal,
                 // therefore we have failed to disprove it.
-                debug!(?strand, "Marking Strand as ambiguous because answer to (negative) subgoal was ambiguous");
+                debug!(
+                    ?strand,
+                    "Marking Strand as ambiguous because answer to (negative) subgoal was ambiguous"
+                );
                 strand.ex_clause.ambiguous = true;
 
                 // Strand is ambigious.
@@ -1329,11 +1334,13 @@ impl<'forest, I: Interner> SolveState<'forest, I> {
                         // All the subgoals of this strand floundered. We may be able
                         // to get helpful information from this strand still, but it
                         // will *always* be ambiguous, so mark it as so.
-                        assert!(!canonical_strand
-                            .value
-                            .ex_clause
-                            .floundered_subgoals
-                            .is_empty());
+                        assert!(
+                            !canonical_strand
+                                .value
+                                .ex_clause
+                                .floundered_subgoals
+                                .is_empty()
+                        );
                         canonical_strand.value.ex_clause.ambiguous = true;
                         return SubGoalSelection::NotSelected;
                     }

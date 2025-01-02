@@ -1,8 +1,8 @@
-use chalk_integration::interner::{ChalkIr, RawId};
 use chalk_integration::SolverChoice;
+use chalk_integration::interner::{ChalkIr, RawId};
 use chalk_ir::*;
-use chalk_solve::rust_ir::*;
 use chalk_solve::RustIrDatabase;
+use chalk_solve::rust_ir::*;
 use std::sync::Arc;
 
 // FIXME: some of these are probably redundant, so we should figure out which panic in the same place in `chalk-engine`
@@ -67,12 +67,9 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         assert_eq!(id.0.index, 0);
         Arc::new(TraitDatum {
             id,
-            binders: Binders::new(
-                VariableKinds::empty(ChalkIr),
-                TraitDatumBound {
-                    where_clauses: vec![],
-                },
-            ),
+            binders: Binders::new(VariableKinds::empty(ChalkIr), TraitDatumBound {
+                where_clauses: vec![],
+            }),
             flags: TraitFlags {
                 auto: false,
                 marker: false,
@@ -99,16 +96,13 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
             TyKind::Adt(AdtId(RawId { index: 1 }), Substitution::empty(ChalkIr)),
         );
 
-        let binders = Binders::new(
-            VariableKinds::empty(ChalkIr),
-            ImplDatumBound {
-                trait_ref: TraitRef {
-                    trait_id: TraitId(RawId { index: 0 }),
-                    substitution: Substitution::from1(ChalkIr, substitution),
-                },
-                where_clauses: vec![],
+        let binders = Binders::new(VariableKinds::empty(ChalkIr), ImplDatumBound {
+            trait_ref: TraitRef {
+                trait_id: TraitId(RawId { index: 0 }),
+                substitution: Substitution::from1(ChalkIr, substitution),
             },
-        );
+            where_clauses: vec![],
+        });
 
         Arc::new(ImplDatum {
             polarity: Polarity::Positive,
@@ -136,13 +130,10 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
     fn adt_datum(&self, id: AdtId<ChalkIr>) -> Arc<AdtDatum<ChalkIr>> {
         // Only needed because we always access the adt datum for logging
         Arc::new(AdtDatum {
-            binders: Binders::empty(
-                ChalkIr,
-                AdtDatumBound {
-                    variants: vec![],
-                    where_clauses: vec![],
-                },
-            ),
+            binders: Binders::empty(ChalkIr, AdtDatumBound {
+                variants: vec![],
+                where_clauses: vec![],
+            }),
             flags: AdtFlags {
                 fundamental: false,
                 phantom_data: false,

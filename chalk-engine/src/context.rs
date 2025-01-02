@@ -6,8 +6,8 @@
 //! [`Context`] trait for a list of types.
 
 use crate::CompleteAnswer;
-use chalk_ir::interner::Interner;
 use chalk_ir::Substitution;
+use chalk_ir::interner::Interner;
 use std::fmt::Debug;
 
 pub enum AnswerResult<I: Interner> {

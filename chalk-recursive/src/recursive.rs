@@ -1,10 +1,10 @@
+use crate::UCanonicalGoal;
 use crate::fixed_point::{Cache, Minimums, RecursiveContext, SolverStuff};
 use crate::solve::{SolveDatabase, SolveIteration};
-use crate::UCanonicalGoal;
-use chalk_ir::{interner::Interner, NoSolution};
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_ir::{Constraints, Fallible};
-use chalk_solve::{coinductive_goal::IsCoinductive, RustIrDatabase, Solution};
+use chalk_ir::{NoSolution, interner::Interner};
+use chalk_solve::{RustIrDatabase, Solution, coinductive_goal::IsCoinductive};
 use std::fmt;
 
 /// A Solver is the basic context in which you can propose goals for a given

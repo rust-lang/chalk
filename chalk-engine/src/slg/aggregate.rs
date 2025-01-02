@@ -1,7 +1,7 @@
+use crate::CompleteAnswer;
 use crate::context::{self, AnswerResult};
 use crate::slg::SlgContextOps;
 use crate::slg::SubstitutionExt;
-use crate::CompleteAnswer;
 use chalk_ir::cast::Cast;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;

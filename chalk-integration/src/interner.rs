@@ -1,9 +1,5 @@
 use crate::tls;
 use chalk_ir::{
-    interner::{HasInterner, Interner},
-    TyKind,
-};
-use chalk_ir::{
     AdtId, AliasTy, AssocTypeId, CanonicalVarKind, CanonicalVarKinds, ConstData, Constraint,
     Constraints, FnDefId, Goals, InEnvironment, Lifetime, OpaqueTy, OpaqueTyId,
     ProgramClauseImplication, ProgramClauses, ProjectionTy, QuantifiedWhereClauses,
@@ -12,6 +8,10 @@ use chalk_ir::{
 use chalk_ir::{
     GenericArg, GenericArgData, Goal, GoalData, LifetimeData, ProgramClause, ProgramClauseData,
     QuantifiedWhereClause, Variance,
+};
+use chalk_ir::{
+    TyKind,
+    interner::{HasInterner, Interner},
 };
 use std::fmt;
 use std::fmt::Debug;
@@ -39,14 +39,10 @@ pub enum ChalkFnAbi {
 
 impl Debug for ChalkFnAbi {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            fmt,
-            "{}",
-            match self {
-                ChalkFnAbi::Rust => "\"rust\"",
-                ChalkFnAbi::C => "\"c\"",
-            },
-        )
+        write!(fmt, "{}", match self {
+            ChalkFnAbi::Rust => "\"rust\"",
+            ChalkFnAbi::C => "\"c\"",
+        },)
     }
 }
 

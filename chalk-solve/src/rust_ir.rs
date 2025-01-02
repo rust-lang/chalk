@@ -7,9 +7,9 @@ use chalk_ir::cast::Cast;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;
 use chalk_ir::{
-    try_break, visit::TypeVisitable, AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex,
-    FnDefId, GenericArg, ImplId, OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution,
-    ToGenericArg, TraitId, TraitRef, Ty, TyKind, VariableKind, WhereClause, WithKind,
+    AdtId, AliasEq, AliasTy, AssocTypeId, Binders, DebruijnIndex, FnDefId, GenericArg, ImplId,
+    OpaqueTyId, ProjectionTy, QuantifiedWhereClause, Substitution, ToGenericArg, TraitId, TraitRef,
+    Ty, TyKind, VariableKind, WhereClause, WithKind, try_break, visit::TypeVisitable,
 };
 use std::iter;
 use std::ops::ControlFlow;

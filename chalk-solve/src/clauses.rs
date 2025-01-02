@@ -1,10 +1,10 @@
 use self::builder::ClauseBuilder;
 use self::env_elaborator::elaborate_env_clauses;
 use self::program_clauses::ToProgramClauses;
+use crate::RustIrDatabase;
 use crate::goal_builder::GoalBuilder;
 use crate::rust_ir::{Movability, WellKnownTrait};
 use crate::split::Split;
-use crate::RustIrDatabase;
 use chalk_ir::cast::{Cast, Caster};
 use chalk_ir::could_match::CouldMatch;
 use chalk_ir::interner::Interner;
@@ -956,16 +956,10 @@ fn match_ty<I: Interner>(
                 builder.push_bound_lifetime(|builder, lifetime| {
                     let ref_ty = TyKind::Ref(*mutbl, lifetime.clone(), ty.clone())
                         .intern(builder.interner());
-                    builder.push_clause(
-                        WellFormed::Ty(ref_ty),
-                        [
-                            DomainGoal::WellFormed(WellFormed::Ty(ty.clone())),
-                            DomainGoal::Holds(WhereClause::TypeOutlives(TypeOutlives {
-                                ty,
-                                lifetime,
-                            })),
-                        ],
-                    );
+                    builder.push_clause(WellFormed::Ty(ref_ty), [
+                        DomainGoal::WellFormed(WellFormed::Ty(ty.clone())),
+                        DomainGoal::Holds(WhereClause::TypeOutlives(TypeOutlives { ty, lifetime })),
+                    ]);
                 })
             });
         }
@@ -991,15 +985,12 @@ fn match_ty<I: Interner>(
             // forall<T. const N: usize> WF([T, N]) :- T: Sized
             let interner = builder.interner();
             let binders = Binders::new(
-                VariableKinds::from_iter(
-                    interner,
-                    [
-                        VariableKind::Ty(TyVariableKind::General),
-                        VariableKind::Const(
-                            TyKind::Scalar(Scalar::Uint(UintTy::Usize)).intern(interner),
-                        ),
-                    ],
-                ),
+                VariableKinds::from_iter(interner, [
+                    VariableKind::Ty(TyVariableKind::General),
+                    VariableKind::Const(
+                        TyKind::Scalar(Scalar::Uint(UintTy::Usize)).intern(interner),
+                    ),
+                ]),
                 PhantomData::<I>,
             );
             builder.push_binders(binders, |builder, PhantomData| {

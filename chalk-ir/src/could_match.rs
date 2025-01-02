@@ -142,11 +142,7 @@ where
                     _ => true,
                 };
 
-                if could_match {
-                    Ok(())
-                } else {
-                    Err(NoSolution)
-                }
+                if could_match { Ok(()) } else { Err(NoSolution) }
             }
 
             fn zip_lifetimes(

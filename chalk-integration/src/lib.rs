@@ -12,8 +12,8 @@ pub mod test_macros;
 pub mod tls;
 
 use chalk_engine::solve::SLGSolver;
-use chalk_ir::interner::HasInterner;
 use chalk_ir::Binders;
+use chalk_ir::interner::HasInterner;
 use chalk_recursive::{Cache, RecursiveSolver};
 use chalk_solve::Solver;
 use interner::ChalkIr;

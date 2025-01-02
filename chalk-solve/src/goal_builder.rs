@@ -3,8 +3,8 @@ use cast::CastTo;
 use chalk_ir::cast::Cast;
 use chalk_ir::cast::Caster;
 use chalk_ir::*;
-use fold::shift::Shift;
 use fold::TypeFoldable;
+use fold::shift::Shift;
 use interner::{HasInterner, Interner};
 
 pub struct GoalBuilder<'i, I: Interner> {

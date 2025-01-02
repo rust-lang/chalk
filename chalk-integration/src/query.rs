@@ -1,21 +1,21 @@
 // https://crates.io/crates/salsa
 // hello world https://github.com/salsa-rs/salsa/blob/master/examples/hello_world/main.rs
 
+use crate::SolverChoice;
 use crate::error::ChalkError;
 use crate::interner::ChalkIr;
 use crate::lowering::Lower;
 use crate::program::Program;
 use crate::program_environment::ProgramEnvironment;
 use crate::tls;
-use crate::SolverChoice;
 use chalk_ir::TraitId;
+use chalk_solve::RustIrDatabase;
+use chalk_solve::Solver;
 use chalk_solve::clauses::builder::ClauseBuilder;
 use chalk_solve::clauses::program_clauses::ToProgramClauses;
 use chalk_solve::coherence::orphan;
 use chalk_solve::coherence::{CoherenceSolver, SpecializationPriorities};
 use chalk_solve::wf;
-use chalk_solve::RustIrDatabase;
-use chalk_solve::Solver;
 use salsa::Database;
 use std::clone::Clone;
 use std::cmp::{Eq, PartialEq};

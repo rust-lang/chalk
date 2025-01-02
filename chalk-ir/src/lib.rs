@@ -2504,10 +2504,10 @@ impl<I: Interner> Goal<I> {
             QuantifierKind::ForAll,
             Binders::with_fresh_type_var(interner, |ty| {
                 GoalData::Implies(
-                    ProgramClauses::from_iter(
-                        interner,
-                        vec![DomainGoal::Compatible, DomainGoal::DownstreamType(ty)],
-                    ),
+                    ProgramClauses::from_iter(interner, vec![
+                        DomainGoal::Compatible,
+                        DomainGoal::DownstreamType(ty),
+                    ]),
                     self.shifted_in(interner),
                 )
                 .intern(interner)

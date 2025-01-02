@@ -1,13 +1,13 @@
 use chalk_integration::{program::Program, query::LoweringDatabase, tls};
-use chalk_ir::{interner::Interner, UnificationDatabase};
+use chalk_ir::{UnificationDatabase, interner::Interner};
 use chalk_solve::{
-    display::{write_items, WriterState},
     RustIrDatabase,
+    display::{WriterState, write_items},
 };
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use super::util::{program_item_ids, ReparseTestResult};
+use super::util::{ReparseTestResult, program_item_ids};
 
 /// `DuplicateNamesDb` implements `RustIrDatabase`, and returns `Foo` for all
 /// requested item names. This allows us to test that names are correctly

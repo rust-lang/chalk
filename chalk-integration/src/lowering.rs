@@ -746,7 +746,7 @@ impl LowerWithEnv for Ty {
                 }
                 match env.lookup_type(name)? {
                     TypeLookup::Parameter(_) => {
-                        return Err(RustIrError::CannotApplyTypeParameter(name.clone()))
+                        return Err(RustIrError::CannotApplyTypeParameter(name.clone()));
                     }
                     TypeLookup::Adt(id) => tykind!(env.adt_kind(id), Adt, id),
                     TypeLookup::FnDef(id) => tykind!(env.fn_def_kind(id), FnDef, id),

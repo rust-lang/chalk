@@ -3,8 +3,8 @@ use crate::ExClause;
 use chalk_derive::HasInterner;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
-use chalk_solve::infer::InferenceTable;
 use chalk_solve::RustIrDatabase;
+use chalk_solve::infer::InferenceTable;
 
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -59,13 +59,10 @@ impl<I: Interner> SlgContextOps<'_, I> {
             goal.canonical.clone(),
         );
         infer
-            .canonicalize(
-                self.program.interner(),
-                ConstrainedSubst {
-                    subst,
-                    constraints: Constraints::empty(self.program.interner()),
-                },
-            )
+            .canonicalize(self.program.interner(), ConstrainedSubst {
+                subst,
+                constraints: Constraints::empty(self.program.interner()),
+            })
             .quantified
     }
 

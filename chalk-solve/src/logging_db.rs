@@ -11,8 +11,8 @@ use std::{
 
 use crate::rust_ir::*;
 use crate::{
-    display::{self, WriterState},
     RustIrDatabase,
+    display::{self, WriterState},
 };
 use chalk_ir::{interner::Interner, *};
 

@@ -563,7 +563,7 @@ pub trait Interner: Debug + Copy + Eq + Hash + Sized {
 
     /// Lookup the `ProgramClauseData` that was interned to create a `ProgramClause`.
     fn program_clauses_data(self, clauses: &Self::InternedProgramClauses)
-        -> &[ProgramClause<Self>];
+    -> &[ProgramClause<Self>];
 
     /// Create an "interned" quantified where clauses from `data`. This is not
     /// normally invoked directly; instead, you invoke

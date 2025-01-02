@@ -8,7 +8,7 @@ use crate::rust_ir::*;
 use chalk_ir::{interner::Interner, *};
 use itertools::Itertools;
 
-use crate::{logging_db::RecordedItemId, split::Split, RustIrDatabase};
+use crate::{RustIrDatabase, logging_db::RecordedItemId, split::Split};
 
 #[macro_use]
 mod utils;

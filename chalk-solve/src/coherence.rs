@@ -2,8 +2,8 @@ use indexmap::IndexMap;
 use petgraph::prelude::*;
 use rustc_hash::FxHashMap;
 
-use crate::solve::Solver;
 use crate::RustIrDatabase;
+use crate::solve::Solver;
 use chalk_ir::interner::Interner;
 use chalk_ir::{self, ImplId, TraitId};
 use std::fmt;

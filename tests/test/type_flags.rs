@@ -51,16 +51,15 @@ fn dyn_ty_flags_correct() {
     };
     let bounds = chalk_ir::Binders::<chalk_ir::QuantifiedWhereClauses<ChalkIr>>::empty(
         ChalkIr,
-        chalk_ir::QuantifiedWhereClauses::from_iter(
+        chalk_ir::QuantifiedWhereClauses::from_iter(ChalkIr, vec![chalk_ir::Binders::<
+            chalk_ir::WhereClause<ChalkIr>,
+        >::empty(
             ChalkIr,
-            vec![chalk_ir::Binders::<chalk_ir::WhereClause<ChalkIr>>::empty(
-                ChalkIr,
-                chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
-                    ty: internal_ty,
-                    alias: chalk_ir::AliasTy::Projection(projection_ty),
-                }),
-            )],
-        ),
+            chalk_ir::WhereClause::AliasEq(chalk_ir::AliasEq {
+                ty: internal_ty,
+                alias: chalk_ir::AliasTy::Projection(projection_ty),
+            }),
+        )]),
     );
     let dyn_ty = chalk_ir::DynTy {
         lifetime: lifetime!(placeholder 5),
@@ -96,14 +95,11 @@ fn flagless_ty_has_no_flags() {
 
 #[test]
 fn static_and_bound_lifetimes() {
-    let substitutions = chalk_ir::Substitution::from_iter(
-        ChalkIr,
-        vec![
-            chalk_ir::GenericArgData::Lifetime(chalk_ir::LifetimeData::Static.intern(ChalkIr))
-                .intern(ChalkIr),
-            chalk_ir::GenericArgData::Lifetime(lifetime!(bound 5)).intern(ChalkIr),
-        ],
-    );
+    let substitutions = chalk_ir::Substitution::from_iter(ChalkIr, vec![
+        chalk_ir::GenericArgData::Lifetime(chalk_ir::LifetimeData::Static.intern(ChalkIr))
+            .intern(ChalkIr),
+        chalk_ir::GenericArgData::Lifetime(lifetime!(bound 5)).intern(ChalkIr),
+    ]);
 
     let ty = TyKind::Adt(
         chalk_ir::AdtId(chalk_integration::interner::RawId { index: 0 }),

@@ -77,16 +77,12 @@ impl<I: Interner> RenderAsRust<I> for AdtDatum<I> {
         let value = self.binders.skip_binders();
 
         // flags
-        write_flags!(
-            f,
-            self.flags,
-            AdtFlags {
-                // Ordering matters
-                upstream,
-                fundamental,
-                phantom_data
-            }
-        );
+        write_flags!(f, self.flags, AdtFlags {
+            // Ordering matters
+            upstream,
+            fundamental,
+            phantom_data
+        });
 
         // repr
         let repr = s.db().adt_repr(self.id);
@@ -171,18 +167,14 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
         let value = self.binders.skip_binders();
 
         // flags
-        write_flags!(
-            f,
-            self.flags,
-            TraitFlags {
-                auto,
-                marker,
-                upstream,
-                fundamental,
-                non_enumerable,
-                coinductive
-            }
-        );
+        write_flags!(f, self.flags, TraitFlags {
+            auto,
+            marker,
+            upstream,
+            fundamental,
+            non_enumerable,
+            coinductive
+        });
 
         // object safe
         if s.db().is_object_safe(self.id) {

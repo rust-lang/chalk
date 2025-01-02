@@ -267,14 +267,11 @@ fn quantify_simple() {
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (bound 0) (bound 1) (bound 2)),
-            binders: CanonicalVarKinds::from_iter(
-                interner,
-                vec![
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U2),
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U1),
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U0),
-                ]
-            ),
+            binders: CanonicalVarKinds::from_iter(interner, vec![
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U2),
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U1),
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U0),
+            ]),
         }
     );
 }
@@ -310,14 +307,11 @@ fn quantify_bound() {
             .quantified,
         Canonical {
             value: ty!(apply (item 0) (apply (item 1) (bound 0) (bound 1)) (bound 2) (bound 0) (bound 1)),
-            binders: CanonicalVarKinds::from_iter(
-                interner,
-                vec![
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U1),
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U0),
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U2),
-                ]
-            ),
+            binders: CanonicalVarKinds::from_iter(interner, vec![
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U1),
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U0),
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U2),
+            ]),
         }
     );
 }
@@ -356,13 +350,10 @@ fn quantify_ty_under_binder() {
             .quantified,
         Canonical {
             value: ty!(function 3 (apply (item 0) (bound 1) (bound 1 0) (bound 1 0) (lifetime (bound 1 1)))),
-            binders: CanonicalVarKinds::from_iter(
-                interner,
-                vec![
-                    CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U0),
-                    CanonicalVarKind::new(VariableKind::Lifetime, U0)
-                ]
-            ),
+            binders: CanonicalVarKinds::from_iter(interner, vec![
+                CanonicalVarKind::new(VariableKind::Ty(TyVariableKind::General), U0),
+                CanonicalVarKind::new(VariableKind::Lifetime, U0)
+            ]),
         }
     );
 }

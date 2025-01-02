@@ -1,9 +1,9 @@
 extern crate proc_macro;
 
 use proc_macro2::{Span, TokenStream};
-use quote::quote;
 use quote::ToTokens;
-use syn::{parse_quote, DeriveInput, Ident, TypeParam, TypeParamBound};
+use quote::quote;
+use syn::{DeriveInput, Ident, TypeParam, TypeParamBound, parse_quote};
 
 use synstructure::decl_derive;
 
@@ -54,7 +54,10 @@ fn get_intern_param(input: &DeriveInput) -> Option<(DeriveKind, &Ident)> {
     });
 
     let param = params.next();
-    assert!(params.next().is_none(), "deriving this trait only works with at most one type parameter that implements HasInterner or Interner");
+    assert!(
+        params.next().is_none(),
+        "deriving this trait only works with at most one type parameter that implements HasInterner or Interner"
+    );
 
     param
 }
@@ -130,12 +133,9 @@ fn derive_has_interner(mut s: synstructure::Structure) -> TokenStream {
     let (interner, _) = find_interner(&mut s);
 
     s.add_bounds(synstructure::AddBounds::None);
-    s.bound_impl(
-        quote!(::chalk_ir::interner::HasInterner),
-        quote! {
-            type Interner = #interner;
-        },
-    )
+    s.bound_impl(quote!(::chalk_ir::interner::HasInterner), quote! {
+        type Interner = #interner;
+    })
 }
 
 /// Derives TypeVisitable for structs and enums for which one of the following is true:
@@ -240,20 +240,17 @@ fn derive_zip(mut s: synstructure::Structure) -> TokenStream {
     quote!((_, _)  => Err(::chalk_ir::NoSolution)).to_tokens(&mut body);
 
     s.add_bounds(synstructure::AddBounds::None);
-    s.bound_impl(
-        quote!(::chalk_ir::zip::Zip<#interner>),
-        quote! {
+    s.bound_impl(quote!(::chalk_ir::zip::Zip<#interner>), quote! {
 
-            fn zip_with<Z: ::chalk_ir::zip::Zipper<#interner>>(
-                zipper: &mut Z,
-                variance: ::chalk_ir::Variance,
-                a: &Self,
-                b: &Self,
-            ) -> ::chalk_ir::Fallible<()> {
-                    match (a, b) { #body }
-                }
-        },
-    )
+        fn zip_with<Z: ::chalk_ir::zip::Zipper<#interner>>(
+            zipper: &mut Z,
+            variance: ::chalk_ir::Variance,
+            a: &Self,
+            b: &Self,
+        ) -> ::chalk_ir::Fallible<()> {
+                match (a, b) { #body }
+            }
+    })
 }
 
 /// Derives TypeFoldable for structs and enums for which one of the following is true:
@@ -284,18 +281,15 @@ fn derive_type_foldable(mut s: synstructure::Structure) -> TokenStream {
     };
 
     s.add_bounds(synstructure::AddBounds::None);
-    s.bound_impl(
-        quote!(::chalk_ir::fold::TypeFoldable<#interner>),
-        quote! {
-            fn try_fold_with<E>(
-                self,
-                folder: &mut dyn ::chalk_ir::fold::FallibleTypeFolder < #interner, Error = E >,
-                outer_binder: ::chalk_ir::DebruijnIndex,
-            ) -> ::std::result::Result<Self, E> {
-                Ok(match self { #body })
-            }
-        },
-    )
+    s.bound_impl(quote!(::chalk_ir::fold::TypeFoldable<#interner>), quote! {
+        fn try_fold_with<E>(
+            self,
+            folder: &mut dyn ::chalk_ir::fold::FallibleTypeFolder < #interner, Error = E >,
+            outer_binder: ::chalk_ir::DebruijnIndex,
+        ) -> ::std::result::Result<Self, E> {
+            Ok(match self { #body })
+        }
+    })
 }
 
 fn derive_fallible_type_folder(mut s: synstructure::Structure) -> TokenStream {

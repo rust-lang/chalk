@@ -200,36 +200,32 @@ impl<I: Interner> RenderAsRust<I> for FnPointer<I> {
 impl<I: Interner> RenderAsRust<I> for Scalar {
     fn fmt(&self, _s: &InternalWriterState<'_, I>, f: &mut Formatter<'_>) -> Result {
         use chalk_ir::{FloatTy::*, IntTy::*, UintTy::*};
-        write!(
-            f,
-            "{}",
-            match self {
-                Scalar::Bool => "bool",
-                Scalar::Char => "char",
-                Scalar::Int(int) => match int {
-                    Isize => "isize",
-                    I8 => "i8",
-                    I16 => "i16",
-                    I32 => "i32",
-                    I64 => "i64",
-                    I128 => "i128",
-                },
-                Scalar::Uint(uint) => match uint {
-                    Usize => "usize",
-                    U8 => "u8",
-                    U16 => "u16",
-                    U32 => "u32",
-                    U64 => "u64",
-                    U128 => "u128",
-                },
-                Scalar::Float(float) => match float {
-                    F16 => "f16",
-                    F32 => "f32",
-                    F64 => "f64",
-                    F128 => "f128",
-                },
-            }
-        )
+        write!(f, "{}", match self {
+            Scalar::Bool => "bool",
+            Scalar::Char => "char",
+            Scalar::Int(int) => match int {
+                Isize => "isize",
+                I8 => "i8",
+                I16 => "i16",
+                I32 => "i32",
+                I64 => "i64",
+                I128 => "i128",
+            },
+            Scalar::Uint(uint) => match uint {
+                Usize => "usize",
+                U8 => "u8",
+                U16 => "u16",
+                U32 => "u32",
+                U64 => "u64",
+                U128 => "u128",
+            },
+            Scalar::Float(float) => match float {
+                F16 => "f16",
+                F32 => "f32",
+                F64 => "f64",
+                F128 => "f128",
+            },
+        })
     }
 }
 

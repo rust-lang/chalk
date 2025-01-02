@@ -1,12 +1,12 @@
 use super::program_clauses::ToProgramClauses;
-use crate::clauses::builder::ClauseBuilder;
-use crate::clauses::{match_alias_ty, match_ty};
 use crate::DomainGoal;
 use crate::FromEnv;
 use crate::ProgramClause;
 use crate::RustIrDatabase;
 use crate::Ty;
-use crate::{debug_span, TyKind};
+use crate::clauses::builder::ClauseBuilder;
+use crate::clauses::{match_alias_ty, match_ty};
+use crate::{TyKind, debug_span};
 use chalk_ir::interner::Interner;
 use chalk_ir::visit::{TypeVisitable, TypeVisitor};
 use chalk_ir::{DebruijnIndex, Environment};

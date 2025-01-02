@@ -3,7 +3,7 @@ use chalk_ir::{
     self, AdtId, BoundVar, ClosureId, CoroutineId, DebruijnIndex, FnDefId, OpaqueTyId, TraitId,
     VariableKinds,
 };
-use chalk_ir::{cast::Cast, ForeignDefId, WithKind};
+use chalk_ir::{ForeignDefId, WithKind, cast::Cast};
 use chalk_parse::ast::*;
 use chalk_solve::rust_ir::AssociatedTyValueId;
 use std::collections::BTreeMap;

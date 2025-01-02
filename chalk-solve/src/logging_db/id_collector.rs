@@ -1,10 +1,10 @@
 use super::RecordedItemId;
 use crate::RustIrDatabase;
 use chalk_ir::{
+    AliasTy, DebruijnIndex, TyKind, WhereClause,
     interner::Interner,
     visit::TypeVisitor,
     visit::{TypeSuperVisitable, TypeVisitable},
-    AliasTy, DebruijnIndex, TyKind, WhereClause,
 };
 use std::ops::ControlFlow;
 

@@ -1,7 +1,7 @@
+use crate::RustIrDatabase;
 use crate::coherence::CoherenceError;
 use crate::ext::GoalExt;
 use crate::solve::Solver;
-use crate::RustIrDatabase;
 use chalk_ir::cast::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;

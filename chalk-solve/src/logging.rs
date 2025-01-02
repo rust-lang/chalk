@@ -2,7 +2,7 @@
 /// from `CHALK_DEBUG`.
 #[cfg(feature = "tracing-full")]
 pub fn with_tracing_logs<T>(action: impl FnOnce() -> T) -> T {
-    use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+    use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
     use tracing_tree::HierarchicalLayer;
     let filter = EnvFilter::from_env("CHALK_DEBUG");
     let subscriber = Registry::default()

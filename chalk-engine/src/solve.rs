@@ -1,7 +1,7 @@
 use crate::context::{AnswerResult, AnswerStream};
 use crate::forest::Forest;
-use crate::slg::aggregate::AggregateOps;
 use crate::slg::SlgContextOps;
+use crate::slg::aggregate::AggregateOps;
 use chalk_ir::interner::Interner;
 use chalk_ir::{Canonical, ConstrainedSubst, Goal, InEnvironment, UCanonical};
 use chalk_solve::{RustIrDatabase, Solution, Solver, SubstitutionResult};

@@ -1,6 +1,6 @@
 use super::{builder::ClauseBuilder, generalize};
 use crate::RustIrDatabase;
-use chalk_ir::{cast::Cast, interner::Interner, Ty, TyKind, WhereClause};
+use chalk_ir::{Ty, TyKind, WhereClause, cast::Cast, interner::Interner};
 
 /// If the self type `S` of an `Implemented` goal is a `dyn trait` type, we wish
 /// to generate program-clauses that indicates that it implements its own

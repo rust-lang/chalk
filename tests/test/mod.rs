@@ -3,19 +3,19 @@
 use std::sync::Arc;
 
 use chalk_integration::program::Program;
-use expect_test::{expect, Expect};
+use expect_test::{Expect, expect};
 
 use crate::test_util::assert_same;
+use chalk_integration::SolverChoice;
 use chalk_integration::db::ChalkDatabase;
 use chalk_integration::interner::ChalkIr;
 use chalk_integration::lowering::lower_goal;
 use chalk_integration::query::LoweringDatabase;
-use chalk_integration::SolverChoice;
 use chalk_ir::Constraints;
-use chalk_solve::ext::*;
-use chalk_solve::logging::with_tracing_logs;
 use chalk_solve::RustIrDatabase;
 use chalk_solve::Solution;
+use chalk_solve::ext::*;
+use chalk_solve::logging::with_tracing_logs;
 
 #[cfg(feature = "bench")]
 mod bench;

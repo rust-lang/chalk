@@ -2,7 +2,7 @@ use std::ops::ControlFlow;
 use std::{fmt, iter};
 
 use crate::{
-    ext::*, goal_builder::GoalBuilder, rust_ir::*, solve::Solver, split::Split, RustIrDatabase,
+    RustIrDatabase, ext::*, goal_builder::GoalBuilder, rust_ir::*, solve::Solver, split::Split,
 };
 use chalk_ir::{
     cast::*,

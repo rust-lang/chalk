@@ -1,5 +1,5 @@
-use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::clauses::ClauseBuilder;
+use crate::clauses::builtin_traits::needs_impl_for_tys;
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::{CanonicalVarKinds, Floundered, Substitution, TyKind, TyVariableKind, VariableKind};
 use std::iter;

@@ -2,7 +2,7 @@ use crate::coherence::{CoherenceError, CoherenceSolver};
 use crate::debug_span;
 use crate::ext::*;
 use crate::rust_ir::*;
-use crate::{goal_builder::GoalBuilder, Solution};
+use crate::{Solution, goal_builder::GoalBuilder};
 use chalk_ir::cast::*;
 use chalk_ir::fold::shift::Shift;
 use chalk_ir::interner::Interner;

@@ -1,5 +1,5 @@
-use crate::rust_ir::*;
 use crate::RustIrDatabase;
+use crate::rust_ir::*;
 use chalk_ir::interner::Interner;
 use chalk_ir::*;
 use std::sync::Arc;

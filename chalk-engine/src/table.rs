@@ -2,8 +2,8 @@ use crate::index_struct;
 use crate::strand::CanonicalStrand;
 use crate::{Answer, AnswerMode};
 use rustc_hash::FxHashMap;
-use std::collections::hash_map::Entry;
 use std::collections::VecDeque;
+use std::collections::hash_map::Entry;
 use std::mem;
 
 use chalk_ir::interner::Interner;

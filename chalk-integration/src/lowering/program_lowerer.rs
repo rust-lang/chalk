@@ -13,11 +13,11 @@ use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 use string_cache::DefaultAtom as Atom;
 
-use super::{env::*, lower_adt_size_align, Lower, LowerParameterMap, LowerWithEnv, FIXME_SELF};
+use super::{FIXME_SELF, Lower, LowerParameterMap, LowerWithEnv, env::*, lower_adt_size_align};
+use crate::RawId;
 use crate::error::RustIrError;
 use crate::program::Program as LoweredProgram;
-use crate::RawId;
-use crate::{interner::ChalkIr, TypeKind, TypeSort};
+use crate::{TypeKind, TypeSort, interner::ChalkIr};
 
 #[derive(Default)]
 pub(super) struct ProgramLowerer {

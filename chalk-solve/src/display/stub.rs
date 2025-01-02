@@ -4,15 +4,15 @@ use std::sync::Arc;
 
 use crate::rust_ir::{CoroutineDatum, CoroutineWitnessDatum};
 use crate::{
+    RustIrDatabase,
     rust_ir::{
         AdtDatumBound, AdtKind, AdtVariantDatum, AssociatedTyDatumBound, FnDefDatumBound,
         OpaqueTyDatumBound, TraitDatumBound,
     },
-    RustIrDatabase,
 };
 use chalk_ir::{
-    interner::Interner, Binders, CanonicalVarKinds, CoroutineId, Substitution, Ty,
-    UnificationDatabase, VariableKinds, Variances,
+    Binders, CanonicalVarKinds, CoroutineId, Substitution, Ty, UnificationDatabase, VariableKinds,
+    Variances, interner::Interner,
 };
 
 #[derive(Debug)]
@@ -46,13 +46,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         ty: chalk_ir::AssocTypeId<I>,
     ) -> std::sync::Arc<crate::rust_ir::AssociatedTyDatum<I>> {
         let mut v = (*self.db.associated_ty_data(ty)).clone();
-        v.binders = Binders::new(
-            v.binders.binders.clone(),
-            AssociatedTyDatumBound {
-                where_clauses: Vec::new(),
-                bounds: Vec::new(),
-            },
-        );
+        v.binders = Binders::new(v.binders.binders.clone(), AssociatedTyDatumBound {
+            where_clauses: Vec::new(),
+            bounds: Vec::new(),
+        });
         Arc::new(v)
     }
 
@@ -61,12 +58,9 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         trait_id: chalk_ir::TraitId<I>,
     ) -> std::sync::Arc<crate::rust_ir::TraitDatum<I>> {
         let mut v = (*self.db.trait_datum(trait_id)).clone();
-        v.binders = Binders::new(
-            v.binders.binders.clone(),
-            TraitDatumBound {
-                where_clauses: Vec::new(),
-            },
-        );
+        v.binders = Binders::new(v.binders.binders.clone(), TraitDatumBound {
+            where_clauses: Vec::new(),
+        });
         Arc::new(v)
     }
 
@@ -76,13 +70,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
             AdtKind::Struct | AdtKind::Union => vec![AdtVariantDatum { fields: vec![] }],
             AdtKind::Enum => vec![],
         };
-        v.binders = Binders::new(
-            v.binders.binders.clone(),
-            AdtDatumBound {
-                variants,
-                where_clauses: Vec::new(),
-            },
-        );
+        v.binders = Binders::new(v.binders.binders.clone(), AdtDatumBound {
+            variants,
+            where_clauses: Vec::new(),
+        });
         Arc::new(v)
     }
 
@@ -99,13 +90,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         fn_def_id: chalk_ir::FnDefId<I>,
     ) -> std::sync::Arc<crate::rust_ir::FnDefDatum<I>> {
         let mut v = (*self.db.fn_def_datum(fn_def_id)).clone();
-        v.binders = Binders::new(
-            v.binders.binders.clone(),
-            FnDefDatumBound {
-                inputs_and_output: v.binders.skip_binders().inputs_and_output.clone(),
-                where_clauses: Vec::new(),
-            },
-        );
+        v.binders = Binders::new(v.binders.binders.clone(), FnDefDatumBound {
+            inputs_and_output: v.binders.skip_binders().inputs_and_output.clone(),
+            where_clauses: Vec::new(),
+        });
         Arc::new(v)
     }
 
@@ -128,13 +116,10 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         id: chalk_ir::OpaqueTyId<I>,
     ) -> std::sync::Arc<crate::rust_ir::OpaqueTyDatum<I>> {
         let mut v = (*self.db.opaque_ty_data(id)).clone();
-        v.bound = Binders::new(
-            v.bound.binders,
-            OpaqueTyDatumBound {
-                bounds: Binders::new(VariableKinds::empty(self.db.interner()), Vec::new()),
-                where_clauses: Binders::new(VariableKinds::empty(self.db.interner()), Vec::new()),
-            },
-        );
+        v.bound = Binders::new(v.bound.binders, OpaqueTyDatumBound {
+            bounds: Binders::new(VariableKinds::empty(self.db.interner()), Vec::new()),
+            where_clauses: Binders::new(VariableKinds::empty(self.db.interner()), Vec::new()),
+        });
         Arc::new(v)
     }
 

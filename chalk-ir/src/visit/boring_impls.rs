@@ -5,11 +5,11 @@
 //! The more interesting impls of `TypeVisitable` remain in the `visit` module.
 
 use crate::{
-    try_break, AdtId, AssocTypeId, ClausePriority, ClosureId, Constraints, ControlFlow,
-    CoroutineId, DebruijnIndex, FloatTy, FnDefId, ForeignDefId, GenericArg, Goals, ImplId, IntTy,
-    Interner, Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauses,
+    AdtId, AssocTypeId, ClausePriority, ClosureId, Constraints, ControlFlow, CoroutineId,
+    DebruijnIndex, FloatTy, FnDefId, ForeignDefId, GenericArg, Goals, ImplId, IntTy, Interner,
+    Mutability, OpaqueTyId, PlaceholderIndex, ProgramClause, ProgramClauses,
     QuantifiedWhereClauses, QuantifierKind, Safety, Scalar, Substitution, TraitId,
-    TypeSuperVisitable, TypeVisitable, TypeVisitor, UintTy, UniverseIndex,
+    TypeSuperVisitable, TypeVisitable, TypeVisitor, UintTy, UniverseIndex, try_break,
 };
 use std::{marker::PhantomData, sync::Arc};
 

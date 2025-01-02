@@ -1,5 +1,5 @@
-use crate::table::Table;
 use crate::TableIndex;
+use crate::table::Table;
 use rustc_hash::FxHashMap;
 use std::ops::{Index, IndexMut};
 

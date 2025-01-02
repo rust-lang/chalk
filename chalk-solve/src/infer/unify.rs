@@ -1,11 +1,11 @@
 use super::var::*;
 use super::*;
 use crate::debug_span;
+use chalk_ir::UnificationDatabase;
 use chalk_ir::cast::Cast;
 use chalk_ir::fold::{FallibleTypeFolder, TypeFoldable};
 use chalk_ir::interner::{HasInterner, Interner};
 use chalk_ir::zip::{Zip, Zipper};
-use chalk_ir::UnificationDatabase;
 use std::fmt::Debug;
 use tracing::{debug, instrument};
 

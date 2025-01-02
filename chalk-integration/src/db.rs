@@ -1,10 +1,11 @@
 use crate::{
+    SolverChoice,
     error::ChalkError,
     interner::ChalkIr,
     lowering::lower_goal,
     program::Program,
     query::{Lowering, LoweringDatabase},
-    tls, SolverChoice,
+    tls,
 };
 use chalk_ir::{
     AdtId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,

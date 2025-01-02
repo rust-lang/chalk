@@ -8,10 +8,10 @@
 
 use chalk_derive::FallibleTypeFolder;
 use chalk_ir::{
-    fold::{TypeFoldable, TypeFolder},
-    interner::{HasInterner, Interner},
     Binders, BoundVar, Const, ConstData, ConstValue, DebruijnIndex, Lifetime, LifetimeData, Ty,
     TyKind, TyVariableKind, VariableKind, VariableKinds,
+    fold::{TypeFoldable, TypeFolder},
+    interner::{HasInterner, Interner},
 };
 use rustc_hash::FxHashMap;
 

@@ -5,7 +5,7 @@
 //! compiled as a standalone test (rather than from `lib.rs`).
 use chalk_integration::{interner::ChalkIr, program::Program, query::LoweringDatabase, tls};
 use chalk_solve::{
-    display::{write_items, WriterState},
+    display::{WriterState, write_items},
     logging_db::RecordedItemId,
 };
 use regex::Regex;
