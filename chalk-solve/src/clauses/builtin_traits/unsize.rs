@@ -187,7 +187,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
     // could be lifted.
     //
     // for more info visit `fn assemble_candidates_for_unsizing` and
-    // `fn confirm_builtin_unisize_candidate` in rustc.
+    // `fn confirm_builtin_unsize_candidate` in rustc.
 
     match (source_ty.kind(interner), target_ty.kind(interner)) {
         // dyn TraitA + AutoA + 'a -> dyn TraitB + AutoB + 'b
