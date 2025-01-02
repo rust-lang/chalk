@@ -221,7 +221,10 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
             let auto_trait_ids_b: Vec<_> = auto_trait_ids(db, bounds_b).collect();
 
-            let may_apply = principal_a == principal_b
+            // If B has a principal, then A must as well
+            // (i.e. we allow dropping principal, but not creating a principal out of thin air).
+            // `AutoB` must be a subset of `AutoA`.
+            let may_apply = principal_a.is_some() >= principal_b.is_some()
                 && auto_trait_ids_b
                     .iter()
                     .all(|id_b| auto_trait_ids_a.iter().any(|id_a| id_a == id_b));
@@ -274,7 +277,10 @@ pub fn add_unsize_program_clauses<I: Interner>(
 
                                 // The only "implements" bound that is not an auto trait, is the principal
                                 assert_eq!(Some(trait_id), principal_a);
-                                Some(bound)
+
+                                // Only include principal_a if the principal_b is also present
+                                // (this allows dropping principal, `dyn Tr+A -> dyn A`)
+                                principal_b.is_some().then(|| bound)
                             })
                             // Add auto traits from B (again, they are already checked above).
                             .chain(bounds_b.skip_binders().iter(interner).cloned().filter(

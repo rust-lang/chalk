@@ -110,7 +110,7 @@ fn dyn_to_dyn_unsizing() {
                 dyn Principal + Auto1 + 'a: Unsize<dyn Auto1 + 'a>
             }
         } yields {
-            expect![["No possible solution"]]
+            expect!["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_0 }]"]
         }
 
         // Non-matching principal traits
