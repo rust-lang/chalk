@@ -190,7 +190,7 @@ pub fn add_unsize_program_clauses<I: Interner>(
     // `fn confirm_builtin_unisize_candidate` in rustc.
 
     match (source_ty.kind(interner), target_ty.kind(interner)) {
-        // dyn Trait + AutoX + 'a -> dyn Trait + AutoY + 'b
+        // dyn TraitA + AutoA + 'a -> dyn TraitB + AutoB + 'b
         (
             TyKind::Dyn(DynTy {
                 bounds: bounds_a,
