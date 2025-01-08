@@ -73,7 +73,28 @@ pub(super) fn push_trait_super_clauses<I: Interner>(
     }
 }
 
-fn super_traits<I: Interner>(
+/// Returns super-`TraitRef`s and super-`Projection`s that are quantified over the parameters of
+/// `trait_id` and relevant higher-ranked lifetimes. The outer `Binders` is for the former and the
+/// inner `Binders` is for the latter.
+///
+/// For example, given the following trait definitions and `C` as `trait_id`,
+///
+/// ```
+/// trait A<'a, T> {}
+/// trait B<'b, U> where Self: for<'x> A<'x, U> {}
+/// trait C<'c, V> where Self: B<'c, V> {}
+/// ```
+///
+/// returns the following quantified `TraitRef`s.
+///
+/// ```notrust
+/// for<Self, 'c, V> {
+///     for<'x> { Self: A<'x, V> }
+///     for<> { Self: B<'c, V> }
+///     for<> { Self: C<'c, V> }
+/// }
+/// ```
+pub(crate) fn super_traits<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     trait_id: TraitId<I>,
 ) -> Binders<(
