@@ -191,11 +191,14 @@ fn dyn_upcasting() {
             #[object_safe]
             trait GenericSuper<T> {}
             #[object_safe]
+            trait LifetimedSuper<'a> {}
+            #[object_safe]
             trait Super
             where
                 Self: SuperSuper,
                 Self: GenericSuper<i32>,
                 Self: GenericSuper<i64>,
+                forall<'a> Self: LifetimedSuper<'a>,
             {}
             #[object_safe]
             trait Principal where Self: Super {}
@@ -269,6 +272,18 @@ fn dyn_upcasting() {
             }
         } yields {
             expect![[r#"Ambiguous; no inference guidance"#]]
+        }
+
+        goal {
+            forall<'a> {
+                forall<'b> {
+                    forall<'c> {
+                        dyn Principal + 'a: Unsize<dyn LifetimedSuper<'b> + 'c>
+                    }
+                }
+            }
+        } yields {
+            expect!["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!3_0 }, InEnvironment { environment: Env([]), goal: '!2_0: '!5_0 }, InEnvironment { environment: Env([]), goal: '!5_0: '!2_0 }]"]
         }
     }
 }
