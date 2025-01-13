@@ -1,6 +1,6 @@
 [package]
 name = "chalk-recursive"
-version = "0.98.0-dev.0"
+version = "0.99.0-dev.0"
 description = "Recursive solver for the Chalk project"
 license = "MIT OR Apache-2.0"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -13,9 +13,9 @@ edition = "2018"
 rustc-hash = { version = "1.1.0" }
 tracing = "0.1"
 
-chalk-derive = { version = "0.98.0-dev.0", path = "../chalk-derive" }
-chalk-ir = { version = "0.98.0-dev.0", path = "../chalk-ir" }
-chalk-solve = { version = "0.98.0-dev.0", path = "../chalk-solve", default-features = false }
+chalk-derive = { version = "0.99.0-dev.0", path = "../chalk-derive" }
+chalk-ir = { version = "0.99.0-dev.0", path = "../chalk-ir" }
+chalk-solve = { version = "0.99.0-dev.0", path = "../chalk-solve", default-features = false }
 
 [dev-dependencies]
 chalk-integration = { path = "../chalk-integration" }

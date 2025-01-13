@@ -1,6 +1,6 @@
 [package]
 name = "chalk-integration"
-version = "0.98.0-dev.0"
+version = "0.99.0-dev.0"
 license = "MIT OR Apache-2.0"
 description = "Sample solver setup for Chalk"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -14,10 +14,10 @@ string_cache = "0.8.0"
 salsa = "0.16.0"
 tracing = "0.1"
 
-chalk-derive = { version = "0.98.0-dev.0", path = "../chalk-derive" }
-chalk-ir = { version = "0.98.0-dev.0", path = "../chalk-ir" }
-chalk-solve = { version = "0.98.0-dev.0", path = "../chalk-solve" }
-chalk-recursive = { version = "0.98.0-dev.0", path = "../chalk-recursive" }
-chalk-engine = { version = "0.98.0-dev.0", path = "../chalk-engine" }
-chalk-parse = { version = "0.98.0-dev.0", path = "../chalk-parse" }
+chalk-derive = { version = "0.99.0-dev.0", path = "../chalk-derive" }
+chalk-ir = { version = "0.99.0-dev.0", path = "../chalk-ir" }
+chalk-solve = { version = "0.99.0-dev.0", path = "../chalk-solve" }
+chalk-recursive = { version = "0.99.0-dev.0", path = "../chalk-recursive" }
+chalk-engine = { version = "0.99.0-dev.0", path = "../chalk-engine" }
+chalk-parse = { version = "0.99.0-dev.0", path = "../chalk-parse" }
 indexmap = "2"

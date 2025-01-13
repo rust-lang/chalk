@@ -1,6 +1,6 @@
 [package]
 name = "chalk-parse"
-version = "0.98.0-dev.0"
+version = "0.99.0-dev.0"
 description = "Parser for the Chalk project"
 license = "MIT OR Apache-2.0"
 authors = ["Rust Compiler Team", "Chalk developers"]
