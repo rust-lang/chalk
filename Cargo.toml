@@ -1,6 +1,6 @@
 [package]
 name = "chalk"
-version = "0.98.0-dev.0"
+version = "0.99.0-dev.0"
 description = "Model of the Rust trait system"
 license = "MIT OR Apache-2.0"
 authors = ["Rust Compiler Team", "Chalk developers"]
@@ -21,13 +21,13 @@ salsa = "0.16.0"
 serde = "1.0"
 serde_derive = "1.0"
 
-chalk-derive = { version = "0.98.0-dev.0", path = "chalk-derive" }
-chalk-engine = { version = "0.98.0-dev.0", path = "chalk-engine" }
-chalk-ir = { version = "0.98.0-dev.0", path = "chalk-ir" }
-chalk-solve = { version = "0.98.0-dev.0", path = "chalk-solve" }
-chalk-recursive = { version = "0.98.0-dev.0", path = "chalk-recursive" }
-chalk-parse = { version = "0.98.0-dev.0", path = "chalk-parse" }
-chalk-integration = { version = "0.98.0-dev.0", path = "chalk-integration" }
+chalk-derive = { version = "0.99.0-dev.0", path = "chalk-derive" }
+chalk-engine = { version = "0.99.0-dev.0", path = "chalk-engine" }
+chalk-ir = { version = "0.99.0-dev.0", path = "chalk-ir" }
+chalk-solve = { version = "0.99.0-dev.0", path = "chalk-solve" }
+chalk-recursive = { version = "0.99.0-dev.0", path = "chalk-recursive" }
+chalk-parse = { version = "0.99.0-dev.0", path = "chalk-parse" }
+chalk-integration = { version = "0.99.0-dev.0", path = "chalk-integration" }
 
 [workspace]
 
