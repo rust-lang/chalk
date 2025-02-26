@@ -3,7 +3,7 @@ use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
-    AliasTy, Binders, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty, TyKind,
+    AliasTy, Binders, Goal, Normalize, ProjectionTy, Safety, Substitution, TraitId, Ty, TyKind,
 };
 
 fn push_clauses<I: Interner>(
@@ -19,31 +19,113 @@ fn push_clauses<I: Interner>(
     let tupled = TyKind::Tuple(arg_sub.len(interner), arg_sub).intern(interner);
     let substitution =
         Substitution::from_iter(interner, &[self_ty.cast(interner), tupled.cast(interner)]);
-    builder.push_fact(TraitRef {
-        trait_id,
-        substitution: substitution.clone(),
-    });
 
-    // The `Output` type is defined on the `FnOnce`
-    if let WellKnownTrait::FnOnce = well_known {
-        let trait_datum = db.trait_datum(trait_id);
-        assert_eq!(
-            trait_datum.associated_ty_ids.len(),
-            1,
-            "FnOnce trait should have exactly one associated type, found {:?}",
-            trait_datum.associated_ty_ids
+    let is_async = matches!(
+        well_known,
+        WellKnownTrait::AsyncFnOnce | WellKnownTrait::AsyncFnMut | WellKnownTrait::AsyncFn
+    );
+
+    if !is_async {
+        builder.push_fact(TraitRef {
+            trait_id,
+            substitution: substitution.clone(),
+        });
+
+        // The `Output` type is defined on the `FnOnce`
+        if let WellKnownTrait::FnOnce = well_known {
+            let trait_datum = db.trait_datum(trait_id);
+            assert_eq!(
+                trait_datum.associated_ty_ids.len(),
+                1,
+                "FnOnce trait should have exactly one associated type, found {:?}",
+                trait_datum.associated_ty_ids
+            );
+            // Constructs the alias. For `Fn`, for example, this would look like
+            // `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
+            let output_id = trait_datum.associated_ty_ids[0];
+            let alias = AliasTy::Projection(ProjectionTy {
+                associated_ty_id: output_id,
+                substitution,
+            });
+            builder.push_fact(Normalize {
+                alias,
+                ty: return_type,
+            });
+        }
+    } else {
+        let sync_counterpart = match well_known {
+            WellKnownTrait::AsyncFnOnce => db.well_known_trait_id(WellKnownTrait::FnOnce).unwrap(),
+            WellKnownTrait::AsyncFnMut => db.well_known_trait_id(WellKnownTrait::FnMut).unwrap(),
+            WellKnownTrait::AsyncFn => db.well_known_trait_id(WellKnownTrait::Fn).unwrap(),
+            _ => unreachable!(),
+        };
+
+        let future = db.well_known_trait_id(WellKnownTrait::Future).unwrap();
+        let sync_counterpart = TraitRef {
+            trait_id: sync_counterpart,
+            substitution: substitution.clone(),
+        };
+        let output_is_future = TraitRef {
+            trait_id: future,
+            substitution: Substitution::from1(interner, return_type.clone()),
+        };
+
+        // This adds the following clause:
+        // `F: AsyncFnX<Arg, Output = O>` :- `F: FnX<Arg, Output: Fut<Output = O>>`
+        // Actually, the `<F as AsyncFnX>::Output = O` part is added in the if let expression below.
+        builder.push_clause(
+            TraitRef {
+                trait_id,
+                substitution: substitution.clone(),
+            },
+            [sync_counterpart.clone(), output_is_future.clone()],
         );
-        // Constructs the alias. For `Fn`, for example, this would look like
-        // `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
-        let output_id = trait_datum.associated_ty_ids[0];
-        let alias = AliasTy::Projection(ProjectionTy {
-            associated_ty_id: output_id,
-            substitution,
-        });
-        builder.push_fact(Normalize {
-            alias,
-            ty: return_type,
-        });
+
+        if let WellKnownTrait::AsyncFnOnce = well_known {
+            builder.push_bound_ty(|builder, ty| {
+                let trait_datum = db.trait_datum(trait_id);
+                assert_eq!(
+                    trait_datum.associated_ty_ids.len(),
+                    2,
+                    "AsyncFnOnce trait should have exactly two associated types, found {:?}",
+                    trait_datum.associated_ty_ids
+                );
+                let output_id = trait_datum.associated_ty_ids[1];
+                let async_alias = AliasTy::Projection(ProjectionTy {
+                    associated_ty_id: output_id,
+                    substitution,
+                });
+
+                let trait_datum = db.trait_datum(future);
+                assert_eq!(
+                    trait_datum.associated_ty_ids.len(),
+                    1,
+                    "Future trait should have exactly one associated type, found {:?}",
+                    trait_datum.associated_ty_ids
+                );
+                let output_id = trait_datum.associated_ty_ids[0];
+                let future_alias = AliasTy::Projection(ProjectionTy {
+                    associated_ty_id: output_id,
+                    substitution: Substitution::from1(interner, return_type),
+                });
+
+                builder.push_clause(
+                    Normalize {
+                        alias: async_alias,
+                        ty: ty.clone(),
+                    },
+                    [
+                        sync_counterpart.cast::<Goal<_>>(interner),
+                        output_is_future.cast(interner),
+                        Normalize {
+                            alias: future_alias,
+                            ty,
+                        }
+                        .cast(interner),
+                    ],
+                );
+            });
+        }
     }
 }
 
@@ -71,8 +153,8 @@ fn push_clauses_for_apply<I: Interner>(
     });
 }
 
-/// Handles clauses for FnOnce/FnMut/Fn.
-/// If `self_ty` is a function, we push a clause of the form
+/// Handles clauses for FnOnce/FnMut/Fn and AsyncFnOnce/AsyncFnMut/AsyncFn.
+/// For sync traits, `self_ty` is a function, we push a clause of the form
 /// `fn(A1, A2, ..., AN) -> O: FnTrait<(A1, A2, ..., AN)>`, where `FnTrait`
 /// is the trait corresponding to `trait_id` (FnOnce/FnMut/Fn)
 ///
@@ -80,6 +162,11 @@ fn push_clauses_for_apply<I: Interner>(
 /// `Normalize(<fn(A) -> B as FnOnce<(A,)>>::Output -> B)`
 /// We do not add the usual `Implemented(fn(A) -> b as FnOnce<(A,)>` clause
 /// as a condition, since we already called `push_fact` with it
+///
+/// For async traits, we push a clause of the form
+/// `F: AsyncFnX<Arg, Output = O>` :- `F: FnX<Arg, Output: Fut<Output = O>>`,
+/// which corresponds to the implementation
+/// `impl<F, Arg, Fut, O> AsyncFn<A> for F where F: Fn<Arg, Output = Fut>, Fut: Future<Output = O>`.
 pub fn add_fn_trait_program_clauses<I: Interner>(
     db: &dyn RustIrDatabase<I>,
     builder: &mut ClauseBuilder<'_, I>,
@@ -111,9 +198,13 @@ pub fn add_fn_trait_program_clauses<I: Interner>(
             let closure_kind = db.closure_kind(*closure_id, substitution);
             let trait_matches = matches!(
                 (well_known, closure_kind),
-                (WellKnownTrait::Fn, ClosureKind::Fn)
-                    | (WellKnownTrait::FnMut, ClosureKind::FnMut | ClosureKind::Fn)
-                    | (WellKnownTrait::FnOnce, _)
+                (
+                    WellKnownTrait::Fn | WellKnownTrait::AsyncFn,
+                    ClosureKind::Fn
+                ) | (
+                    WellKnownTrait::FnMut | WellKnownTrait::AsyncFnMut,
+                    ClosureKind::FnMut | ClosureKind::Fn
+                ) | (WellKnownTrait::FnOnce | WellKnownTrait::AsyncFnOnce, _)
             );
             if !trait_matches {
                 return;

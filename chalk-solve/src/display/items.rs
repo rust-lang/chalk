@@ -199,6 +199,9 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::FnOnce => "fn_once",
                 WellKnownTrait::FnMut => "fn_mut",
                 WellKnownTrait::Fn => "fn",
+                WellKnownTrait::AsyncFnOnce => "async_fn_once",
+                WellKnownTrait::AsyncFnMut => "async_fn_mut",
+                WellKnownTrait::AsyncFn => "async_fn",
                 WellKnownTrait::Unsize => "unsize",
                 WellKnownTrait::Unpin => "unpin",
                 WellKnownTrait::CoerceUnsized => "coerce_unsized",
@@ -208,6 +211,7 @@ impl<I: Interner> RenderAsRust<I> for TraitDatum<I> {
                 WellKnownTrait::Tuple => "tuple_trait",
                 WellKnownTrait::Pointee => "pointee",
                 WellKnownTrait::FnPtr => "fn_ptr_trait",
+                WellKnownTrait::Future => "future",
             };
             writeln!(f, "#[lang({})]", name)?;
         }
