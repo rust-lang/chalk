@@ -162,6 +162,29 @@ fn closure_implements_fn_traits() {
             #[lang(fn)]
             trait Fn<Args> where Self: FnMut<Args> { }
 
+            #[lang(future)]
+            trait Future {
+                type Output;
+            }
+
+            #[lang(async_fn_once)]
+            trait AsyncFnOnce<Args> {
+                type CallOnceFuture: Future<Output = <Self as AsyncFnOnce<Args>>::Output>;
+                type Output;
+            }
+
+            #[lang(async_fn_mut)]
+            trait AsyncFnMut<Args> where Self: AsyncFnOnce<Args> { }
+
+            #[lang(async_fn)]
+            trait AsyncFn<Args> where Self: AsyncFnMut<Args> { }
+
+            struct ConcreteFuture<T> { }
+
+            impl<T> Future for ConcreteFuture<T> {
+                type Output = T;
+            }
+
             closure foo(self,) {}
             closure bar(&self,) {}
             closure baz(&mut self,) {}
@@ -172,6 +195,20 @@ fn closure_implements_fn_traits() {
                 &'a mut u32
             }
             closure foobar<'a>(self, a: u8, b: f32) -> u32 {
+                u8;
+                &'a u16
+            }
+
+            closure foo_async(self,) -> ConcreteFuture<()> { }
+            closure bar_async(&self,) -> ConcreteFuture<()> { }
+            closure baz_async(&mut self,) -> ConcreteFuture<()> { }
+
+            closure foobuzz_async<'a>(self, a: u8, b: f32) -> ConcreteFuture<u32> {
+                u8;
+                &'a u16;
+                &'a mut u32
+            }
+            closure foobar_async<'a>(self, a: u8, b: f32) -> ConcreteFuture<u32> {
                 u8;
                 &'a u16
             }
@@ -199,6 +236,28 @@ fn closure_implements_fn_traits() {
             expect![["Unique"]]
         }
 
+        // A closure with kind `AsyncFnOnce` only implements `AsyncFnOnce`
+        goal {
+            foo_async: AsyncFn<()>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            foo_async: AsyncFnMut<()>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            foo_async: AsyncFnOnce<()>
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            Normalize(<foo_async as AsyncFnOnce<()>>::Output -> ())
+        } yields {
+            expect![["Unique"]]
+        }
+
         // A closure with kind `Fn` implements all `Fn` traits
         goal {
             bar: Fn<()>
@@ -217,6 +276,28 @@ fn closure_implements_fn_traits() {
         }
         goal {
             Normalize(<bar as FnOnce<()>>::Output -> ())
+        } yields {
+            expect![["Unique"]]
+        }
+
+        // A closure with kind `AsyncFn` implements all `AsyncFn` traits
+        goal {
+            bar_async: AsyncFn<()>
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            bar_async: AsyncFnMut<()>
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            bar_async: AsyncFnOnce<()>
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            Normalize(<bar_async as AsyncFnOnce<()>>::Output -> ())
         } yields {
             expect![["Unique"]]
         }
@@ -242,7 +323,30 @@ fn closure_implements_fn_traits() {
         } yields {
             expect![["Unique"]]
         }
-        // A closure also implements the `Fn` traits regardless of upvars
+
+        // A closure with kind `AsyncFnMut` implements `AsyncFnMut` and `AsyncFnOnce`
+        goal {
+            baz_async: AsyncFn<()>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            baz_async: AsyncFnMut<()>
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            baz_async: AsyncFnOnce<()>
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            Normalize(<baz_async as AsyncFnOnce<()>>::Output -> ())
+        } yields {
+            expect![["Unique"]]
+        }
+
+        // A closure also implements the `Fn/AsyncFn` traits regardless of upvars
         goal {
             forall<'a> {
                 foobar<'a>: FnOnce<(u8, f32)>
@@ -274,6 +378,41 @@ fn closure_implements_fn_traits() {
         goal {
             forall<'a> {
                 Normalize(<foobuzz<'a> as FnOnce<(u8, f32)>>::Output -> u32)
+            }
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            forall<'a> {
+                foobar_async<'a>: AsyncFnOnce<(u8, f32)>
+            }
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            forall<'a> {
+                Normalize(<foobar_async<'a> as AsyncFnOnce<(u8, f32)>>::Output -> u32)
+            }
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            forall<'a> {
+                Normalize(<foobar_async<'a> as AsyncFnOnce<(u8, f32)>>::Output -> u32)
+            }
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            forall<'a> {
+                foobuzz_async<'a>: AsyncFnOnce<(u8, f32)>
+            }
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            forall<'a> {
+                Normalize(<foobuzz_async<'a> as AsyncFnOnce<(u8, f32)>>::Output -> u32)
             }
         } yields {
             expect![["Unique"]]
