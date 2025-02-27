@@ -270,6 +270,9 @@ pub enum WellKnownTrait {
     FnOnce,
     FnMut,
     Fn,
+    AsyncFnOnce,
+    AsyncFnMut,
+    AsyncFn,
     Unsize,
     Unpin,
     CoerceUnsized,
@@ -279,6 +282,7 @@ pub enum WellKnownTrait {
     Tuple,
     Pointee,
     FnPtr,
+    Future,
 }
 
 chalk_ir::const_visit!(WellKnownTrait);

@@ -59,6 +59,23 @@ fn function_implement_fn_traits() {
             #[lang(fn)]
             trait Fn<Args> where Self: FnMut<Args> { }
 
+            #[lang(future)]
+            trait Future {
+                type Output;
+            }
+
+            #[lang(async_fn_once)]
+            trait AsyncFnOnce<Args> {
+                type CallOnceFuture: Future<Output = <Self as AsyncFnOnce<Args>>::Output>;
+                type Output;
+            }
+
+            #[lang(async_fn_mut)]
+            trait AsyncFnMut<Args> where Self: AsyncFnOnce<Args> { }
+
+            #[lang(async_fn)]
+            trait AsyncFn<Args> where Self: AsyncFnMut<Args> { }
+
             struct Ty { }
 
             trait Clone { }
@@ -66,6 +83,12 @@ fn function_implement_fn_traits() {
             impl Clone for Ty { }
 
             opaque type MyOpaque: Clone = Ty;
+
+            struct ConcreteFuture<T> { }
+
+            impl<T> Future for ConcreteFuture<T> {
+                type Output = T;
+            }
         }
 
         // Simple test: make sure a fully monomorphic type implements FnOnce
@@ -89,6 +112,27 @@ fn function_implement_fn_traits() {
             expect![["Unique"]]
         }
 
+        // Same as above, but for AsyncFnOnce
+        goal {
+            fn(u8) -> ConcreteFuture<()>: AsyncFnOnce<(u8,)>
+        } yields {
+            expect![["Unique"]]
+        }
+
+        // Same as above, but for AsyncFnMut
+        goal {
+            fn(u8) -> ConcreteFuture<()>: AsyncFnMut<(u8,)>
+        } yields {
+            expect![["Unique"]]
+        }
+
+        // Same as above, but for AsyncFn
+        goal {
+            fn(u8) -> ConcreteFuture<()>: AsyncFn<(u8,)>
+        } yields {
+            expect![["Unique"]]
+        }
+
         // Make sure unsafe function pointers don't implement FnOnce
         goal {
             unsafe fn(u8): FnOnce<(u8,)>
@@ -104,6 +148,24 @@ fn function_implement_fn_traits() {
         // Same as above but for Fn
         goal {
             unsafe fn(u8): Fn<(u8,)>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        // Same as above but for AsyncFnOnce
+        goal {
+            unsafe fn(u8) -> ConcreteFuture<()>: AsyncFnOnce<(u8,)>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        // Same as above but for AsyncFnMut
+        goal {
+            unsafe fn(u8) -> ConcreteFuture<()>: AsyncFnMut<(u8,)>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        // Same as above but for AsyncFn
+        goal {
+            unsafe fn(u8) -> ConcreteFuture<()>: AsyncFn<(u8,)>
         } yields {
             expect![["No possible solution"]]
         }
@@ -124,10 +186,22 @@ fn function_implement_fn_traits() {
             expect![["Unique"]]
         }
 
+        // Normalizing pointer which returns `Future<Output = T>` with `AsycFnOnce::Output`
+        goal {
+            Normalize(<fn(u8) -> ConcreteFuture<bool> as AsyncFnOnce<(u8,)>>::Output -> bool)
+        } yields {
+            expect![["Unique"]]
+        }
+
         // Tests that we fail to normalize when there's a mismatch with
         // fully monomorphic types.
         goal {
             Normalize(<fn(u8) -> bool as FnOnce<(u8,)>>::Output -> u8)
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            Normalize(<fn(u8) -> ConcreteFuture<bool> as AsyncFnOnce<(u8,)>>::Output -> u8)
         } yields {
             expect![["No possible solution"]]
         }
@@ -138,6 +212,13 @@ fn function_implement_fn_traits() {
         goal {
             forall<T, V> {
                 Normalize(<fn(u8, V) -> T as FnOnce<(u8, V)>>::Output -> V)
+            }
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            forall<T, V> {
+                Normalize(<fn(u8, V) -> ConcreteFuture<T> as AsyncFnOnce<(u8, V)>>::Output -> V)
             }
         } yields {
             expect![["No possible solution"]]
@@ -153,11 +234,28 @@ fn function_implement_fn_traits() {
         } yields {
             expect![["Unique; substitution [?0 := !1_0]"]]
         }
+        goal {
+            forall<T, V> {
+                exists<U> {
+                    Normalize(<fn(u8, V) -> ConcreteFuture<T> as AsyncFnOnce<(u8, V)>>::Output -> U)
+                }
+            }
+        } yields {
+            expect![["Unique; substitution [?0 := !1_0]"]]
+        }
 
-        // Tests that we properly tuple function arguments when constrcting
+        // Tests that we properly tuple function arguments when constructing
         // the `FnOnce` impl
         goal {
             fn(u8, u32): FnOnce<(u8,u32)>
+        } yields {
+            expect![["Unique"]]
+        }
+
+        // Tests that we properly tuple function arguments when constructing
+        // the `AsyncFnOnce` impl
+        goal {
+            fn(u8, u32) -> ConcreteFuture<()>: AsyncFnOnce<(u8,u32)>
         } yields {
             expect![["Unique"]]
         }
@@ -169,6 +267,11 @@ fn function_implement_fn_traits() {
         } yields {
             expect![["No possible solution"]]
         }
+        goal {
+            fn(i32) -> ConcreteFuture<()>: AsyncFnOnce<(bool,)>
+        } yields {
+            expect![["No possible solution"]]
+        }
 
         // Tests function pointer types that use the function's binder
         // Universally quantified lifetimes that differ only in their
@@ -176,6 +279,13 @@ fn function_implement_fn_traits() {
         goal {
             forall<'a> {
                 for<'b> fn(&'b u8): FnOnce<(&'a u8,)>
+            }
+        } yields {
+            expect![["Unique"]]
+        }
+        goal {
+            forall<'a> {
+                for<'b> fn(&'b u8) -> ConcreteFuture<()>: AsyncFnOnce<(&'a u8,)>
             }
         } yields {
             expect![["Unique"]]
@@ -192,10 +302,17 @@ fn function_implement_fn_traits() {
         } yields {
             expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
         }
+        goal {
+            forall<'a, 'b> {
+                for<'c> fn(&'c u8, &'c i32) -> ConcreteFuture<()>: AsyncFnOnce<(&'a u8, &'b i32)>
+            }
+        } yields {
+            expect![["Unique; lifetime constraints [InEnvironment { environment: Env([]), goal: '!1_0: '!1_1 }, InEnvironment { environment: Env([]), goal: '!1_1: '!1_0 }]"]]
+        }
 
         // Tests the opposite case as the previous test: a 'less strict' function
-        // (does not require lifetimes to be the same) can implement `FnOnce` for
-        // a 'stricter' signature (requires lifetimes to be the same) without
+        // (does not require lifetimes to be the same) can implement `FnOnce/AsyncFnOnce`
+        // for a 'stricter' signature (requires lifetimes to be the same) without
         // any additional requirements
         goal {
             forall<'a> {
@@ -204,11 +321,18 @@ fn function_implement_fn_traits() {
         } yields {
             expect![["Unique"]]
         }
+        goal {
+            forall<'a> {
+                for<'b, 'c> fn(&'b u8, &'c i32) -> ConcreteFuture<()>: AsyncFnOnce<(&'a u8, &'a i32)>
+            }
+        } yields {
+            expect![["Unique"]]
+        }
 
         // Similar to the above test, but for types instead of lifetimes:
         // a 'stricter' function (requires types to be the same) can never
-        // implement `FnOnce` for a 'less strict' signature (does not require
-        // types to be the same)
+        // implement `FnOnce/AsyncFnOnce` for a 'less strict' signature (does
+        // not require types to be the same)
         goal {
             forall<T, U> {
                 fn(T, T): FnOnce<(T, U)>
@@ -216,13 +340,27 @@ fn function_implement_fn_traits() {
         } yields {
             expect![["No possible solution"]]
         }
+        goal {
+            forall<T, U> {
+                fn(T, T) -> ConcreteFuture<()>: AsyncFnOnce<(T, U)>
+            }
+        } yields {
+            expect![["No possible solution"]]
+        }
 
         // Tests the opposite case as a previous test: a 'less strict'
-        // function can never implement 'FnOnce' for a 'more strict' signature
-        // (does not require types to bthe same)
+        // function can never implement 'FnOnce/AsyncFnOnce' for a 'more
+        // strict' signature (does not require types to bthe same)
         goal {
             forall<T, U> {
                 fn(T, U): FnOnce<(T, T)>
+            }
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            forall<T, U> {
+                fn(T, U) -> ConcreteFuture<()>: AsyncFnOnce<(T, T)>
             }
         } yields {
             expect![["No possible solution"]]
@@ -236,10 +374,22 @@ fn function_implement_fn_traits() {
         } yields_first[SolverChoice::slg(3, None)] {
             expect![["Floundered"]]
         }
+        goal {
+            exists<T> {
+                T: AsyncFnOnce<()>
+            }
+        } yields_first[SolverChoice::slg(3, None)] {
+            expect![["Floundered"]]
+        }
 
         // No solution for alias type
         goal {
             MyOpaque: FnOnce<()>
+        } yields {
+            expect![["No possible solution"]]
+        }
+        goal {
+            MyOpaque: AsyncFnOnce<()>
         } yields {
             expect![["No possible solution"]]
         }

@@ -43,7 +43,12 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Clone => {
                 clone::add_clone_program_clauses(db, builder, trait_ref, ty, binders)?;
             }
-            WellKnownTrait::FnOnce | WellKnownTrait::FnMut | WellKnownTrait::Fn => {
+            WellKnownTrait::FnOnce
+            | WellKnownTrait::FnMut
+            | WellKnownTrait::Fn
+            | WellKnownTrait::AsyncFnOnce
+            | WellKnownTrait::AsyncFnMut
+            | WellKnownTrait::AsyncFn => {
                 fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty);
             }
             WellKnownTrait::Unsize => {
@@ -69,7 +74,8 @@ pub fn add_builtin_program_clauses<I: Interner>(
             WellKnownTrait::Unpin
             | WellKnownTrait::Drop
             | WellKnownTrait::CoerceUnsized
-            | WellKnownTrait::DispatchFromDyn => (),
+            | WellKnownTrait::DispatchFromDyn
+            | WellKnownTrait::Future => (),
         }
         Ok(())
     })
@@ -87,7 +93,7 @@ pub fn add_builtin_assoc_program_clauses<I: Interner>(
     // `Generalize` collects them for us.
     let generalized = generalize::Generalize::apply(db.interner(), self_ty);
     builder.push_binders(generalized, |builder, self_ty| match well_known {
-        WellKnownTrait::FnOnce => {
+        WellKnownTrait::FnOnce | WellKnownTrait::AsyncFnOnce => {
             fn_family::add_fn_trait_program_clauses(db, builder, well_known, self_ty);
             Ok(())
         }

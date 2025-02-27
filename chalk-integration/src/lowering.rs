@@ -1133,6 +1133,9 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::FnOnce => rust_ir::WellKnownTrait::FnOnce,
             WellKnownTrait::FnMut => rust_ir::WellKnownTrait::FnMut,
             WellKnownTrait::Fn => rust_ir::WellKnownTrait::Fn,
+            WellKnownTrait::AsyncFnOnce => rust_ir::WellKnownTrait::AsyncFnOnce,
+            WellKnownTrait::AsyncFnMut => rust_ir::WellKnownTrait::AsyncFnMut,
+            WellKnownTrait::AsyncFn => rust_ir::WellKnownTrait::AsyncFn,
             WellKnownTrait::Unsize => rust_ir::WellKnownTrait::Unsize,
             WellKnownTrait::Unpin => rust_ir::WellKnownTrait::Unpin,
             WellKnownTrait::CoerceUnsized => rust_ir::WellKnownTrait::CoerceUnsized,
@@ -1142,6 +1145,7 @@ impl Lower for WellKnownTrait {
             WellKnownTrait::Tuple => rust_ir::WellKnownTrait::Tuple,
             WellKnownTrait::Pointee => rust_ir::WellKnownTrait::Pointee,
             WellKnownTrait::FnPtr => rust_ir::WellKnownTrait::FnPtr,
+            WellKnownTrait::Future => rust_ir::WellKnownTrait::Future,
         }
     }
 }

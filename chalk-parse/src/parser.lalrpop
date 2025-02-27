@@ -63,6 +63,9 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "fn_once" ")" "]" => WellKnownTrait::FnOnce,
      "#" "[" "lang" "(" "fn_mut" ")" "]" => WellKnownTrait::FnMut,
      "#" "[" "lang" "(" "fn" ")" "]" => WellKnownTrait::Fn,
+     "#" "[" "lang" "(" "async_fn_once" ")" "]" => WellKnownTrait::AsyncFnOnce,
+     "#" "[" "lang" "(" "async_fn_mut" ")" "]" => WellKnownTrait::AsyncFnMut,
+     "#" "[" "lang" "(" "async_fn" ")" "]" => WellKnownTrait::AsyncFn,
      "#" "[" "lang" "(" "unsize" ")" "]" => WellKnownTrait::Unsize,
      "#" "[" "lang" "(" "unpin" ")" "]" => WellKnownTrait::Unpin,
      "#" "[" "lang" "(" "coerce_unsized" ")" "]" => WellKnownTrait::CoerceUnsized,
@@ -72,6 +75,7 @@ WellKnownTrait: WellKnownTrait = {
      "#" "[" "lang" "(" "tuple_trait" ")" "]" => WellKnownTrait::Tuple,
      "#" "[" "lang" "(" "pointee_trait" ")" "]" => WellKnownTrait::Pointee,
      "#" "[" "lang" "(" "fn_ptr_trait" ")" "]" => WellKnownTrait::FnPtr,
+     "#" "[" "lang" "(" "future" ")" "]" => WellKnownTrait::Future,
 };
 
 AdtReprAttr: AdtReprAttr = {

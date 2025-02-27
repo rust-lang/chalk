@@ -80,9 +80,36 @@ fn fn_def_implements_fn_traits() {
             #[lang(fn)]
             trait Fn<Args> where Self: FnMut<Args> { }
 
+            #[lang(future)]
+            trait Future {
+                type Output;
+            }
+
+            #[lang(async_fn_once)]
+            trait AsyncFnOnce<Args> {
+                type CallOnceFuture: Future<Output = <Self as AsyncFnOnce<Args>>::Output>;
+                type Output;
+            }
+
+            #[lang(async_fn_mut)]
+            trait AsyncFnMut<Args> where Self: AsyncFnOnce<Args> { }
+
+            #[lang(async_fn)]
+            trait AsyncFn<Args> where Self: AsyncFnMut<Args> { }
+
+            struct ConcreteFuture<T> { }
+
+            impl<T> Future for ConcreteFuture<T> {
+                type Output = T;
+            }
+
             fn foo();
             fn bar(one: i32);
             fn baz(one: i32) -> u8;
+
+            fn qux() -> ConcreteFuture<()>;
+            fn quux(one: i32) -> ConcreteFuture<()>;
+            fn quuz(one: i32) -> ConcreteFuture<u8>;
         }
 
         goal {
@@ -120,6 +147,42 @@ fn fn_def_implements_fn_traits() {
         } yields {
             expect![["Unique"]]
         }
+
+        goal {
+            qux: AsyncFn<()>
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            Normalize(<qux as AsyncFnOnce<()>>::Output -> ())
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            quux: AsyncFn<(i32,)>
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            Normalize(<quux as AsyncFnOnce<(i32,)>>::Output -> ())
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            quuz: AsyncFn<(i32,)>
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            Normalize(<quuz as AsyncFnOnce<(i32,)>>::Output -> u8)
+        } yields {
+            expect![["Unique"]]
+        }
     }
 }
 
@@ -138,7 +201,32 @@ fn generic_fn_implements_fn_traits() {
             #[lang(fn)]
             trait Fn<Args> where Self: FnMut<Args> { }
 
+            #[lang(future)]
+            trait Future {
+                type Output;
+            }
+
+            #[lang(async_fn_once)]
+            trait AsyncFnOnce<Args> {
+                type CallOnceFuture: Future<Output = <Self as AsyncFnOnce<Args>>::Output>;
+                type Output;
+            }
+
+            #[lang(async_fn_mut)]
+            trait AsyncFnMut<Args> where Self: AsyncFnOnce<Args> { }
+
+            #[lang(async_fn)]
+            trait AsyncFn<Args> where Self: AsyncFnMut<Args> { }
+
+            struct ConcreteFuture<T> { }
+
+            impl<T> Future for ConcreteFuture<T> {
+                type Output = T;
+            }
+
             fn foo<T>(t: T) -> T;
+
+            fn bar<T>(t: T) -> ConcreteFuture<T>;
         }
 
         goal {
@@ -161,6 +249,30 @@ fn generic_fn_implements_fn_traits() {
 
         goal {
             forall<T> { Normalize(<foo<T> as FnOnce<(T,)>>::Output -> T) }
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            exists<T> { bar<T>: AsyncFn<(T,)> }
+        } yields {
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
+        }
+
+        goal {
+            forall<T> { bar<T>: AsyncFn<(T,)> }
+        } yields {
+            expect![["Unique"]]
+        }
+
+        goal {
+            exists<T> { Normalize(<bar<T> as AsyncFnOnce<(T,)>>::Output -> T) }
+        } yields {
+            expect![["Unique; for<?U0> { substitution [?0 := ^0.0] }"]]
+        }
+
+        goal {
+            forall<T> { Normalize(<bar<T> as AsyncFnOnce<(T,)>>::Output -> T) }
         } yields {
             expect![["Unique"]]
         }

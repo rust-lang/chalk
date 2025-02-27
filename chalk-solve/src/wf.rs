@@ -427,11 +427,14 @@ where
                     &impl_datum,
                 )
             }
-            WellKnownTrait::Clone | WellKnownTrait::Unpin => true,
+            WellKnownTrait::Clone | WellKnownTrait::Unpin | WellKnownTrait::Future => true,
             // You can't add a manual implementation for the following traits:
             WellKnownTrait::Fn
             | WellKnownTrait::FnOnce
             | WellKnownTrait::FnMut
+            | WellKnownTrait::AsyncFn
+            | WellKnownTrait::AsyncFnOnce
+            | WellKnownTrait::AsyncFnMut
             | WellKnownTrait::Unsize
             | WellKnownTrait::Sized
             | WellKnownTrait::DiscriminantKind
