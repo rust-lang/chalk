@@ -1,10 +1,7 @@
+use crate::query::solver;
 use crate::{
-    error::ChalkError,
-    interner::ChalkIr,
-    lowering::lower_goal,
-    program::Program,
-    query::{Lowering, LoweringDatabase},
-    tls, SolverChoice,
+    error::ChalkError, interner::ChalkIr, lowering::lower_goal, program::Program,
+    query::LoweringDatabase, tls, SolverChoice,
 };
 use chalk_ir::{
     AdtId, AssocTypeId, Binders, Canonical, CanonicalVarKinds, ClosureId, ConstrainedSubst,
@@ -18,17 +15,20 @@ use chalk_solve::rust_ir::{
     ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
-use salsa::Database;
+use salsa::{Database, Event};
 use std::fmt;
 use std::sync::Arc;
 
-#[salsa::database(Lowering)]
-#[derive(Default)]
+#[salsa::db]
+#[derive(Default, Clone)]
 pub struct ChalkDatabase {
     storage: salsa::Storage<Self>,
 }
 
-impl Database for ChalkDatabase {}
+#[salsa::db]
+impl Database for ChalkDatabase {
+    fn salsa_event(&self, _event: &dyn Fn() -> Event) {}
+}
 
 impl ChalkDatabase {
     pub fn with(program_text: &str, solver_choice: SolverChoice) -> Self {
@@ -52,7 +52,7 @@ impl ChalkDatabase {
         &self,
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
     ) -> Option<Solution<ChalkIr>> {
-        let solver = self.solver();
+        let solver = solver(self);
         let solution = solver.lock().unwrap().solve(self, goal);
         solution
     }
@@ -66,7 +66,7 @@ impl ChalkDatabase {
         goal: &UCanonical<InEnvironment<Goal<ChalkIr>>>,
         f: &mut dyn FnMut(SubstitutionResult<Canonical<ConstrainedSubst<ChalkIr>>>, bool) -> bool,
     ) -> bool {
-        let solver = self.solver();
+        let solver = solver(self);
         let solution = solver.lock().unwrap().solve_multiple(self, goal, f);
         solution
     }
