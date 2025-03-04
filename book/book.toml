@@ -16,6 +16,10 @@ additional-js = ["mermaid.min.js", "mermaid-init.js"]
 follow-web-links = true
 warning-policy = "error"
 optional = true
+exclude = [
+  # This even returns 403 on real browsers with Cloudflare's verify human challenge
+  'dl\.acm\.org',
+]
 
 # Workaround for GitHub docs returning 403 response: https://github.com/github/docs/issues/17358
 [output.linkcheck.http-headers]
