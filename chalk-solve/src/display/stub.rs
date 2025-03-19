@@ -116,6 +116,14 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         unreachable!("impl items should never be stubbed")
     }
 
+    fn associated_ty_from_impl(
+        &self,
+        _impl_id: chalk_ir::ImplId<I>,
+        _assoc_type_id: chalk_ir::AssocTypeId<I>,
+    ) -> Option<crate::rust_ir::AssociatedTyValueId<I>> {
+        unreachable!("should never reach projection if impl datum is not stubbed")
+    }
+
     fn associated_ty_value(
         &self,
         _id: crate::rust_ir::AssociatedTyValueId<I>,

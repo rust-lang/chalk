@@ -94,6 +94,13 @@ where
     ) -> std::sync::Arc<chalk_solve::rust_ir::ImplDatum<I>> {
         self.db.impl_datum(impl_id)
     }
+    fn associated_ty_from_impl(
+        &self,
+        impl_id: chalk_ir::ImplId<I>,
+        assoc_type_id: chalk_ir::AssocTypeId<I>,
+    ) -> Option<chalk_solve::rust_ir::AssociatedTyValueId<I>> {
+        self.db.associated_ty_from_impl(impl_id, assoc_type_id)
+    }
     fn associated_ty_value(
         &self,
         id: chalk_solve::rust_ir::AssociatedTyValueId<I>,

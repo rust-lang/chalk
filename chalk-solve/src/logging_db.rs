@@ -171,6 +171,14 @@ where
         self.ws.db().hidden_opaque_type(id)
     }
 
+    fn associated_ty_from_impl(
+        &self,
+        impl_id: ImplId<I>,
+        assoc_type_id: AssocTypeId<I>,
+    ) -> Option<AssociatedTyValueId<I>> {
+        self.ws.db().associated_ty_from_impl(impl_id, assoc_type_id)
+    }
+
     fn associated_ty_value(
         &self,
         id: crate::rust_ir::AssociatedTyValueId<I>,
@@ -432,6 +440,14 @@ where
 
     fn impl_datum(&self, impl_id: ImplId<I>) -> Arc<ImplDatum<I>> {
         self.db.impl_datum(impl_id)
+    }
+
+    fn associated_ty_from_impl(
+        &self,
+        impl_id: ImplId<I>,
+        assoc_type_id: AssocTypeId<I>,
+    ) -> Option<AssociatedTyValueId<I>> {
+        self.db.associated_ty_from_impl(impl_id, assoc_type_id)
     }
 
     fn associated_ty_value(
