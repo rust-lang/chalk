@@ -99,6 +99,19 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir().unwrap().impl_datum(id)
     }
 
+    fn associated_ty_from_impl(
+        &self,
+        impl_id: ImplId<ChalkIr>,
+        assoc_type_id: AssocTypeId<ChalkIr>,
+    ) -> Option<AssociatedTyValueId<ChalkIr>> {
+        let ir = self.program_ir().unwrap();
+        ir.impl_data[&impl_id]
+            .associated_ty_value_ids
+            .iter()
+            .copied()
+            .find(|id| ir.associated_ty_values[id].associated_ty_id == assoc_type_id)
+    }
+
     fn associated_ty_value(
         &self,
         id: AssociatedTyValueId<ChalkIr>,

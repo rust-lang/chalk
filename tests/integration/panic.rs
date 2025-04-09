@@ -118,6 +118,14 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         })
     }
 
+    fn associated_ty_from_impl(
+        &self,
+        _impl_id: ImplId<ChalkIr>,
+        _assoc_type_id: AssocTypeId<ChalkIr>,
+    ) -> Option<AssociatedTyValueId<ChalkIr>> {
+        unimplemented!()
+    }
+
     fn associated_ty_value(
         &self,
         id: AssociatedTyValueId<ChalkIr>,

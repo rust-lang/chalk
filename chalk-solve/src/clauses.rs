@@ -639,6 +639,7 @@ pub fn program_clauses_that_could_match<I: Interner>(
                     builder,
                     environment,
                     trait_id,
+                    proj.associated_ty_id,
                     trait_parameters,
                     binders,
                 );
@@ -749,6 +750,7 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
     builder: &mut ClauseBuilder<'_, I>,
     environment: &Environment<I>,
     trait_id: TraitId<I>,
+    assoc_id: AssocTypeId<I>,
     trait_parameters: &[GenericArg<I>],
     binders: &CanonicalVarKinds<I>,
 ) {
@@ -763,7 +765,7 @@ fn push_program_clauses_for_associated_type_values_in_impls_of<I: Interner>(
 
         debug!(?impl_id);
 
-        for &atv_id in &impl_datum.associated_ty_value_ids {
+        if let Some(atv_id) = builder.db.associated_ty_from_impl(impl_id, assoc_id) {
             let atv = builder.db.associated_ty_value(atv_id);
             debug!(?atv_id, ?atv);
             atv.to_program_clauses(builder, environment);

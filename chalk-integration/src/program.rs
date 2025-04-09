@@ -398,6 +398,18 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.impl_data[&id].clone()
     }
 
+    fn associated_ty_from_impl(
+        &self,
+        impl_id: ImplId<ChalkIr>,
+        assoc_type_id: AssocTypeId<ChalkIr>,
+    ) -> Option<AssociatedTyValueId<ChalkIr>> {
+        self.impl_data[&impl_id]
+            .associated_ty_value_ids
+            .iter()
+            .copied()
+            .find(|id| self.associated_ty_values[id].associated_ty_id == assoc_type_id)
+    }
+
     fn associated_ty_value(
         &self,
         id: AssociatedTyValueId<ChalkIr>,
