@@ -292,8 +292,8 @@ impl ProgramLowerer {
                         //     type Bar<A0, A1>;
                         // }
                         // ```
-                        let mut variable_kinds = assoc_ty_defn.all_parameters();
-                        variable_kinds.extend(trait_defn.all_parameters());
+                        let mut variable_kinds = trait_defn.all_parameters();
+                        variable_kinds.extend(assoc_ty_defn.all_parameters());
 
                         let binders = empty_env.in_binders(variable_kinds, |env| {
                             Ok(rust_ir::AssociatedTyDatumBound {
@@ -330,8 +330,8 @@ impl ProgramLowerer {
                         // impl *and* those from the associated type
                         // itself. As in the "trait" case above, we begin
                         // with the parameters from the impl.
-                        let mut variable_kinds = atv.all_parameters();
-                        variable_kinds.extend(impl_defn.all_parameters());
+                        let mut variable_kinds = impl_defn.all_parameters();
+                        variable_kinds.extend(atv.all_parameters());
 
                         let value = empty_env.in_binders(variable_kinds, |env| {
                             Ok(rust_ir::AssociatedTyValueBound {

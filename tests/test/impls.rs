@@ -240,8 +240,7 @@ fn normalize_rev_infer_gat() {
                 T: Combine<Item<U> = Either<A, B>>
             }
         } yields {
-            // T is ?1 and U is ?0, so this is surprising, but correct! (See #126.)
-            expect![["Unique; substitution [?0 := B, ?1 := A]"]]
+            expect![["Unique; substitution [?0 := A, ?1 := B]"]]
         }
     }
 }

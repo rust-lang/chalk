@@ -93,9 +93,8 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         // the impl parameters are a suffix
         //
         // [ P0..Pn, Pn...Pm ]
-        //           ^^^^^^^ impl parameters
-        let split_point = parameters.len() - impl_params_len;
-        let (other_params, impl_params) = parameters.split_at(split_point);
+        //   ^^^^^^ impl parameters
+        let (impl_params, other_params) = parameters.split_at(impl_params_len);
         (impl_params, other_params)
     }
 
@@ -144,9 +143,10 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
         // `<Box<!T> as Foo>::Item<'!a>`
         let projection_substitution = Substitution::from_iter(
             interner,
-            atv_parameters
-                .iter()
-                .chain(trait_ref.substitution.iter(interner))
+            trait_ref
+                .substitution
+                .iter(interner)
+                .chain(atv_parameters.iter())
                 .cloned(),
         );
 
@@ -190,8 +190,8 @@ pub trait Split<I: Interner>: RustIrDatabase<I> {
     ) -> (&'p [P], &'p [P]) {
         let trait_datum = &self.trait_datum(associated_ty_datum.trait_id);
         let trait_num_params = trait_datum.binders.len(self.interner());
-        let split_point = parameters.len() - trait_num_params;
-        let (other_params, trait_params) = parameters.split_at(split_point);
+        let split_point = trait_num_params;
+        let (trait_params, other_params) = parameters.split_at(split_point);
         (trait_params, other_params)
     }
 }
