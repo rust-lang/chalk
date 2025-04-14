@@ -192,8 +192,8 @@ fn atc_accounting() {
             &r#"AssociatedTyValue {
     impl_id: ImplId(#2),
     associated_ty_id: (Iterable::Iter),
-    value: for<lifetime, type> AssociatedTyValueBound {
-        ty: Iter<'^0.0, ^0.1>
+    value: for<type, lifetime> AssociatedTyValueBound {
+        ty: Iter<'^0.1, ^0.0>
     },
 }"#
             .replace(",\n", "\n"),

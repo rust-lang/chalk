@@ -866,11 +866,9 @@ fn push_alias_alias_eq_clause<I: Interner>(
                 let (_, trait_args, assoc_args) = builder.db.split_projection(&projection_ty);
                 let fresh_self_subst = Substitution::from_iter(
                     interner,
-                    assoc_args
-                        .iter()
-                        .cloned()
-                        .chain(std::iter::once(intermediate_eq_ty.clone().cast(interner)))
-                        .chain(trait_args[1..].iter().cloned()),
+                    std::iter::once(intermediate_eq_ty.clone().cast(interner))
+                        .chain(trait_args[1..].iter().cloned())
+                        .chain(assoc_args.iter().cloned()),
                 );
                 let fresh_alias = AliasTy::Projection(ProjectionTy {
                     associated_ty_id: projection_ty.associated_ty_id,

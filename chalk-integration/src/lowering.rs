@@ -633,7 +633,10 @@ impl LowerWithEnv for ProjectionTy {
             substitution: trait_substitution,
         } = trait_ref.lower(env)?;
         let lookup = env.lookup_associated_ty(trait_id, name)?;
-        let mut args: Vec<_> = args
+
+        let mut all_args: Vec<_> = trait_substitution.iter(interner).cloned().collect();
+
+        let args: Vec<_> = args
             .iter()
             .map(|a| a.lower(env))
             .collect::<LowerResult<_>>()?;
@@ -656,11 +659,11 @@ impl LowerWithEnv for ProjectionTy {
             }
         }
 
-        args.extend(trait_substitution.iter(interner).cloned());
+        all_args.extend(args.into_iter());
 
         Ok(chalk_ir::ProjectionTy {
             associated_ty_id: lookup.id,
-            substitution: chalk_ir::Substitution::from_iter(interner, args),
+            substitution: chalk_ir::Substitution::from_iter(interner, all_args),
         })
     }
 }
@@ -1024,9 +1027,8 @@ pub fn lower_goal(goal: &Goal, program: &LoweredProgram) -> LowerResult<chalk_ir
         .map(|(&associated_ty_id, datum)| {
             let trait_datum = &program.trait_data[&datum.trait_id];
             let num_trait_params = trait_datum.binders.len(interner);
-            let num_addl_params = datum.binders.len(interner) - num_trait_params;
             let addl_variable_kinds =
-                datum.binders.binders.as_slice(interner)[..num_addl_params].to_owned();
+                datum.binders.binders.as_slice(interner)[num_trait_params..].to_owned();
             let lookup = AssociatedTyLookup {
                 id: associated_ty_id,
                 addl_variable_kinds,

@@ -367,9 +367,7 @@ fn mixed_indices_normalize_gat_application() {
                 Normalize(<Ref<'a, T> as Foo>::T<X> -> Either<U, Y>)
             }
         } yields {
-            // Our GAT parameter <X> is mapped to ?0; all others appear left to right
-            // in our Normalize(...) goal.
-            expect![["Unique; for<?U0,?U0,?U0> { substitution [?0 := ^0.0, ?1 := '^0.1, ?2 := ^0.2, ?3 := ^0.0, ?4 := ^0.2] }"]]
+            expect![["Unique; for<?U0,?U0,?U0> { substitution [?0 := '^0.0, ?1 := ^0.1, ?2 := ^0.2, ?3 := ^0.2, ?4 := ^0.1] }"]]
         }
     }
 }
