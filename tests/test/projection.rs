@@ -634,6 +634,33 @@ fn gat_in_alias_in_alias_eq() {
 }
 
 #[test]
+fn gat_bound_for_self_type() {
+    test! {
+        program {
+            struct I32 { }
+            trait Trait {
+                type Assoc: Another<Gat<i32> = usize>;
+            }
+            trait Another {
+                type Gat<T>;
+            }
+        }
+
+        goal {
+            forall<T> {
+                exists<U> {
+                    if (T: Trait) {
+                        <<T as Trait>::Assoc as Another>::Gat<i32> = U
+                    }
+                }
+            }
+        } yields[SolverChoice::recursive_default()] {
+            expect![[r#"Unique; substitution [?0 := Uint(Usize)]"#]]
+        }
+    }
+}
+
+#[test]
 fn forall_projection() {
     test! {
         program {
