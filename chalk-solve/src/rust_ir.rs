@@ -442,10 +442,11 @@ impl<I: Interner> AliasEqBound<I> {
 
         let substitution = Substitution::from_iter(
             interner,
-            self.parameters
-                .iter()
+            trait_ref
+                .substitution
+                .iter(interner)
                 .cloned()
-                .chain(trait_ref.substitution.iter(interner).cloned()),
+                .chain(self.parameters.iter().cloned()),
         );
 
         vec![
