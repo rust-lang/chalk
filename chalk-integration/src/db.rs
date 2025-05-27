@@ -15,7 +15,7 @@ use chalk_ir::{
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
     ClosureKind, CoroutineDatum, CoroutineWitnessDatum, FnDefDatum, FnDefInputsAndOutputDatum,
-    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    ImplDatum, OpaqueTyDatum, TraitDatum, WellKnownAssocType, WellKnownTrait,
 };
 use chalk_solve::{RustIrDatabase, Solution, SubstitutionResult};
 use salsa::Database;
@@ -181,6 +181,15 @@ impl RustIrDatabase<ChalkIr> for ChalkDatabase {
         self.program_ir()
             .unwrap()
             .well_known_trait_id(well_known_trait)
+    }
+
+    fn well_known_assoc_type_id(
+        &self,
+        assoc_type: WellKnownAssocType,
+    ) -> Option<AssocTypeId<ChalkIr>> {
+        self.program_ir()
+            .unwrap()
+            .well_known_assoc_type_id(assoc_type)
     }
 
     fn program_clauses_for_env(

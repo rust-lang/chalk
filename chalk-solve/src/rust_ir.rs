@@ -287,6 +287,15 @@ pub enum WellKnownTrait {
 
 chalk_ir::const_visit!(WellKnownTrait);
 
+/// A list of the associated types that are "well known" to chalk, which means that
+/// the chalk-solve crate has special, hard-coded impls for them.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
+pub enum WellKnownAssocType {
+    AsyncFnOnceOutput,
+}
+
+chalk_ir::const_visit!(WellKnownAssocType);
+
 impl<I: Interner> TraitDatum<I> {
     pub fn is_auto_trait(&self) -> bool {
         self.flags.auto

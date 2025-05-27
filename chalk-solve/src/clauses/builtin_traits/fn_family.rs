@@ -1,5 +1,5 @@
 use crate::clauses::ClauseBuilder;
-use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownTrait};
+use crate::rust_ir::{ClosureKind, FnDefInputsAndOutputDatum, WellKnownAssocType, WellKnownTrait};
 use crate::{Interner, RustIrDatabase, TraitRef};
 use chalk_ir::cast::Cast;
 use chalk_ir::{
@@ -83,14 +83,9 @@ fn push_clauses<I: Interner>(
 
         if let WellKnownTrait::AsyncFnOnce = well_known {
             builder.push_bound_ty(|builder, ty| {
-                let trait_datum = db.trait_datum(trait_id);
-                assert_eq!(
-                    trait_datum.associated_ty_ids.len(),
-                    2,
-                    "AsyncFnOnce trait should have exactly two associated types, found {:?}",
-                    trait_datum.associated_ty_ids
-                );
-                let output_id = trait_datum.associated_ty_ids[1];
+                let output_id = db
+                    .well_known_assoc_type_id(WellKnownAssocType::AsyncFnOnceOutput)
+                    .unwrap();
                 let async_alias = AliasTy::Projection(ProjectionTy {
                     associated_ty_id: output_id,
                     substitution,

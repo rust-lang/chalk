@@ -537,6 +537,14 @@ impl RustIrDatabase<ChalkIr> for Program {
         self.well_known_traits.get(&well_known_trait).copied()
     }
 
+    fn well_known_assoc_type_id(
+        &self,
+        _assoc_type: chalk_solve::rust_ir::WellKnownAssocType,
+    ) -> Option<AssocTypeId<ChalkIr>> {
+        // FIXME
+        None
+    }
+
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<ChalkIr>,

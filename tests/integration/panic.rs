@@ -211,6 +211,13 @@ impl RustIrDatabase<ChalkIr> for MockDatabase {
         unimplemented!()
     }
 
+    fn well_known_assoc_type_id(
+        &self,
+        assoc_type: WellKnownAssocType,
+    ) -> Option<AssocTypeId<ChalkIr>> {
+        unimplemented!()
+    }
+
     fn program_clauses_for_env(
         &self,
         environment: &Environment<ChalkIr>,

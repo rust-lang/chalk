@@ -155,6 +155,12 @@ where
     ) -> Option<chalk_ir::TraitId<I>> {
         self.db.well_known_trait_id(well_known_trait)
     }
+    fn well_known_assoc_type_id(
+        &self,
+        assoc_type: chalk_solve::rust_ir::WellKnownAssocType,
+    ) -> Option<chalk_ir::AssocTypeId<I>> {
+        self.db.well_known_assoc_type_id(assoc_type)
+    }
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<I>,
