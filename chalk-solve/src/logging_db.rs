@@ -229,6 +229,14 @@ where
         trait_id
     }
 
+    fn well_known_assoc_type_id(&self, assoc_type: WellKnownAssocType) -> Option<AssocTypeId<I>> {
+        let assoc_type_id = self.ws.db().well_known_assoc_type_id(assoc_type);
+        if let Some(id) = assoc_type_id {
+            self.record(self.ws.db().associated_ty_data(id).trait_id);
+        }
+        assoc_type_id
+    }
+
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<I>,
@@ -487,6 +495,10 @@ where
         well_known_trait: crate::rust_ir::WellKnownTrait,
     ) -> Option<TraitId<I>> {
         self.db.well_known_trait_id(well_known_trait)
+    }
+
+    fn well_known_assoc_type_id(&self, assoc_type: WellKnownAssocType) -> Option<AssocTypeId<I>> {
+        self.db.well_known_assoc_type_id(assoc_type)
     }
 
     fn program_clauses_for_env(

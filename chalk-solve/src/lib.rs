@@ -128,6 +128,9 @@ pub trait RustIrDatabase<I: Interner>: Debug {
     /// Returns id of a trait lang item, if found
     fn well_known_trait_id(&self, well_known_trait: WellKnownTrait) -> Option<TraitId<I>>;
 
+    /// Returns id of a associated type, if found.
+    fn well_known_assoc_type_id(&self, assoc_type: WellKnownAssocType) -> Option<AssocTypeId<I>>;
+
     /// Calculates program clauses from an env. This is intended to call the
     /// `program_clauses_for_env` function and then possibly cache the clauses.
     fn program_clauses_for_env(&self, environment: &Environment<I>) -> ProgramClauses<I>;

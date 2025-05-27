@@ -188,6 +188,13 @@ impl<I: Interner, DB: RustIrDatabase<I>> RustIrDatabase<I> for StubWrapper<'_, D
         self.db.well_known_trait_id(well_known_trait)
     }
 
+    fn well_known_assoc_type_id(
+        &self,
+        assoc_type: crate::rust_ir::WellKnownAssocType,
+    ) -> Option<chalk_ir::AssocTypeId<I>> {
+        self.db.well_known_assoc_type_id(assoc_type)
+    }
+
     fn program_clauses_for_env(
         &self,
         environment: &chalk_ir::Environment<I>,
