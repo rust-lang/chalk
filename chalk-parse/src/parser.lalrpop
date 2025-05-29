@@ -283,7 +283,12 @@ TraitDefn: TraitDefn = {
     }
 };
 
+WellKnownAssocType: WellKnownAssocType = {
+     "#" "[" "lang" "(" "async_fn_once_output" ")" "]" => WellKnownAssocType::AsyncFnOnceOutput,
+};
+
 AssocTyDefn: AssocTyDefn = {
+    <well_known:WellKnownAssocType?> 
     "type" <name:Id> <p:Angle<VariableKind>> <b:(":" <Plus<QuantifiedInlineBound>>)?>
         <w:QuantifiedWhereClauses> ";" =>
     {
@@ -292,6 +297,7 @@ AssocTyDefn: AssocTyDefn = {
             variable_kinds: p,
             where_clauses: w,
             bounds: b.unwrap_or(vec![]),
+            well_known,
         }
     }
 };

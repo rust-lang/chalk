@@ -11,7 +11,7 @@ use chalk_ir::{
 use chalk_solve::rust_ir::{
     AdtDatum, AdtRepr, AdtSizeAlign, AssociatedTyDatum, AssociatedTyValue, AssociatedTyValueId,
     ClosureKind, CoroutineDatum, CoroutineWitnessDatum, FnDefDatum, FnDefInputsAndOutputDatum,
-    ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownTrait,
+    ImplDatum, ImplType, OpaqueTyDatum, TraitDatum, WellKnownAssocType, WellKnownTrait,
 };
 use chalk_solve::split::Split;
 use chalk_solve::RustIrDatabase;
@@ -95,6 +95,9 @@ pub struct Program {
 
     /// For each trait lang item
     pub well_known_traits: BTreeMap<WellKnownTrait, TraitId<ChalkIr>>,
+
+    /// For each assoc type lang item
+    pub well_known_assoc_types: BTreeMap<WellKnownAssocType, AssocTypeId<ChalkIr>>,
 
     /// For each associated ty declaration `type Foo` found in a trait:
     pub associated_ty_data: BTreeMap<AssocTypeId<ChalkIr>, Arc<AssociatedTyDatum<ChalkIr>>>,
@@ -539,10 +542,9 @@ impl RustIrDatabase<ChalkIr> for Program {
 
     fn well_known_assoc_type_id(
         &self,
-        _assoc_type: chalk_solve::rust_ir::WellKnownAssocType,
+        assoc_type: WellKnownAssocType,
     ) -> Option<AssocTypeId<ChalkIr>> {
-        // FIXME
-        None
+        self.well_known_assoc_types.get(&assoc_type).copied()
     }
 
     fn program_clauses_for_env(

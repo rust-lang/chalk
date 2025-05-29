@@ -187,6 +187,12 @@ pub struct AssocTyDefn {
     pub variable_kinds: Vec<VariableKind>,
     pub bounds: Vec<QuantifiedInlineBound>,
     pub where_clauses: Vec<QuantifiedWhereClause>,
+    pub well_known: Option<WellKnownAssocType>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WellKnownAssocType {
+    AsyncFnOnceOutput,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

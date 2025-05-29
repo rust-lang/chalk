@@ -152,6 +152,7 @@ impl ProgramLowerer {
         let mut closure_upvars = BTreeMap::new();
         let mut trait_data = BTreeMap::new();
         let mut well_known_traits = BTreeMap::new();
+        let mut well_known_assoc_types = BTreeMap::new();
         let mut impl_data = BTreeMap::new();
         let mut associated_ty_data = BTreeMap::new();
         let mut associated_ty_values = BTreeMap::new();
@@ -271,6 +272,15 @@ impl ProgramLowerer {
                     for assoc_ty_defn in &trait_defn.assoc_ty_defns {
                         let lookup = &self.associated_ty_lookups
                             [&(trait_id, assoc_ty_defn.name.str.clone())];
+
+                        if let Some(well_known) = assoc_ty_defn.well_known {
+                            let well_known = match well_known {
+                                chalk_parse::ast::WellKnownAssocType::AsyncFnOnceOutput => {
+                                    chalk_solve::rust_ir::WellKnownAssocType::AsyncFnOnceOutput
+                                }
+                            };
+                            well_known_assoc_types.insert(well_known, lookup.id);
+                        }
 
                         // The parameters in scope for the associated
                         // type definitions are *both* those from the
@@ -494,6 +504,7 @@ impl ProgramLowerer {
             coroutine_witness_data,
             trait_data,
             well_known_traits,
+            well_known_assoc_types,
             impl_data,
             associated_ty_values,
             associated_ty_data,

@@ -88,6 +88,7 @@ fn fn_def_implements_fn_traits() {
             #[lang(async_fn_once)]
             trait AsyncFnOnce<Args> {
                 type CallOnceFuture: Future<Output = <Self as AsyncFnOnce<Args>>::Output>;
+                #[lang(async_fn_once_output)]
                 type Output;
             }
 
@@ -209,6 +210,7 @@ fn generic_fn_implements_fn_traits() {
             #[lang(async_fn_once)]
             trait AsyncFnOnce<Args> {
                 type CallOnceFuture: Future<Output = <Self as AsyncFnOnce<Args>>::Output>;
+                #[lang(async_fn_once_output)]
                 type Output;
             }
 
