@@ -152,17 +152,13 @@ impl<I: Interner> Debug for QuantifiedWhereClauses<I> {
 
 impl<I: Interner> Debug for ProjectionTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_projection_ty(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format ProjectionTy without setting Program in tls")
-        })
+        I::debug_projection_ty(self, fmt).unwrap_or_else(|| fmt.write_str("<ProjectionTy>"))
     }
 }
 
 impl<I: Interner> Debug for OpaqueTy<I> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result<(), Error> {
-        I::debug_opaque_ty(self, fmt).unwrap_or_else(|| {
-            unimplemented!("cannot format OpaqueTy without setting Program in tls")
-        })
+        I::debug_opaque_ty(self, fmt).unwrap_or_else(|| fmt.write_str("<OpaqueTy>"))
     }
 }
 
