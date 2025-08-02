@@ -195,6 +195,8 @@ impl<'t, I: Interner> Unifier<'t, I> {
                 self.relate_var_ty(variance.invert(), var, kind, &ty)
             }
 
+            (TyKind::Error, _) | (_, TyKind::Error) => Ok(()),
+
             // This would correspond to unifying a `fn` type with a non-fn
             // type in Rust; error.
             (&TyKind::Function(_), _) | (_, &TyKind::Function(_)) => Err(NoSolution),
@@ -349,7 +351,6 @@ impl<'t, I: Interner> Unifier<'t, I> {
             (TyKind::Foreign(id_a), TyKind::Foreign(id_b)) => {
                 Zip::zip_with(self, variance, id_a, id_b)
             }
-            (TyKind::Error, TyKind::Error) => Ok(()),
 
             (_, _) => Err(NoSolution),
         }
