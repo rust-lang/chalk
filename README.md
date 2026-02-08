@@ -2,6 +2,14 @@
 [![Chalk Book](https://img.shields.io/badge/book-chalk-blue.svg)](https://rust-lang.github.io/chalk/book/)
 [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://rust-lang.github.io/chalk/chalk/)
 
+> [!WARNING]
+> The Chalk project has been sunset in favor of the newer next-generation trait solver.
+> See the following posts for more details on the development of the new trait solver:
+> - https://blog.rust-lang.org/inside-rust/2023/07/17/trait-system-refactor-initiative/
+> - https://blog.rust-lang.org/inside-rust/2023/12/22/trait-system-refactor-initiative/
+> - https://blog.rust-lang.org/2024/06/26/types-team-update/
+> - https://blog.rust-lang.org/inside-rust/2024/12/04/trait-system-refactor-initiative/
+
 # chalk
 
 Chalk is a library that implements the Rust trait system, based on [Prolog-ish][Prolog] logic rules.
@@ -10,7 +18,7 @@ See the [Chalk book](https://rust-lang.github.io/chalk/book/) for more informati
 
 ## FAQ
 
-**How does chalk relate to rustc?** The plan is to have rustc use the
+**How does chalk relate to rustc?** The plan *was* to have rustc use the
 `chalk-solve` crate (in this repo) to answer questions about Rust programs, for
 example, "Does `Vec<u32>` implement `Debug`?". Internally, chalk converts
 Rust-specific information into logic and uses a logic engine to find the answer
