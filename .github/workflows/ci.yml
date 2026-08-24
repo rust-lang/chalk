@@ -18,11 +18,9 @@ jobs:
           fetch-depth: 1
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          profile: minimal
-          override: true
+        run: |
+          rustup toolchain install ${{ matrix.rust }} --profile minimal
+          rustup default ${{ matrix.rust }}
 
       - name: Build chalk-engine without default features
         run: cd chalk-engine && cargo build --no-default-features
@@ -72,12 +70,9 @@ jobs:
           fetch-depth: 1
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-          components: rustfmt
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default stable
 
       - name: Check formatting of all crates in the workspace
         run: cargo fmt --all -- --check

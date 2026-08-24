@@ -17,17 +17,12 @@ jobs:
           fetch-depth: 0
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
 
       - name: Install cargo-workspaces
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-workspaces
-          version: 0.2.44
+        run: cargo install cargo-workspaces --version 0.2.44
 
       - name: Install Node (for changelog generation)
         uses: actions/setup-node@v2
