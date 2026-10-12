@@ -19,6 +19,8 @@ optional = true
 exclude = [
   # This even returns 403 on real browsers with Cloudflare's verify human challenge
   'dl\.acm\.org',
+  'npmjs\.com',
+  'amazon\.com'
 ]
 
 # Workaround for GitHub docs returning 403 response: https://github.com/github/docs/issues/17358
