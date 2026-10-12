@@ -17,7 +17,7 @@ type can be referenced by the user using an **associated type
 projection** like `<Option<u32> as IntoIterator>::Item`.
 
 > Often, people will use the shorthand syntax `T::Item`. Presently, that
-> syntax is expanded during ["type collection"](https://rustc-dev-guide.rust-lang.org/type-checking.html) into the
+> syntax is expanded during ["type collection"](https://rustc-dev-guide.rust-lang.org/hir-typeck/summary.html) into the
 > explicit form, though that is something we may want to change in the future.
 
 [intoiter-item]: https://doc.rust-lang.org/nightly/core/iter/trait.IntoIterator.html#associatedtype.Item
